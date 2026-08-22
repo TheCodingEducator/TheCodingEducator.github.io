@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TheCodingEducator's Games</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  header {
+    padding: 64px 24px 32px;
+    text-align: center;
+  }
+
+  header h1 {
+    margin: 0 0 8px;
+    font-size: clamp(28px, 5vw, 44px);
+  }
+
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 18px;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 24px 80px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+  }
+
+  a.card {
+    display: block;
+    background: var(--panel);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+
+  a.card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+  }
+
+  .thumb {
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+  }
+
+  .card-body {
+    padding: 16px 18px 20px;
+  }
+
+  .card-body h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+  }
+
+  .card-body p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .card.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    border: 1px dashed rgba(255,255,255,0.15);
+    color: var(--muted);
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 24px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TheCodingEducator's Games</h1>
+  <p>Pick a game below to play</p>
+</header>
+
+<main>
+
+  <a class="card" href="Exponent%20Racer/index.html">
+    <div class="thumb" style="background: linear-gradient(135deg, #e74c3c, #f1c40f);">🏎️</div>
+    <div class="card-body">
+      <h2>Exponent Racer</h2>
+      <p>Race down the road answering exponent questions to keep your fuel up and dodge traffic.</p>
+    </div>
+  </a>
+
+  <div class="card placeholder">
+    More games coming soon
+  </div>
+
+</main>
+
+<footer>
+  Made by TheCodingEducator
+</footer>
+
+</body>
+</html>
