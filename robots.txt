@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://thecodingeducator.github.io/sitemap.xml
