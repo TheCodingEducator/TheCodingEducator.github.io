@@ -88,8 +88,13 @@
     font-size: 14px;
   }
 
-  .back-link:hover {
+  .back-link:hover, .back-link:focus-visible {
     color: var(--accent);
+  }
+
+  a:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
   }
 
   footer {

@@ -20,10 +20,36 @@
     display: block;
     box-shadow: 0 0 24px rgba(0,0,0,0.6);
   }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: #aaa;
+    font: 13px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    color: #fff;
+  }
 </style>
 <script src="exponent-racer-p5.min.js"></script>
 </head>
 <body>
+<a class="back-link" href="../index.html">&larr; All games</a>
+<h1 class="sr-only">Exponent Racer</h1>
+<p class="sr-only">A driving game where you steer between lanes and answer exponent math questions to refuel and score points. Controls: arrow keys or WASD to move, space or enter to confirm answers, mouse to click menu buttons.</p>
 <script src="exponent-racer-shim.js"></script>
 <script src="exponent-racer-game.js"></script>
 <script src="exponent-racer-hook.js"></script>

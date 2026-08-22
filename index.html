@@ -65,6 +65,12 @@
     border-color: var(--accent);
   }
 
+  a.card:focus-visible,
+  footer a:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .thumb {
     height: 150px;
     display: flex;
@@ -119,7 +125,7 @@
 <main>
 
   <a class="card" href="exponent-racer/exponent-racer.html">
-    <div class="thumb" style="background: linear-gradient(135deg, #e74c3c, #f1c40f);">🏎️</div>
+    <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #e74c3c, #f1c40f);">🏎️</div>
     <div class="card-body">
       <h2>Exponent Racer</h2>
       <p>Race down the road answering exponent questions to keep your fuel up and dodge traffic.</p>
@@ -127,7 +133,7 @@
   </a>
 
   <a class="card" href="exponent-hoops/exponent-hoops.html">
-    <div class="thumb" style="background: linear-gradient(135deg, #1d428a, #ce1141);">🏀</div>
+    <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #1d428a, #ce1141);">🏀</div>
     <div class="card-body">
       <h2>Exponent Hoops</h2>
       <p>Shoot hoops by solving exponent rules - play solo or head-to-head with a friend.</p>
