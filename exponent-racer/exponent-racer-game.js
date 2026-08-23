@@ -1324,9 +1324,9 @@ if (startSequencePhase > 0) {
     if (isVocab) { circleType = optStr.substring(1, 2); optStr = optStr.substring(3); }
 
     if (isFraction) {
-      var fParts = optStr.split("\n—\n"); textSize(19); drawSupText(fParts[0], targetX, fuelY - 10);
-      stroke("black"); strokeWeight(2); line(targetX - 10, fuelY + 2, targetX + 10, fuelY + 2);
-      noStroke(); drawSupText(fParts[1], targetX, fuelY + 21); // pushed down from +14: the denominator's exponent digit is raised, so it needs extra clearance below the bar
+      var fParts = optStr.split("\n—\n"); textSize(19); drawSupText(fParts[0], targetX, fuelY - 14);
+      stroke("black"); strokeWeight(2); line(targetX - 10, fuelY - 2, targetX + 10, fuelY - 2);
+      noStroke(); drawSupText(fParts[1], targetX, fuelY + 17); // shifted up 4px from the +21/-10 pair to vertically center the fraction block within the 70px answer circle
     } else if (isVocab) {
       textSize(24); drawSupText(optStr, targetX, fuelY, CENTER, CENTER, circleType);
       noStroke();
