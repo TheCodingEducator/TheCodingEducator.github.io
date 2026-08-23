@@ -709,12 +709,23 @@ function drawSupText(str, x, y, hAlign, vAlign) {
   else if (hAlign === RIGHT) startX = x - totalWidth;
   else startX = x;
 
+  // Whether both a base and a superscript segment are present - if the
+  // exponent is only raised (base stays put), the combined shape's visual
+  // center drifts upward from y (the raised part sticks out further than
+  // the base sticks down), which is what made text look off-center inside
+  // boxes. Splitting the offset between both segments instead keeps the
+  // combined shape balanced around the original y.
+  var hasBoth = false;
+  for (s = 0; s < segments.length; s++) { if (segments[s].isSup) hasBoth = true; }
+  hasBoth = hasBoth && segments.length > 1;
+  var baseShift = hasBoth ? supRaise / 2 : 0;
+
   textAlign(LEFT, vAlign);
   var cursorX = startX;
   for (s = 0; s < segments.length; s++) {
     var seg = segments[s];
     textSize(seg.isSup ? supSize : baseSize);
-    text(seg.text, cursorX, seg.isSup ? (y - supRaise) : y);
+    text(seg.text, cursorX, seg.isSup ? (y - supRaise + baseShift) : (y + baseShift));
     cursorX += textWidth(seg.text);
   }
 
