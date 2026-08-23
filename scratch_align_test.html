@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head>
+<script src="exponent-racer/exponent-racer-p5.min.js"></script>
+</head>
+<body>
+<script>
+function setup() {
+  createCanvas(400, 400);
+  noLoop();
+}
+function draw() {
+  background(0);
+  fill(255); noStroke();
+  textFont("sans-serif");
+  textSize(22);
+
+  // Draw a "5" with CENTER,CENTER at y=100
+  textAlign(CENTER, CENTER);
+  text("5", 100, 100);
+
+  // Draw a "5" with CENTER,TOP at y=200
+  textAlign(CENTER, TOP);
+  text("5", 100, 200);
+}
+
+window.scanInk = function(xCenter, xHalfWidth, yStart, yEnd) {
+  var c = document.querySelector('canvas');
+  var ctx = c.getContext('2d');
+  var data = ctx.getImageData(xCenter - xHalfWidth, yStart, xHalfWidth * 2, yEnd - yStart).data;
+  var w = xHalfWidth * 2, h = yEnd - yStart;
+  var minY = null, maxY = null, minX = null, maxX = null;
+  for (var yy = 0; yy < h; yy++) {
+    for (var xx = 0; xx < w; xx++) {
+      var idx = (yy * w + xx) * 4;
+      if (data[idx] > 50) { // any non-black pixel (white text on black bg)
+        if (minY === null || yy < minY) minY = yy;
+        if (maxY === null || yy > maxY) maxY = yy;
+        if (minX === null || xx < minX) minX = xx;
+        if (maxX === null || xx > maxX) maxX = xx;
+      }
+    }
+  }
+  return { topY: yStart + minY, bottomY: yStart + maxY, leftX: (xCenter - xHalfWidth) + minX, rightX: (xCenter - xHalfWidth) + maxX };
+};
+</script>
+</body></html>

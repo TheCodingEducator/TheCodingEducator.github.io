@@ -20,23 +20,23 @@ var equipped = { car: "red", trail: "none", boost: "none", world: "default" };
 
 var shopData = {
   cars: [
-    { id: "red", name: "Red Car", price: 0 }, { id: "blue", name: "Blue Car", price: 0 },
-    { id: "green", name: "Green Car", price: 0 }, { id: "purple", name: "Purple Car", price: 0 },
-    { id: "orange", name: "Orange Car", price: 0 }, { id: "pink", name: "Pink Car", price: 0 },
-    { id: "yellow", name: "Yellow Car", price: 0 }, { id: "black", name: "Black Car", price: 0 },
-    { id: "white", name: "White Car", price: 0 }, { id: "superhero", name: "Superhero", price: 0 }
+    { id: "red", name: "Red Car", price: 300 }, { id: "blue", name: "Blue Car", price: 300 },
+    { id: "green", name: "Green Car", price: 300 }, { id: "purple", name: "Purple Car", price: 300 },
+    { id: "orange", name: "Orange Car", price: 300 }, { id: "pink", name: "Pink Car", price: 300 },
+    { id: "yellow", name: "Yellow Car", price: 300 }, { id: "black", name: "Black Car", price: 300 },
+    { id: "white", name: "White Car", price: 300 }, { id: "superhero", name: "Superhero", price: 1000 }
   ],
 
   trails: [
-    { id: "none", name: "Exhaust", price: 0 }, { id: "fire", name: "Fire Trail", price: 0 },
-    { id: "blue", name: "Blue Smoke", price: 0 }, { id: "red", name: "Red Smoke", price: 0 },
-    { id: "pink", name: "Pink Smoke", price: 0 }, { id: "bubbles", name: "Bubbles", price: 0 },
-    { id: "money", name: "Money Trail", price: 0 }
+    { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
+    { id: "blue", name: "Blue Smoke", price: 300 }, { id: "red", name: "Red Smoke", price: 300 },
+    { id: "pink", name: "Pink Smoke", price: 300 }, { id: "bubbles", name: "Bubbles", price: 500 },
+    { id: "money", name: "Money Trail", price: 500 }
   ],
   boosts: [
-    { id: "none", name: "No Powerup", price: 0 },
-    { id: "shield", name: "Forcefield", price: 0 },
-    { id: "magnet", name: "Coin Magnet", price: 0 }
+    { id: "none", name: "No Powerup", price: 500 },
+    { id: "shield", name: "Forcefield", price: 500 },
+    { id: "magnet", name: "Coin Magnet", price: 500 }
   ],
 };
 
@@ -102,9 +102,19 @@ function formatExponent(expNum) {
 // copies of those instead guarantees a consistent look everywhere.
 var SUP_TO_NORMAL = {"⁻":"-", "⁰":"0", "¹":"1", "²":"2", "³":"3", "⁴":"4", "⁵":"5", "⁶":"6", "⁷":"7", "⁸":"8", "⁹":"9"};
 
-function drawSupText(str, x, y, hAlign, vAlign) {
+// Empirically-measured (not guessed) relationship between a digit's font
+// size and its actual rendered ink, via pixel-scanning a live canvas: ink
+// height is ~0.68x the font size, and for TOP vertical alignment the ink's
+// visual center sits ~0.35x the font size below the y that was passed in
+// (for CENTER alignment the visual center already matches y directly).
+var DIGIT_INK_HEIGHT_RATIO = 0.68;
+var TOP_ALIGN_CENTER_OFFSET_RATIO = 0.35;
+
+function drawSupText(str, x, y, hAlign, vAlign, circleType, circleStroke, circleStrokeWeight) {
   if (hAlign === undefined) hAlign = CENTER;
   if (vAlign === undefined) vAlign = CENTER;
+  if (circleStroke === undefined) circleStroke = "blue";
+  if (circleStrokeWeight === undefined) circleStrokeWeight = 3;
 
   var segments = [];
   for (var i = 0; i < str.length; i++) {
@@ -125,9 +135,12 @@ function drawSupText(str, x, y, hAlign, vAlign) {
 
   var totalWidth = 0;
   var s;
+  var layout = []; // {left, width, size, centerY} per segment, for circleType below
   for (s = 0; s < segments.length; s++) {
     textSize(segments[s].isSup ? supSize : baseSize);
-    totalWidth += textWidth(segments[s].text);
+    var w = textWidth(segments[s].text);
+    layout.push({ width: w, size: segments[s].isSup ? supSize : baseSize, isSup: segments[s].isSup });
+    totalWidth += w;
   }
 
   var startX;
@@ -139,13 +152,45 @@ function drawSupText(str, x, y, hAlign, vAlign) {
   var cursorX = startX;
   for (s = 0; s < segments.length; s++) {
     var seg = segments[s];
-    textSize(seg.isSup ? supSize : baseSize);
-    text(seg.text, cursorX, seg.isSup ? (y - supRaise) : y);
-    cursorX += textWidth(seg.text);
+    var segY = seg.isSup ? (y - supRaise) : y;
+    textSize(layout[s].size);
+    text(seg.text, cursorX, segY);
+    layout[s].left = cursorX;
+    layout[s].centerY = (vAlign === TOP) ? (segY + layout[s].size * TOP_ALIGN_CENTER_OFFSET_RATIO) : segY;
+    cursorX += layout[s].width;
   }
 
   textSize(baseSize);
   textAlign(hAlign, vAlign);
+
+  // Draw a circle around the base digit ("B"), the exponent digit ("E"), or
+  // both together ("P") - positioned/sized from the same layout just used to
+  // draw the text, so it always matches regardless of font size or position.
+  // Only meaningful for the base+exponent (2-segment) vocab strings this is
+  // actually used for.
+  if (circleType && layout.length === 2) {
+    push();
+    noFill(); stroke(circleStroke); strokeWeight(circleStrokeWeight);
+
+    var baseSeg = layout[0], expSeg = layout[1];
+    var baseCenterX = baseSeg.left + baseSeg.width / 2;
+    var expCenterX = expSeg.left + expSeg.width / 2;
+
+    if (circleType === "B") {
+      ellipse(baseCenterX, baseSeg.centerY, baseSeg.width * 1.5, baseSeg.size * 1.05);
+    } else if (circleType === "E") {
+      ellipse(expCenterX, expSeg.centerY, expSeg.width * 1.7, expSeg.size * 1.3);
+    } else if (circleType === "P") {
+      var baseInkHalf = (baseSeg.size * DIGIT_INK_HEIGHT_RATIO) / 2;
+      var expInkHalf = (expSeg.size * DIGIT_INK_HEIGHT_RATIO) / 2;
+      var top = expSeg.centerY - expInkHalf;
+      var bottom = baseSeg.centerY + baseInkHalf;
+      var pCenterX = startX + totalWidth / 2;
+      var pCenterY = (top + bottom) / 2;
+      ellipse(pCenterX, pCenterY, totalWidth * 1.2, (bottom - top) * 1.25);
+    }
+    pop();
+  }
 }
 
 
@@ -1255,10 +1300,9 @@ if (startSequencePhase > 0) {
     if (isFraction) {
       var fParts = optStr.split("\n—\n"); textSize(19); drawSupText(fParts[0], targetX, fuelY - 10);
       stroke("black"); strokeWeight(2); line(targetX - 10, fuelY + 2, targetX + 10, fuelY + 2);
-      noStroke(); drawSupText(fParts[1], targetX, fuelY + 14);
+      noStroke(); drawSupText(fParts[1], targetX, fuelY + 21); // pushed down from +14: the denominator's exponent digit is raised, so it needs extra clearance below the bar
     } else if (isVocab) {
-      textSize(24); drawSupText(optStr, targetX, fuelY); noFill(); stroke("blue"); strokeWeight(3);
-      if (circleType === "B") ellipse(targetX - 4, fuelY + 1, 19, 24); else if (circleType === "E") ellipse(targetX + 6, fuelY - 4, 14, 17); else if (circleType === "P") ellipse(targetX + 1, fuelY - 2, 40, 31);
+      textSize(24); drawSupText(optStr, targetX, fuelY, CENTER, CENTER, circleType);
       noStroke();
     } else {
       if (optStr.length >= 7) textSize(18); else if (optStr.length >= 5) textSize(22); else textSize(28);
@@ -1497,32 +1541,32 @@ function drawPausedScreen() {
   noStroke(); fill("red"); textSize(30); textStyle(BOLD); text("INCORRECT!", 200, currentY); textStyle(NORMAL);
 
   currentY += h1 + gap;
-  fill("white"); if (expressionString.indexOf("Identify:") === 0) textSize(18); else textSize(22); drawSupText("Question: " + expressionString, 200, currentY);
+  fill("white"); if (expressionString.indexOf("Identify:") === 0) textSize(18); else textSize(22); drawSupText("Question: " + expressionString, 200, currentY, CENTER, TOP);
 
   currentY += h2 + gap;
   var leftY = currentY; var rightY = currentY;
 
   fill("red"); textSize(18); textStyle(BOLD); text("Your Answer:", 100, leftY); textStyle(NORMAL); leftY += 20;
   if (pickedIsFraction) {
-    var pParts = pAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(pParts[0], 100, leftY); stroke("white"); strokeWeight(2); line(90, leftY + 22, 110, leftY + 22); noStroke(); drawSupText(pParts[1], 100, leftY + 28); leftY += 60;
+    var pParts = pAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(pParts[0], 100, leftY, CENTER, TOP); stroke("white"); strokeWeight(2); line(90, leftY + 22, 110, leftY + 22); noStroke(); drawSupText(pParts[1], 100, leftY + 35, CENTER, TOP); leftY += 60;
   } else if (pIsVocab) {
-    fill("white"); textSize(22); drawSupText(pAns, 100, leftY); noFill(); stroke("blue"); strokeWeight(3); if (pCircleType === "B") ellipse(100 - 4, leftY + 11, 18, 22); else if (pCircleType === "E") ellipse(100 + 5, leftY + 7, 14, 17); else if (pCircleType === "P") ellipse(100 + 1, leftY + 9, 36, 28); noStroke(); leftY += 30;
-  } else { fill("white"); textSize(22); drawSupText(pAns, 100, leftY); leftY += 30; }
+    fill("white"); textSize(22); drawSupText(pAns, 100, leftY, CENTER, TOP, pCircleType); noStroke(); leftY += 30;
+  } else { fill("white"); textSize(22); drawSupText(pAns, 100, leftY, CENTER, TOP); leftY += 30; }
 
   fill("lime"); textSize(18); textStyle(BOLD); text("Correct Answer:", 300, rightY); textStyle(NORMAL); rightY += 20;
   if (correctIsFraction) {
-    var cParts = cAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(cParts[0], 300, rightY); stroke("white"); strokeWeight(2); line(290, rightY + 22, 310, rightY + 22); noStroke(); drawSupText(cParts[1], 300, rightY + 28); rightY += 60;
+    var cParts = cAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(cParts[0], 300, rightY, CENTER, TOP); stroke("white"); strokeWeight(2); line(290, rightY + 22, 310, rightY + 22); noStroke(); drawSupText(cParts[1], 300, rightY + 35, CENTER, TOP); rightY += 60;
   } else if (cIsVocab) {
-    fill("white"); textSize(22); drawSupText(cAns, 300, rightY); noFill(); stroke("blue"); strokeWeight(3); if (cCircleType === "B") ellipse(300 - 4, rightY + 11, 18, 22); else if (cCircleType === "E") ellipse(300 + 5, rightY + 7, 14, 17); else if (cCircleType === "P") ellipse(300 + 1, rightY + 9, 36, 28); noStroke(); rightY += 30;
-  } else { fill("white"); textSize(22); drawSupText(cAns, 300, rightY); rightY += 30; }
+    fill("white"); textSize(22); drawSupText(cAns, 300, rightY, CENTER, TOP, cCircleType); noStroke(); rightY += 30;
+  } else { fill("white"); textSize(22); drawSupText(cAns, 300, rightY, CENTER, TOP); rightY += 30; }
 
   currentY += h3 + gap;
 
   if (explanationString.indexOf("A negative exponent flips") === 0) {
     var expParts = explanationString.split(":\n"); fill("lime"); textSize(15); textLeading(18); text(expParts[0] + ":", 200, currentY);
     var eqY = currentY + 40; var eqParts = expParts[1].split(" = "); var leftDenom = eqParts[0].substring(4); var rightDenom = eqParts[1].substring(4);
-    text("1", 150, eqY); stroke("lime"); strokeWeight(2); line(138, eqY + 22, 162, eqY + 22); noStroke(); drawSupText(leftDenom, 150, eqY + 28);
-    text("=", 200, eqY + 12); text("1", 250, eqY); stroke("lime"); strokeWeight(2); line(238, eqY + 22, 262, eqY + 22); noStroke(); drawSupText(rightDenom, 250, eqY + 28);
+    text("1", 150, eqY); stroke("lime"); strokeWeight(2); line(138, eqY + 22, 162, eqY + 22); noStroke(); drawSupText(leftDenom, 150, eqY + 34, CENTER, TOP);
+    text("=", 200, eqY + 12); text("1", 250, eqY); stroke("lime"); strokeWeight(2); line(238, eqY + 22, 262, eqY + 22); noStroke(); drawSupText(rightDenom, 250, eqY + 34, CENTER, TOP);
   } else { fill("lime"); textSize(15); textLeading(18); text(explanationString, 200, currentY); }
 
   currentY += h4 + gap;
@@ -1545,10 +1589,8 @@ function drawReviewItem(str, cx, cy) {
   textAlign(CENTER, CENTER); fill("white");
 
   if (str.indexOf("—") !== -1) {
-      var fParts = str.split("\n—\n"); textSize(12); drawSupText(fParts[0], cx, cy - 8); stroke("white"); strokeWeight(1.5); line(cx - 7, cy, cx + 7, cy); noStroke(); drawSupText(fParts[1], cx, cy + 8);
-  } else { textSize(18); drawSupText(str, cx, cy); }
-
-  if (isVocab) { noFill(); stroke("cyan"); strokeWeight(2); if (circle === "B") ellipse(cx - 3, cy, 14, 18); else if (circle === "E") ellipse(cx + 6, cy - 4, 10, 14); else if (circle === "P") ellipse(cx + 1, cy - 1, 30, 22); noStroke(); }
+      var fParts = str.split("\n—\n"); textSize(12); drawSupText(fParts[0], cx, cy - 8); stroke("white"); strokeWeight(1.5); line(cx - 7, cy, cx + 7, cy); noStroke(); drawSupText(fParts[1], cx, cy + 13); // pushed down from +8: the denominator's exponent digit is raised, so it needs extra clearance below the bar
+  } else { textSize(18); drawSupText(str, cx, cy, CENTER, CENTER, isVocab ? circle : null, "cyan", 2); }
   textAlign(LEFT, CENTER);
 }
 
