@@ -5,6 +5,7 @@
 // ---- Canvas bootstrap (Code.org injects this behind the scenes) ----
 function setup() {
   createCanvas(400, 400).parent('game-canvas-slot');
+  pixelDensity(4); // renders into a 1600x1600 backing buffer instead of 400x400 so the canvas stays sharp when CSS stretches it up to 700px (desktop) or fullscreen - all game coordinates stay in the same 0-400 logical space either way
   frameRate(30); // Game Lab's default frame rate; the game's speed constants were tuned against it
   angleMode(DEGREES); // Game Lab uses degrees everywhere (rotate(), arc() angles, sprite.rotation, and this game's own cos()/sin() tracing-paper math), unlike plain p5.js's radians default
 }

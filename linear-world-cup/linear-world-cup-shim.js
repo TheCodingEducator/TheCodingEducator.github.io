@@ -13,6 +13,7 @@
 // ---- Canvas bootstrap (Code.org injects this behind the scenes) ----
 function setup() {
   createCanvas(400, 400).parent('game-canvas-slot');
+  pixelDensity(4); // renders into a 1600x1600 backing buffer instead of 400x400 so the canvas stays sharp when CSS stretches it up to 700px (desktop) or fullscreen - all game coordinates stay in the same 0-400 logical space either way
   // The game's own clock/timer math is tuned for 60fps specifically - e.g.
   // "enemyAnimDuration = round(random(240, 240)); // 4 seconds at 60fps"
   // and gameClockSeconds advancing by 50/60 per frame - so this is the one
