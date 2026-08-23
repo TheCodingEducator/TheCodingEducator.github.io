@@ -20,11 +20,11 @@ var equipped = { car: "red", trail: "none", boost: "none", world: "default" };
 
 var shopData = {
   cars: [
-    { id: "red", name: "Red Car", price: 300 }, { id: "blue", name: "Blue Car", price: 300 },
-    { id: "green", name: "Green Car", price: 300 }, { id: "purple", name: "Purple Car", price: 300 },
-    { id: "orange", name: "Orange Car", price: 300 }, { id: "pink", name: "Pink Car", price: 300 },
-    { id: "yellow", name: "Yellow Car", price: 300 }, { id: "black", name: "Black Car", price: 300 },
-    { id: "white", name: "White Car", price: 300 }, { id: "superhero", name: "Superhero", price: 1000 }
+    { id: "red", name: "Red Car", price: 100 }, { id: "blue", name: "Blue Car", price: 100 },
+    { id: "green", name: "Green Car", price: 100 }, { id: "purple", name: "Purple Car", price: 100 },
+    { id: "orange", name: "Orange Car", price: 100 }, { id: "pink", name: "Pink Car", price: 100 },
+    { id: "yellow", name: "Yellow Car", price: 100 }, { id: "black", name: "Black Car", price: 100 },
+    { id: "white", name: "White Car", price: 100 }, { id: "superhero", name: "Superhero", price: 1000 }
   ],
 
   trails: [
