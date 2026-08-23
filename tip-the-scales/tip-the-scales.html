@@ -214,7 +214,7 @@
 
     /* --- Visual Scale Logic --- */
     .scale-wrapper {
-      flex: 1; min-height: 0; width: 100%; position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; overflow: visible;
+      flex: 1; min-height: 0; width: 100%; position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; overflow: visible;
       margin-top: 0.25rem;
       margin-bottom: 0.75rem;
     }
@@ -223,6 +223,7 @@
       position: relative; width: 440px; height: 280px;
       display: flex; flex-direction: column; align-items: center; user-select: none;
       transform-origin: top center;
+      flex-shrink: 0; /* without this, flexbox squishes the box to fit scale-wrapper on its own (default flex-shrink:1) before fitScale()'s JS ever measures/scales it, contaminating the "true unscaled geometry" measurement with an unintended layout squish - the box must stay at its real 440x280 size so transform:scale() is the only thing resizing it */
     }
 
     .pivot-group { position: absolute; top: 20px; display: flex; flex-direction: column; align-items: center; width: 100%; }
@@ -934,12 +935,51 @@
       const container = document.getElementById('scale-container');
       if (!wrapper || !container) return;
 
-      let availableHeight = wrapper.clientHeight;
-      let availableWidth = wrapper.clientWidth - 20;
-      if (availableHeight <= 0 || availableWidth <= 0) return;
+      // Clamped to a small positive floor rather than bailing out - on an
+      // extreme viewport (e.g. sandbox mode's side panels leaving no room
+      // on a very short landscape window) clientHeight/Width can genuinely
+      // hit 0, and returning early would leave the container with whatever
+      // transform it last had (often none at all, i.e. its full natural
+      // 440x280 size) - a far worse collision than a very small scale.
+      let availableHeight = Math.max(wrapper.clientHeight, 1);
+      let availableWidth = Math.max(wrapper.clientWidth - 12, 1);
 
-      const scaleW = availableWidth / 440;
-      const scaleH = availableHeight / 280;
+      // Measure the container's TRUE unscaled content footprint instead of
+      // assuming the nominal 440x280 artwork box. Balloons/tiles/grouped-
+      // parenthesis stacks (e.g. several terms piled on one pan) render
+      // well outside that box, so fitting against the fixed size let real
+      // content spill past the wrapper's edges - this is what was cutting
+      // off the horizontal sides. Resetting the transform first measures
+      // genuine scale-1 geometry (this doesn't cause a visible flash: the
+      // reset and the new transform are both set before the browser's next
+      // paint, since nothing yields to the event loop in between).
+      container.style.transform = 'none';
+      const box = container.getBoundingClientRect();
+      const originX = box.left + box.width / 2; // horizontally centered anchor
+      const originY = box.bottom; // bottom-anchored (see .scale-wrapper's justify-content:flex-end), so the scale reaches down toward whatever sits below the wrapper instead of leaving a gap above it
+
+      // Sentinel init (not box.top/box.bottom!) - a fallback of the box's
+      // own edges would never get overwritten by the loop below whenever
+      // real content falls short of that edge (exactly the case for the
+      // bottom edge: the 280px box has empty space below the artwork), so
+      // it has to genuinely track the true min/max seen, then fall back to
+      // the nominal box only if nothing was measured at all.
+      let halfW = 0, contentTop = Infinity, contentBottom = -Infinity;
+      const nodes = container.querySelectorAll('*');
+      for (let i = 0; i < nodes.length; i++) {
+        const r = nodes[i].getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue;
+        halfW = Math.max(halfW, originX - r.left, r.right - originX);
+        contentTop = Math.min(contentTop, r.top);
+        contentBottom = Math.max(contentBottom, r.bottom);
+      }
+      if (contentBottom < contentTop) { halfW = box.width / 2; contentTop = box.top; contentBottom = box.bottom; }
+
+      const up = originY - contentTop;              // distance from the bottom anchor up to the content's top
+      const down = contentBottom - originY;          // signed: negative when the visible art (pans/beam) falls short of the container's own declared bottom edge, which is the normal case - the 280px box has empty space below the artwork, so bottom-anchoring the box alone still leaves a gap above the controls bar
+
+      const scaleW = (availableWidth / 2) / Math.max(halfW, 1);
+      const scaleH = availableHeight / Math.max(up + Math.max(down, 0), 1);
 
       // Capped at whatever actually fits the wrapper (with a small safety
       // margin) - previously an extra 1.25x/1.45x was applied AFTER this
@@ -950,8 +990,17 @@
       // landscape, and a narrowed desktop window.
       let finalScale = Math.min(scaleW, scaleH, 6.0) * 0.95;
 
-      container.style.transformOrigin = (state.mode === 'sandbox') ? 'bottom center' : 'top center';
-      container.style.transform = `scale(${finalScale})`;
+      // Close the gap between the true visible content's bottom edge and
+      // the wrapper's bottom edge (the down < 0 case above) by nudging the
+      // whole scaled assembly down by that many real screen pixels -
+      // translateY is applied after scale() so this shift isn't itself
+      // affected by finalScale - so the scale visually reaches all the way
+      // down to the bar below it instead of floating with dead space
+      // beneath it.
+      const gapPx = down < 0 ? -down * finalScale : 0;
+
+      container.style.transformOrigin = 'bottom center';
+      container.style.transform = `translateY(${gapPx}px) scale(${finalScale})`;
     }
 
     const observer = new ResizeObserver(() => { fitScale(); });
