@@ -442,6 +442,15 @@ function updateHumanoids() {
     var dx = hoop.x - atkBody.x; var dy = hoop.y - (atkBody.y - 26);
     var shootAngle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
     pinArm(atkLarm, atkBody, true, shootAngle); pinArm(atkRarm, atkBody, false, shootAngle);
+
+    // Keep the ball glued to the shooter's raised hands (same pivot/reach math
+    // as pinArm's hand-tip position) instead of a fixed offset above the body,
+    // so it visibly travels up with the arms as they lift toward the hoop.
+    if (gameState === "pre_question") {
+      var shootRad = shootAngle * (Math.PI / 180);
+      ball.x = atkBody.x - 35 * Math.sin(shootRad);
+      ball.y = (atkBody.y - 26) + 35 * Math.cos(shootRad);
+    }
   } else if (gameState === "play" || gameState === "shot_clock_violation") {
     pinArm(defLarm, defBody, true, 45); pinArm(defRarm, defBody, false, -45);
     if (gameState === "shot_clock_violation") { pinArm(atkLarm, atkBody, true, 10); pinArm(atkRarm, atkBody, false, -10); }
