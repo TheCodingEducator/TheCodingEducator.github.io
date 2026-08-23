@@ -1214,8 +1214,11 @@ if (startSequencePhase > 0) {
           isSafe = true;
           for (var i = 0; i < obstacles.length; i++) {
               var otherCar = obstacles.get(i);
-              // Only check for overlap if they are in the SAME lane
-              if (otherCar.x === pickLane && Math.abs(otherCar.y - spawnY) < 150) {
+              // Check the lane the car is IN OR HEADING TOWARD (targetX/intentX),
+              // not just its current x - a merging car's x sits off at the road
+              // edge (40 or 360) the whole time it's merging, so checking raw x
+              // alone misses cars already committed to arriving in this lane.
+              if ((otherCar.x === pickLane || otherCar.targetX === pickLane || otherCar.intentX === pickLane) && Math.abs(otherCar.y - spawnY) < 150) {
                   isSafe = false;
                   spawnY -= 150;
                   break;
