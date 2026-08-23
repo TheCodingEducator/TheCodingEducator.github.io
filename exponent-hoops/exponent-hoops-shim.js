@@ -123,7 +123,13 @@ function _glNormalizeKey(k) {
   return String(k).toLowerCase();
 }
 
-window.addEventListener('keydown', function (e) { _glKeysNow[_glNormalizeKey(e.key)] = true; });
+// Arrow keys and space scroll the page by default - block that while playing,
+// since it fights the player and shoves the canvas out from under them.
+var _glScrollKeys = { ' ': true, 'ArrowUp': true, 'ArrowDown': true, 'ArrowLeft': true, 'ArrowRight': true, 'Spacebar': true };
+window.addEventListener('keydown', function (e) {
+  if (_glScrollKeys[e.key]) e.preventDefault();
+  _glKeysNow[_glNormalizeKey(e.key)] = true;
+});
 window.addEventListener('keyup', function (e) { _glKeysNow[_glNormalizeKey(e.key)] = false; });
 window.addEventListener('blur', function () { _glKeysNow = {}; }); // avoid stuck keys after alt-tab
 
