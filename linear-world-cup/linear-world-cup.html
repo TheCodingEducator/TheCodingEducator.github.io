@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear World Cup</title>
+<meta name="description" content="Score goals by writing the slope-intercept equation that passes through your teammates and the goal. A free, COPPA-compliant browser game for students.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Linear World Cup">
+<meta property="og:description" content="Score goals by writing the slope-intercept equation that passes through your teammates and the goal.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thecodingeducator.github.io/linear-world-cup/linear-world-cup.html">
+<meta name="twitter:card" content="summary">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+     crossorigin="anonymous"></script>
+<style>
+  :root {
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  #game-canvas-slot canvas {
+    display: block;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+  @media (min-width: 900px) {
+    #game-canvas-slot canvas {
+      /* p5 sets an inline width/height style on the canvas by default,
+         which otherwise beats these rules regardless of specificity */
+      width: min(78vh, 700px) !important;
+      height: min(78vh, 700px) !important;
+      max-width: none;
+      max-height: none;
+    }
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  /* Make the canvas fill the screen (preserving its square aspect ratio)
+     while its container is fullscreened, instead of staying capped at
+     the normal page's max size. */
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #111; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #111; width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen canvas, #game-canvas-slot:-webkit-full-screen canvas {
+    width: min(100vw, 100vh) !important;
+    height: min(100vw, 100vh) !important;
+    max-width: none;
+    max-height: none;
+  }
+</style>
+<script src="linear-world-cup-p5.min.js"></script>
+</head>
+<body>
+<a class="back-link" href="../index.html">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
+<h1 class="sr-only">Linear World Cup</h1>
+<p class="sr-only">A soccer game where you score goals and complete passes by writing the slope-intercept equation of the line connecting your player to a teammate or the goal. Choose a proportional (y = mx) or non-proportional (y = mx + b) mode, play against the computer or a friend, and compete in a full tournament bracket. Controls: type digits for the slope numerator, denominator, and y-intercept, minus key or on-screen button to toggle negative, enter to kick, mouse or the on-screen keyboard to play on any device.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot"></div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.EE.B.6</span>
+      <p>Use similar triangles to explain why the slope m is the same between any two distinct points on a non-vertical line in the coordinate plane; derive the equation y = mx for a line through the origin and the equation y = mx + b for a line intercepting the vertical axis at b.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.F.A.3</span>
+      <p>Interpret the equation y = mx + b as defining a linear function, whose graph is a straight line; give examples of functions that are not linear.</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Linear World Cup covers the full slope-intercept unit - writing y = mx + b, distinguishing proportional relationships (b = 0) from non-proportional ones, and reading slope as rise-over-run - by making the equation itself the only way to move the ball. Every pass and every shot requires typing a real slope (as a fraction) and a real y-intercept, then watching that exact line get drawn across the field, so students see immediately whether their equation was geometrically correct, not just numerically close.</p>
+  <ul>
+    <li><strong>Proportional vs. non-proportional, built into the mode select.</strong> The PROPORTIONAL mode locks b = 0 and only asks for slope, isolating that skill before NON-PROPORTIONAL introduces a real y-intercept - mirroring the exact progression CCSS.8.EE.B.6 describes from y = mx to y = mx + b.</li>
+    <li><strong>The ball's position is the y-intercept.</strong> Since every pass starts from x = 0, the ball's current coordinate is always (0, b) - so a wrong y-intercept guess is caught instantly as "incorrect y-intercept," reinforcing what b actually represents on the graph rather than treating it as an abstract constant.</li>
+    <li><strong>Slope entered as a true fraction.</strong> Students type a numerator and denominator (with a sign toggle), not a decimal, which keeps rise-over-run reasoning front and center and prevents rounding from masking a conceptual error.</li>
+    <li><strong>Three support levels for differentiation.</strong> EASY shows a live preview of the line as it's typed, HARD hides that preview (and shifts the y-axis numbering so answers can't be eyeballed from familiar values), and 2-PLAYER turns review into a head-to-head match for two students sharing a screen.</li>
+    <li><strong>A computer opponent and a tournament bracket.</strong> Matches against the AI and an eight-team single-elimination tournament give repeated, game-like reps of the same skill without a lesson ever feeling like a worksheet.</li>
+    <li><strong>Immediate geometric feedback.</strong> A missed pass or shot draws the actual line the student's equation describes, so "the ball went to the wrong place" is always visibly traceable back to which part of the equation - slope or intercept - was wrong.</li>
+    <li><strong>Low-stakes, replayable practice.</strong> No accounts, no penalty for a wrong equation beyond losing possession, and an on-screen numeric keypad so the game works identically on a classroom tablet or a touchscreen Chromebook.</li>
+  </ul>
+</section>
+
+<script src="linear-world-cup-shim.js"></script>
+<script src="linear-world-cup-game.js"></script>
+<script src="linear-world-cup-hook.js"></script>
+
+<script>
+  function toggleFullscreen() {
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFs) {
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) req.call(el);
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }
+  function updateFullscreenBtn() {
+    var btn = document.getElementById('fullscreen-btn');
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+</script>
+</body>
+</html>
