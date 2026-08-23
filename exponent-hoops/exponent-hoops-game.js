@@ -825,16 +825,16 @@ function renderMathUI_1P() {
   stroke("#333333"); strokeWeight(1); line(50, 55, 350, 55); noStroke(); fill("white"); textSize(38);
 
   if (isFraction) {
-    drawSupText(questionText, 200, 185); stroke("white"); strokeWeight(2); line(165, 210, 235, 210); noStroke(); drawSupText(subQuestionText, 200, 236);
+    drawSupText(questionText, 200, 185); stroke("white"); strokeWeight(2); line(165, 218, 235, 218); noStroke(); drawSupText(subQuestionText, 200, 244);
   } else {
     drawSupText(questionText, 200, 210);
   }
 
   var buttonLayout = [
-    { x: 200, y: 100, key: "up", altKey: "w", label: "[ UP ]" },
-    { x: 200, y: 310, key: "down", altKey: "s", label: "[ DOWN ]" },
-    { x: 75, y: 205, key: "left", altKey: "a", label: "[ LEFT ]" },
-    { x: 325, y: 205, key: "right", altKey: "d", label: "[ RIGHT ]" }
+    { x: 200, y: 100, key: "up", altKey: "w", arrow: "▲" },
+    { x: 200, y: 310, key: "down", altKey: "s", arrow: "▼" },
+    { x: 75, y: 205, key: "left", altKey: "a", arrow: "◀" },
+    { x: 325, y: 205, key: "right", altKey: "d", arrow: "▶" }
   ];
 
   for (var i = 0; i < 4; i++) {
@@ -844,8 +844,7 @@ function renderMathUI_1P() {
     fill(hover ? "#4a90d9" : "white"); noStroke(); rect(bx - bw/2, by - bh/2, bw, bh, 8);
     fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); drawSupText(options[i].text, bx, by - 9); textStyle(NORMAL);
 
-    fill("#333333"); rect(bx - 40, by + 13, 80, 14, 4);
-    fill("white"); textSize(10); textStyle(BOLD); text(buttonLayout[i].label, bx, by + 24); textStyle(NORMAL);
+    fill(hover ? "white" : "#111111"); textSize(18); textStyle(BOLD); textAlign(CENTER, CENTER); text(buttonLayout[i].arrow, bx, by + 19); textStyle(NORMAL);
 
     if (keyWentDown(buttonLayout[i].key) || keyWentDown(buttonLayout[i].altKey) || (mouseWentDown("leftButton") && hover)) {
       lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
