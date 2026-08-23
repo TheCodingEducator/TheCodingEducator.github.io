@@ -164,11 +164,43 @@
     background: rgba(0,0,0,0.8);
     border-color: rgba(255,255,255,0.6);
   }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  /* Make the canvas fill the screen (preserving its square aspect ratio)
+     while its container is fullscreened, instead of staying capped at
+     the normal page's max size. */
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #111; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #111; width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen canvas, #game-canvas-slot:-webkit-full-screen canvas {
+    width: min(100vw, 100vh) !important;
+    height: min(100vw, 100vh) !important;
+    max-width: none;
+    max-height: none;
+  }
 </style>
 <script src="exponent-racer-p5.min.js"></script>
 </head>
 <body>
 <a class="back-link" href="../index.html">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
 <h1 class="sr-only">Exponent Racer</h1>
 <p class="sr-only">A driving game where you steer between lanes and answer exponent math questions to refuel and score points. Controls: arrow keys or WASD to move, space or enter to confirm answers, mouse to click menu buttons.</p>
 
@@ -210,5 +242,26 @@
 <script src="exponent-racer-game.js"></script>
 <script src="exponent-racer-hook.js"></script>
 <script src="exponent-racer-mobile-controls.js"></script>
+
+<script>
+  function toggleFullscreen() {
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFs) {
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) req.call(el);
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }
+  function updateFullscreenBtn() {
+    var btn = document.getElementById('fullscreen-btn');
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+</script>
 </body>
 </html>

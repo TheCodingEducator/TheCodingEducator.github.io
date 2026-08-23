@@ -50,6 +50,10 @@
       display: flex;
       flex-direction: column;
     }
+    /* When fullscreened, the frame is the only thing on screen (no topbar
+       taking up the top 44px), so it can use the full viewport height. */
+    .game-frame:fullscreen { height: 100vh; background: #f8fafc; }
+    .game-frame:-webkit-full-screen { height: 100vh; background: #f8fafc; }
 
     .mono { font-family: 'JetBrains Mono', monospace; }
     .hidden { display: none !important; }
@@ -446,6 +450,15 @@
     }
     .site-back-link:hover, .site-back-link:focus-visible { background: #f1f5f9; border-color: #cbd5e1; }
 
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+    .fullscreen-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 999px;
+      color: #1e293b; font: 700 13px 'Inter', -apple-system, sans-serif; cursor: pointer;
+    }
+    .fullscreen-btn:hover, .fullscreen-btn:focus-visible { background: #f1f5f9; border-color: #cbd5e1; }
+
     .ccss-widget { position: relative; }
     .ccss-toggle {
       display: inline-flex; align-items: center; gap: 6px;
@@ -481,24 +494,27 @@
 
 <div class="site-topbar">
   <a class="site-back-link" href="../index.html">&larr; All games</a>
-  <div class="ccss-widget">
-    <button class="ccss-toggle" onclick="toggleCcssPanel()" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
-    <div id="ccss-panel" class="ccss-panel hidden">
-      <h4>Common Core Standards</h4>
-      <div class="ccss-entry">
-        <span class="code">CCSS.MATH.CONTENT.6.EE.B.7</span>
-        <p>Solve real-world and mathematical problems by writing and solving equations of the form x + p = q and px = q for cases in which p, q and x are all nonnegative rational numbers.</p>
-        <p class="applies">Applies to: 1-Step Equations</p>
-      </div>
-      <div class="ccss-entry">
-        <span class="code">CCSS.MATH.CONTENT.7.EE.B.4a</span>
-        <p>Solve equations of the form px + q = r and p(x + q) = r fluently.</p>
-        <p class="applies">Applies to: 2-Step Equations, Complex Equations</p>
-      </div>
-      <div class="ccss-entry">
-        <span class="code">CCSS.MATH.CONTENT.8.EE.C.7b</span>
-        <p>Solve linear equations with rational number coefficients, including equations whose solutions require expanding expressions using the distributive property and collecting like terms.</p>
-        <p class="applies">Applies to: Variables Both Sides, Complex Equations</p>
+  <div class="topbar-right">
+    <button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
+    <div class="ccss-widget">
+      <button class="ccss-toggle" onclick="toggleCcssPanel()" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
+      <div id="ccss-panel" class="ccss-panel hidden">
+        <h4>Common Core Standards</h4>
+        <div class="ccss-entry">
+          <span class="code">CCSS.MATH.CONTENT.6.EE.B.7</span>
+          <p>Solve real-world and mathematical problems by writing and solving equations of the form x + p = q and px = q for cases in which p, q and x are all nonnegative rational numbers.</p>
+          <p class="applies">Applies to: 1-Step Equations</p>
+        </div>
+        <div class="ccss-entry">
+          <span class="code">CCSS.MATH.CONTENT.7.EE.B.4a</span>
+          <p>Solve equations of the form px + q = r and p(x + q) = r fluently.</p>
+          <p class="applies">Applies to: 2-Step Equations, Complex Equations</p>
+        </div>
+        <div class="ccss-entry">
+          <span class="code">CCSS.MATH.CONTENT.8.EE.C.7b</span>
+          <p>Solve linear equations with rational number coefficients, including equations whose solutions require expanding expressions using the distributive property and collecting like terms.</p>
+          <p class="applies">Applies to: Variables Both Sides, Complex Equations</p>
+        </div>
       </div>
     </div>
   </div>
@@ -1778,6 +1794,25 @@
         document.querySelector('.ccss-toggle').setAttribute('aria-expanded', 'false');
       }
     });
+
+    function toggleFullscreen() {
+      var el = document.querySelector('.game-frame');
+      var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!isFs) {
+        var req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) req.call(el);
+      } else {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
+      }
+    }
+    function updateFullscreenBtn() {
+      var btn = document.getElementById('fullscreen-btn');
+      var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+    }
+    document.addEventListener('fullscreenchange', updateFullscreenBtn);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
   </script>
 </body>
 </html>
