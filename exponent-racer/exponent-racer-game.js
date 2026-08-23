@@ -376,7 +376,7 @@ function drawShopScreen() {
                   totalCoins -= item.price; unlockedItems[shopTab].push(item.id); equipped[shopTab.slice(0, -1)] = item.id; playSound("sound://category_achievements/lighthearted_bonus_objective_1.mp3");
                 }
               } else if (!isEquipped) {
-                equipped[shopTab.slice(0, -1)] = item.id; playSound("sound://category_pop/click_pop_1.mp3");
+                equipped[shopTab.slice(0, -1)] = item.id; playSound("sound://category_pop/puzzle_game_ui_pop_01.mp3");
               }
           }
         }
@@ -1805,7 +1805,8 @@ function drawWinSequence() {
     // Start the car zoom once the background is stopped
     if (winCarAccel === 0) {
       if (!engineSoundPlayed) {
-        playSound("sound://category_vehicles/formula_1_car_pass_by.mp3");
+        playSound("sound://category_whoosh/deep_pass_by_whoosh_7_fast.mp3");
+        playSound("sound://category_whoosh/deep_pass_by_whoosh_1.mp3");
         engineSoundPlayed = true;
       }
       winCarAccel = 0.5; // Trigger the acceleration
@@ -1957,7 +1958,7 @@ function drawMaxVelocityPrompt() {
     }
     // Check if clicked the Gray Button (X: 100-300, Y: 340-380)
     else if (mouseX > 100 && mouseX < 300 && mouseY > 340 && mouseY < 380) {
-        playSound("sound://category_pop/click.mp3"); // Optional sound
+        playSound("sound://category_pop/puzzle_game_ui_pop_tiny_01.mp3"); // Optional sound
         gameState = "play"; // Unpause and keep going
     }
   }
