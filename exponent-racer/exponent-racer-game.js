@@ -246,6 +246,7 @@ function draw() {
       if (score >= 75 && gameMode === "easy" && !maxVelocityPromptShown) {
           maxVelocityPromptShown = true;
           gameState = "maxVelocityPrompt";
+          playSound("sound://category_achievements/puzzle_game_secret_unlock_01.mp3");
       } else {
           playGame(false);
       }
@@ -302,8 +303,8 @@ function drawStartScreen() {
   }
 
   if (mouseWentDown("leftButton")) {
-    if (mouseX > 40 && mouseX < 180 && mouseY > 200 && mouseY < 260) { gameMode = "easy"; skillStates = [true, true, true, true, true, true]; gameState = "skillSelect"; }
-    if (!hardLocked && mouseX > 220 && mouseX < 360 && mouseY > 200 && mouseY < 260) { gameMode = "hard"; for (var s = 0; s < 6; s++) skillStates[s] = unlockedHardSkills[s]; gameState = "skillSelect"; }
+    if (mouseX > 40 && mouseX < 180 && mouseY > 200 && mouseY < 260) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "easy"; skillStates = [true, true, true, true, true, true]; gameState = "skillSelect"; }
+    if (!hardLocked && mouseX > 220 && mouseX < 360 && mouseY > 200 && mouseY < 260) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "hard"; for (var s = 0; s < 6; s++) skillStates[s] = unlockedHardSkills[s]; gameState = "skillSelect"; }
     if (mouseX > 130 && mouseX < 270 && mouseY > 280 && mouseY < 325) { gameState = "shop"; shopScrollY = 0; }
   }
 }
@@ -404,7 +405,7 @@ function drawShopScreen() {
     var tb = tabs[t]; var isSel = (shopTab === tb.id);
     fill(isSel ? "#3498db" : "#7f8c8d"); stroke("white"); strokeWeight(2); rect(tb.x, 70, 90, 30);
     fill("white"); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text(tb.name, tb.x + 45, 85); textStyle(NORMAL);
-    if (mouseWentDown("leftButton") && mouseX > tb.x && mouseX < tb.x + 90 && mouseY > 70 && mouseY < 100) { shopTab = tb.id; shopScrollY = 0; }
+    if (mouseWentDown("leftButton") && mouseX > tb.x && mouseX < tb.x + 90 && mouseY > 70 && mouseY < 100) { playSound("sound://category_app/app_tab_sound.mp3"); shopTab = tb.id; shopScrollY = 0; }
   }
 
   // Footer Mask
@@ -436,7 +437,7 @@ function drawSkillSelectScreen() {
     fill(isLocked ? "#bdc3c7" : "white"); stroke("black"); strokeWeight(2); rect(340, y + 5, 26, 26);
     if (skillStates[i] && !isLocked) { stroke("green"); strokeWeight(4); line(346, y + 18, 351, y + 26); line(351, y + 26, 362, y + 10); }
     else if (isLocked) { stroke("#7f8c8d"); strokeWeight(3); line(346, y + 11, 360, y + 25); line(360, y + 11, 346, y + 25); }
-    if (mouseWentDown("leftButton") && !isLocked && mouseX > 20 && mouseX < 380 && mouseY > y && mouseY < y + 36) { skillStates[i] = !skillStates[i]; showSkillError = false; }
+    if (mouseWentDown("leftButton") && !isLocked && mouseX > 20 && mouseX < 380 && mouseY > y && mouseY < y + 36) { playSound("sound://category_tap/puzzle_game_organic_wood_block_tone_tap_1.mp3"); skillStates[i] = !skillStates[i]; showSkillError = false; }
   }
 
   if (showSkillError) { fill("red"); noStroke(); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text("Select at least 1 skill to begin!", 200, 335); textStyle(NORMAL); }
@@ -453,7 +454,7 @@ function drawSkillSelectScreen() {
       } else if (mouseX > 220 && mouseX < 360) {
         var anyCheckedClick = false;
         for (var j = 0; j < 6; j++) { if (skillStates[j]) anyCheckedClick = true; }
-        if (!anyCheckedClick) showSkillError = true; else { showSkillError = false; startGame(); }
+        if (!anyCheckedClick) showSkillError = true; else { showSkillError = false; playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3"); startGame(); }
       }
     }
   }
@@ -835,7 +836,7 @@ function playGame(isFrozen) {
 
     player.x += (targetCarX - player.x) * handling; player.y += (targetCarY - player.y) * handling;
 
-    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") gameOverReason = "Ran out of gas!"; gameState = "over"; return; }
+    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = "Ran out of gas!"; playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; return; }
 
     if (frameCounter % 200 === 0 && !coinActive && startSequencePhase === 0) {
       coinActive = true;
@@ -1538,7 +1539,7 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
 
   fill("white"); stroke("black"); strokeWeight(2); rect(10, 360, 60, 30);
   fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text("MENU", 40, 375); textStyle(NORMAL);
-  if (mouseWentDown("leftButton") && mouseX > 10 && mouseX < 70 && mouseY > 360 && mouseY < 390) gameState = "start";
+  if (mouseWentDown("leftButton") && mouseX > 10 && mouseX < 70 && mouseY > 360 && mouseY < 390) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); gameState = "start"; }
 }
 
 function drawPausedScreen() {
@@ -1659,9 +1660,12 @@ function drawGameOver() {
   fill("green"); stroke("black"); strokeWeight(2); rect(210, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text("Play Again", 285, btnY + 20); textStyle(NORMAL);
 
   if (mouseWentDown("leftButton")) {
-    if (mouseY > btnY && mouseY < btnY + 40) { if (mouseX > 40 && mouseX < 190) gameState = "start"; else if (mouseX > 210 && mouseX < 360) startGame(); }
+    if (mouseY > btnY && mouseY < btnY + 40) {
+      if (mouseX > 40 && mouseX < 190) { playSound("sound://category_tap/vibrant_ui_mouse_click_1.mp3"); gameState = "start"; }
+      else if (mouseX > 210 && mouseX < 360) { playSound("sound://category_tap/vibrant_ui_mouse_click_1.mp3"); startGame(); }
+    }
   }
-  if (keyWentDown("space") || keyWentDown("enter")) startGame();
+  if (keyWentDown("space") || keyWentDown("enter")) { playSound("sound://category_tap/vibrant_ui_mouse_click_1.mp3"); startGame(); }
   textAlign(CENTER, CENTER);
 }
 
@@ -1889,8 +1893,10 @@ function drawWinScreen() {
   if (mouseWentDown("leftButton")) {
     if (mouseY > 300 && mouseY < 340) {
       if (mouseX > 40 && mouseX < 190) {
+         playSound("sound://category_tap/vibrant_ui_mouse_click_1.mp3");
          gameState = "start";
       } else if (mouseX > 210 && mouseX < 360) {
+         playSound("sound://category_tap/vibrant_ui_mouse_click_1.mp3");
          startGame();
       }
     }
@@ -1898,6 +1904,7 @@ function drawWinScreen() {
 
   // Allow keyboard shortcuts to restart
   if (keyWentDown("space") || keyWentDown("enter")) {
+    playSound("sound://category_tap/vibrant_ui_mouse_click_1.mp3");
     startGame();
   }
 }

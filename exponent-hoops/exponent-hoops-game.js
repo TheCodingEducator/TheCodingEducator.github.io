@@ -147,6 +147,7 @@ function draw() {
       if (shotClock <= 0) {
         gameState = "shot_clock_violation";
         violationTimer = 90; // 3 seconds
+        playSound("sound://category_sports/Double_Whistle_SFX.mp3");
       }
     }
 
@@ -218,6 +219,7 @@ function draw() {
           // SUCCESSFUL STEAL
           gameState = "steal_success";
           stealTimer = 90;
+          playSound("sound://category_achievements/vibrant_game_achievement_2.mp3");
         } else {
           // FAILED STEAL (Triggers if out of range OR RNG percentage fails)
           stealCooldownTimer = maxCooldown;
@@ -410,8 +412,8 @@ function draw() {
     fill("white"); noStroke(); text("MAIN MENU", 200, 293); textStyle(NORMAL);
 
     if (mouseWentDown("leftButton")) {
-      if (hoverResume) { hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
-      if (hoverMenu) { afkStreak = 0; showCorrect = false; showPenalty = false; gameState = "title"; }
+      if (hoverResume) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
+      if (hoverMenu) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); afkStreak = 0; showCorrect = false; showPenalty = false; gameState = "title"; }
     }
   }
 }
@@ -898,7 +900,7 @@ function renderMathUI_2P() {
       if (!defenderLockedOut && defPress) {
         lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
         if (options[i].isCorrect) { showPenalty = true; penaltyTimer = 150; triggerBlock(); }
-        else { defenderLockedOut = true; lockedOptionIndex = i; shakeTimer = 9; }
+        else { defenderLockedOut = true; lockedOptionIndex = i; shakeTimer = 9; playSound("sound://category_tap/slight_negative_select_1.mp3"); }
       }
       if (atkPress) {
         lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
@@ -1046,6 +1048,7 @@ function drawInstructions2P() {
   textStyle(NORMAL);
 
   if (keyWentDown("space") || keyWentDown("enter")) {
+    playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3");
     gameState = "play";
     resetBall();
   }
@@ -1085,7 +1088,7 @@ function drawTitleScreen() {
   fill("white"); noStroke(); textSize(18); text("VERSUS MODE", 295, 331); textStyle(NORMAL);
 
   if (mouseWentDown("leftButton")) {
-    if (hover1P) { gameMode = "1P"; scoreBlue = 0; gameState = "play"; resetBall(); }
-    if (hover2P) { gameMode = "2P"; scoreBlue = 0; scoreRed = 0; possession = 1; gameState = "instructions_2p"; resetBall(); }
+    if (hover1P) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "1P"; scoreBlue = 0; gameState = "play"; resetBall(); }
+    if (hover2P) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "2P"; scoreBlue = 0; scoreRed = 0; possession = 1; gameState = "instructions_2p"; resetBall(); }
   }
 }
