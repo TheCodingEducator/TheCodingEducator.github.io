@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tip the Scales</title>
+  <meta name="description" content="Balance a literal scale to solve linear equations - from one-step basics to distributing and combining like terms. A free, COPPA-compliant browser game for students.">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <meta property="og:title" content="Tip the Scales">
+  <meta property="og:description" content="Balance a literal scale to solve linear equations - from one-step basics to distributing and combining like terms.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://thecodingeducator.github.io/tip-the-scales/tip-the-scales.html">
+  <meta name="twitter:card" content="summary">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+       crossorigin="anonymous"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       STRICT NO-SCROLL LAYOUT & GIANT CLEAR UI
+       ========================================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { min-height: 100%; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      width: 100vw;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* The game's own layout is a strict single-viewport, no-scroll design -
+       kept exactly as built, just given a fixed-height topbar sibling above
+       it instead of <body> owning the full viewport, so a teaching-notes
+       section can live below it (page scrolls to reveal that) without
+       disturbing the game itself, and without any floating overlay that
+       could collide with the game's own tightly-packed corner UI on mobile. */
+    .game-frame {
+      height: calc(100vh - 44px);
+      height: calc(100dvh - 44px);
+      overflow: hidden;
+      width: 100%;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .hidden { display: none !important; }
+
+    /* --- Typography --- */
+    h1 { font-size: 2.5rem; font-weight: 900; background: linear-gradient(to bottom right, #1e293b, #64748b); -webkit-background-clip: text; color: transparent; margin-bottom: 0.5rem; }
+    @media(min-width: 768px) { h1 { font-size: 4.5rem; margin-bottom: 1rem; } }
+    h2 { font-size: 1.75rem; font-weight: 900; color: #1e293b; margin-bottom: 0.25rem; }
+    @media(min-width: 768px) { h2 { font-size: 2.5rem; margin-bottom: 0.5rem; } }
+    h3 { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem; }
+    @media(min-width: 768px) { h3 { font-size: 1.5rem; } }
+    p.subtitle { font-size: 1rem; color: #64748b; font-weight: 500; margin-bottom: 1.5rem; }
+    @media(min-width: 768px) { p.subtitle { font-size: 1.25rem; margin-bottom: 2.5rem; } }
+
+    /* --- Screens --- */
+    .screen {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 0.25rem 0.5rem; height: 100%; max-height: 100%; width: 100%;
+      box-sizing: border-box; justify-content: space-between;
+    }
+    @media(min-width: 768px) { .screen { padding: 0.5rem 2rem; } }
+    .screen-centered { justify-content: center; }
+
+    /* --- Title Screen Elements --- */
+    .title-card { background: white; padding: 2rem; border-radius: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; max-width: 42rem; text-align: center; width: 100%; }
+    @media(min-width: 768px) { .title-card { padding: 4rem; border-radius: 3rem; } }
+    .title-icon { width: 72px; height: 72px; background: linear-gradient(to bottom right, #3b82f6, #4f46e5); border-radius: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(59,130,246,0.3); }
+    @media(min-width: 768px) { .title-icon { width: 110px; height: 110px; border-radius: 2rem; margin-bottom: 2rem; } }
+    .title-icon svg { color: white; width: 36px; height: 36px; }
+    @media(min-width: 768px) { .title-icon svg { width: 56px; height: 56px; } }
+    .title-buttons { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; }
+    @media(min-width: 768px) { .title-buttons { gap: 1rem; } }
+
+    /* --- Top Navigation --- */
+    .top-nav { width: 100%; max-width: 64rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; z-index: 10; position: relative; flex-shrink: 0; }
+    .nav-btn { padding: 0.5rem; background: white; border-radius: 0.75rem; border: 1px solid #e2e8f0; color: #64748b; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; }
+    .nav-btn svg { width: 20px; height: 20px; }
+    @media(min-width: 768px) { .nav-btn { padding: 0.625rem; border-radius: 1rem; } .nav-btn svg { width: 24px; height: 24px; } }
+    .nav-btn:hover { color: #1e293b; background: #f8fafc; }
+    .nav-btn:active { transform: scale(0.9); }
+    .progress-col { display: flex; flex-direction: column; align-items: center; }
+    .progress-label { font-size: 11px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+    .progress-dots { display: flex; gap: 0.375rem; flex-wrap: wrap; justify-content: center; max-width: 280px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; transition: all 0.2s; }
+    @media(min-width: 768px) { .dot { width: 12px; height: 12px; gap: 0.5rem; } }
+    .dot-done { background: #3b82f6; }
+    .dot-current { background: #60a5fa; box-shadow: 0 0 0 2px #bfdbfe; }
+    .dot-pending { background: #e2e8f0; }
+
+    /* --- Buttons & Cards --- */
+    .btn-hero { background: #2563eb; color: white; padding: 1rem 1.5rem; border-radius: 1.25rem; font-weight: 700; font-size: 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.75rem; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.3); transition: all 0.2s; width: 100%; max-width: 340px; margin: 0 auto; }
+    @media(min-width: 768px) { .btn-hero { padding: 1.25rem 2.5rem; font-size: 1.5rem; gap: 1rem; } }
+    .btn-hero:hover { background: #1d4ed8; transform: translateY(-2px); }
+    .btn-hero:active { transform: scale(0.95); }
+    .btn-secondary { background: white; color: #1e293b; border: 2px solid #e2e8f0; box-shadow: none; }
+    .btn-secondary:hover { background: #f1f5f9; border-color: #cbd5e1; }
+
+    .diff-header { text-align: center; margin-bottom: 1.5rem; }
+    @media(min-width: 768px) { .diff-header { margin-bottom: 3rem; } }
+    .card-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; width: 100%; max-width: 56rem; margin: 0 auto; overflow-y: auto; padding: 0.5rem; }
+    @media(min-width: 768px) { .card-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem; } }
+    .diff-card { background: white; padding: 1.25rem; border-radius: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid #f1f5f9; cursor: pointer; transition: all 0.2s; text-align: left; }
+    @media(min-width: 768px) { .diff-card { padding: 2rem; border-radius: 2rem; } }
+    .diff-card:hover { border-color: #60a5fa; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-4px); }
+    .diff-card:active { transform: scale(0.98); }
+    .diff-card.complex { background: linear-gradient(to bottom right, #eef2ff, #eff6ff); border-color: #e0e7ff; }
+    .diff-card.complex:hover { border-color: #818cf8; }
+    .diff-tag { font-family: 'JetBrains Mono', monospace; font-size: 1rem; background: #f8fafc; color: #64748b; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-weight: 700;}
+    .complex .diff-tag { background: rgba(255,255,255,0.5); color: #4f46e5; }
+
+    /* --- Math Fractions CSS --- */
+    .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; font-size: 0.85em; line-height: 1.1; margin: 0 0.15em; }
+    .frac-num { border-bottom: 2px solid currentColor; width: 100%; text-align: center; padding-bottom: 1px; }
+    .frac-den { width: 100%; text-align: center; padding-top: 1px; }
+
+    /* --- Equation Stack Display (Grid Aligned, Centered & Highly Compact) --- */
+    .eq-panel {
+      background: white; padding: 0.125rem 0.5rem;
+      border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 2px solid #f1f5f9;
+      z-index: 10; position: relative; flex-shrink: 0; white-space: nowrap;
+      display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; row-gap: 0;
+      margin-bottom: 0; width: 100%; max-width: 56rem;
+    }
+    @media(min-width: 768px) {
+      .eq-panel { padding: 0.25rem 2rem; border-radius: 1rem; max-width: 64rem; }
+    }
+
+    .eq-left { text-align: right; display: flex; justify-content: flex-end; align-items: center; overflow: visible; flex-wrap: nowrap; }
+    .eq-right { text-align: left; display: flex; justify-content: flex-start; align-items: center; overflow: visible; flex-wrap: nowrap; }
+    .eq-sign { text-align: center; transition: color 0.3s; margin: 0 0.5rem; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; }
+    @media(min-width: 768px) { .eq-sign { margin: 0 1rem; } }
+
+    .eq-main { font-family: 'JetBrains Mono', monospace; font-size: 1.125rem; color: #1e293b; font-weight: 800; line-height: 1; min-height: 1.5rem;}
+    @media(min-width: 768px) { .eq-main { font-size: 1.5rem; min-height: 2rem;} }
+
+    .eq-exp { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; color: #64748b; line-height: 1; margin-top: 0.125rem; min-height: 1rem; }
+    @media(min-width: 768px) { .eq-exp { font-size: 0.875rem; min-height: 1.25rem;} }
+
+    /* --- Message Box (Fixed Overlay) --- */
+    .msg-wrapper { position: fixed; top: 15%; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; width: 90%; display: flex; justify-content: center;}
+    .msg-box { pointer-events: auto; background: #fef2f2; color: #ef4444; padding: 0.75rem 1.5rem; border-radius: 9999px; border: 2px solid #fca5a5; font-weight: 900; font-size: 1rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); animation: bounce-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; max-width: 600px;}
+    @media(min-width: 768px) { .msg-box { font-size: 1.125rem; } }
+    .msg-box svg { width: 24px; height: 24px; flex-shrink: 0; }
+    @keyframes bounce-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    /* =========================================================
+       MAIN GAME AREA (3 Columns)
+       ========================================================= */
+    .game-main-area {
+      flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: row;
+      align-items: stretch; justify-content: space-between; overflow: visible; gap: 0.25rem;
+    }
+    @media(min-width: 768px) { .game-main-area { gap: 0.5rem; } }
+
+    /* --- SIDE PANELS (Sandbox Mode Only) --- */
+    .sandbox-side-panel {
+      width: auto; min-width: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.5rem; background: white; border-radius: 1rem; border: 2px dashed #cbd5e1;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 0.5rem; flex-shrink: 0; z-index: 20;
+    }
+    @media(min-width: 768px) { .sandbox-side-panel { min-width: 180px; padding: 1rem; border-radius: 1.5rem; gap: 1rem; } }
+
+    .side-panel-header { font-size: 12px; font-weight: 900; text-align: center; color: #475569; letter-spacing: 0.05em; line-height: 1.1; margin-bottom: 0.25rem; }
+    @media(min-width: 768px) { .side-panel-header { font-size: 16px; margin-bottom: 0.5rem; } }
+
+    .c-box { width: 100%; border-radius: 0.75rem; padding: 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; border: 1px solid; }
+    @media(min-width: 768px) { .c-box { border-radius: 1rem; padding: 0.75rem; gap: 0.75rem; } }
+    .c-box.var { background: rgba(239,246,255,0.5); border-color: #dbeafe; }
+    .c-box.const { background: rgba(255,237,213,0.5); border-color: #ffedd5; }
+
+    .c-title { font-size: 9px; text-transform: uppercase; font-weight: 900; text-align: center; margin: 0; }
+    @media(min-width: 768px) { .c-title { font-size: 12px; } }
+    .c-box.var .c-title { color: #1e40af; }
+    .c-box.const .c-title { color: #9a3412; }
+
+    .c-btns { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center; justify-content: center; gap: 0.125rem; }
+    @media(min-width: 768px) { .c-btns { gap: 0.25rem; } }
+
+    .btn-op { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 0.25rem; border: 2px solid; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0; }
+    .btn-op svg { width: 12px; height: 12px; stroke-width: 3.5px; }
+    @media(min-width: 768px) { .btn-op { width: 28px; height: 28px; border-radius: 0.375rem; } .btn-op svg { width: 14px; height: 14px; } }
+    .btn-op:active { transform: scale(0.9); }
+    .btn-op.sub { border-color: #fecaca; color: #ef4444; }
+    .btn-op.sub:hover { background: #fef2f2; border-color: #fca5a5; }
+    .btn-op.add { border-color: #bbf7d0; color: #16a34a; }
+    .btn-op.add:hover { background: #f0fdf4; border-color: #86efac; }
+
+    .c-icon { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 2px solid rgba(0,0,0,0.05); flex-shrink: 0;}
+    .c-icon.var { width: 22px; height: 22px; background: #2563eb; color: white; border-radius: 0.375rem; }
+    .c-icon.const { width: 22px; height: 22px; background: #fb923c; color: #431407; border-radius: 50%; font-weight: 900; }
+    @media(min-width: 768px) { .c-icon { font-size: 1rem; } .c-icon.var, .c-icon.const { width: 28px; height: 28px; border-radius: 0.5rem; } .c-icon.const { border-radius: 50%; } }
+
+    /* --- CENTER AREA --- */
+    .center-area {
+      flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; overflow: visible;
+    }
+
+    /* --- Visual Scale Logic --- */
+    .scale-wrapper {
+      flex: 1; min-height: 0; width: 100%; position: relative; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; overflow: visible;
+      margin-top: 0.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .scale-container {
+      position: relative; width: 440px; height: 280px;
+      display: flex; flex-direction: column; align-items: center; user-select: none;
+      transform-origin: top center;
+    }
+
+    .pivot-group { position: absolute; top: 20px; display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .pivot-dot { width: 28px; height: 28px; background: #475569; border-radius: 50%; z-index: 30; margin-bottom: -14px; border: 4px solid #94a3b8; }
+    .pivot-pillar { width: 16px; height: 140px; background: #94a3b8; border-left: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+    .pivot-base { width: 110px; height: 20px; background: #cbd5e1; margin-top: -2px; border-radius: 10px 10px 0 0; border: 2px solid #e2e8f0; }
+
+    .spring-transition { transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .scale-beam { position: absolute; top: 20px; width: 440px; height: 20px; background: #334155; border-radius: 9999px; z-index: 20; box-shadow: 0 6px 8px rgba(0,0,0,0.15); }
+
+    .pan-container { position: absolute; top: 8px; transform-origin: top; }
+    .pan-left { left: 4%; }
+    .pan-right { right: 4%; }
+    .pan-center { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+    .pan-string { width: 4px; height: 140px; background: #94a3b8; border-radius: 2px; }
+
+    .platform-shadow { box-shadow: 0 6px 0 rgba(0,0,0,0.15); }
+    .pan-platform { width: 180px; height: 20px; background: #475569; border-radius: 0 0 12px 12px; border-top: 5px solid #94a3b8; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5px; z-index: 10; position: relative; }
+
+    .pan-content { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: absolute; display: flex; justify-content: center; width: 100%;}
+
+    .pos-area { bottom: 100%; margin-bottom: 2px; display: flex; flex-direction: column-reverse; align-items: center; gap: 4px; z-index: 20; position: absolute; width: 100%; }
+
+    .neg-area { bottom: 100%; width: 100%; display: flex; flex-direction: column-reverse; align-items: center; gap: 8px; z-index: 10; position: absolute; transition: bottom 0.3s ease-in-out; }
+
+    /* --- Fractional Shapes & Blocks --- */
+    .shape-var { width: 32px; height: 32px; background: #2563eb; border: 1px solid rgba(29,78,216,0.4); color: white; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex-shrink: 0; overflow: hidden; }
+    .shape-const { width: 30px; height: 30px; background: #fb923c; border: 1px solid rgba(249,115,22,0.4); color: #431407; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; overflow: hidden; }
+    .group-wrap { display: flex; align-items: center; gap: 3px; padding: 3px; background: rgba(255,255,255,0.4); border: 2px dashed rgba(148,163,184,0.5); border-radius: 12px; flex-shrink: 0; }
+
+    /* --- Fractional Balloon Physics --- */
+    .b-wrapper {
+      position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      flex-shrink: 0; width: 28px; height: 38px;
+    }
+
+    .b-string {
+      position: absolute; top: 50%; left: 50%; transform: translateX(-50%); width: 3px;
+      background: rgba(148,163,184,0.9); z-index: -1;
+      animation: stretch-string 3s ease-in-out infinite;
+      transform-origin: top center;
+    }
+
+    @keyframes stretch-string {
+      0%, 100% { height: var(--string-len); }
+      50% { height: calc(var(--string-len) + 6px); }
+    }
+
+    .balloon {
+      border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%; display: flex; align-items: center; justify-content: center;
+      font-weight: 900; position: relative; flex-shrink: 0;
+      animation: float-balloon 3s ease-in-out infinite; z-index: 10;
+      width: 28px; height: 38px;
+    }
+    @keyframes float-balloon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .balloon::before { content: ''; position: absolute; top: 15%; left: 15%; width: 30%; height: 30%; border-radius: 50%; }
+
+    .b-var { background: #2563eb; border: 1px solid rgba(29,78,216,0.4); color: white; box-shadow: 0 6px 10px rgba(0,0,0,0.1); }
+    .b-var::before { background: rgba(255,255,255,0.2); }
+
+    .b-const { background: #fb923c; border: 1px solid rgba(249,115,22,0.4); color: #431407; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .b-const::before { background: rgba(255,255,255,0.3); }
+
+    .b-label { z-index: 10; }
+
+
+    /* --- Sandbox Math Panel --- */
+    .sandbox-math-panel { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; z-index: 10; margin-bottom: 0.25rem; flex-shrink: 0; width: 100%;}
+    @media(min-width: 768px) { .sandbox-math-panel { gap: 0.5rem; margin-bottom: 0.5rem; } }
+
+    .sm-controls-row { display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 0.25rem; }
+
+    .sm-x-chooser {
+      display: flex; align-items: center; justify-content: center;
+      background: white; border: 2px solid #e2e8f0;
+      border-radius: 0.75rem; padding: 0 0.75rem;
+      height: 32px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; white-space: nowrap; width: auto;
+    }
+    @media(min-width: 768px) {
+      .sm-x-chooser { height: 40px; padding: 0 1rem; border-radius: 1rem; font-size: 18px; }
+    }
+
+    .sm-x-prefix { color: #2563eb; display: flex; align-items: center; gap: 0.25rem; margin-right: 0.5rem; }
+    .sm-x-prefix-eq { color: #cbd5e1; margin-right: 0.125rem; }
+
+    .sm-x-btn { width: 22px; height: 22px; border-radius: 0.375rem; border: 2px solid #e2e8f0; background: #f8fafc; font-family: 'Inter', sans-serif; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #475569; font-size: 14px; transition: all 0.2s; }
+    @media(min-width: 768px) { .sm-x-btn { width: 28px; height: 28px; font-size: 18px; border-radius: 0.5rem; } }
+    .sm-x-btn:hover { background: #e2e8f0; color: #1e293b; }
+    .sm-x-btn:active { transform: scale(0.9); }
+
+    .sm-x-val { width: 2.5rem; text-align: center; color: #1e293b; }
+    @media(min-width: 768px) { .sm-x-val { width: 3.5rem; } }
+
+    .sm-sub, .sm-simp {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
+      width: 100%; max-width: 56rem;
+      background: white;
+      border-radius: 0.75rem; padding: 0 1rem;
+      height: 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; white-space: nowrap;
+    }
+    @media(min-width: 768px) {
+      .sm-sub, .sm-simp { height: 40px; padding: 0 2rem; border-radius: 1rem; font-size: 18px; max-width: 64rem; }
+    }
+
+    .sm-sub { font-weight: 700; color: #64748b; border: 2px solid #f1f5f9; }
+    .sm-simp { font-weight: 900; color: #1e293b; border: 2px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+    /* --- Challenge Controls --- */
+    .challenge-controls {
+      width: 100%; max-width: 72rem; background: white; padding: 0.375rem 0.75rem; border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;
+      display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.5rem;
+      justify-content: center; align-items: center; z-index: 10; position: relative; flex-shrink: 0;
+      margin-bottom: 0.25rem; overflow-x: auto; overflow-y: hidden;
+    }
+    @media(min-width: 768px) { .challenge-controls { padding: 0.5rem 1rem; border-radius: 1rem; gap: 1rem; margin-bottom: 0.5rem; } }
+
+    .ch-wrap { display: flex; gap: 0.25rem; align-items: center; justify-content: center; flex-wrap: nowrap; flex-shrink: 0;}
+    @media(min-width: 768px) { .ch-wrap { gap: 0.75rem; } }
+
+    .divider { display: block; width: 1px; height: 24px; background: #e2e8f0; border-radius: 1px; flex-shrink: 0; }
+    @media(min-width: 768px) { .divider { height: 32px; } }
+
+    .action-group-row { display: flex; flex-direction: row; align-items: center; gap: 0.25rem; flex-shrink: 0;}
+    @media(min-width: 768px) { .action-group-row { gap: 0.5rem; } }
+    .action-title { font-size: 9px; text-transform: uppercase; font-weight: 900; color: #94a3b8; letter-spacing: 0.1em; text-align: center; }
+    @media(min-width: 768px) { .action-title { font-size: 11px; } }
+    .action-btns-row { display: flex; flex-direction: row; gap: 0.125rem; flex-wrap: nowrap; justify-content: center; align-items: center; }
+    @media(min-width: 768px) { .action-btns-row { gap: 0.25rem; } }
+
+    .btn-action { height: 24px; min-width: 24px; padding: 0 0.25rem; display: flex; align-items: center; justify-content: center; font-weight: 800; border-radius: 0.375rem; border: 1px solid; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.7rem; flex-shrink: 0;}
+    @media(min-width: 768px) { .btn-action { height: 32px; min-width: 32px; padding: 0 0.375rem; font-size: 0.875rem; border-radius: 0.5rem; } }
+    .btn-action:active { transform: scale(0.9); }
+    .btn-action.div { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+    .btn-action.div:hover { background: #e0e7ff; border-color: #a5b4fc; }
+    .btn-action.mul { background: #fdf4ff; color: #c026d3; border-color: #f5d0fe; }
+    .btn-action.mul:hover { background: #fae8ff; border-color: #f0abfc; }
+
+    .btn-action.exp { background: #ecfdf5; color: #059669; border-color: #a7f3d0; padding: 0 0.375rem; gap: 0.25rem; width: 85px; }
+    .btn-action.factor-mode { background: #f5f3ff; color: #9333ea; border-color: #e9d5ff; padding: 0 0.375rem; gap: 0.25rem; width: 85px; }
+    .btn-action.factor-mode:hover { background: #ede9fe; border-color: #d8b4fe; }
+    .btn-action.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); pointer-events: none; }
+    @media(min-width: 768px) { .btn-action.exp, .btn-action.factor-mode { width: 105px; } }
+
+    .btn-undo-col { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0.25rem; padding: 0 0.5rem; border-radius: 0.5rem; transition: all 0.2s; background: transparent; border: 1px solid #e2e8f0; flex-shrink: 0; height: 26px;}
+    @media(min-width: 768px) { .btn-undo-col { padding: 0 0.75rem; height: 32px; } }
+    .btn-undo-col svg { width: 12px; height: 12px; stroke-width: 3px; }
+    @media(min-width: 768px) { .btn-undo-col svg { width: 16px; height: 16px; } }
+    .btn-undo-col span { font-size: 8px; text-transform: uppercase; font-weight: 800; margin-top: 0; }
+    @media(min-width: 768px) { .btn-undo-col span { font-size: 10px; margin-top: 0; } }
+    .btn-undo-col.active { color: #475569; cursor: pointer; background: white;}
+    .btn-undo-col.active:hover { background: #f1f5f9; }
+    .btn-undo-col.active:active { transform: scale(0.95); }
+    .btn-undo-col.disabled { color: #cbd5e1; cursor: not-allowed; border-color: transparent;}
+
+    .c-box-row { display: flex; flex-direction: row; align-items: center; gap: 0.25rem; padding: 0.125rem 0.375rem; border-radius: 0.375rem; border: 1px solid; width: auto; flex-shrink: 0; height: 26px;}
+    @media(min-width: 768px) { .c-box-row { border-radius: 0.5rem; padding: 0.25rem 0.5rem; gap: 0.5rem; height: 32px;} }
+    .c-box-row.var { background: rgba(239,246,255,0.5); border-color: #dbeafe; }
+    .c-box-row.const { background: rgba(255,237,213,0.5); border-color: #ffedd5; }
+    .c-box-row .c-title { font-size: 9px; text-transform: uppercase; font-weight: 900; margin: 0; display: block; }
+    @media(min-width: 768px) { .c-box-row .c-title { font-size: 11px; } }
+    .c-box-row.var .c-title { color: #1e40af; }
+    .c-box-row.const .c-title { color: #9a3412; }
+
+    /* --- Challenge Answer Box --- */
+    .answer-panel {
+      width: 100%; max-width: 32rem; background: white; padding: 0.5rem 1rem; border-radius: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;
+      display: flex; flex-direction: row; justify-content: center; align-items: center; z-index: 10;
+      margin-bottom: 0.5rem; gap: 0.75rem;
+    }
+    .answer-input {
+      width: 120px; height: 40px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 800;
+      border: 2px solid #cbd5e1; border-radius: 0.5rem; outline: none; transition: border-color 0.2s; color: #1e293b;
+    }
+    .answer-input:focus { border-color: #3b82f6; }
+    .answer-input::placeholder { color: #cbd5e1; font-weight: 500; font-size: 1rem; }
+    .btn-submit {
+      background: #22c55e; color: white; padding: 0.5rem 1.5rem; border-radius: 0.75rem; font-weight: 800; font-size: 1rem; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(34,197,94,0.3);
+    }
+    .btn-submit:hover { background: #16a34a; transform: translateY(-1px); }
+    .btn-submit:active { transform: scale(0.95); }
+
+    /* --- Modals (Win & Warning) --- */
+    .win-overlay { position: fixed; inset: 0; background: rgba(248,250,252,0.85); backdrop-filter: blur(8px); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .win-modal { background: white; padding: 1.5rem; border-radius: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 4px solid #dcfce3; display: flex; flex-direction: column; align-items: center; animation: modal-up 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); text-align: center;}
+    @media(min-width: 768px) { .win-modal { padding: 4rem; border-radius: 4rem; } }
+    @keyframes modal-up { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+    .win-icon { width: 80px; height: 80px; background: #dcfce3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: inset 0 4px 6px rgba(0,0,0,0.05); }
+    @media(min-width: 768px) { .win-icon { width: 120px; height: 120px; margin-bottom: 2rem; } }
+    .win-icon svg { color: #22c55e; width: 40px; height: 40px; }
+    @media(min-width: 768px) { .win-icon svg { width: 64px; height: 64px; } }
+    .win-title { font-size: 2rem; font-weight: 900; color: #1e293b; margin-bottom: 0.5rem; }
+    @media(min-width: 768px) { .win-title { font-size: 3rem; margin-bottom: 1rem; } }
+    .win-val { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 800; color: #64748b; background: #f8fafc; padding: 0.75rem 2rem; border-radius: 1rem; border: 2px solid #f1f5f9; margin-bottom: 2rem; }
+    @media(min-width: 768px) { .win-val { font-size: 2rem; padding: 1rem 3rem; border-radius: 1.5rem; margin-bottom: 3rem; } }
+    .btn-next { background: #22c55e; color: white; padding: 1rem 2rem; border-radius: 1rem; font-weight: 800; font-size: 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 15px -3px rgba(34,197,94,0.3); transition: all 0.2s; }
+    @media(min-width: 768px) { .btn-next { padding: 1.5rem 3rem; font-size: 1.5rem; border-radius: 1.5rem; gap: 1rem; } }
+    .btn-next:active { transform: scale(0.95); }
+
+    /* ==========================================================================
+       SITE CHROME (added for TheCodingEducator's Games - not part of the
+       original game): back link, Common Core standards popover, teaching notes
+
+       These live in a dedicated topbar in normal document flow (not a
+       floating overlay), because the game's own layout uses every corner of
+       the viewport tightly on small screens - a fixed-position overlay
+       collided with the challenge answer panel on mobile.
+       ========================================================================== */
+    .site-topbar {
+      flex-shrink: 0; height: 44px; width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+      box-sizing: border-box;
+    }
+
+    .site-back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 999px;
+      color: #1e293b; font: 700 13px 'Inter', -apple-system, sans-serif; text-decoration: none;
+    }
+    .site-back-link:hover, .site-back-link:focus-visible { background: #f1f5f9; border-color: #cbd5e1; }
+
+    .ccss-widget { position: relative; }
+    .ccss-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 999px;
+      color: #1e293b; font: 700 13px 'Inter', -apple-system, sans-serif; cursor: pointer;
+    }
+    .ccss-toggle:hover { background: #f1f5f9; border-color: #cbd5e1; }
+    .ccss-panel {
+      position: absolute; top: calc(100% + 8px); right: 0; width: 300px; max-width: 85vw;
+      background: white; border: 1px solid #e2e8f0; border-radius: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15); padding: 16px 18px;
+      font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.55; color: #1e293b;
+      max-height: 70vh; overflow-y: auto; z-index: 150;
+    }
+    .ccss-panel h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #2563eb; margin-bottom: 10px; }
+    .ccss-entry { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
+    .ccss-entry:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .ccss-entry .code { display: block; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #64748b; margin-bottom: 6px; }
+    .ccss-entry p { margin: 0 0 6px; color: #1e293b; }
+    .ccss-entry .applies { margin: 0; font-size: 11.5px; color: #64748b; }
+
+    .teaching-notes {
+      max-width: 720px; margin: 0 auto; padding: 48px 24px 64px; color: #1e293b; width: 100%;
+    }
+    .teaching-notes h2 { font-size: 22px; color: #2563eb; margin-bottom: 16px; font-weight: 900; }
+    .teaching-notes p, .teaching-notes li { font-size: 15px; line-height: 1.6; color: #334155; }
+    .teaching-notes ul { padding-left: 20px; }
+    .teaching-notes li { margin-bottom: 10px; }
+    .teaching-notes li strong { color: #0f172a; }
+  </style>
+</head>
+<body>
+
+<div class="site-topbar">
+  <a class="site-back-link" href="../index.html">&larr; All games</a>
+  <div class="ccss-widget">
+    <button class="ccss-toggle" onclick="toggleCcssPanel()" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
+    <div id="ccss-panel" class="ccss-panel hidden">
+      <h4>Common Core Standards</h4>
+      <div class="ccss-entry">
+        <span class="code">CCSS.MATH.CONTENT.6.EE.B.7</span>
+        <p>Solve real-world and mathematical problems by writing and solving equations of the form x + p = q and px = q for cases in which p, q and x are all nonnegative rational numbers.</p>
+        <p class="applies">Applies to: 1-Step Equations</p>
+      </div>
+      <div class="ccss-entry">
+        <span class="code">CCSS.MATH.CONTENT.7.EE.B.4a</span>
+        <p>Solve equations of the form px + q = r and p(x + q) = r fluently.</p>
+        <p class="applies">Applies to: 2-Step Equations, Complex Equations</p>
+      </div>
+      <div class="ccss-entry">
+        <span class="code">CCSS.MATH.CONTENT.8.EE.C.7b</span>
+        <p>Solve linear equations with rational number coefficients, including equations whose solutions require expanding expressions using the distributive property and collecting like terms.</p>
+        <p class="applies">Applies to: Variables Both Sides, Complex Equations</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="game-frame">
+
+  <!-- =============================== -->
+  <!-- VIEW 1: TITLE SCREEN            -->
+  <!-- =============================== -->
+  <div id="title-view" class="screen screen-centered">
+    <div class="title-card">
+      <div class="title-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+      </div>
+      <h1>Tip the Scales</h1>
+      <p class="subtitle">Master algebra by balancing the board.</p>
+
+      <div class="title-buttons">
+        <button onclick="setMode('difficulty')" class="btn-hero">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          Play Challenge
+        </button>
+        <button onclick="startSandbox()" class="btn-hero btn-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>
+          Sandbox Mode
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- VIEW 2: DIFFICULTY SELECT       -->
+  <!-- =============================== -->
+  <div id="difficulty-view" class="screen screen-centered hidden">
+    <div class="top-nav" style="margin-bottom: auto;">
+      <button onclick="setMode('title')" class="nav-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </button>
+      <div></div>
+    </div>
+
+    <div class="diff-header" style="margin-top: auto;">
+      <h2>Select Level</h2>
+      <p class="subtitle" style="margin-bottom: 0;">Choose your difficulty to begin.</p>
+    </div>
+
+    <div class="card-grid" style="margin-bottom: auto;">
+      <div onclick="startChallenge('1-step')" class="diff-card">
+        <h3>1-Step Equations</h3>
+        <span class="diff-tag">x + 3 = 8</span>
+      </div>
+      <div onclick="startChallenge('2-step')" class="diff-card">
+        <h3>2-Step Equations</h3>
+        <span class="diff-tag">2x + 1 = 7</span>
+      </div>
+      <div onclick="startChallenge('multi-step')" class="diff-card">
+        <h3>Variables Both Sides</h3>
+        <span class="diff-tag">3x + 2 = x + 8</span>
+      </div>
+      <div onclick="startChallenge('complex')" class="diff-card complex">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+          <svg style="color: #6366f1; width: 24px; height: 24px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <h3 style="color: #312e81; margin: 0;">Complex Equations</h3>
+        </div>
+        <span class="diff-tag">2(x + 1) = 4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- VIEW 3: GAME / SANDBOX VIEW     -->
+  <!-- =============================== -->
+  <div id="game-view" class="screen hidden">
+
+    <!-- Top Nav: Challenge -->
+    <div id="challenge-nav" class="top-nav hidden">
+      <button onclick="setMode('difficulty')" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <div class="progress-col">
+        <div id="diff-badge" class="progress-label">1-STEP EQUATIONS</div>
+        <div class="progress-dots" id="level-dots"></div>
+      </div>
+      <button onclick="resetLevel()" class="nav-btn" title="Reset Level" style="gap: 0.375rem; font-weight: 800; font-size: 0.875rem; color: #475569;">
+        Reset
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+    </div>
+
+    <!-- Top Nav: Sandbox -->
+    <div id="sandbox-nav" class="top-nav hidden">
+      <button onclick="setMode('title')" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <div class="progress-col"><div class="progress-label" style="font-size: 14px; margin: 0; color: #475569; letter-spacing: 0.2em;">SANDBOX</div></div>
+      <button onclick="startSandbox()" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+    </div>
+
+    <!-- Math Stack: Main Equation & Expanded Equation -->
+    <div class="eq-panel">
+      <div id="eq-left" class="eq-left eq-main">0</div>
+      <div id="eq-sign" class="eq-sign eq-main">=</div>
+      <div id="eq-right" class="eq-right eq-main">0</div>
+
+      <div id="eq-exp-left" class="eq-left eq-exp">0</div>
+      <div id="eq-exp-sign" class="eq-sign eq-exp">=</div>
+      <div id="eq-exp-right" class="eq-right eq-exp">0</div>
+    </div>
+
+    <!-- Overlay Message Box -->
+    <div class="msg-wrapper">
+      <div id="msg-box" class="msg-box hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span id="msg-text"></span>
+      </div>
+    </div>
+
+    <!-- Warning Overlay for Division -->
+    <div id="warning-layer" class="win-overlay hidden" style="z-index: 250;">
+      <div class="win-modal" style="border-color: #fca5a5;">
+        <h2 class="win-title" style="color: #ef4444; font-size: 1.5rem;">Fractions Ahead!</h2>
+        <p style="margin-bottom: 1.5rem; color: #64748b; font-weight: 500; font-size: 0.875rem; max-width: 280px;">Dividing now will create a fraction. This is not recommended for this type of problem!</p>
+        <div style="display: flex; gap: 1rem; width: 100%; justify-content: center;">
+          <button onclick="cancelWarning()" style="background: white; color: #475569; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid #cbd5e1;">Undo / Back</button>
+          <button onclick="proceedWarning()" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(239,68,68,0.3);">Proceed</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MAIN 3-COLUMN AREA -->
+    <!-- ============================================== -->
+    <div class="game-main-area">
+
+      <!-- Sandbox LEFT Side Panel -->
+      <div id="sandbox-left-panel" class="sandbox-side-panel hidden">
+        <div class="side-panel-header">LEFT<br>SIDE</div>
+        <div class="c-box var">
+          <span class="c-title">Variables</span>
+          <div class="c-btns">
+            <button onclick="handleSandboxOp('left', 'sub', 'var')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <div class="c-icon var">x</div>
+            <button onclick="handleSandboxOp('left', 'add', 'var')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+          </div>
+        </div>
+        <div class="c-box const">
+          <span class="c-title">Constants</span>
+          <div class="c-btns">
+            <button onclick="handleSandboxOp('left', 'sub', 'const')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <div class="c-icon const">1</div>
+            <button onclick="handleSandboxOp('left', 'add', 'const')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER AREA (Scale + Bottom Info) -->
+      <div class="center-area">
+
+        <!-- Visual Scale Component -->
+        <div class="scale-wrapper" id="scale-wrapper">
+          <div class="scale-container" id="scale-container">
+            <div class="pivot-group">
+              <div class="pivot-dot"></div>
+              <div class="pivot-pillar"></div>
+              <div class="pivot-base"></div>
+            </div>
+            <div id="scale-beam" class="scale-beam spring-transition">
+              <div id="pan-left" class="pan-container pan-left spring-transition">
+                <div class="pan-center">
+                  <div class="pan-string"></div>
+                  <div class="pan-platform platform-shadow">
+                    <div id="left-pos" class="pan-content pos-area"></div>
+                    <div id="left-neg" class="pan-content neg-area"></div>
+                  </div>
+                </div>
+              </div>
+              <div id="pan-right" class="pan-container pan-right spring-transition">
+                <div class="pan-center">
+                  <div class="pan-string"></div>
+                  <div class="pan-platform platform-shadow">
+                    <div id="right-pos" class="pan-content pos-area"></div>
+                    <div id="right-neg" class="pan-content neg-area"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sandbox Math Data Panel (Uniform, at bottom) -->
+        <div id="sandbox-math-panel" class="sandbox-math-panel hidden">
+          <div class="sm-controls-row">
+            <div class="sm-x-chooser">
+              <div class="sm-x-prefix">
+                <span>x</span>
+                <span class="sm-x-prefix-eq">=</span>
+              </div>
+              <button onclick="changeXValue(-1)" class="sm-x-btn">-</button>
+              <span id="sandbox-x-val" class="sm-x-val">5</span>
+              <button onclick="changeXValue(1)" class="sm-x-btn">+</button>
+            </div>
+          </div>
+          <div id="sandbox-sub" class="sm-sub">
+            <div id="sandbox-sub-left" class="eq-left">0</div>
+            <div id="sandbox-sub-sign" class="eq-sign">=</div>
+            <div id="sandbox-sub-right" class="eq-right">0</div>
+          </div>
+          <div id="sandbox-simp" class="sm-simp">
+            <div id="sandbox-simp-left" class="eq-left">0</div>
+            <div id="sandbox-simp-sign" class="eq-sign">=</div>
+            <div id="sandbox-simp-right" class="eq-right">0</div>
+          </div>
+        </div>
+
+        <!-- Challenge Controls -->
+        <div id="challenge-controls" class="challenge-controls hidden">
+          <div class="ch-wrap">
+            <div class="c-box-row var">
+              <span class="c-title">Variables</span>
+              <div class="c-btns">
+                <button onclick="handleOp('sub', 'var')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+                <div class="c-icon var">x</div>
+                <button onclick="handleOp('add', 'var')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+              </div>
+            </div>
+            <div class="c-box-row const">
+              <span class="c-title">Constants</span>
+              <div class="c-btns">
+                <button onclick="handleOp('sub', 'const')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+                <div class="c-icon const">1</div>
+                <button onclick="handleOp('add', 'const')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="action-group-row">
+            <span class="action-title" style="margin-right: 0.25rem;">Operations</span>
+            <div class="action-btns-row">
+              <button onclick="handleMultiply(2)" class="btn-action mul">×2</button>
+              <button onclick="handleMultiply(3)" class="btn-action mul">×3</button>
+              <button onclick="handleMultiply(4)" class="btn-action mul">×4</button>
+              <button onclick="handleMultiply(5)" class="btn-action mul">×5</button>
+              <button onclick="handleDivide(2)" class="btn-action div">÷2</button>
+              <button onclick="handleDivide(3)" class="btn-action div">÷3</button>
+              <button onclick="handleDivide(4)" class="btn-action div">÷4</button>
+              <button onclick="handleDivide(5)" class="btn-action div">÷5</button>
+
+              <button id="btn-expand" onclick="handleExpand()" class="btn-action exp disabled">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 15l-6 6m6-6v4.8m0-4.8H4.2M9 9 3 3m6 6V4.2M9 9H4.2m5.8-5.8 6 6m-6-6v4.8m0-4.8h4.8"/></svg> Expand
+              </button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <button id="btn-undo-challenge" onclick="handleUndo()" class="btn-undo-col disabled">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+            <span>Undo</span>
+          </button>
+        </div>
+
+        <!-- Answer Panel (Challenge Mode Only) -->
+        <div id="challenge-answer-panel" class="answer-panel hidden">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 900; color: #1e293b;">x =</span>
+          <input type="text" id="user-answer-input" class="answer-input" placeholder="e.g. 5/2" autocomplete="off" />
+          <button onclick="submitAnswer()" class="btn-submit">Submit</button>
+        </div>
+
+      </div>
+
+      <!-- Sandbox RIGHT Side Panel -->
+      <div id="sandbox-right-panel" class="sandbox-side-panel hidden">
+        <div class="side-panel-header">RIGHT<br>SIDE</div>
+        <div class="c-box var">
+          <span class="c-title">Variables</span>
+          <div class="c-btns">
+            <button onclick="handleSandboxOp('right', 'sub', 'var')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <div class="c-icon var">x</div>
+            <button onclick="handleSandboxOp('right', 'add', 'var')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+          </div>
+        </div>
+        <div class="c-box const">
+          <span class="c-title">Constants</span>
+          <div class="c-btns">
+            <button onclick="handleSandboxOp('right', 'sub', 'const')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <div class="c-icon const">1</div>
+            <button onclick="handleSandboxOp('right', 'add', 'const')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Win Modal (Challenge only) -->
+    <div id="win-layer" class="win-overlay hidden">
+      <div class="win-modal">
+        <div class="win-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        </div>
+        <h2 id="win-title" class="win-title">Solved!</h2>
+        <p id="win-val" class="win-val">x = ?</p>
+        <button onclick="nextLevel()" class="btn-next">
+          Next Level
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.game-frame -->
+
+<!-- =============================== -->
+<!-- TEACHING NOTES                  -->
+<!-- =============================== -->
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Tip the Scales is built the way I'd build a lesson - differentiated, low-stakes, and designed so a student's reading level never gets in the way of the math.</p>
+  <ul>
+    <li><strong>The equality sign is a physical scale, not just a symbol.</strong> Both sides visibly tip based on their real numeric weight, so "equal" is something a student can see and feel before it's ever an abstract rule about balancing equations.</li>
+    <li><strong>Four representations of the same idea, at once.</strong> The color-coded algebra tiles (blue = variable, orange = constant), the symbolic equation, a fully expanded term-by-term view, and - in Sandbox mode - a live substituted-value readout are all on screen together, so a student can connect the concrete, visual, and symbolic versions of the same relationship.</li>
+    <li><strong>Four-tier progression matched to real grade-level standards.</strong> 1-Step (grade 6) &rarr; 2-Step (grade 7) &rarr; Variables on Both Sides &rarr; Complex/Distribution (grade 8), each with its own 15-level track, so a student only sees rule combinations they're actually ready for.</li>
+    <li><strong>Sandbox mode for open-ended exploration.</strong> No win condition - freely add or remove variables and constants on either side and choose any value for x, to build intuition before being scored on it.</li>
+    <li><strong>The distributive property, made visible.</strong> The Expand/Factor toggle actually animates between the grouped p(x + q) form and the fully expanded term list, instead of just stating the rule.</li>
+    <li><strong>A guardrail against a common frustration point.</strong> Dividing when it would create a fraction pops a clear warning instead of silently producing a confusing result - and still lets a student proceed if that's what they intend.</li>
+    <li><strong>Fraction-aware, not decimal-forced.</strong> The answer box accepts inputs like "5/2", so exact rational answers aren't mangled into decimals.</li>
+    <li><strong>Wrong-answer hints tailored to the difficulty tier.</strong> Instead of one generic "try again," the hint text nudges toward the strategy that actually matters at that level - isolating a variable, clearing fractions, or expanding first.</li>
+    <li><strong>Low-stakes practice.</strong> Unlimited undo, a full level reset, no accounts, and no permanent record of mistakes.</li>
+  </ul>
+</section>
+
+  <!-- =============================== -->
+  <!-- APPLICATION LOGIC               -->
+  <!-- =============================== -->
+  <script>
+    const state = {
+      mode: 'title',
+      difficulty: '1-step',
+      levelIndex: 0,
+      leftState: { variables: 0, constants: 0, groups: null },
+      rightState: { variables: 0, constants: 0, groups: null },
+      initialLeft: { variables: 0, constants: 0, groups: null },
+      initialRight: { variables: 0, constants: 0, groups: null },
+      xValue: 5,
+      history: [],
+      isWin: false,
+      message: '',
+      seenEquations: new Set(),
+      pendingDivisor: null
+    };
+
+    const VAR_COLOR = '#2563eb';
+    const CONST_COLOR = '#f97316';
+
+    // Global Keydown Listener for Hotkeys (Space/Enter -> Submit/Next Level)
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            if (state.mode === 'challenge') {
+                if (state.pendingDivisor !== null) return; // Do not trigger if Warning Modal is visible
+
+                // Do not hijack the event if user is actively tabbing through and pressing native buttons
+                if (event.target.tagName !== 'BUTTON') {
+                    event.preventDefault(); // Prevent default page scroll on Space or form submit on Enter
+                    if (state.isWin) {
+                        nextLevel();
+                    } else {
+                        submitAnswer();
+                    }
+                }
+            }
+        }
+    });
+
+    function cloneSide(s) { return { variables: s.variables, constants: s.constants, groups: s.groups ? { ...s.groups } : null }; }
+
+    function cleanFloat(f) {
+        return Math.round(f * 60) / 60;
+    }
+
+    function isInt(val) {
+        return Math.abs(val - Math.round(val)) < 0.001;
+    }
+
+    function getGcd(a, b) {
+        a = Math.abs(a); b = Math.abs(b);
+        if (a === 0 && b === 0) return 1;
+        if (a === 0) return b;
+        if (b === 0) return a;
+        while (b) { let temp = b; b = a % b; a = temp; }
+        return a;
+    }
+
+    function getFactor(s) {
+        if (s.groups !== null) return 1;
+        if (!isInt(s.variables) || !isInt(s.constants)) return 1;
+        if (Math.abs(s.variables) === 0 || Math.abs(s.constants) === 0) return 1;
+        return getGcd(Math.round(s.variables), Math.round(s.constants));
+    }
+
+    function cleanGroups(s) {
+        // Only shed the parenthesis if the multiplier drops to 1 or -1
+        if (s.groups && Math.abs(s.groups.count) === 1) {
+            s.variables = cleanFloat(s.variables + s.groups.count * s.groups.variables);
+            s.constants = cleanFloat(s.constants + s.groups.count * s.groups.constants);
+            s.groups = null;
+        }
+    }
+
+    function showMessage(msg) {
+      state.message = msg;
+      updateUI();
+      setTimeout(() => { if(state.message === msg) { state.message = ''; updateUI(); } }, 5000);
+    }
+
+    function fitScale() {
+      if (state.mode !== 'challenge' && state.mode !== 'sandbox') return;
+      const wrapper = document.getElementById('scale-wrapper');
+      const container = document.getElementById('scale-container');
+      if (!wrapper || !container) return;
+
+      let availableHeight = wrapper.clientHeight;
+      let availableWidth = wrapper.clientWidth - 20;
+
+      const scaleW = availableWidth / 440;
+      const scaleH = availableHeight / 280;
+
+      let finalScale = Math.min(scaleW, scaleH, 6.0) * 0.98;
+
+      if (state.mode === 'sandbox') {
+        finalScale *= 1.45;
+        container.style.transformOrigin = 'bottom center';
+      } else {
+        finalScale *= 1.25;
+        container.style.transformOrigin = 'top center';
+      }
+
+      container.style.transform = `scale(${finalScale})`;
+    }
+
+    const observer = new ResizeObserver(() => { fitScale(); });
+
+    window.onload = () => {
+        const wrapper = document.getElementById('scale-wrapper');
+        if (wrapper) observer.observe(wrapper);
+    }
+
+    function generateEquation(difficulty, levelIndex) {
+      let attempts = 0;
+      let left = { variables: 0, constants: 0, groups: null };
+      let right = { variables: 0, constants: 0, groups: null };
+      let solution = 5;
+
+      while (attempts < 2000) {
+        attempts++;
+        let skipGlobalFraction = false;
+        solution = Math.floor(Math.random() * 5) + 1;
+        left = { variables: 0, constants: 0, groups: null };
+        right = { variables: 0, constants: 0, groups: null };
+
+        let useFraction = Math.random() < 0.25;
+
+        switch (difficulty) {
+          case '1-step':
+            skipGlobalFraction = true;
+            if (useFraction) {
+              let d = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+              let c = Math.floor(Math.random() * 5) + 1;
+              while (c * d > 10) c--;
+              if (c < 1) continue;
+              solution = c * d;
+              left.variables = cleanFloat(1 / d);
+              right.constants = c;
+            } else {
+              if (Math.random() > 0.5) {
+                let a = Math.floor(Math.random() * 9) + 1;
+                while (solution + a > 10) a--;
+                if (a < 1) continue;
+                left.variables = 1; left.constants = a;
+                right.constants = solution + a;
+              } else {
+                let a = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+                while (a * solution > 10) solution--;
+                if (solution < 1) continue;
+                left.variables = a; right.constants = a * solution;
+              }
+            }
+            break;
+
+          case '2-step':
+            skipGlobalFraction = true;
+            if (!useFraction) {
+              let a2 = Math.floor(Math.random() * 3) + 2;
+              let maxB = 10 - (a2 * solution);
+              if (maxB < 1) continue;
+              let b2 = Math.floor(Math.random() * maxB) + 1;
+              left.variables = a2; left.constants = b2;
+              right.constants = a2 * solution + b2;
+            } else {
+              let d = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+              let b2 = Math.floor(Math.random() * 5) + 1;
+              let c2 = solution + b2;
+              if (c2 > 10) continue;
+              left.variables = cleanFloat(1 / d);
+              left.constants = cleanFloat(b2 / d);
+              right.constants = cleanFloat(c2 / d);
+            }
+            break;
+
+          case 'multi-step':
+            skipGlobalFraction = !useFraction;
+            let ax = Math.floor(Math.random() * 3) + 2;
+            let cx = Math.floor(Math.random() * (ax - 1)) + 1;
+            let maxBMulti = 10 - (ax * solution);
+            if (maxBMulti < 1) continue;
+            let b = Math.floor(Math.random() * maxBMulti) + 1;
+            let rhs = ax * solution + b;
+            let dVal = rhs - (cx * solution);
+            if (dVal < 1 || dVal > 10) continue;
+            left.variables = ax; left.constants = b;
+            right.variables = cx; right.constants = dVal;
+            break;
+
+          case 'complex':
+            skipGlobalFraction = true;
+            let compType = Math.random();
+            if (compType < 0.33) {
+                let a2 = Math.floor(Math.random() * 3) + 2;
+                let maxB = 10 - (a2 * solution);
+                if (maxB < 1) continue;
+                let b2 = Math.floor(Math.random() * maxB) + 1;
+                let d = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+                left.variables = cleanFloat(a2 / d);
+                left.constants = cleanFloat(b2 / d);
+                right.constants = cleanFloat((a2 * solution + b2) / d);
+            } else {
+                let count = 2;
+                let inVar = 1;
+                let maxInConst = Math.floor((10 / count) - (inVar * solution));
+                if (maxInConst < 1) continue;
+                let inConst = Math.floor(Math.random() * maxInConst) + 1;
+                let totalLeft = count * (inVar * solution + inConst);
+                if (totalLeft > 10) continue;
+                left.groups = { count, variables: inVar, constants: inConst };
+                if (Math.random() > 0.5) { right.constants = totalLeft; }
+                else {
+                  let cx_var = 1;
+                  let d_const = totalLeft - (cx_var * solution);
+                  if (d_const < 1 || d_const > 10) continue;
+                  right.variables = cx_var; right.constants = d_const;
+                }
+            }
+            break;
+        }
+
+        if (!skipGlobalFraction) {
+            let d = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+            left.variables = cleanFloat(left.variables / d);
+            left.constants = cleanFloat(left.constants / d);
+            if (left.groups) left.groups.count = cleanFloat(left.groups.count / d);
+            right.variables = cleanFloat(right.variables / d);
+            right.constants = cleanFloat(right.constants / d);
+            if (right.groups) right.groups.count = cleanFloat(right.groups.count / d);
+        }
+
+        const getVars = (s) => Math.abs(s.variables) + (s.groups ? Math.abs(s.groups.count * s.groups.variables) : 0);
+        const getConsts = (s) => Math.abs(s.constants) + (s.groups ? Math.abs(s.groups.count * s.groups.constants) : 0);
+
+        if (getVars(left) === getVars(right)) continue;
+        if (getVars(left) > 10 || getVars(right) > 10 || getConsts(left) > 10 || getConsts(right) > 10) continue;
+        if (Math.random() > 0.5) { let temp = left; left = right; right = temp; }
+
+        let eqStr1 = formatSideHTML(left) + "=" + formatSideHTML(right);
+        let eqStr2 = formatSideHTML(right) + "=" + formatSideHTML(left);
+
+        if (state.seenEquations && (state.seenEquations.has(eqStr1) || state.seenEquations.has(eqStr2))) continue;
+
+        if (state.seenEquations) {
+            state.seenEquations.add(eqStr1);
+            state.seenEquations.add(eqStr2);
+        }
+
+        break;
+      }
+      return { left, right, solution };
+    }
+
+    function toImproperFraction(val) {
+        let sign = val < 0 ? '-' : '';
+        val = Math.abs(val);
+        if (isInt(val)) return sign + Math.round(val);
+
+        let gcd = function(a, b) { return b ? gcd(b, a % b) : a; };
+        let num = Math.round(val * 60);
+        let den = 60;
+        let g = gcd(num, den);
+        num /= g; den /= g;
+
+        return `${sign}<span class="frac"><span class="frac-num">${num}</span><span class="frac-den">${den}</span></span>`;
+    }
+
+    function formatSideHTML(s) {
+      let parts = [];
+      let plus = `<span style="margin: 0 0.15em;">+</span>`;
+      let minus = `<span style="margin: 0 0.15em;">-</span>`;
+
+      if (s.groups) {
+        let gInner = [];
+        if (s.groups.variables !== 0) {
+          let vStr = Math.abs(s.groups.variables) === 1 ? 'x' : toImproperFraction(Math.abs(s.groups.variables)) + 'x';
+          if (s.groups.variables < 0) vStr = '-' + vStr;
+          gInner.push(`<span style="color: ${VAR_COLOR};">${vStr}</span>`);
+        }
+        if (s.groups.constants !== 0) {
+          let cStr = toImproperFraction(Math.abs(s.groups.constants));
+          if (s.groups.constants > 0 && gInner.length > 0) gInner.push(`${plus} <span style="color: ${CONST_COLOR};">${cStr}</span>`);
+          else if (s.groups.constants < 0 && gInner.length > 0) gInner.push(`${minus} <span style="color: ${CONST_COLOR};">${cStr}</span>`);
+          else gInner.push(`<span style="color: ${CONST_COLOR};">${s.groups.constants < 0 ? '-' : ''}${cStr}</span>`);
+        }
+        parts.push(`<span style="color: ${CONST_COLOR};">${toImproperFraction(s.groups.count)}</span>(${gInner.join(' ')})`);
+      }
+      if (s.variables !== 0) {
+        let vStr = Math.abs(s.variables) === 1 ? 'x' : toImproperFraction(Math.abs(s.variables)) + 'x';
+        if (s.variables > 0 && parts.length > 0) parts.push(`${plus} <span style="color: ${VAR_COLOR};">${vStr}</span>`);
+        else if (s.variables < 0 && parts.length > 0) parts.push(`${minus} <span style="color: ${VAR_COLOR};">${vStr}</span>`);
+        else parts.push(`<span style="color: ${VAR_COLOR};">${s.variables < 0 ? '-' : ''}${vStr}</span>`);
+      }
+      if (s.constants !== 0) {
+        let cStr = toImproperFraction(Math.abs(s.constants));
+        if (s.constants > 0 && parts.length > 0) parts.push(`${plus} <span style="color: ${CONST_COLOR};">${cStr}</span>`);
+        else if (s.constants < 0 && parts.length > 0) parts.push(`${minus} <span style="color: ${CONST_COLOR};">${cStr}</span>`);
+        else parts.push(`<span style="color: ${CONST_COLOR};">${s.constants < 0 ? '-' : ''}${cStr}</span>`);
+      }
+      return parts.length ? parts.join(' ') : `<span style="color: ${CONST_COLOR};">0</span>`;
+    }
+
+    function getExpandedTerms(s) {
+      let terms = [];
+      if (s.groups) {
+        let gCountFull = Math.floor(Math.abs(s.groups.count));
+        for (let i = 0; i < gCountFull; i++) {
+           let v = Math.abs(s.groups.variables);
+           for (let j=0; j<Math.floor(v); j++) terms.push(s.groups.variables > 0 ? 'x' : '-x');
+           if (v - Math.floor(v) > 0.001) terms.push((s.groups.variables > 0 ? '' : '-') + toImproperFraction(v - Math.floor(v)) + 'x');
+
+           let c = Math.abs(s.groups.constants);
+           for (let k=0; k<Math.floor(c); k++) terms.push(s.groups.constants > 0 ? '1' : '-1');
+           if (c - Math.floor(c) > 0.001) terms.push((s.groups.constants > 0 ? '' : '-') + toImproperFraction(c - Math.floor(c)));
+        }
+      }
+
+      let vFull = Math.floor(Math.abs(s.variables));
+      let vFrac = Math.abs(s.variables) - vFull;
+      for (let i = 0; i < vFull; i++) terms.push(s.variables > 0 ? 'x' : '-x');
+      if (vFrac > 0.001) terms.push((s.variables > 0 ? '' : '-') + toImproperFraction(vFrac) + 'x');
+
+      let cFull = Math.floor(Math.abs(s.constants));
+      let cFrac = Math.abs(s.constants) - cFull;
+      for (let i = 0; i < cFull; i++) terms.push(s.constants > 0 ? '1' : '-1');
+      if (cFrac > 0.001) terms.push((s.constants > 0 ? '' : '-') + toImproperFraction(cFrac));
+
+      return terms;
+    }
+
+    function getExpandedHtmlParts(terms, limit) {
+      let parts = [];
+      if (terms.length > 0 && limit === 0) {
+        return [`<span style="color: #94a3b8;">...</span>`];
+      }
+      for (let i = 0; i < terms.length; i++) {
+        if (i >= limit) {
+          parts.push(` <span style="color: #94a3b8;">...</span>`);
+          break;
+        }
+        let t = terms[i];
+        let color = t.includes('x') ? VAR_COLOR : CONST_COLOR;
+        let sign = t.startsWith('-') ? '-' : '+';
+        let valHtml = t;
+        if (sign === '-') valHtml = valHtml.substring(1);
+
+        if (i === 0) {
+          parts.push(`<span style="color: ${color};">${sign === '-' ? '-' : ''}${valHtml}</span>`);
+        } else {
+          parts.push(` <span style="color: #cbd5e1; margin: 0 0.15em;">${sign}</span> <span style="color: ${color};">${valHtml}</span>`);
+        }
+      }
+      return parts;
+    }
+
+    function formatSubstitutionHTML(s, xVal) {
+      let parts = [];
+      let plus = `<span style="margin: 0 0.15em;">+</span>`;
+      let minus = `<span style="margin: 0 0.15em;">-</span>`;
+
+      if (s.variables !== 0) {
+        let coef = Math.abs(s.variables) === 1 ? '' : toImproperFraction(Math.abs(s.variables));
+        if (s.variables < 0) coef = '-' + coef;
+        parts.push(`<span style="color: ${VAR_COLOR};">${coef}(${toImproperFraction(xVal)})</span>`);
+      }
+      if (s.constants !== 0) {
+        let cStr = toImproperFraction(Math.abs(s.constants));
+        if (parts.length > 0) parts.push(s.constants > 0 ? `${plus} <span style="color: ${CONST_COLOR};">${cStr}</span>` : `${minus} <span style="color: ${CONST_COLOR};">${cStr}</span>`);
+        else parts.push(`<span style="color: ${CONST_COLOR};">${s.constants < 0 ? '-' : ''}${cStr}</span>`);
+      }
+      return parts.length ? parts.join(' ') : `<span style="color: ${CONST_COLOR};">0</span>`;
+    }
+
+    function setMode(newMode) {
+      state.mode = newMode;
+      document.getElementById('title-view').classList.toggle('hidden', newMode !== 'title');
+      document.getElementById('difficulty-view').classList.toggle('hidden', newMode !== 'difficulty');
+      document.getElementById('game-view').classList.toggle('hidden', newMode !== 'challenge' && newMode !== 'sandbox');
+      if (newMode === 'challenge' || newMode === 'sandbox') updateUI();
+    }
+
+    function startChallenge(diff) {
+      state.difficulty = diff;
+      state.levelIndex = 0;
+      state.seenEquations = new Set();
+      generateLevel();
+      setMode('challenge');
+    }
+
+    function generateLevel() {
+      const eq = generateEquation(state.difficulty, state.levelIndex);
+      state.leftState = eq.left;
+      state.rightState = eq.right;
+      state.initialLeft = cloneSide(eq.left);
+      state.initialRight = cloneSide(eq.right);
+      state.xValue = eq.solution;
+      state.history = [];
+      state.isWin = false;
+      state.message = '';
+
+      const input = document.getElementById('user-answer-input');
+      if (input) input.value = '';
+
+      updateUI();
+    }
+
+    function resetLevel() {
+      if (state.mode !== 'challenge' || state.isWin) return;
+      state.leftState = cloneSide(state.initialLeft);
+      state.rightState = cloneSide(state.initialRight);
+      state.history = [];
+      state.message = '';
+
+      const input = document.getElementById('user-answer-input');
+      if (input) input.value = '';
+
+      updateUI();
+    }
+
+    function nextLevel() {
+      state.levelIndex++;
+      if (state.levelIndex >= 15) { setMode('difficulty'); return; }
+      generateLevel();
+    }
+
+    function startSandbox() {
+      state.leftState = { variables: 0, constants: 0, groups: null };
+      state.rightState = { variables: 0, constants: 0, groups: null };
+      state.initialLeft = { variables: 0, constants: 0, groups: null };
+      state.initialRight = { variables: 0, constants: 0, groups: null };
+      state.xValue = 5;
+      state.history = [];
+      state.isWin = false;
+      state.message = '';
+      setMode('sandbox');
+    }
+
+    function handleOp(type, target) {
+      if (state.isWin) return;
+      let leftVars = state.leftState.variables; let rightVars = state.rightState.variables;
+      let leftConsts = state.leftState.constants; let rightConsts = state.rightState.constants;
+
+      let step = 1;
+
+      if (type === 'add' && target === 'var') { leftVars+=step; rightVars+=step; }
+      if (type === 'sub' && target === 'var') { leftVars-=step; rightVars-=step; }
+      if (type === 'add' && target === 'const') { leftConsts+=step; rightConsts+=step; }
+      if (type === 'sub' && target === 'const') { leftConsts-=step; rightConsts-=step; }
+
+      if (Math.abs(leftVars) > 10 || Math.abs(rightVars) > 10 || Math.abs(leftConsts) > 10 || Math.abs(rightConsts) > 10) {
+        showMessage('Max limit of 10 reached!'); return;
+      }
+      state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
+      state.leftState.variables = cleanFloat(leftVars); state.rightState.variables = cleanFloat(rightVars);
+      state.leftState.constants = cleanFloat(leftConsts); state.rightState.constants = cleanFloat(rightConsts);
+      updateUI();
+    }
+
+    function handleSandboxOp(side, type, target) {
+      let targetSide = side === 'left' ? state.leftState : state.rightState;
+      let vars = targetSide.variables; let consts = targetSide.constants;
+
+      let step = 1;
+
+      if (type === 'add' && target === 'var') vars+=step;
+      if (type === 'sub' && target === 'var') vars-=step;
+      if (type === 'add' && target === 'const') consts+=step;
+      if (type === 'sub' && target === 'const') consts-=step;
+
+      if (Math.abs(vars) > 10 || Math.abs(consts) > 10) { showMessage('Max limit of 10 reached!'); return; }
+      state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
+
+      targetSide.variables = cleanFloat(vars); targetSide.constants = cleanFloat(consts);
+      updateUI();
+    }
+
+    function changeXValue(delta) {
+      if (state.mode !== 'sandbox') return;
+      let newX = cleanFloat(state.xValue + delta);
+      if (newX > 10) newX = 10; if (newX < -10) newX = -10;
+      state.xValue = newX; updateUI();
+    }
+
+    function handleMultiply(multiplier) {
+      if (state.isWin) return;
+
+      const checkExceeds = (s) => {
+          let nV = s.variables * multiplier;
+          let nC = s.constants * multiplier;
+          let nGC = s.groups ? s.groups.count * multiplier : 0;
+          if (!s.groups && (s.variables !== 0 || s.constants !== 0)) {
+              nGC = multiplier;
+              nV = 0; nC = 0;
+          } else if (s.groups && (s.variables !== 0 || s.constants !== 0)) {
+              nV = (s.variables + s.groups.count * s.groups.variables) * multiplier;
+              nC = (s.constants + s.groups.count * s.groups.constants) * multiplier;
+              nGC = 0;
+          }
+          return Math.abs(nV) > 10 || Math.abs(nC) > 10 || Math.abs(nGC) > 10;
+      };
+
+      if (checkExceeds(state.leftState) || checkExceeds(state.rightState)) { showMessage('Exceeds limit of 10!'); return; }
+
+      state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
+
+      const applyMult = (s, m) => {
+          if (!s.groups) {
+              if (s.variables !== 0 || s.constants !== 0) {
+                  s.groups = { count: m, variables: s.variables, constants: s.constants };
+                  s.variables = 0;
+                  s.constants = 0;
+              }
+          } else if (s.variables === 0 && s.constants === 0) {
+              s.groups.count = cleanFloat(s.groups.count * m);
+          } else {
+              let totalV = cleanFloat(s.variables + s.groups.count * s.groups.variables);
+              let totalC = cleanFloat(s.constants + s.groups.count * s.groups.constants);
+              s.groups = { count: m, variables: totalV, constants: totalC };
+              s.variables = 0;
+              s.constants = 0;
+          }
+          cleanGroups(s);
+      };
+
+      applyMult(state.leftState, multiplier);
+      applyMult(state.rightState, multiplier);
+
+      updateUI();
+    }
+
+    function handleDivide(divisor) {
+      if (state.isWin) return;
+
+      const dividesCleanly = (s) => isInt(s.variables / divisor) && isInt(s.constants / divisor) && (!s.groups || isInt(s.groups.count / divisor));
+
+      if (!dividesCleanly(state.leftState) || !dividesCleanly(state.rightState)) {
+          state.pendingDivisor = divisor;
+          document.getElementById('warning-layer').classList.remove('hidden');
+          return;
+      }
+
+      executeDivide(divisor);
+    }
+
+    function cancelWarning() {
+        state.pendingDivisor = null;
+        document.getElementById('warning-layer').classList.add('hidden');
+    }
+
+    function proceedWarning() {
+        if (state.pendingDivisor) {
+            executeDivide(state.pendingDivisor);
+            state.pendingDivisor = null;
+        }
+        document.getElementById('warning-layer').classList.add('hidden');
+    }
+
+    function executeDivide(divisor) {
+      state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
+
+      state.leftState.variables = cleanFloat(state.leftState.variables / divisor);
+      state.leftState.constants = cleanFloat(state.leftState.constants / divisor);
+      if (state.leftState.groups) state.leftState.groups.count = cleanFloat(state.leftState.groups.count / divisor);
+
+      state.rightState.variables = cleanFloat(state.rightState.variables / divisor);
+      state.rightState.constants = cleanFloat(state.rightState.constants / divisor);
+      if (state.rightState.groups) state.rightState.groups.count = cleanFloat(state.rightState.groups.count / divisor);
+
+      cleanGroups(state.leftState);
+      cleanGroups(state.rightState);
+
+      updateUI();
+    }
+
+    function handleExpand() {
+      if (state.isWin) return;
+      let lVars = state.leftState.variables + (state.leftState.groups ? state.leftState.groups.variables * state.leftState.groups.count : 0);
+      let lConsts = state.leftState.constants + (state.leftState.groups ? state.leftState.groups.constants * state.leftState.groups.count : 0);
+      let rVars = state.rightState.variables + (state.rightState.groups ? state.rightState.groups.variables * state.rightState.groups.count : 0);
+      let rConsts = state.rightState.constants + (state.rightState.groups ? state.rightState.groups.constants * state.rightState.groups.count : 0);
+
+      if (Math.abs(lVars) > 10 || Math.abs(lConsts) > 10 || Math.abs(rVars) > 10 || Math.abs(rConsts) > 10) { showMessage('Exceeds limit of 10!'); return; }
+
+      state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
+      const exp = (s) => {
+          if (s.groups) {
+              s.variables = cleanFloat(s.variables + s.groups.variables * s.groups.count);
+              s.constants = cleanFloat(s.constants + s.groups.constants * s.groups.count);
+              s.groups = null;
+          }
+      };
+      exp(state.leftState); exp(state.rightState);
+      updateUI();
+    }
+
+    function handleFactor() {
+      if (state.isWin) return;
+      state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
+
+      const applyFactor = (s) => {
+          let g = getFactor(s);
+          if (g > 1) {
+              s.groups = { count: g, variables: cleanFloat(s.variables / g), constants: cleanFloat(s.constants / g) };
+              s.variables = 0;
+              s.constants = 0;
+          }
+      };
+
+      applyFactor(state.leftState);
+      applyFactor(state.rightState);
+      updateUI();
+    }
+
+    function handleUndo() {
+      if (state.history.length === 0 || state.isWin) return;
+      const last = state.history.pop();
+      state.leftState = last.left; state.rightState = last.right; state.message = '';
+      updateUI();
+    }
+
+    function parseUserAnswer(val) {
+        if (val.includes('/')) {
+            let parts = val.split('/');
+            if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
+                return parseFloat(parts[0]) / parseFloat(parts[1]);
+            }
+        }
+        return parseFloat(val);
+    }
+
+    function submitAnswer() {
+      if (state.mode !== 'challenge' || state.isWin) return;
+
+      const input = document.getElementById('user-answer-input');
+      const valText = input.value.trim();
+      const val = parseUserAnswer(valText);
+
+      if (isNaN(val) || valText === '') {
+        showMessage("Please enter a valid number or fraction (e.g. 5 or 5/2)!");
+        return;
+      }
+
+      if (Math.abs(val - state.xValue) < 0.001) {
+        state.isWin = true;
+        updateUI();
+      } else {
+        // Reset problem to initial state
+        state.leftState = cloneSide(state.initialLeft);
+        state.rightState = cloneSide(state.initialRight);
+        state.history = [];
+        input.value = '';
+
+        // Provide hint based on difficulty
+        let hint = "Perform the same operations on both sides to isolate x.";
+        if (state.difficulty === '2-step') {
+            hint = "Try moving constants to one side first, then divide.";
+        } else if (state.difficulty === 'multi-step') {
+            hint = "Try to get all variables on one side and constants on the other.";
+        } else if (state.difficulty === 'complex') {
+            hint = "Expand the groups first to see all the terms clearly.";
+        }
+
+        // Add specific fraction hint if the current state has fractions
+        if (!isInt(state.leftState.variables) || !isInt(state.leftState.constants) || !isInt(state.rightState.variables) || !isInt(state.rightState.constants)) {
+            hint = "Try multiplying both sides by the denominator to clear fractions!";
+        }
+
+        showMessage("Incorrect! Hint: " + hint);
+        updateUI();
+      }
+    }
+
+    function renderShapes(side) {
+      let h = '';
+      if (side.groups && side.groups.count > 0) {
+        h += `<div style="display: flex; gap: 4px; justify-content: center; width: 100%; margin-bottom: 4px;">`;
+        let gCount = Math.floor(Math.abs(side.groups.count));
+        for(let i=0; i<gCount; i++) {
+          h += `<div class="group-wrap">`;
+          let vFull = Math.floor(Math.abs(side.groups.variables));
+          let vFrac = cleanFloat(Math.abs(side.groups.variables) - vFull);
+          for(let v=0; v<vFull; v++) h += `<div class="shape-var">x</div>`;
+          if (vFrac > 0.001) h += `<div class="shape-var" style="height: ${Math.max(16, Math.round(32 * vFrac))}px; font-size: 10px;">${toImproperFraction(vFrac)}x</div>`;
+
+          let cFull = Math.floor(Math.abs(side.groups.constants));
+          let cFrac = cleanFloat(Math.abs(side.groups.constants) - cFull);
+          for(let c=0; c<cFull; c++) h += `<div class="shape-const">1</div>`;
+          if (cFrac > 0.001) {
+              let dim = Math.max(16, Math.round(30 * Math.sqrt(cFrac)));
+              h += `<div class="shape-const" style="width: ${dim}px; height: ${dim}px; font-size: 10px; border-radius: 50%;">${toImproperFraction(cFrac)}</div>`;
+          }
+          h += `</div>`;
+        }
+        h += `</div>`;
+      }
+
+      let items = [];
+      let posVars = cleanFloat(side.variables);
+      if (posVars > 0) {
+          let full = Math.floor(posVars);
+          let frac = cleanFloat(posVars - full);
+          for(let i=0; i<full; i++) items.push({ type: 'var', label: 'x', frac: 1 });
+          if (frac > 0.001) items.push({ type: 'var', label: toImproperFraction(frac) + 'x', frac: frac });
+      }
+
+      let posConsts = cleanFloat(side.constants);
+      if (posConsts > 0) {
+          let full = Math.floor(posConsts);
+          let frac = cleanFloat(posConsts - full);
+          for(let i=0; i<full; i++) items.push({ type: 'const', label: '1', frac: 1 });
+          if (frac > 0.001) items.push({ type: 'const', label: toImproperFraction(frac), frac: frac });
+      }
+
+      let chunks = [];
+      for(let i=0; i<items.length; i+=5) {
+        chunks.push(items.slice(i, i+5));
+      }
+
+      chunks.forEach(chunk => {
+        h += `<div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; width: 100%;">`;
+        chunk.forEach(b => {
+          let bClass = b.type === 'var' ? 'shape-var' : 'shape-const';
+          let style = '';
+          if (b.frac < 1) {
+              if (b.type === 'var') {
+                  style = `height: ${Math.max(16, Math.round(32 * b.frac))}px; font-size: 10px;`;
+              } else {
+                  let dim = Math.max(16, Math.round(30 * Math.sqrt(b.frac)));
+                  style = `width: ${dim}px; height: ${dim}px; font-size: 10px; border-radius: 50%;`;
+              }
+          }
+          h += `<div class="${bClass}" style="${style}">${b.label}</div>`;
+        });
+        h += `</div>`;
+      });
+      return h;
+    }
+
+    function renderBalloons(side, baseHeight) {
+      let h = '';
+      let items = [];
+
+      let negVars = cleanFloat(Math.abs(Math.min(0, side.variables)));
+      if (negVars > 0) {
+          let full = Math.floor(negVars);
+          let frac = cleanFloat(negVars - full);
+          for(let i=0; i<full; i++) items.push({ type: 'var', label: '-x', frac: 1 });
+          if (frac > 0.001) items.push({ type: 'var', label: '-' + toImproperFraction(frac) + 'x', frac: frac });
+      }
+
+      let negConsts = cleanFloat(Math.abs(Math.min(0, side.constants)));
+      if (negConsts > 0) {
+          let full = Math.floor(negConsts);
+          let frac = cleanFloat(negConsts - full);
+          for(let i=0; i<full; i++) items.push({ type: 'const', label: '-1', frac: 1 });
+          if (frac > 0.001) items.push({ type: 'const', label: '-' + toImproperFraction(frac), frac: frac });
+      }
+
+      let chunks = [];
+      for(let i=0; i<items.length; i+=5) {
+        chunks.push(items.slice(i, i+5));
+      }
+
+      chunks.forEach((chunk, rowIndex) => {
+        let stringLen = baseHeight + (rowIndex * 46) + 19;
+
+        h += `<div style="display: flex; gap: 6px; justify-content: center; width: 100%;">`;
+        chunk.forEach(b => {
+          let bClass = b.type === 'var' ? 'b-var' : 'b-const';
+          let scale = b.frac < 1 ? Math.max(0.7, Math.sqrt(b.frac)) : 1;
+          let bStyle = b.frac < 1 ? `transform: scale(${scale});` : '';
+          let lStyle = b.frac < 1 ? `font-size: 10px;` : '';
+
+          h += `<div class="b-wrapper">
+                  <div class="balloon ${bClass}" style="${bStyle}">
+                    <span class="b-label" style="${lStyle}">${b.label}</span>
+                    <div class="b-string" style="--string-len: ${stringLen / scale}px;"></div>
+                  </div>
+                </div>`;
+        });
+        h += `</div>`;
+      });
+      return h;
+    }
+
+    function getPosRows(side) {
+      let posCount = Math.ceil(Math.max(0, side.variables)) + Math.ceil(Math.max(0, side.constants));
+      return Math.ceil(posCount / 5) + (side.groups && Math.abs(side.groups.count) > 0 ? 1 : 0);
+    }
+
+    function updateUI() {
+      const isSandbox = state.mode === 'sandbox';
+
+      // Toggle Specific Overlays & Layouts
+      document.getElementById('challenge-nav').classList.toggle('hidden', isSandbox);
+      document.getElementById('challenge-controls').classList.toggle('hidden', isSandbox);
+      document.getElementById('challenge-answer-panel').classList.toggle('hidden', isSandbox);
+      document.getElementById('sandbox-nav').classList.toggle('hidden', !isSandbox);
+
+      document.getElementById('sandbox-left-panel').classList.toggle('hidden', !isSandbox);
+      document.getElementById('sandbox-right-panel').classList.toggle('hidden', !isSandbox);
+
+      if (!isSandbox) {
+        document.getElementById('diff-badge').innerText = state.difficulty.replace('-', ' ') + ' equations';
+        let dots = '';
+        for(let i=0; i<15; i++) {
+          let cls = i < state.levelIndex ? 'dot-done' : (i === state.levelIndex ? 'dot-current' : 'dot-pending');
+          dots += `<div class="dot ${cls}"></div>`;
+        }
+        document.getElementById('level-dots').innerHTML = dots;
+
+        const expBtn = document.getElementById('btn-expand');
+
+        const lFactor = getFactor(state.leftState);
+        const rFactor = getFactor(state.rightState);
+        const canExpand = (state.leftState.groups !== null || state.rightState.groups !== null);
+        const canFactor = (!canExpand && (lFactor > 1 || rFactor > 1));
+
+        if (canExpand) {
+            expBtn.classList.remove('hidden', 'factor-mode', 'disabled');
+            expBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 15l-6 6m6-6v4.8m0-4.8H4.2M9 9 3 3m6 6V4.2M9 9H4.2m5.8-5.8 6 6m-6-6v4.8m0-4.8h4.8"/></svg> Expand`;
+            expBtn.onclick = handleExpand;
+        } else if (canFactor) {
+            expBtn.classList.remove('hidden', 'disabled');
+            expBtn.classList.add('factor-mode');
+            expBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M10 14l-7 7"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M14 14h6v6"/><path d="M14 14l7 7"/><path d="M10 10H4V4"/><path d="M10 10L3 3"/></svg> Factor`;
+            expBtn.onclick = handleFactor;
+        } else {
+            expBtn.classList.remove('hidden', 'factor-mode');
+            expBtn.classList.add('disabled');
+            expBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 15l-6 6m6-6v4.8m0-4.8H4.2M9 9 3 3m6 6V4.2M9 9H4.2m5.8-5.8 6 6m-6-6v4.8m0-4.8h4.8"/></svg> Expand`;
+            expBtn.onclick = null;
+        }
+      }
+
+      if (isSandbox) {
+        document.getElementById('scale-wrapper').style.marginTop = '200px';
+      } else {
+        document.getElementById('scale-wrapper').style.marginTop = '0.25rem';
+      }
+
+      const getW = (s) => s.variables * state.xValue + s.constants + (s.groups ? s.groups.count * (s.groups.variables * state.xValue + s.groups.constants) : 0);
+      const leftWeight = getW(state.leftState);
+      const rightWeight = getW(state.rightState);
+      const difference = rightWeight - leftWeight;
+
+      const isEqual = Math.abs(leftWeight - rightWeight) < 0.001;
+      const signStr = isEqual ? '=' : '≠';
+      const signColor = isEqual ? '#22c55e' : '#ef4444';
+      const signHtml = `<span style="color: ${signColor}; font-weight: 900; font-size: 1.3em;">${signStr}</span>`;
+
+      // Update Color-Coded Equation Displays
+      document.getElementById('eq-left').innerHTML = formatSideHTML(state.leftState);
+      document.getElementById('eq-right').innerHTML = formatSideHTML(state.rightState);
+      document.getElementById('eq-sign').innerHTML = signHtml;
+
+      // Generate the Expanded Forms
+      let leftTerms = getExpandedTerms(state.leftState);
+      let rightTerms = getExpandedTerms(state.rightState);
+
+      let maxTerms = 20;
+      let leftLimit = leftTerms.length;
+      let rightLimit = rightTerms.length;
+
+      if (leftTerms.length + rightTerms.length > maxTerms) {
+        leftLimit = Math.min(leftTerms.length, maxTerms);
+        rightLimit = Math.max(0, maxTerms - leftLimit);
+      }
+
+      let leftExpHtml = getExpandedHtmlParts(leftTerms, leftLimit).join('');
+      let rightExpHtml = getExpandedHtmlParts(rightTerms, rightLimit).join('');
+      if (leftTerms.length === 0) leftExpHtml = `<span style="color: ${CONST_COLOR};">0</span>`;
+      if (rightTerms.length === 0) rightExpHtml = `<span style="color: ${CONST_COLOR};">0</span>`;
+
+      document.getElementById('eq-exp-left').innerHTML = leftExpHtml;
+      document.getElementById('eq-exp-right').innerHTML = rightExpHtml;
+      document.getElementById('eq-exp-sign').innerHTML = signHtml;
+
+      if (isSandbox) {
+        document.getElementById('sandbox-math-panel').classList.remove('hidden');
+        document.getElementById('sandbox-x-val').innerHTML = toImproperFraction(state.xValue);
+        document.getElementById('sandbox-sub-left').innerHTML = formatSubstitutionHTML(state.leftState, state.xValue);
+        document.getElementById('sandbox-sub-right').innerHTML = formatSubstitutionHTML(state.rightState, state.xValue);
+        document.getElementById('sandbox-sub-sign').innerHTML = signHtml;
+        document.getElementById('sandbox-simp-left').innerHTML = `<span style="color: ${CONST_COLOR};">${toImproperFraction(leftWeight)}</span>`;
+        document.getElementById('sandbox-simp-right').innerHTML = `<span style="color: ${CONST_COLOR};">${toImproperFraction(rightWeight)}</span>`;
+        document.getElementById('sandbox-simp-sign').innerHTML = signHtml;
+      } else {
+        document.getElementById('sandbox-math-panel').classList.add('hidden');
+      }
+
+      const msgBox = document.getElementById('msg-box');
+      if (state.message) { document.getElementById('msg-text').innerText = state.message; msgBox.classList.remove('hidden'); }
+      else { msgBox.classList.add('hidden'); }
+
+      const undoChallenge = document.getElementById('btn-undo-challenge');
+      if (state.history.length > 0 && !state.isWin) {
+        if(undoChallenge) { undoChallenge.classList.add('active'); undoChallenge.classList.remove('disabled'); }
+      } else {
+        if(undoChallenge) { undoChallenge.classList.remove('active'); undoChallenge.classList.add('disabled'); }
+      }
+
+      const tilt = Math.max(-8, Math.min(8, difference * 1.5));
+      document.getElementById('scale-beam').style.transform = `rotate(${tilt}deg)`;
+      document.getElementById('pan-left').style.transform = `rotate(${-tilt}deg)`;
+      document.getElementById('pan-right').style.transform = `rotate(${-tilt}deg)`;
+
+      const leftBaseHeight = getPosRows(state.leftState) === 0 ? 25 : (getPosRows(state.leftState) * 42 + 5);
+      const rightBaseHeight = getPosRows(state.rightState) === 0 ? 25 : (getPosRows(state.rightState) * 42 + 5);
+
+      document.getElementById('left-neg').style.bottom = `calc(100% + ${leftBaseHeight}px)`;
+      document.getElementById('right-neg').style.bottom = `calc(100% + ${rightBaseHeight}px)`;
+
+      document.getElementById('left-pos').innerHTML = renderShapes(state.leftState);
+      document.getElementById('left-neg').innerHTML = renderBalloons(state.leftState, leftBaseHeight);
+      document.getElementById('right-pos').innerHTML = renderShapes(state.rightState);
+      document.getElementById('right-neg').innerHTML = renderBalloons(state.rightState, rightBaseHeight);
+
+      const winLyr = document.getElementById('win-layer');
+      if (state.isWin && !isSandbox) {
+        document.getElementById('win-title').innerText = state.levelIndex === 14 ? 'Complete!' : 'Solved!';
+        document.getElementById('win-val').innerHTML = `<span style="color: ${VAR_COLOR};">x</span> <span style="color: #cbd5e1;">=</span> <span style="color: ${CONST_COLOR};">${toImproperFraction(state.xValue)}</span>`;
+        winLyr.classList.remove('hidden');
+      } else { winLyr.classList.add('hidden'); }
+
+      // Fire auto-scaler to ensure scale is perfectly centered
+      setTimeout(fitScale, 10);
+    }
+
+    setMode('title');
+  </script>
+
+  <!-- Site chrome: Common Core panel toggle (kept separate from the game's own script/state) -->
+  <script>
+    function toggleCcssPanel() {
+      var panel = document.getElementById('ccss-panel');
+      var btn = document.querySelector('.ccss-toggle');
+      var willShow = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !willShow);
+      btn.setAttribute('aria-expanded', String(willShow));
+    }
+    document.addEventListener('click', function (e) {
+      var widget = document.querySelector('.ccss-widget');
+      if (widget && !widget.contains(e.target)) {
+        document.getElementById('ccss-panel').classList.add('hidden');
+        document.querySelector('.ccss-toggle').setAttribute('aria-expanded', 'false');
+      }
+    });
+  </script>
+</body>
+</html>
