@@ -666,6 +666,62 @@ function toSuperscript(num) {
 }
 function formatPower(v, exp) { if (exp === 0) return "1"; return v + toSuperscript(exp); }
 
+// Draws text that may contain toSuperscript()'s superscript characters, but
+// renders those digits as scaled-down/raised REGULAR digits instead of using
+// the Unicode superscript glyphs directly. Unicode superscript characters
+// come from two different blocks (¹²³ vs ⁰⁴⁵⁶⁷⁸⁹) that many fonts - even
+// well-designed ones - render with inconsistent size/baseline/style, which
+// looks broken (mismatched digits) especially on mobile. Regular digits 0-9
+// are always a unified, consistent glyph set in any font, so drawing scaled
+// copies of those instead guarantees a consistent look everywhere.
+var SUP_TO_NORMAL = {"⁻":"-", "⁰":"0", "¹":"1", "²":"2", "³":"3", "⁴":"4", "⁵":"5", "⁶":"6", "⁷":"7", "⁸":"8", "⁹":"9"};
+
+function drawSupText(str, x, y, hAlign, vAlign) {
+  if (hAlign === undefined) hAlign = CENTER;
+  if (vAlign === undefined) vAlign = CENTER;
+
+  var segments = [];
+  for (var i = 0; i < str.length; i++) {
+    var ch = str[i];
+    var mapped = SUP_TO_NORMAL[ch];
+    var isSup = mapped !== undefined;
+    var glyph = isSup ? mapped : ch;
+    if (segments.length > 0 && segments[segments.length - 1].isSup === isSup) {
+      segments[segments.length - 1].text += glyph;
+    } else {
+      segments.push({ text: glyph, isSup: isSup });
+    }
+  }
+
+  var baseSize = textSize();
+  var supSize = baseSize * 0.62;
+  var supRaise = baseSize * 0.32;
+
+  var totalWidth = 0;
+  var s;
+  for (s = 0; s < segments.length; s++) {
+    textSize(segments[s].isSup ? supSize : baseSize);
+    totalWidth += textWidth(segments[s].text);
+  }
+
+  var startX;
+  if (hAlign === CENTER) startX = x - totalWidth / 2;
+  else if (hAlign === RIGHT) startX = x - totalWidth;
+  else startX = x;
+
+  textAlign(LEFT, vAlign);
+  var cursorX = startX;
+  for (s = 0; s < segments.length; s++) {
+    var seg = segments[s];
+    textSize(seg.isSup ? supSize : baseSize);
+    text(seg.text, cursorX, seg.isSup ? (y - supRaise) : y);
+    cursorX += textWidth(seg.text);
+  }
+
+  textSize(baseSize);
+  textAlign(hAlign, vAlign);
+}
+
 function generateExponentQuestion(isHard) {
   isFraction = false; subQuestionText = "";
   var qType = randomNumber(0, 7);
@@ -758,9 +814,9 @@ function renderMathUI_1P() {
   stroke("#333333"); strokeWeight(1); line(50, 55, 350, 55); noStroke(); fill("white"); textSize(38);
 
   if (isFraction) {
-    text(questionText, 200, 185); stroke("white"); strokeWeight(2); line(165, 197, 235, 197); noStroke(); text(subQuestionText, 200, 230);
+    drawSupText(questionText, 200, 185); stroke("white"); strokeWeight(2); line(165, 197, 235, 197); noStroke(); drawSupText(subQuestionText, 200, 230);
   } else {
-    text(questionText, 200, 210);
+    drawSupText(questionText, 200, 210);
   }
 
   var buttonLayout = [
@@ -775,7 +831,7 @@ function renderMathUI_1P() {
     var hover = (World.mouseX > bx - bw/2 && World.mouseX < bx + bw/2 && World.mouseY > by - bh/2 && World.mouseY < by + bh/2);
 
     fill(hover ? "#4a90d9" : "white"); noStroke(); rect(bx - bw/2, by - bh/2, bw, bh, 8);
-    fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); text(options[i].text, bx, by + 2); textStyle(NORMAL);
+    fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); drawSupText(options[i].text, bx, by + 2); textStyle(NORMAL);
 
     fill("#333333"); rect(bx - 40, by + 13, 80, 14, 4);
     fill("white"); textSize(10); textStyle(BOLD); text(buttonLayout[i].label, bx, by + 24); textStyle(NORMAL);
@@ -798,9 +854,9 @@ function renderMathUI_2P() {
   stroke("#333333"); strokeWeight(1); line(50, 62, 350, 62); noStroke(); fill("white"); textSize(36);
 
   if (isFraction) {
-    text(questionText, 200, 108); stroke("white"); strokeWeight(2); line(165, 120, 235, 120); noStroke(); text(subQuestionText, 200, 155);
+    drawSupText(questionText, 200, 108); stroke("white"); strokeWeight(2); line(165, 120, 235, 120); noStroke(); drawSupText(subQuestionText, 200, 155);
   } else {
-    text(questionText, 200, 135);
+    drawSupText(questionText, 200, 135);
   }
 
   if (defenderLockedOut) {
@@ -812,7 +868,7 @@ function renderMathUI_2P() {
   for (var i = 0; i < 2; i++) {
     var bx = 110 + (i * 175); var by = 275; var isLocked = (lockedOptionIndex === i);
     fill(isLocked ? "#3a1010" : "white"); noStroke(); rect(bx - 70, by - 45, 140, 90, 8);
-    fill(isLocked ? "#666666" : "#111111"); textSize(32); textStyle(BOLD); text(options[i].text, bx, by + 5); textStyle(NORMAL);
+    fill(isLocked ? "#666666" : "#111111"); textSize(32); textStyle(BOLD); drawSupText(options[i].text, bx, by + 5); textStyle(NORMAL);
     fill(isLocked ? "#222222" : "#1d428a"); rect(bx - 65, by + 28, 58, 16, 4); fill(isLocked ? "#444444" : "white"); textSize(11); textStyle(BOLD); text(i === 0 ? "[ A ]" : "[ D ]", bx - 36, by + 40);
     fill(isLocked ? "#222222" : "#ce1141"); rect(bx + 7, by + 28, 58, 16, 4); fill(isLocked ? "#444444" : "white"); textSize(11); text(i === 0 ? "[ < ]" : "[ > ]", bx + 36, by + 40); textStyle(NORMAL);
 
@@ -851,7 +907,7 @@ function drawExplanationScreen(isCorrect) {
 
   var qString = lastQuestionText;
   if (lastIsFraction && lastSubQuestionText !== "") qString += " / " + lastSubQuestionText;
-  fill("white"); textSize(18); textStyle(BOLD); text(qString + "  =  " + lastCorrectAns, 200, 316); textStyle(NORMAL);
+  fill("white"); textSize(18); textStyle(BOLD); drawSupText(qString + "  =  " + lastCorrectAns, 200, 316); textStyle(NORMAL);
 
   fill("#aaaaaa"); textSize(12); text(lastExplanation, 200, 336);
 

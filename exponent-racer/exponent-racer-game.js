@@ -92,6 +92,62 @@ function formatExponent(expNum) {
   return res;
 }
 
+// Draws text that may contain formatExponent()'s superscript characters, but
+// renders those digits as scaled-down/raised REGULAR digits instead of using
+// the Unicode superscript glyphs directly. Unicode superscript characters
+// come from two different blocks (¹²³ vs ⁰⁴⁵⁶⁷⁸⁹) that many fonts - even
+// well-designed ones - render with inconsistent size/baseline/style, which
+// looks broken (mismatched digits) especially on mobile. Regular digits 0-9
+// are always a unified, consistent glyph set in any font, so drawing scaled
+// copies of those instead guarantees a consistent look everywhere.
+var SUP_TO_NORMAL = {"⁻":"-", "⁰":"0", "¹":"1", "²":"2", "³":"3", "⁴":"4", "⁵":"5", "⁶":"6", "⁷":"7", "⁸":"8", "⁹":"9"};
+
+function drawSupText(str, x, y, hAlign, vAlign) {
+  if (hAlign === undefined) hAlign = CENTER;
+  if (vAlign === undefined) vAlign = CENTER;
+
+  var segments = [];
+  for (var i = 0; i < str.length; i++) {
+    var ch = str[i];
+    var mapped = SUP_TO_NORMAL[ch];
+    var isSup = mapped !== undefined;
+    var glyph = isSup ? mapped : ch;
+    if (segments.length > 0 && segments[segments.length - 1].isSup === isSup) {
+      segments[segments.length - 1].text += glyph;
+    } else {
+      segments.push({ text: glyph, isSup: isSup });
+    }
+  }
+
+  var baseSize = textSize();
+  var supSize = baseSize * 0.62;
+  var supRaise = baseSize * 0.32;
+
+  var totalWidth = 0;
+  var s;
+  for (s = 0; s < segments.length; s++) {
+    textSize(segments[s].isSup ? supSize : baseSize);
+    totalWidth += textWidth(segments[s].text);
+  }
+
+  var startX;
+  if (hAlign === CENTER) startX = x - totalWidth / 2;
+  else if (hAlign === RIGHT) startX = x - totalWidth;
+  else startX = x;
+
+  textAlign(LEFT, vAlign);
+  var cursorX = startX;
+  for (s = 0; s < segments.length; s++) {
+    var seg = segments[s];
+    textSize(seg.isSup ? supSize : baseSize);
+    text(seg.text, cursorX, seg.isSup ? (y - supRaise) : y);
+    cursorX += textWidth(seg.text);
+  }
+
+  textSize(baseSize);
+  textAlign(hAlign, vAlign);
+}
+
 
 var menuExponents = [];
 for(var j=0; j<10; j++) {
@@ -1190,16 +1246,16 @@ if (startSequencePhase > 0) {
     if (isVocab) { circleType = optStr.substring(1, 2); optStr = optStr.substring(3); }
 
     if (isFraction) {
-      var fParts = optStr.split("\n—\n"); textSize(19); text(fParts[0], targetX, fuelY - 10);
+      var fParts = optStr.split("\n—\n"); textSize(19); drawSupText(fParts[0], targetX, fuelY - 10);
       stroke("black"); strokeWeight(2); line(targetX - 10, fuelY + 2, targetX + 10, fuelY + 2);
-      noStroke(); text(fParts[1], targetX, fuelY + 14);
+      noStroke(); drawSupText(fParts[1], targetX, fuelY + 14);
     } else if (isVocab) {
-      textSize(24); text(optStr, targetX, fuelY); noFill(); stroke("blue"); strokeWeight(3);
+      textSize(24); drawSupText(optStr, targetX, fuelY); noFill(); stroke("blue"); strokeWeight(3);
       if (circleType === "B") ellipse(targetX - 4, fuelY + 1, 19, 24); else if (circleType === "E") ellipse(targetX + 6, fuelY - 4, 14, 17); else if (circleType === "P") ellipse(targetX + 1, fuelY - 2, 40, 31);
       noStroke();
     } else {
       if (optStr.length >= 7) textSize(18); else if (optStr.length >= 5) textSize(22); else textSize(28);
-      text(optStr, targetX, fuelY);
+      drawSupText(optStr, targetX, fuelY);
     }
   }
 
@@ -1371,10 +1427,10 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
   noStroke(); fill("black"); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text("FUEL", 350, 24); textStyle(NORMAL);
   noStroke(); fill("black"); textAlign(CENTER, CENTER);
 
-  if (expressionString.indexOf("Identify:") === 0) { textSize(18); text(expressionString, 200, 23); }
-  else if (expressionString.length >= 20) { textSize(15); text(expressionString, 200, 23); }
-  else if (expressionString.length > 14) { textSize(19); text(expressionString, 200, 23); }
-  else { textSize(24); text(expressionString, 200, 23); }
+  if (expressionString.indexOf("Identify:") === 0) { textSize(18); drawSupText(expressionString, 200, 23); }
+  else if (expressionString.length >= 20) { textSize(15); drawSupText(expressionString, 200, 23); }
+  else if (expressionString.length > 14) { textSize(19); drawSupText(expressionString, 200, 23); }
+  else { textSize(24); drawSupText(expressionString, 200, 23); }
 
   noStroke(); fill("gold"); ellipse(16, 60, 16, 16); fill("yellow"); ellipse(16, 60, 10, 10);
   fill("white"); stroke("black"); strokeWeight(3); textAlign(LEFT, CENTER);
@@ -1434,32 +1490,32 @@ function drawPausedScreen() {
   noStroke(); fill("red"); textSize(30); textStyle(BOLD); text("INCORRECT!", 200, currentY); textStyle(NORMAL);
 
   currentY += h1 + gap;
-  fill("white"); if (expressionString.indexOf("Identify:") === 0) textSize(18); else textSize(22); text("Question: " + expressionString, 200, currentY);
+  fill("white"); if (expressionString.indexOf("Identify:") === 0) textSize(18); else textSize(22); drawSupText("Question: " + expressionString, 200, currentY);
 
   currentY += h2 + gap;
   var leftY = currentY; var rightY = currentY;
 
   fill("red"); textSize(18); textStyle(BOLD); text("Your Answer:", 100, leftY); textStyle(NORMAL); leftY += 20;
   if (pickedIsFraction) {
-    var pParts = pAns.split("\n—\n"); fill("white"); textSize(18); text(pParts[0], 100, leftY); stroke("white"); strokeWeight(2); line(90, leftY + 22, 110, leftY + 22); noStroke(); text(pParts[1], 100, leftY + 28); leftY += 60;
+    var pParts = pAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(pParts[0], 100, leftY); stroke("white"); strokeWeight(2); line(90, leftY + 22, 110, leftY + 22); noStroke(); drawSupText(pParts[1], 100, leftY + 28); leftY += 60;
   } else if (pIsVocab) {
-    fill("white"); textSize(22); text(pAns, 100, leftY); noFill(); stroke("blue"); strokeWeight(3); if (pCircleType === "B") ellipse(100 - 4, leftY + 11, 18, 22); else if (pCircleType === "E") ellipse(100 + 5, leftY + 7, 14, 17); else if (pCircleType === "P") ellipse(100 + 1, leftY + 9, 36, 28); noStroke(); leftY += 30;
-  } else { fill("white"); textSize(22); text(pAns, 100, leftY); leftY += 30; }
+    fill("white"); textSize(22); drawSupText(pAns, 100, leftY); noFill(); stroke("blue"); strokeWeight(3); if (pCircleType === "B") ellipse(100 - 4, leftY + 11, 18, 22); else if (pCircleType === "E") ellipse(100 + 5, leftY + 7, 14, 17); else if (pCircleType === "P") ellipse(100 + 1, leftY + 9, 36, 28); noStroke(); leftY += 30;
+  } else { fill("white"); textSize(22); drawSupText(pAns, 100, leftY); leftY += 30; }
 
   fill("lime"); textSize(18); textStyle(BOLD); text("Correct Answer:", 300, rightY); textStyle(NORMAL); rightY += 20;
   if (correctIsFraction) {
-    var cParts = cAns.split("\n—\n"); fill("white"); textSize(18); text(cParts[0], 300, rightY); stroke("white"); strokeWeight(2); line(290, rightY + 22, 310, rightY + 22); noStroke(); text(cParts[1], 300, rightY + 28); rightY += 60;
+    var cParts = cAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(cParts[0], 300, rightY); stroke("white"); strokeWeight(2); line(290, rightY + 22, 310, rightY + 22); noStroke(); drawSupText(cParts[1], 300, rightY + 28); rightY += 60;
   } else if (cIsVocab) {
-    fill("white"); textSize(22); text(cAns, 300, rightY); noFill(); stroke("blue"); strokeWeight(3); if (cCircleType === "B") ellipse(300 - 4, rightY + 11, 18, 22); else if (cCircleType === "E") ellipse(300 + 5, rightY + 7, 14, 17); else if (cCircleType === "P") ellipse(300 + 1, rightY + 9, 36, 28); noStroke(); rightY += 30;
-  } else { fill("white"); textSize(22); text(cAns, 300, rightY); rightY += 30; }
+    fill("white"); textSize(22); drawSupText(cAns, 300, rightY); noFill(); stroke("blue"); strokeWeight(3); if (cCircleType === "B") ellipse(300 - 4, rightY + 11, 18, 22); else if (cCircleType === "E") ellipse(300 + 5, rightY + 7, 14, 17); else if (cCircleType === "P") ellipse(300 + 1, rightY + 9, 36, 28); noStroke(); rightY += 30;
+  } else { fill("white"); textSize(22); drawSupText(cAns, 300, rightY); rightY += 30; }
 
   currentY += h3 + gap;
 
   if (explanationString.indexOf("A negative exponent flips") === 0) {
     var expParts = explanationString.split(":\n"); fill("lime"); textSize(15); textLeading(18); text(expParts[0] + ":", 200, currentY);
     var eqY = currentY + 40; var eqParts = expParts[1].split(" = "); var leftDenom = eqParts[0].substring(4); var rightDenom = eqParts[1].substring(4);
-    text("1", 150, eqY); stroke("lime"); strokeWeight(2); line(138, eqY + 22, 162, eqY + 22); noStroke(); text(leftDenom, 150, eqY + 28);
-    text("=", 200, eqY + 12); text("1", 250, eqY); stroke("lime"); strokeWeight(2); line(238, eqY + 22, 262, eqY + 22); noStroke(); text(rightDenom, 250, eqY + 28);
+    text("1", 150, eqY); stroke("lime"); strokeWeight(2); line(138, eqY + 22, 162, eqY + 22); noStroke(); drawSupText(leftDenom, 150, eqY + 28);
+    text("=", 200, eqY + 12); text("1", 250, eqY); stroke("lime"); strokeWeight(2); line(238, eqY + 22, 262, eqY + 22); noStroke(); drawSupText(rightDenom, 250, eqY + 28);
   } else { fill("lime"); textSize(15); textLeading(18); text(explanationString, 200, currentY); }
 
   currentY += h4 + gap;
@@ -1482,8 +1538,8 @@ function drawReviewItem(str, cx, cy) {
   textAlign(CENTER, CENTER); fill("white");
 
   if (str.indexOf("—") !== -1) {
-      var fParts = str.split("\n—\n"); textSize(12); text(fParts[0], cx, cy - 8); stroke("white"); strokeWeight(1.5); line(cx - 7, cy, cx + 7, cy); noStroke(); text(fParts[1], cx, cy + 8);
-  } else { textSize(18); text(str, cx, cy); }
+      var fParts = str.split("\n—\n"); textSize(12); drawSupText(fParts[0], cx, cy - 8); stroke("white"); strokeWeight(1.5); line(cx - 7, cy, cx + 7, cy); noStroke(); drawSupText(fParts[1], cx, cy + 8);
+  } else { textSize(18); drawSupText(str, cx, cy); }
 
   if (isVocab) { noFill(); stroke("cyan"); strokeWeight(2); if (circle === "B") ellipse(cx - 3, cy, 14, 18); else if (circle === "E") ellipse(cx + 6, cy - 4, 10, 14); else if (circle === "P") ellipse(cx + 1, cy - 1, 30, 22); noStroke(); }
   textAlign(LEFT, CENTER);
@@ -1518,7 +1574,7 @@ function drawGameOver() {
       fill("white"); noStroke(); textAlign(LEFT, TOP);
       var qText = wa.q; if (qText.indexOf("Identify: ") === 0) qText = qText.replace("Identify: ", "");
       var fullQ = "Q: " + qText; if (fullQ.length > 22) textSize(14); else if (fullQ.length > 17) textSize(16); else textSize(18);
-      text(fullQ, 35, itemY + 4); textSize(16); fill("#ff6b6b"); text("You:", 180, itemY + 5); fill("#2ecc71"); text("Cor:", 280, itemY + 5);
+      drawSupText(fullQ, 35, itemY + 4, LEFT, TOP); textSize(16); fill("#ff6b6b"); text("You:", 180, itemY + 5); fill("#2ecc71"); text("Cor:", 280, itemY + 5);
       drawReviewItem(wa.picked, 230, itemY + 12); drawReviewItem(wa.a, 330, itemY + 12); textAlign(CENTER, TOP);
     }
     if (wrongAnswersList.length > 3) { fill("gray"); textSize(10); text("+ " + (wrongAnswersList.length - 3) + " more unlisted mistake(s)", 200, reviewStartY + (maxShow * 35)); }

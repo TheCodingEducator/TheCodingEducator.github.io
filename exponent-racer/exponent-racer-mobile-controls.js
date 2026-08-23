@@ -3,7 +3,8 @@
 // uses for keyDown()/keyWentDown() - the game code itself needs no changes.
 // Only shown on devices whose primary input is touch (not on desktop/mouse).
 (function () {
-  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
+    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
   if (!isTouch) return;
 
   var wrap = document.createElement('div');
