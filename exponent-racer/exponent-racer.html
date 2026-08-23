@@ -92,6 +92,21 @@
     color: var(--muted);
     font-style: italic;
   }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .standards-panel .applies-to {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
   .teaching-notes {
     max-width: 720px;
     margin: 0 auto;
@@ -152,10 +167,19 @@
 <div class="play-area">
   <div id="game-canvas-slot"></div>
   <aside class="standards-panel">
-    <h2>&#128207; Common Core Standard</h2>
-    <span class="code">CCSS.MATH.CONTENT.8.EE.A.1</span>
-    <p>Know and apply the properties of integer exponents to generate equivalent numerical expressions.</p>
-    <p class="example">e.g. 3&sup2; &times; 3&#8315;&#8309; = 3&#8315;&sup3; = 1/3&sup3; = 1/27</p>
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.EE.A.1</span>
+      <p>Know and apply the properties of integer exponents to generate equivalent numerical expressions.</p>
+      <p class="example">e.g. 3&sup2; &times; 3&#8315;&#8309; = 3&#8315;&sup3; = 1/3&sup3; = 1/27</p>
+      <p class="applies-to">Applies to: Multiplying &amp; Dividing Powers, Power of a Power, Negative Exponents, Exponents of Zero and One, Vocabulary</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.6.EE.A.1</span>
+      <p>Write and evaluate numerical expressions involving whole-number exponents.</p>
+      <p class="example">e.g. 3&#8308; = 81</p>
+      <p class="applies-to">Applies to: Evaluating Powers</p>
+    </div>
   </aside>
 </div>
 
@@ -164,6 +188,7 @@
   <p>Exponent Racer is built the way I'd build a lesson - differentiated, low-stakes, and designed so a student's reading level never gets in the way of the math.</p>
   <ul>
     <li><strong>Differentiated by skill and by pace.</strong> Before each run, students choose exactly which of the 6 exponent skills to practice, and progress from Street Racing to Maximum Velocity mode as mastery builds. Inside a run, the question timer tightens a little with every correct answer, so the game keeps nudging a student toward faster recall instead of forcing everyone through the same fixed pace.</li>
+    <li><strong>Spans two grade levels on purpose.</strong> Evaluating Powers is grade-6 content (CCSS 6.EE.A.1); the other five skills are grade-8 (CCSS 8.EE.A.1). A student who still needs the basics and a student ready for negative exponents can both find their level on the same skill-select screen.</li>
     <li><strong>Rule-based feedback, not just right or wrong.</strong> Every missed question is followed by a plain-language explanation of the rule that applies (for example, "A negative exponent flips the base to the denominator"), so a mistake becomes a teaching moment instead of just a lower score.</li>
     <li><strong>Vocabulary built in.</strong> A dedicated skill has students identify the base, exponent, or power within an expression, reinforcing the academic vocabulary alongside the symbols themselves.</li>
     <li><strong>Language-light and ESL-friendly.</strong> Gameplay runs on numbers and symbols, not word problems - a student can play, understand their score, and read the answer choices with very little English reading required.</li>
