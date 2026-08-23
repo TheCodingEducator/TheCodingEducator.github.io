@@ -821,6 +821,19 @@ function generateExponentQuestion(isHard) {
   }
 }
 
+// Draws a solid triangle pointing in the given direction, instead of relying
+// on the ▲▼◀▶ Unicode glyphs - some platforms render ◀/▶ with color emoji
+// presentation (they're in Unicode's emoji set as "Reverse"/"Play" buttons)
+// while ▲/▼ have no emoji artwork and always render as plain glyphs, so the
+// four never looked uniform together on those devices. A drawn shape has no
+// font/emoji dependency at all, so it's guaranteed identical everywhere.
+function drawArrowShape(dir, cx, cy, s) {
+  if (dir === "up") triangle(cx, cy - s, cx - s, cy + s * 0.8, cx + s, cy + s * 0.8);
+  else if (dir === "down") triangle(cx, cy + s, cx - s, cy - s * 0.8, cx + s, cy - s * 0.8);
+  else if (dir === "left") triangle(cx - s, cy, cx + s * 0.8, cy - s, cx + s * 0.8, cy + s);
+  else if (dir === "right") triangle(cx + s, cy, cx - s * 0.8, cy - s, cx - s * 0.8, cy + s);
+}
+
 function renderMathUI_1P() {
   fill("#111111"); noStroke(); rect(20, 20, 360, 360, 12);
   fill("white"); textAlign(CENTER); textSize(18); textStyle(BOLD); text("SOLVE TO SHOOT", 200, 45); textStyle(NORMAL);
@@ -854,7 +867,7 @@ function renderMathUI_1P() {
 
     fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); drawSupText(options[i].text, textX, textY); textStyle(NORMAL);
 
-    fill(hover ? "white" : "#111111"); textSize(18); textStyle(BOLD); textAlign(CENTER, CENTER); text(buttonLayout[i].arrow, arrowX, arrowY); textStyle(NORMAL);
+    fill(hover ? "white" : "#111111"); noStroke(); drawArrowShape(dir, arrowX, arrowY, 8);
 
     if (keyWentDown(buttonLayout[i].key) || keyWentDown(buttonLayout[i].altKey) || (mouseWentDown("leftButton") && hover)) {
       lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
