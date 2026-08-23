@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Let's Get to the Point</title>
+<meta name="description" content="Slide, spin, and flip points on a coordinate grid to master translations, rotations, and reflections. A free, COPPA-compliant browser game for students.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Let's Get to the Point">
+<meta property="og:description" content="Slide, spin, and flip points on a coordinate grid to master translations, rotations, and reflections.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thecodingeducator.github.io/lets-get-to-the-point/lets-get-to-the-point.html">
+<meta name="twitter:card" content="summary">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+     crossorigin="anonymous"></script>
+<style>
+  :root {
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  #game-canvas-slot canvas {
+    display: block;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+  @media (min-width: 900px) {
+    #game-canvas-slot canvas {
+      /* p5 sets an inline width/height style on the canvas by default,
+         which otherwise beats these rules regardless of specificity */
+      width: min(78vh, 700px) !important;
+      height: min(78vh, 700px) !important;
+      max-width: none;
+      max-height: none;
+    }
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+</style>
+<script src="lets-get-to-the-point-p5.min.js"></script>
+</head>
+<body>
+<a class="back-link" href="../index.html">&larr; All games</a>
+<h1 class="sr-only">Let's Get to the Point</h1>
+<p class="sr-only">A coordinate-grid game where you slide, spin, and flip a point to match a target using translations, rotations, and reflections. Play solo in Practice, Genius in Training, or Geometry Genius modes, or race a friend head-to-head. Controls: arrow keys or WASD to move, space or enter to confirm answers, mouse to click menu buttons.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot"></div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.1</span>
+      <p>Verify experimentally the properties of rotations, reflections, and translations.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.3</span>
+      <p>Describe the effect of translations, rotations, and reflections on two-dimensional figures using coordinates.</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Let's Get to the Point is built the way I'd build a lesson - differentiated, low-stakes, and designed so a student's reading level never gets in the way of the math.</p>
+  <ul>
+    <li><strong>A hands-on rotation tool, digitized.</strong> Rotations use an interactive tracing-paper overlay - place a pencil at the center of rotation, then physically turn the paper - the same manipulative many teachers already use on paper, now with instant, exact feedback.</li>
+    <li><strong>Four-tier progression.</strong> Practice (self-paced, with hints), Genius in Training (speed-run with a personal best time), Geometry Genius (harder: rotation centers off the origin, multi-vertex shapes, fewer visual supports), and Head-to-Head (two players race the same grid).</li>
+    <li><strong>Diagnostic feedback, not just "wrong."</strong> A missed answer is analyzed for the specific mistake - clockwise/counterclockwise confusion, reflecting over the wrong axis, swapping x and y, moving only one coordinate - and shows a tailored visual explanation for that exact error.</li>
+    <li><strong>Scaffolding that fades as difficulty rises.</strong> Distance labels and direction arrows guide translations and reflections in the easier modes, and are deliberately removed in Geometry Genius so stronger students aren't held back by training wheels they no longer need.</li>
+    <li><strong>Two ways to be right.</strong> A 180° rotation reached by going clockwise or counterclockwise lands on the same point either way - the game recognizes and praises this instead of marking a mathematically valid path wrong.</li>
+    <li><strong>Both notations, side by side.</strong> Translations appear in algebraic form (x + 3, y + 2) and in plain language ("3 units right and 2 units up") across different questions, building fluency with both ways transformations get described.</li>
+    <li><strong>Low-stakes practice.</strong> Unlimited retries in Practice and Genius in Training, no accounts, and no permanent record of mistakes.</li>
+    <li><strong>Head-to-Head for review days.</strong> Two students solve the same challenge on the same grid at the same time - first correct answer wins the round - built for the kind of competitive energy a whole-class review deserves.</li>
+  </ul>
+</section>
+
+<script src="lets-get-to-the-point-shim.js"></script>
+<script src="lets-get-to-the-point-game.js"></script>
+<script src="lets-get-to-the-point-hook.js"></script>
+<script src="lets-get-to-the-point-mobile-controls.js"></script>
+</body>
+</html>
