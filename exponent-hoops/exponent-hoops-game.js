@@ -831,10 +831,10 @@ function renderMathUI_1P() {
   }
 
   var buttonLayout = [
-    { x: 200, y: 100, key: "up", altKey: "w", arrow: "▲" },
-    { x: 200, y: 310, key: "down", altKey: "s", arrow: "▼" },
-    { x: 75, y: 205, key: "left", altKey: "a", arrow: "◀" },
-    { x: 325, y: 205, key: "right", altKey: "d", arrow: "▶" }
+    { x: 200, y: 100, key: "up", altKey: "w", arrow: "▲", dir: "up" },
+    { x: 200, y: 310, key: "down", altKey: "s", arrow: "▼", dir: "down" },
+    { x: 75, y: 205, key: "left", altKey: "a", arrow: "◀", dir: "left" },
+    { x: 325, y: 205, key: "right", altKey: "d", arrow: "▶", dir: "right" }
   ];
 
   for (var i = 0; i < 4; i++) {
@@ -842,9 +842,17 @@ function renderMathUI_1P() {
     var hover = (World.mouseX > bx - bw/2 && World.mouseX < bx + bw/2 && World.mouseY > by - bh/2 && World.mouseY < by + bh/2);
 
     fill(hover ? "#4a90d9" : "white"); noStroke(); rect(bx - bw/2, by - bh/2, bw, bh, 8);
-    fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); drawSupText(options[i].text, bx, by - 9); textStyle(NORMAL);
 
-    fill(hover ? "white" : "#111111"); textSize(18); textStyle(BOLD); textAlign(CENTER, CENTER); text(buttonLayout[i].arrow, bx, by + 19); textStyle(NORMAL);
+    var dir = buttonLayout[i].dir;
+    var textX = bx, textY = by, arrowX = bx, arrowY = by;
+    if (dir === "up") { arrowY = by - bh / 2 + 13; textY = by + 8; }
+    else if (dir === "down") { arrowY = by + bh / 2 - 13; textY = by - 9; }
+    else if (dir === "left") { arrowX = bx - bw / 2 + 15; textX = bx + 10; }
+    else if (dir === "right") { arrowX = bx + bw / 2 - 15; textX = bx - 10; }
+
+    fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); drawSupText(options[i].text, textX, textY); textStyle(NORMAL);
+
+    fill(hover ? "white" : "#111111"); textSize(18); textStyle(BOLD); textAlign(CENTER, CENTER); text(buttonLayout[i].arrow, arrowX, arrowY); textStyle(NORMAL);
 
     if (keyWentDown(buttonLayout[i].key) || keyWentDown(buttonLayout[i].altKey) || (mouseWentDown("leftButton") && hover)) {
       lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
