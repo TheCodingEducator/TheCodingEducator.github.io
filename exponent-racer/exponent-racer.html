@@ -14,20 +14,109 @@
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
      crossorigin="anonymous"></script>
 <style>
+  :root {
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
     background: #111;
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
   }
-  canvas {
+  #game-canvas-slot canvas {
     display: block;
     box-shadow: 0 0 24px rgba(0,0,0,0.6);
     max-width: 100vw;
     max-height: 100vh;
+  }
+  @media (min-width: 900px) {
+    #game-canvas-slot canvas {
+      /* p5 sets an inline width/height style on the canvas by default,
+         which otherwise beats these rules regardless of specificity */
+      width: min(78vh, 700px) !important;
+      height: min(78vh, 700px) !important;
+      max-width: none;
+      max-height: none;
+    }
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .example {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
   }
   .sr-only {
     position: absolute;
@@ -59,6 +148,31 @@
 <a class="back-link" href="../index.html">&larr; All games</a>
 <h1 class="sr-only">Exponent Racer</h1>
 <p class="sr-only">A driving game where you steer between lanes and answer exponent math questions to refuel and score points. Controls: arrow keys or WASD to move, space or enter to confirm answers, mouse to click menu buttons.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot"></div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standard</h2>
+    <span class="code">CCSS.MATH.CONTENT.8.EE.A.1</span>
+    <p>Know and apply the properties of integer exponents to generate equivalent numerical expressions.</p>
+    <p class="example">e.g. 3&sup2; &times; 3&#8315;&#8309; = 3&#8315;&sup3; = 1/3&sup3; = 1/27</p>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Exponent Racer is built the way I'd build a lesson - differentiated, low-stakes, and designed so a student's reading level never gets in the way of the math.</p>
+  <ul>
+    <li><strong>Differentiated by skill and by pace.</strong> Before each run, students choose exactly which of the 6 exponent skills to practice, and progress from Street Racing to Maximum Velocity mode as mastery builds. Inside a run, the question timer tightens a little with every correct answer, so the game keeps nudging a student toward faster recall instead of forcing everyone through the same fixed pace.</li>
+    <li><strong>Rule-based feedback, not just right or wrong.</strong> Every missed question is followed by a plain-language explanation of the rule that applies (for example, "A negative exponent flips the base to the denominator"), so a mistake becomes a teaching moment instead of just a lower score.</li>
+    <li><strong>Vocabulary built in.</strong> A dedicated skill has students identify the base, exponent, or power within an expression, reinforcing the academic vocabulary alongside the symbols themselves.</li>
+    <li><strong>Language-light and ESL-friendly.</strong> Gameplay runs on numbers and symbols, not word problems - a student can play, understand their score, and read the answer choices with very little English reading required.</li>
+    <li><strong>Low-stakes practice.</strong> No accounts, no logins, and no permanent record of mistakes. Students can retry as many times as they need without it feeling like a graded test.</li>
+    <li><strong>Mistake review at the end of every run.</strong> The game-over screen lists recently missed questions side-by-side with the correct answer, giving students (and teachers glancing over a shoulder) a quick summary of what to revisit.</li>
+    <li><strong>Works on any device.</strong> On-screen joystick and action-button controls appear automatically on phones and tablets, so it's just as playable on a school Chromebook as it is at home.</li>
+  </ul>
+</section>
+
 <script src="exponent-racer-shim.js"></script>
 <script src="exponent-racer-game.js"></script>
 <script src="exponent-racer-hook.js"></script>

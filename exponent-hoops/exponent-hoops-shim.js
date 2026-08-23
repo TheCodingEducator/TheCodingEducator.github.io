@@ -4,7 +4,7 @@
 
 // ---- Canvas bootstrap (Code.org injects this behind the scenes) ----
 function setup() {
-  createCanvas(400, 400);
+  createCanvas(400, 400).parent('game-canvas-slot');
   frameRate(30); // Game Lab's default frame rate; the game's speed constants were tuned against it
   angleMode(DEGREES); // Game Lab uses degrees everywhere (rotate(), arc() angles, sprite.rotation), unlike plain p5.js's radians default
 }
