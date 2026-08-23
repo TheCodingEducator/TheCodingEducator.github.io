@@ -864,7 +864,7 @@ function renderMathUI_2P() {
   stroke("#333333"); strokeWeight(1); line(50, 62, 350, 62); noStroke(); fill("white"); textSize(36);
 
   if (isFraction) {
-    drawSupText(questionText, 200, 108); stroke("white"); strokeWeight(2); line(165, 130, 235, 130); noStroke(); drawSupText(subQuestionText, 200, 155);
+    drawSupText(questionText, 200, 108); stroke("white"); strokeWeight(2); line(165, 138, 235, 138); noStroke(); drawSupText(subQuestionText, 200, 163);
   } else {
     drawSupText(questionText, 200, 135);
   }
