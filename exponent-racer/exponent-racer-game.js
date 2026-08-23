@@ -932,7 +932,11 @@ function playGame(isFrozen) {
 
     // --- NEW FRUSTUM CULLING OPTIMIZATION ---
     // If the asset is completely off-screen above or below the viewport, skip rendering it!
-    if (tree.y < -250 || tree.y > 470) {
+    // City buildings are drawn well above their anchor point (up to bH=198px,
+    // since bH = tree.s * 9 and tree.s can be up to 22) - a plain "> 470" cutoff
+    // (canvas is 400 tall) would cull a tall building's top while it's still
+    // clearly on-screen, so the exit threshold has to clear that worst case.
+    if (tree.y < -250 || tree.y > 610) {
         continue;
     }
 
