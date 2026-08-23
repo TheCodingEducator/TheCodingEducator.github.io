@@ -979,7 +979,13 @@
       const down = contentBottom - originY;          // signed: negative when the visible art (pans/beam) falls short of the container's own declared bottom edge, which is the normal case - the 280px box has empty space below the artwork, so bottom-anchoring the box alone still leaves a gap above the controls bar
 
       const scaleW = (availableWidth / 2) / Math.max(halfW, 1);
-      const scaleH = availableHeight / Math.max(up + Math.max(down, 0), 1);
+      // up + down == contentBottom - contentTop (the TRUE content span)
+      // regardless of down's sign - clamping down to 0 here (an earlier
+      // version of this fix) undercounted the normal case where the art
+      // falls short of the container's own bottom edge, which under-scaled
+      // the whole assembly and left the leftover room stuck entirely above
+      // it once the bottom-gap correction below shifted everything down.
+      const scaleH = availableHeight / Math.max(up + down, 1);
 
       // Capped at whatever actually fits the wrapper (with a small safety
       // margin) - previously an extra 1.25x/1.45x was applied AFTER this
@@ -990,14 +996,18 @@
       // landscape, and a narrowed desktop window.
       let finalScale = Math.min(scaleW, scaleH, 6.0) * 0.95;
 
-      // Close the gap between the true visible content's bottom edge and
-      // the wrapper's bottom edge (the down < 0 case above) by nudging the
-      // whole scaled assembly down by that many real screen pixels -
-      // translateY is applied after scale() so this shift isn't itself
-      // affected by finalScale - so the scale visually reaches all the way
-      // down to the bar below it instead of floating with dead space
-      // beneath it.
-      const gapPx = down < 0 ? -down * finalScale : 0;
+      // Whichever dimension wasn't the binding constraint leaves leftover
+      // room (e.g. a wide equation is often width-bound, leaving unused
+      // height even though the scale is as big as it can be without either
+      // distorting its proportions or overflowing sideways). Rather than
+      // dumping 100% of that leftover as a gap above the scale (bottom-
+      // flush) or below it (top-flush), split it evenly so the scale sits
+      // roughly centered between the equation box above and the controls
+      // bar below - as close to touching both as the artwork's own
+      // proportions allow.
+      const naturalSpan = (up + down) * finalScale;
+      const leftover = Math.max(availableHeight - naturalSpan, 0);
+      const gapPx = (down < 0 ? -down * finalScale : 0) - leftover / 2;
 
       container.style.transformOrigin = 'bottom center';
       container.style.transform = `translateY(${gapPx}px) scale(${finalScale})`;
