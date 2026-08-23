@@ -640,12 +640,26 @@ function resetQuestion() {
       forcedLane = others[randomNumber(0, 1)]; fuelOptions[forcedLane] = powerOfPowerSumTrick;
   }
 
+  // Exponents of Zero and One: always include 0 and 1 as answer choices (whichever
+  // of them isn't the correct answer), since those are the classic misconceptions
+  // this skill is testing - "does x^0 = 0?" and "does x^1 = 1 or x?".
+  if (pickedSkill === 4) {
+    var requiredDistractors = [];
+    if (getMathVal(answer) !== 0) requiredDistractors.push(0);
+    if (getMathVal(answer) !== 1) requiredDistractors.push(1);
+    var openLanes = []; for (var ol = 0; ol < 3; ol++) if (fuelOptions[ol] === null) openLanes.push(ol);
+    for (var sIdx = openLanes.length - 1; sIdx > 0; sIdx--) { var rIdx = randomNumber(0, sIdx); var tmpLane = openLanes[sIdx]; openLanes[sIdx] = openLanes[rIdx]; openLanes[rIdx] = tmpLane; }
+    for (var rd = 0; rd < requiredDistractors.length && rd < openLanes.length; rd++) {
+      fuelOptions[openLanes[rd]] = requiredDistractors[rd];
+    }
+  }
+
   if (answerFormat === "vocab") {
     var tIdx = 0; for (var k = 0; k < 3; k++) { if (k !== cLane) { fuelOptions[k] = trickPool[tIdx]; tIdx++; } }
   } else {
     var ansMath = getMathVal(answer);
     for (var k = 0; k < 3; k++) {
-      if (k !== cLane && k !== forcedLane) {
+      if (fuelOptions[k] === null) {
         var isUnique = false, wrongVal, attempts = 0;
         var existingCache = []; for (var f = 0; f < 3; f++) { if (fuelOptions[f] !== null) { existingCache.push({ s: String(fuelOptions[f]), v: getMathVal(fuelOptions[f]) }); } }
 
