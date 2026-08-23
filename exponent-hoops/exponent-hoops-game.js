@@ -600,12 +600,12 @@ function drawRimFront() { stroke("#ff4500"); strokeWeight(3); noFill(); arc(hoop
 function drawScoreUI() {
   if (gameMode === "1P") {
     fill("#1d428a"); stroke("white"); strokeWeight(2); rect(10, 5, 60, 30, 5);
-    noStroke(); fill("white"); textSize(22); textAlign(CENTER); textStyle(BOLD); text(scoreBlue, 40, 28); textStyle(NORMAL);
+    noStroke(); fill("white"); textSize(22); textAlign(CENTER, BASELINE); textStyle(BOLD); text(scoreBlue, 40, 28); textStyle(NORMAL);
   } else {
     fill("#1d428a"); stroke("white"); strokeWeight(2); rect(10, 5, 60, 30, 5);
-    noStroke(); fill("white"); textSize(22); textAlign(CENTER); textStyle(BOLD); text(scoreBlue, 40, 28);
+    noStroke(); fill("white"); textSize(22); textAlign(CENTER, BASELINE); textStyle(BOLD); text(scoreBlue, 40, 28);
     fill("#ce1141"); stroke("white"); strokeWeight(2); rect(330, 5, 60, 30, 5);
-    noStroke(); fill("white"); textSize(22); textAlign(CENTER); text(scoreRed, 360, 28); textStyle(NORMAL);
+    noStroke(); fill("white"); textSize(22); textAlign(CENTER, BASELINE); text(scoreRed, 360, 28); textStyle(NORMAL);
   }
 }
 
@@ -613,14 +613,14 @@ function drawShotClock() {
   if (gameMode === "1P") return;
   var clockColor = (shotClock <= 3) ? "#e74c3c" : "#f1c40f";
   fill("black"); stroke(clockColor); strokeWeight(2); rect(175, 2, 50, 22, 3);
-  noStroke(); fill(clockColor); textSize(18); textAlign(CENTER); textStyle(BOLD); text(shotClock, 200, 19); textStyle(NORMAL);
+  noStroke(); fill(clockColor); textSize(18); textAlign(CENTER, BASELINE); textStyle(BOLD); text(shotClock, 200, 19); textStyle(NORMAL);
 }
 
 function drawControlsUI() {
   fill("rgba(0, 0, 0, 0.85)"); noStroke(); rect(0, 360, 400, 40);
   if (gameMode === "1P") {
     fill("#1d428a"); stroke("white"); strokeWeight(1.5); rect(15, 365, 150, 30, 5);
-    fill("white"); noStroke(); textSize(11); textAlign(CENTER); textStyle(BOLD); text("MOVE", 90, 385);
+    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("MOVE", 90, 385);
 
     fill("#c0392b"); stroke("white"); strokeWeight(1.5); rect(235, 365, 150, 30, 5);
     fill("white"); noStroke(); text("SPACE/ENTER : Shoot", 310, 385); textStyle(NORMAL);
@@ -629,7 +629,7 @@ function drawControlsUI() {
     var p2Text = (possession === 2) ? "ENTER Shoot" : "ENTER Steal";
 
     fill("#1d428a"); stroke("white"); strokeWeight(1.5); rect(5, 365, 165, 30, 5);
-    fill("white"); noStroke(); textSize(11); textAlign(CENTER); textStyle(BOLD); text("WASD Move | " + p1Text, 87, 385);
+    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("WASD Move | " + p1Text, 87, 385);
 
     fill("#ce1141"); stroke("white"); strokeWeight(1.5); rect(230, 365, 165, 30, 5);
     fill("white"); noStroke(); text("ARROWS Move | " + p2Text, 312, 385); textStyle(NORMAL);
@@ -643,7 +643,7 @@ function drawMenuButton() {
   var hover = (mx > 175 && mx < 225 && my > 365 && my < 395);
   fill(hover ? "#e74c3c" : "#111111"); stroke("white"); strokeWeight(1.5); rect(175, 365, 50, 30, 4);
 
-  fill("white"); noStroke(); textSize(11); textAlign(CENTER); textStyle(BOLD); text("MENU", 200, 385); textStyle(NORMAL);
+  fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("MENU", 200, 385); textStyle(NORMAL);
   if (mouseWentDown("leftButton") && hover) {
     gameState = "title"; showCorrect = false; showPenalty = false;
   }
