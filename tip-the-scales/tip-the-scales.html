@@ -869,6 +869,12 @@
     const VAR_COLOR = '#2563eb';
     const CONST_COLOR = '#f97316';
 
+    // Fixed reference footprint for sandbox mode's fitScale() - measured
+    // once from the scale's own static frame (pivot/beam/platforms) with
+    // no tiles on either pan. See fitScale() for why sandbox uses this
+    // instead of measuring live tile content.
+    const SANDBOX_REF = { halfW: 293, up: 260, down: -88 };
+
     // Global Keydown Listener for Hotkeys (Space/Enter -> Submit/Next Level)
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -974,6 +980,22 @@
         contentBottom = Math.max(contentBottom, r.bottom);
       }
       if (contentBottom < contentTop) { halfW = box.width / 2; contentTop = box.top; contentBottom = box.bottom; }
+
+      // Sandbox mode sizes off SANDBOX_REF (the scale's own static frame)
+      // instead of the live tile measurement above, unioned so it can
+      // still grow if an unusually tall stack would otherwise clip -
+      // without this, adding or removing a variable/constant during
+      // open-ended exploration made the whole scale visibly zoom in and
+      // out as its true content bounds shifted (worsened by the .neg-area
+      // balloons' own 0.3s "bottom" transition, which fitScale() could
+      // catch mid-animation). The frame itself doesn't change size, so
+      // anchoring to it keeps the scale's own size constant while tile
+      // stacks are still free to grow or shrink on their own.
+      if (state.mode === 'sandbox') {
+        contentTop = Math.min(contentTop, originY - SANDBOX_REF.up);
+        contentBottom = Math.max(contentBottom, originY + SANDBOX_REF.down);
+        halfW = Math.max(halfW, SANDBOX_REF.halfW);
+      }
 
       const up = originY - contentTop;              // distance from the bottom anchor up to the content's top
       const down = contentBottom - originY;          // signed: negative when the visible art (pans/beam) falls short of the container's own declared bottom edge, which is the normal case - the 280px box has empty space below the artwork, so bottom-anchoring the box alone still leaves a gap above the controls bar
