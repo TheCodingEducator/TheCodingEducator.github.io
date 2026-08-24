@@ -1389,7 +1389,7 @@ var SNEAK_CHASE_DURATION = 1.4; // seconds -- a bit longer since everyone moves 
 var sneakChaseTimer = 0;
 var sneakFleeDirX = 0, sneakFleeDirY = 0;
 
-var PATROL_GUARD_COUNT = 4;
+var PATROL_GUARD_COUNT = 3; // scaled down along with the smaller maze (see MAZE_COLS/MAZE_ROWS) - the same guard density as before, without crowding every route
 var patrolGuards = [];
 
 // The current room's corridor graph (see buildRoomGraph), kept
@@ -1409,10 +1409,15 @@ var GUARD_ALERT_RADIUS = 20;
 // MAZE_COLS grid of rooms becomes a (2*ROWS+1) x (2*COLS+1) super-
 // grid, where carving a wall at an even/odd position opens a
 // corridor between the two rooms on either side of it.
-// Denser still -- many more rooms means many more real branching
-// paths through the maze, not just a couple of forks.
-var MAZE_COLS = 9;
-var MAZE_ROWS = 6;
+// Sized for a quick round: small enough that a solve takes seconds
+// once the route is timed right, not minutes, while still leaving
+// real branching (several rooms per row/column, not just a couple of
+// forks). A much larger grid was the main reason a single blocked
+// corridor could cost such a long wait - the fewer total steps
+// between start and door, the faster a spotted opening actually
+// pays off.
+var MAZE_COLS = 6;
+var MAZE_ROWS = 4;
 var mazeGridCols = MAZE_COLS * 2 + 1;
 var mazeGridRows = MAZE_ROWS * 2 + 1;
 var mazeCellW = (ROOM_RIGHT - ROOM_LEFT) / mazeGridCols;
@@ -1476,16 +1481,17 @@ function generateMaze() {
     }
   }
 
-  // A SMALL number of extra openings for the occasional loop instead
-  // of a pure tree of dead ends -- kept light on purpose. Too many
-  // loops means there's always some totally clear detour around
-  // every guard, which makes them irrelevant; a mostly tree-shaped
-  // maze means the natural route to the door tends to be closer to
-  // the only one, so guards placed on it (see setupPatrolGuards)
-  // actually have to be dealt with. This only ever REMOVES walls, so
+  // Extra openings for loops instead of a pure tree of dead ends -
+  // raised well above a bare minimum now that the maze itself is
+  // smaller (see MAZE_COLS/MAZE_ROWS), so there are genuinely
+  // several real routes through, not just the one spanning-tree path
+  // plus a token detour or two. That's what keeps a single guard's
+  // corridor from being able to wall off the only way through for a
+  // long stretch - there's almost always a second way to route
+  // around while timing the first. This only ever REMOVES walls, so
   // the guaranteed connectivity from the spanning tree above can
   // only ever improve, never break.
-  var extra = Math.floor(MAZE_ROWS * MAZE_COLS * 0.08);
+  var extra = Math.floor(MAZE_ROWS * MAZE_COLS * 0.2);
   for (var e = 0; e < extra; e++) {
     var er = randomInt(1, mazeGridRows - 2);
     var ec = randomInt(1, mazeGridCols - 2);
@@ -1974,17 +1980,19 @@ function setupPatrolGuards(edges, adj, avoidCells, startCell, doorCell, alreadyB
     remaining.splice(farIdx, 1);
   }
 
-  // Each guard starts on one of the picked corridors, but doesn't
-  // just ping-pong along it forever -- see updatePatrolGuards, which
-  // sends it wandering to a random neighboring room cell every time
-  // it arrives somewhere, using sneakRoomAdj.
+  // Each guard starts on one of the picked corridors and stays
+  // posted near it - see updatePatrolGuards/pickNextWanderCell, which
+  // sends it wandering to a random neighboring room cell within
+  // HOME_RANGE_STEPS of homeCell every time it arrives somewhere,
+  // using sneakRoomAdj.
   for (var i = 0; i < chosenIdx.length; i++) {
     var chosen = edges[chosenIdx[i]];
     var guard = {
       fromCell: { gr: chosen.aR, gc: chosen.aC },
       toCell: { gr: chosen.bR, gc: chosen.bC },
+      homeCell: chosenCells[i],
       progress: random(0, 1),
-      speed: GUARD_SPEED_PX_BASE + i * 2, // pixels/sec -- kept slow and deliberate on purpose
+      speed: GUARD_SPEED_PX_BASE + i * 2, // pixels/sec
       coneWidth: 50,
       coneRadius: 55
     };
@@ -2000,17 +2008,19 @@ function setupPatrolGuards(edges, adj, avoidCells, startCell, doorCell, alreadyB
 // Guard turn rate -- how many degrees per second a guard's body
 // (and therefore their cone) can rotate. At the ends of a patrol
 // corridor the guard's walking direction reverses instantly, but
-// this makes them physically turn around over about a second and a
-// half instead of snapping 180 degrees in a single frame, so the
-// cone visibly sweeps as they do it.
-var GUARD_TURN_SPEED = 100; // degrees per second
+// this makes them physically turn around over well under a second
+// instead of snapping 180 degrees in a single frame, so the cone
+// visibly sweeps as they do it without the turn itself eating into
+// the player's window to move.
+var GUARD_TURN_SPEED = 170; // degrees per second
 
 // Base guard walking speed in pixels/second (each guard gets a
-// slightly different one so they don't all move in lockstep) --
-// deliberately slow, same unhurried pace as the old fixed-corridor
-// patrol, just now applied to real point-to-point travel between
-// room cells instead of a single hardcoded edge.
-var GUARD_SPEED_PX_BASE = 7;
+// slightly different one so they don't all move in lockstep) - now
+// combined with the short home-range leash (see HOME_RANGE_STEPS),
+// this means a guard reliably sweeps back past its own post every
+// few seconds instead of the corridor staying blocked (or open) for
+// an unpredictably long stretch.
+var GUARD_SPEED_PX_BASE = 15;
 
 // Steps `current` toward `target` by at most maxStepDeg, always the
 // short way around the circle.
@@ -2026,8 +2036,12 @@ function cellKey(gr, gc) { return gr + "," + gc; }
 
 // Minimum distance, in whole room-cell steps, a guard is ever allowed
 // to wander toward the player's spawn point. Room cells are 2
-// super-grid units apart, hence the /2.
-var SPAWN_GUARD_MIN_STEPS = 3;
+// super-grid units apart, hence the /2. Trimmed down to match the
+// smaller maze (see MAZE_COLS/MAZE_ROWS) - the old radius-3 exclusion
+// zone could swallow a large fraction of a maze this size, leaving
+// too few corridor candidates for setupPatrolGuards to actually place
+// PATROL_GUARD_COUNT guards on.
+var SPAWN_GUARD_MIN_STEPS = 2;
 
 function isTooCloseToSpawn(gr, gc) {
   var dr = (gr - sneakStartCellGr) / 2;
@@ -2035,38 +2049,61 @@ function isTooCloseToSpawn(gr, gc) {
   return Math.sqrt(dr * dr + dc * dc) < SPAWN_GUARD_MIN_STEPS;
 }
 
-// Where a guard heads next after arriving at arrivedCell: a random
-// real neighbor from the room graph, not the fixed reverse trip of
-// the old back-and-forth patrol. Prefers a neighbor that's neither
-// an immediate U-turn NOR a step toward the player's spawn point --
-// if every forward option would close in on the spawn, the guard
-// takes the U-turn instead, i.e. it visibly turns around rather than
-// ever closing in on where the player starts.
-function pickNextWanderCell(arrivedCell, cameFromCell) {
+// How far (in whole room-cell steps) a guard is ever allowed to
+// wander from the corridor it was originally posted to before it's
+// pulled back toward it - see pickNextWanderCell. A guard that can
+// wander anywhere in the maze can end up gone for a very long,
+// unpredictable time, leaving its post's corridor open for so long
+// (or blocked for so long, if it happens to loiter right there) that
+// timing it becomes pure luck instead of a learnable rhythm. Keeping
+// it on a short leash means it reliably sweeps back past the same
+// spot again and again at a roughly consistent interval - something
+// a player can actually watch, count, and time a dash around.
+var HOME_RANGE_STEPS = 2;
+
+// Where a guard heads next after arriving at arrivedCell: a real
+// neighbor from the room graph, biased to stay within HOME_RANGE_STEPS
+// of homeCell (the corridor it was originally posted on) rather than
+// an unrestricted wander across the whole maze - close enough to a
+// short back-and-forth patrol that its rhythm becomes learnable, but
+// still picking among 2-3 real options each time (not a fixed
+// metronome) so it's not perfectly predictable either. Falls back to
+// forward motion outside the range, then any safe neighbor, then any
+// neighbor at all, only when the home-range pool is empty (e.g. a
+// dead end right at the edge of its leash).
+function pickNextWanderCell(arrivedCell, cameFromCell, homeCell) {
   var neighbors = (sneakRoomAdj && sneakRoomAdj[cellKey(arrivedCell.gr, arrivedCell.gc)]) || [];
   if (neighbors.length === 0) { return cameFromCell || arrivedCell; }
 
-  var forwardSafe = [];
-  var anySafe = [];
+  var forwardHome = [], anyHome = [], forwardSafe = [], anySafe = [];
   for (var i = 0; i < neighbors.length; i++) {
     var nb = neighbors[i];
     var isBacktrack = cameFromCell && nb.gr === cameFromCell.gr && nb.gc === cameFromCell.gc;
     var tooClose = isTooCloseToSpawn(nb.gr, nb.gc);
+    var inRange = !homeCell || gridCellDistance(nb, homeCell) <= HOME_RANGE_STEPS;
     if (!tooClose) {
       anySafe.push(nb);
       if (!isBacktrack) { forwardSafe.push(nb); }
+      if (inRange) {
+        anyHome.push(nb);
+        if (!isBacktrack) { forwardHome.push(nb); }
+      }
     }
   }
 
-  var pool = forwardSafe.length > 0 ? forwardSafe : (anySafe.length > 0 ? anySafe : neighbors);
+  var pool = forwardHome.length > 0 ? forwardHome
+    : anyHome.length > 0 ? anyHome
+    : forwardSafe.length > 0 ? forwardSafe
+    : anySafe.length > 0 ? anySafe
+    : neighbors;
   var pick = pool[randomInt(0, pool.length - 1)];
   return { gr: pick.gr, gc: pick.gc };
 }
 
 // Guards walk continuously from fromCell to toCell; on arrival they
-// pick a new random neighboring cell to head to next (see
-// pickNextWanderCell) instead of turning around on cue -- an actual
-// unpredictable search pattern instead of a fixed shuttle.
+// pick a new neighboring cell within HOME_RANGE_STEPS of their post
+// to head to next (see pickNextWanderCell) - a short, learnable loop
+// rather than turning around on cue OR wandering the whole maze.
 function updatePatrolGuards(dt) {
   var maxStep = GUARD_TURN_SPEED * dt;
   for (var i = 0; i < patrolGuards.length; i++) {
@@ -2081,7 +2118,7 @@ function updatePatrolGuards(dt) {
       var arrivedCell = g.toCell;
       var cameFromCell = g.fromCell;
       g.fromCell = arrivedCell;
-      g.toCell = pickNextWanderCell(arrivedCell, cameFromCell);
+      g.toCell = pickNextWanderCell(arrivedCell, cameFromCell, g.homeCell);
       pa = superGridToPixel(g.fromCell.gr, g.fromCell.gc);
       pb = superGridToPixel(g.toCell.gr, g.toCell.gc);
     }
