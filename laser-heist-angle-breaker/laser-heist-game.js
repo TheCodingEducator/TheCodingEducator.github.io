@@ -1,0 +1,3475 @@
+// ================================================================
+// LASER HEIST: ANGLE BREAKER
+// A Code.org Game Lab game about angle relationships:
+// supplementary, complementary, vertical, and parallel-lines-with-
+// a-transversal angles. Built for Code.org Game Lab (JS mode).
+//
+// STORY: You're running a heist crew. Every room hides a different
+// security system, and every system runs on angles:
+//   - Watch Teams (SUPPLEMENTARY) -- two guards eyeball a hallway
+//     from opposite ends, their combined sightline a flat 180
+//     degrees. Work out how much of that line is dead space and
+//     the crew slips through the gap.
+//   - Laser Grids (COMPLEMENTARY) -- a beam clips a corner mirror
+//     and splits into two paths that always sum to 90 degrees.
+//     Know one, know exactly where the other one is aimed.
+//   - Security Cameras (VERTICAL ANGLES) -- two cameras stare at
+//     each other across the floor. Their blind spots sit directly
+//     opposite one another -- equal angles, dead ahead.
+//   - Duct Crawl (PARALLEL LINES + TRANSVERSAL) -- two parallel
+//     ventilation duct runs, linked by one diagonal connector duct
+//     the crew crawls through. Work the crossing angles right and
+//     you know exactly which vent you'll come out of.
+// Get it right and you drop into a Pac-Man-style sneak room: the
+// danger/safe wedge you just solved for becomes a real stationary
+// camera cone somewhere in the maze (a different room cell every
+// time, not always the center), TWO roaming patrol guards add
+// their own moving cones, and you take direct control of the robber
+// (arrow keys / WASD) to route through the safe gap and reach a
+// glowing exit door -- whose side, and your own start side, both
+// change every time. Get spotted mid-sneak and it costs a life: a
+// short chase plays out (the robber fleeing off screen with every
+// guard on their tail) and then the crew moves straight on to the
+// next puzzle -- one catch ends the run at this room.
+// Get the ANSWER wrong and the alarm meter climbs instead. Fill the
+// alarm meter or run out of lives and the heist is over.
+//
+// COMPATIBILITY NOTES (read this if something doesn't run):
+//  - Assumes angleMode(DEGREES) is supported (standard in Game Lab's
+//    p5-based engine). If not, replace degree values passed to
+//    rotate()/arc() with radians via a `deg * Math.PI / 180` helper.
+//  - Assumes `mouseIsPressed`, `mouseX`, `mouseY` are available as
+//    globals, and `keyDown("a")`-style string keys work for polling.
+//    This file does its OWN edge-detection (down-this-frame-but-not-
+//    last-frame) on top of those polling primitives, so it does NOT
+//    depend on keyWentDown()/mouseWentDown() existing at all.
+//  - The illuminated guard/camera cones (drawIlluminatedCone) are
+//    built from plain triangle() calls -- the most basic fill
+//    primitive available -- rather than beginShape()/vertex(), since
+//    that custom-shape API is less consistently available.
+//  - Sounds are wrapped in playSfx() which calls playSound() inside
+//    a try/catch. Upload matching files in the Game Lab "Assets"
+//    panel (or delete the playSfx calls) -- see the SOUND ASSET
+//    NAMES list near the bottom of this file.
+// ================================================================
+
+
+// ----------------------------------------------------------------
+// SECTION 1: CANVAS + VISUAL CONFIG
+// ----------------------------------------------------------------
+var CANVAS_W = 400;
+var CANVAS_H = 400;
+
+var COLOR_BG            = [8, 10, 22];
+var COLOR_BG_GRID       = [18, 22, 40];
+var COLOR_PANEL         = [16, 20, 36];
+var COLOR_PANEL_BORDER  = [60, 70, 110];
+var COLOR_LASER_RED     = [255, 45, 60];
+var COLOR_LASER_GREEN   = [60, 255, 140];
+var COLOR_LASER_BLUE    = [70, 170, 255];
+var COLOR_LASER_GOLD    = [255, 205, 60];
+var COLOR_TEXT_MAIN     = [230, 235, 250];
+var COLOR_TEXT_DIM      = [140, 150, 175];
+var COLOR_TEXT_WARN     = [255, 90, 90];
+var COLOR_TEXT_GOOD     = [90, 255, 150];
+var COLOR_ALARM_FULL    = [255, 40, 40];
+var COLOR_ALARM_EMPTY   = [40, 200, 90];
+var COLOR_BUTTON        = [30, 38, 66];
+var COLOR_BUTTON_HOVER  = [46, 58, 96];
+var COLOR_BUTTON_BORDER = [90, 110, 170];
+
+// The sneak room reads as a hedge maze at night, lit only by the
+// camera's and guards' own cones -- a dark slate path between
+// near-black hedges, not a sunny daytime garden.
+var COLOR_MAZE_PATH      = [40, 44, 52];
+var COLOR_MAZE_SHADOW    = [10, 11, 15];
+var COLOR_HEDGE_DARK     = [10, 20, 12];
+
+// Unlockable laser color skins, unlocked at score thresholds.
+var LASER_SKINS = [
+  { name: "Ruby Red",     unlockScore: 0,    color: [255, 45, 60] },
+  { name: "Emerald Grid", unlockScore: 800,  color: [60, 255, 140] },
+  { name: "Sapphire Net", unlockScore: 2000, color: [70, 170, 255] },
+  { name: "Gold Vault",   unlockScore: 4000, color: [255, 205, 60] },
+  { name: "Void Purple",  unlockScore: 7000, color: [180, 90, 255] }
+];
+
+
+// ----------------------------------------------------------------
+// SECTION 2: GAME STATE MACHINE CONSTANTS
+// ----------------------------------------------------------------
+var STATE_TITLE            = "TITLE";
+var STATE_INSTRUCTIONS     = "INSTRUCTIONS";
+var STATE_MODE_SELECT      = "MODE_SELECT";
+var STATE_LEVEL_INTRO      = "LEVEL_INTRO";
+var STATE_PLAYING          = "PLAYING";
+var STATE_LEVEL_COMPLETE   = "LEVEL_COMPLETE";
+var STATE_PAUSE            = "PAUSE";
+var STATE_GAME_OVER        = "GAME_OVER";
+var STATE_VICTORY          = "VICTORY";
+var STATE_HIGH_SCORES      = "HIGH_SCORES";
+var STATE_CHALLENGE_INTRO  = "CHALLENGE_INTRO";
+var STATE_PRACTICE_SETUP   = "PRACTICE_SETUP";
+var STATE_PRACTICE_PLAY    = "PRACTICE_PLAY";
+
+var gameState = STATE_TITLE;
+var previousState = STATE_TITLE;
+
+
+// ----------------------------------------------------------------
+// SECTION 3: LEVEL DEFINITIONS
+// ----------------------------------------------------------------
+// Each level introduces one angle relationship through a different
+// piece of the heist. Sector 5 mixes all four together as the
+// "vault boss" round.
+var LEVELS = [
+  {
+    id: 0,
+    name: "Sector 1: Watch Team Hallway",
+    type: "supplementary",
+    puzzlesToClear: 4,
+    timeLimit: 18,
+    introText: [
+      "Two guards watch this hallway from opposite doors --",
+      "together their sightline is a flat 180-degree line.",
+      "Read the active guard's watched angle, then work out",
+      "how wide the dead-space gap is before the crew moves."
+    ]
+  },
+  {
+    id: 1,
+    name: "Sector 2: Laser Grid Corner",
+    type: "complementary",
+    puzzlesToClear: 4,
+    timeLimit: 16,
+    introText: [
+      "A tripwire laser clips a corner mirror and splits",
+      "into two beams that always sum to 90 degrees.",
+      "Know one beam's angle and you know exactly where",
+      "the other one is sweeping -- and where it isn't."
+    ]
+  },
+  {
+    id: 2,
+    name: "Sector 3: Camera Crossfire",
+    type: "vertical",
+    puzzlesToClear: 5,
+    timeLimit: 16,
+    introText: [
+      "Two security cameras face each other across the",
+      "floor, sweeping crossed cones of view. Angles directly",
+      "opposite each other (vertical angles) are always",
+      "equal -- adjacent ones are always supplementary."
+    ]
+  },
+  {
+    id: 3,
+    name: "Sector 4: Duct Crawl",
+    type: "parallel",
+    puzzlesToClear: 6,
+    timeLimit: 20,
+    introText: [
+      "Two parallel ventilation runs, linked by one diagonal",
+      "connector duct cutting through both -- a transversal",
+      "forming eight angles. Corresponding, alternate, and",
+      "co-interior rules all apply. Watch the lit pair."
+    ]
+  },
+  {
+    id: 4,
+    name: "Sector 5: The Vault Core",
+    type: "mixed",
+    puzzlesToClear: 8,
+    timeLimit: 15,
+    introText: [
+      "Guards, lasers, cameras, and duct crawls --",
+      "every system, randomized. This is the final lock",
+      "on the vault. Stay sharp -- one mistake fills the",
+      "alarm fast."
+    ]
+  }
+];
+
+
+// ----------------------------------------------------------------
+// SECTION 4: CORE GAME STATE VARIABLES
+// ----------------------------------------------------------------
+var currentLevelIndex   = 0;
+var puzzlesSolvedInLevel = 0;
+var currentPuzzle        = null;
+
+var currentScore   = 0;
+var sessionHighScore = 0;
+var bestStreakEver  = 0;
+
+var lives    = 3;
+var maxLives = 3;
+
+var streak        = 0;
+var scoreMultiplier = 1;
+
+var alarmMeter    = 0;     // 0 to 100
+var alarmMaxValue = 100;
+var alarmDecayPerFrame = 0.05; // slowly cools down over time
+
+var timerValue = 0;   // seconds remaining on current puzzle
+var timerMax   = 15;
+var lastFrameMillis = 0;
+
+// Once true, the current puzzle's timer stops counting down and a
+// wrong answer retries the SAME puzzle instead of moving to a new
+// one -- see updatePuzzleTimer() and retrySamePuzzle().
+var hasFailedThisPuzzle = false;
+
+// The player answers by typing the number of degrees and pressing
+// ENTER -- this is the only way to submit an answer.
+var answerInput = "";
+var ANSWER_MAX_DIGITS = 3;
+
+var feedbackMessage = "";
+var feedbackColor   = COLOR_TEXT_GOOD;
+var feedbackTimer   = 0;
+
+// Practice mode: no timer, no score, no lives -- just questions from
+// whichever angle skills the player checked off, with immediate
+// right/wrong feedback and an automatic advance to the next one.
+var practiceSkills = { supplementary: true, complementary: true, vertical: true, parallel: true };
+var practiceAttempted = 0;
+var practiceCorrect = 0;
+var practiceFeedbackShown = false;
+var practiceFeedbackText = "";
+var practiceFeedbackColor = COLOR_TEXT_GOOD;
+var PRACTICE_ADVANCE_DELAY = 1.8; // seconds of feedback shown before the next question loads
+var practiceAdvanceTimer = 0;
+
+var shakeTimer     = 0;
+var shakeMagnitude = 0;
+
+// Heist scene: a correct lock-in hands you direct control of the
+// robber for a short sneak-past-the-guards minigame; a wrong one
+// plays a brief "caught" reaction. This is what makes solving the
+// angle feel like it actually did something, instead of just
+// scoring points in the background.
+var PUZZLE_PHASE_AIMING   = "AIMING";
+var PUZZLE_PHASE_SNEAKING = "SNEAKING";
+var PUZZLE_PHASE_CAUGHT   = "CAUGHT";
+var puzzlePhase   = PUZZLE_PHASE_AIMING;
+var phaseTimer    = 0;
+var CAUGHT_DURATION = 34; // frames the "spy gets spotted" animation takes
+var pendingAdvance  = null; // what to do once the current phase finishes
+
+var isChallengeMode = false;
+var challengeDifficulty = 1;
+var challengePuzzlesSolved = 0;
+
+var currentSkinIndex = 0;
+var unlockedSkinIndices = [0];
+
+var menuSelectedIndex = 0;
+
+// Input edge-detection bookkeeping (see COMPATIBILITY NOTES above).
+var prevKeys = {};
+var prevMouseIsPressed = false;
+var mouseClickedEdge = false;
+
+var TRACKED_KEYS = [
+  "0","1","2","3","4","5","6","7","8","9",
+  "backspace","delete","enter","return",
+  "up","down","left","right","space",
+  "s","p","escape","y","n",
+  "a","d","w"
+];
+
+
+// ----------------------------------------------------------------
+// SECTION 6: SCREEN SHAKE (visual feedback on wrong answers)
+// ----------------------------------------------------------------
+function triggerShake(magnitude, durationFrames) {
+  shakeMagnitude = magnitude;
+  shakeTimer = durationFrames;
+}
+
+function updateShake() {
+  if (shakeTimer > 0) {
+    shakeTimer -= 1;
+  } else {
+    shakeMagnitude = 0;
+  }
+}
+
+function getShakeOffsetX() {
+  return shakeTimer > 0 ? random(-shakeMagnitude, shakeMagnitude) : 0;
+}
+
+function getShakeOffsetY() {
+  return shakeTimer > 0 ? random(-shakeMagnitude, shakeMagnitude) : 0;
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 7: SOUND HELPERS
+// ----------------------------------------------------------------
+// Built-in Game Lab sound library URLs (sound://category/file.mp3).
+// No asset upload needed -- these play directly from the library.
+var SOUND_URLS = {
+  correct:  "sound://category_bell/vibrant_game_correct_answer_1.mp3",
+  wrong:    "sound://category_alerts/cartoon_negative_bling.mp3",
+  gameover: "sound://category_music/game_over_2.mp3",
+  levelup:  "sound://category_achievements/melodic_win_1.mp3",
+  alarm:    "sound://category_alerts/vibrant_game_rigning_alert_1.mp3"
+};
+
+function playSfx(name) {
+  var url = SOUND_URLS[name];
+  if (!url) { return; }
+  try {
+    playSound(url);
+  } catch (e) {
+    // Sound library unavailable in this environment -- safe to ignore.
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 8: STORAGE (high score persistence)
+// ----------------------------------------------------------------
+// Game Lab's JS runs in a sandboxed interpreter with no access to
+// real browser globals (window, localStorage, document, etc.) --
+// touching them crashes the interpreter itself, even inside a
+// try/catch. So these are in-memory only: score/streak/skins reset
+// each time the program is run. That's fine for a single play
+// session; it just won't survive a page refresh.
+function loadHighScores() {
+  // Nothing to load -- session starts fresh every run.
+}
+
+function saveHighScores() {
+  // Nothing to persist -- sessionHighScore/bestStreakEver/
+  // unlockedSkinIndices already live in memory for this run.
+}
+
+function checkSkinUnlocks() {
+  for (var i = 0; i < LASER_SKINS.length; i++) {
+    if (currentScore >= LASER_SKINS[i].unlockScore && unlockedSkinIndices.indexOf(i) === -1) {
+      unlockedSkinIndices.push(i);
+      showFeedback("SKIN UNLOCKED: " + LASER_SKINS[i].name, COLOR_LASER_GOLD, 90);
+    }
+  }
+}
+
+// ----------------------------------------------------------------
+// SECTION 9: UTILITY FUNCTIONS
+// ----------------------------------------------------------------
+function randomInt(min, max) {
+  return Math.floor(random(min, max + 1));
+}
+
+function clampNum(value, low, high) {
+  return Math.max(low, Math.min(high, value));
+}
+
+function normalizeAngle180(angleDeg) {
+  var a = angleDeg % 360;
+  if (a < 0) { a += 360; }
+  return a;
+}
+
+function formatSeconds(sec) {
+  var s = Math.max(0, Math.ceil(sec));
+  return s + "s";
+}
+
+function isInsideRect(px, py, rx, ry, rw, rh) {
+  return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
+}
+
+function showFeedback(msg, colorRGB, durationFrames) {
+  feedbackMessage = msg;
+  feedbackColor = colorRGB;
+  feedbackTimer = durationFrames;
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 10: KEY / MOUSE EDGE DETECTION
+// ----------------------------------------------------------------
+function keyEdge(keyName) {
+  var now = safeKeyDown(keyName);
+  var prev = !!prevKeys[keyName];
+  return now && !prev;
+}
+
+// Raw poll of keyDown() that never throws, even if this Game Lab
+// build doesn't recognize a given key name.
+function safeKeyDown(keyName) {
+  try { return !!keyDown(keyName); } catch (e) { return false; }
+}
+
+function updateInputEdgeTracking() {
+  for (var i = 0; i < TRACKED_KEYS.length; i++) {
+    var k = TRACKED_KEYS[i];
+    var down = false;
+    try { down = keyDown(k); } catch (e) { down = false; }
+    prevKeys[k] = down;
+  }
+  prevMouseIsPressed = (typeof mouseIsPressed !== "undefined") ? mouseIsPressed : false;
+}
+
+function computeMouseClickEdge() {
+  var isPressed = (typeof mouseIsPressed !== "undefined") ? mouseIsPressed : false;
+  return isPressed && !prevMouseIsPressed;
+}
+
+function enterKeyEdge() {
+  return keyEdge("enter") || keyEdge("return");
+}
+
+// Called by Game Lab on every real key-down browser event, regardless
+// of frame rate -- unlike keyDown() polling (which only sees whatever
+// is held at the instant each draw() frame happens to check), this
+// can't ever miss a fast tap. Queues exactly one maze step; see
+// stepQueued/stepQueuedDGr/stepQueuedDGc and updateSneakingPhase.
+function keyPressed() {
+  if (gameState !== STATE_PLAYING || puzzlePhase !== PUZZLE_PHASE_SNEAKING) { return; }
+  if (safeKeyDown("left") || safeKeyDown("a")) {
+    stepQueued = true; stepQueuedDGr = 0; stepQueuedDGc = -2;
+  } else if (safeKeyDown("right") || safeKeyDown("d")) {
+    stepQueued = true; stepQueuedDGr = 0; stepQueuedDGc = 2;
+  } else if (safeKeyDown("up") || safeKeyDown("w")) {
+    stepQueued = true; stepQueuedDGr = -2; stepQueuedDGc = 0;
+  } else if (safeKeyDown("down") || safeKeyDown("s")) {
+    stepQueued = true; stepQueuedDGr = 2; stepQueuedDGc = 0;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 11: BUTTON UI HELPER
+// ----------------------------------------------------------------
+function drawButton(x, y, w, h, label, isHovered) {
+  if (isHovered) {
+    fill(COLOR_BUTTON_HOVER[0], COLOR_BUTTON_HOVER[1], COLOR_BUTTON_HOVER[2]);
+  } else {
+    fill(COLOR_BUTTON[0], COLOR_BUTTON[1], COLOR_BUTTON[2]);
+  }
+  stroke(COLOR_BUTTON_BORDER[0], COLOR_BUTTON_BORDER[1], COLOR_BUTTON_BORDER[2]);
+  strokeWeight(2);
+  rect(x, y, w, h, 6);
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(14);
+  text(label, x + w / 2, y + h / 2);
+}
+
+function buttonClicked(x, y, w, h) {
+  return mouseClickedEdge && isInsideRect(mouseX, mouseY, x, y, w, h);
+}
+
+function buttonHovered(x, y, w, h) {
+  return isInsideRect(mouseX, mouseY, x, y, w, h);
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 12: ANGLE DRAWING PRIMITIVES
+// ----------------------------------------------------------------
+function drawLaserLine(x1, y1, x2, y2, colorRGB, weight) {
+  stroke(colorRGB[0], colorRGB[1], colorRGB[2]);
+  strokeWeight(weight || 3);
+  line(x1, y1, x2, y2);
+  // faint glow pass
+  stroke(colorRGB[0], colorRGB[1], colorRGB[2], 70);
+  strokeWeight((weight || 3) + 4);
+  line(x1, y1, x2, y2);
+}
+
+function drawAngleArc(cx, cy, radius, startDeg, endDeg, colorRGB) {
+  noFill();
+  stroke(colorRGB[0], colorRGB[1], colorRGB[2]);
+  strokeWeight(2);
+  arc(cx, cy, radius * 2, radius * 2, startDeg, endDeg);
+}
+
+function drawAngleLabel(cx, cy, bisectorDeg, radius, labelText, colorRGB) {
+  var rad = bisectorDeg * Math.PI / 180;
+  var lx = cx + Math.cos(rad) * (radius + 16);
+  var ly = cy + Math.sin(rad) * (radius + 16);
+  noStroke();
+  fill(colorRGB[0], colorRGB[1], colorRGB[2]);
+  textAlign(CENTER, CENTER);
+  textSize(15);
+  text(labelText, lx, ly);
+}
+
+function pointOnCircle(cx, cy, radius, angleDeg) {
+  var rad = angleDeg * Math.PI / 180;
+  return { x: cx + Math.cos(rad) * radius, y: cy + Math.sin(rad) * radius };
+}
+
+// The standard geometry "little square" symbol that marks a right
+// angle -- proof, not just a claim, that the two arms starting at
+// baseDeg and baseDeg+90 really do meet at exactly 90 degrees.
+function drawRightAngleMarker(cx, cy, baseDeg, size) {
+  var p1 = pointOnCircle(cx, cy, size, baseDeg);
+  var p2 = pointOnCircle(cx, cy, size * Math.SQRT2, baseDeg + 45);
+  var p3 = pointOnCircle(cx, cy, size, baseDeg + 90);
+  noFill();
+  stroke(255, 255, 255);
+  strokeWeight(1.5);
+  line(p1.x, p1.y, p2.x, p2.y);
+  line(p2.x, p2.y, p3.x, p3.y);
+}
+
+// A guard standing watch -- used to dress up the supplementary
+// "watch team" diagrams. facingDeg points the guard inward, toward
+// the hallway they're covering.
+// The body stays upright always -- rotating a standing figure
+// sideways just makes them look like they fell over. No separate
+// direction indicator on the guard itself; the illuminated cone
+// drawn alongside it already shows which way it's facing.
+function drawGuardIcon(x, y) {
+  push();
+  translate(x, y);
+
+  noStroke();
+  fill(115, 100, 55);
+  rect(-5, -3, 10, 13, 2);
+  fill(210, 180, 130);
+  ellipse(0, -9, 9, 9);
+  fill(70, 55, 25);
+  rect(-6, -13, 12, 4, 1);
+
+  pop();
+}
+
+// A security camera -- used to dress up the vertical-angle
+// "camera crossfire" diagrams.
+function drawCameraIcon(x, y, facingDeg) {
+  push();
+  translate(x, y);
+  rotate(facingDeg);
+  noStroke();
+  fill(42, 46, 64);
+  rect(-9, -6, 18, 12, 3);
+  fill(90, 225, 255);
+  ellipse(8, 0, 8, 8);
+  fill(255, 60, 60);
+  ellipse(-6, -7, 3, 3);
+  pop();
+}
+
+// A vent grate set into the side of a duct run -- used to dress up
+// the parallel-lines-with-transversal diagrams.
+function drawVentGrateIcon(x, y) {
+  noStroke();
+  fill(90, 95, 105);
+  rect(x - 7, y - 5, 14, 10, 1);
+  stroke(40, 44, 50);
+  strokeWeight(1);
+  line(x - 5, y - 2, x + 5, y - 2);
+  line(x - 5, y, x + 5, y);
+  line(x - 5, y + 2, x + 5, y + 2);
+}
+
+// A straight run of ductwork -- drawn as a filled band with edge
+// lines and a few seam ticks, instead of a single thin line, so it
+// actually reads as a duct rather than an abstract wall.
+function drawDuctRun(x1, x2, y, halfThickness) {
+  noStroke();
+  fill(32, 36, 46);
+  rect(x1, y - halfThickness, x2 - x1, halfThickness * 2);
+  stroke(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  strokeWeight(1.5);
+  line(x1, y - halfThickness, x2, y - halfThickness);
+  line(x1, y + halfThickness, x2, y + halfThickness);
+  stroke(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2], 130);
+  strokeWeight(1);
+  for (var sx = x1 + 20; sx < x2; sx += 40) {
+    line(sx, y - halfThickness, sx, y + halfThickness);
+  }
+}
+
+// The diagonal connector duct joining the two parallel runs -- a
+// thick dark body with a lighter center seam, instead of a plain
+// line, so it reads as a physical crawlable duct.
+function drawDuctConnector(x1, y1, x2, y2) {
+  stroke(60, 66, 78);
+  strokeWeight(10);
+  line(x1, y1, x2, y2);
+  stroke(140, 148, 160);
+  strokeWeight(3);
+  line(x1, y1, x2, y2);
+}
+
+// The riveted flange where the connector duct meets a parallel run.
+function drawDuctJoint(x, y) {
+  noStroke();
+  fill(150, 158, 170);
+  ellipse(x, y, 13, 13);
+  stroke(60, 66, 78);
+  strokeWeight(1.5);
+  noFill();
+  ellipse(x, y, 13, 13);
+  noStroke();
+  fill(90, 95, 105);
+  ellipse(x, y, 5, 5);
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 13: PUZZLE GENERATION -- SUPPLEMENTARY
+// ----------------------------------------------------------------
+function generateSupplementaryPuzzle() {
+  var known = randomInt(15, 165);
+  var missing = 180 - known;
+  var knownIsFirst = random(0, 1) < 0.5;
+  return {
+    type: "supplementary",
+    relationshipName: "Supplementary Angles",
+    ruleText: "Supplementary angles sum to 180 degrees.",
+    knownValue: known,
+    correctAnswer: missing,
+    knownIsFirst: knownIsFirst,
+    baseAngleDeg: randomInt(0, 40) // rotates the whole diagram for variety
+  };
+}
+
+function drawSupplementaryDiagram(puzzle, cx, cy) {
+  var base = puzzle.baseAngleDeg;
+  var radius = 90;
+
+  // The line of sight splitting the hallway. Its position depends
+  // on WHICH side is known vs. the target, so the drawn wedge sizes
+  // always match their labels (fixed a bug where these could
+  // mismatch).
+  var firstWedgeSize = puzzle.knownIsFirst ? puzzle.knownValue : puzzle.correctAnswer;
+  var splitAngle = base + firstWedgeSize;
+  var knownRange = puzzle.knownIsFirst ? [base, splitAngle] : [splitAngle, base + 180];
+  var targetRange = puzzle.knownIsFirst ? [splitAngle, base + 180] : [base, splitAngle];
+  var knownBisector = (knownRange[0] + knownRange[1]) / 2;
+
+  // The camera sits at the vertex, its lens facing straight down
+  // the middle of its own watched cone -- the illuminated wedge is
+  // its actual sightline, not just a labeled arc. Every diagram's
+  // vertex is a camera now, for consistency with the sneak minigame.
+  drawIlluminatedCone(cx, cy, radius, knownRange[0], knownRange[1], COLOR_LASER_RED);
+  drawAngleArc(cx, cy, radius, targetRange[0], targetRange[1], COLOR_TEXT_GOOD);
+
+  var p1 = pointOnCircle(cx, cy, radius, base + 180);
+  var p2 = pointOnCircle(cx, cy, radius, base);
+  drawLaserLine(p1.x, p1.y, p2.x, p2.y, COLOR_TEXT_DIM, 2);
+
+  var p3 = pointOnCircle(cx, cy, radius, splitAngle);
+  drawLaserLine(cx, cy, p3.x, p3.y, COLOR_LASER_RED, 3);
+
+  // Supplementary angles can land on an exact right angle (a 90/90
+  // split) unlike complementary or vertical, where the generated
+  // values can never actually hit 90 -- when they do, mark it with
+  // the same little square used to prove a right angle everywhere
+  // else, not just a number that happens to say "90".
+  if (puzzle.knownValue === 90) { drawRightAngleMarker(cx, cy, knownRange[0], 15); }
+  if (puzzle.correctAnswer === 90) { drawRightAngleMarker(cx, cy, targetRange[0], 15); }
+
+  drawCameraIcon(cx, cy, knownBisector);
+
+  var firstBisector = base + firstWedgeSize / 2;
+  var secondBisector = splitAngle + (180 - firstWedgeSize) / 2;
+
+  if (puzzle.knownIsFirst) {
+    drawAngleLabel(cx, cy, firstBisector, 34, puzzle.knownValue + "°", COLOR_LASER_GOLD);
+    drawAngleLabel(cx, cy, secondBisector, 50, "?", COLOR_TEXT_WARN);
+  } else {
+    drawAngleLabel(cx, cy, firstBisector, 34, "?", COLOR_TEXT_WARN);
+    drawAngleLabel(cx, cy, secondBisector, 50, puzzle.knownValue + "°", COLOR_LASER_GOLD);
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 14: PUZZLE GENERATION -- COMPLEMENTARY
+// ----------------------------------------------------------------
+function generateComplementaryPuzzle() {
+  var known = randomInt(5, 85);
+  var missing = 90 - known;
+  var knownIsFirst = random(0, 1) < 0.5;
+  return {
+    type: "complementary",
+    relationshipName: "Complementary Angles",
+    ruleText: "Complementary angles sum to 90 degrees.",
+    knownValue: known,
+    correctAnswer: missing,
+    knownIsFirst: knownIsFirst,
+    baseAngleDeg: randomInt(0, 40)
+  };
+}
+
+function drawComplementaryDiagram(puzzle, cx, cy) {
+  var base = puzzle.baseAngleDeg;
+  var radius = 90;
+
+  // The actual bounce path -- splitting the 90 degrees into the
+  // known angle and the target angle (same known/target fix as
+  // the supplementary diagram above).
+  var firstWedgeSize = puzzle.knownIsFirst ? puzzle.knownValue : puzzle.correctAnswer;
+  var splitAngle = base + firstWedgeSize;
+  var knownRange = puzzle.knownIsFirst ? [base, splitAngle] : [splitAngle, base + 90];
+  var targetRange = puzzle.knownIsFirst ? [splitAngle, base + 90] : [base, splitAngle];
+  var knownBisector = (knownRange[0] + knownRange[1]) / 2;
+
+  // The camera's lit field is the known wedge -- step in there and
+  // it sees you.
+  drawIlluminatedCone(cx, cy, radius, knownRange[0], knownRange[1], COLOR_LASER_RED);
+  drawAngleArc(cx, cy, radius, targetRange[0], targetRange[1], COLOR_TEXT_GOOD);
+
+  // The incoming tripwire beam and the outer 90-degree reference
+  // boundary it's confined to once it clips the corner mirror.
+  var armA = pointOnCircle(cx, cy, radius, base);
+  var armB = pointOnCircle(cx, cy, radius, base + 90);
+  drawLaserLine(cx, cy, armA.x, armA.y, COLOR_LASER_RED, 3);
+  drawLaserLine(cx, cy, armB.x, armB.y, COLOR_TEXT_DIM, 1.5);
+
+  // Proof it's really 90 degrees, not just a claim.
+  drawRightAngleMarker(cx, cy, base, 15);
+
+  var p3 = pointOnCircle(cx, cy, radius, splitAngle);
+  drawLaserLine(cx, cy, p3.x, p3.y, COLOR_LASER_BLUE, 3);
+
+  // The camera sits at the vertex, facing the middle of its own
+  // watched cone -- every diagram's vertex is a camera now, for
+  // consistency with the sneak minigame.
+  drawCameraIcon(cx, cy, knownBisector);
+
+  var firstBisector = base + firstWedgeSize / 2;
+  var secondBisector = splitAngle + (90 - firstWedgeSize) / 2;
+
+  if (puzzle.knownIsFirst) {
+    drawAngleLabel(cx, cy, firstBisector, 30, puzzle.knownValue + "°", COLOR_LASER_GOLD);
+    drawAngleLabel(cx, cy, secondBisector, 46, "?", COLOR_TEXT_WARN);
+  } else {
+    drawAngleLabel(cx, cy, firstBisector, 30, "?", COLOR_TEXT_WARN);
+    drawAngleLabel(cx, cy, secondBisector, 46, puzzle.knownValue + "°", COLOR_LASER_GOLD);
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 15: PUZZLE GENERATION -- VERTICAL ANGLES (2 crossing lines)
+// ----------------------------------------------------------------
+function generateVerticalPuzzle() {
+  var theta = randomInt(4, 176); // one of the four angles -- anything above 3 degrees, perpendicular included
+  // The four angles around the crossing, in order: theta, 180-theta, theta, 180-theta
+  var slots = ["A", "B", "C", "D"]; // A opposite C, B opposite D
+  var values = {
+    A: theta,
+    B: 180 - theta,
+    C: theta,
+    D: 180 - theta
+  };
+  var knownSlot = slots[randomInt(0, 3)];
+  var remaining = slots.filter(function (s) { return s !== knownSlot; });
+  var targetSlot = remaining[randomInt(0, remaining.length - 1)];
+
+  var relationship;
+  if ((knownSlot === "A" && targetSlot === "C") || (knownSlot === "C" && targetSlot === "A") ||
+      (knownSlot === "B" && targetSlot === "D") || (knownSlot === "D" && targetSlot === "B")) {
+    relationship = "Vertical Angles (equal)";
+  } else {
+    relationship = "Linear Pair (supplementary)";
+  }
+
+  return {
+    type: "vertical",
+    relationshipName: relationship,
+    ruleText: "Vertical angles are equal; adjacent angles on a line are supplementary.",
+    knownSlot: knownSlot,
+    targetSlot: targetSlot,
+    knownValue: values[knownSlot],
+    correctAnswer: values[targetSlot],
+    theta: theta,
+    baseAngleDeg: randomInt(0, 80)
+  };
+}
+
+function drawVerticalDiagram(puzzle, cx, cy) {
+  var base = puzzle.baseAngleDeg;
+  var radius = 95;
+
+  // Two crossing sightlines carve out the four blind-spot angles --
+  // the drawn spread is the puzzle's own theta, so the wedge you see
+  // always actually matches the degree value on the label instead of
+  // a fixed placeholder shape.
+  var spread = puzzle.theta;
+
+  // Slot angle ranges (going counter-clockwise from base):
+  // A: base -> base+spread
+  // B: base+spread -> base+180
+  // C: base+180 -> base+180+spread
+  // D: base+180+spread -> base+360
+  var slotRanges = {
+    A: [base, base + spread],
+    B: [base + spread, base + 180],
+    C: [base + 180, base + 180 + spread],
+    D: [base + 180 + spread, base + 360]
+  };
+  var knownRange = slotRanges[puzzle.knownSlot];
+  var knownBisector = (knownRange[0] + knownRange[1]) / 2;
+
+  // The camera sits at the vertex, its lens pointed straight down
+  // the middle of the sweep it's actually watching.
+  drawIlluminatedCone(cx, cy, radius, knownRange[0], knownRange[1], COLOR_LASER_RED);
+
+  var p1 = pointOnCircle(cx, cy, radius, base);
+  var p2 = pointOnCircle(cx, cy, radius, base + 180);
+  var p3 = pointOnCircle(cx, cy, radius, base + spread);
+  var p4 = pointOnCircle(cx, cy, radius, base + spread + 180);
+  drawLaserLine(p1.x, p1.y, p2.x, p2.y, COLOR_TEXT_DIM, 1.5);
+  drawLaserLine(p3.x, p3.y, p4.x, p4.y, COLOR_LASER_BLUE, 2.5);
+
+  drawCameraIcon(cx, cy, knownBisector);
+
+  var order = ["A", "B", "C", "D"];
+  for (var i = 0; i < order.length; i++) {
+    var slot = order[i];
+    var range = slotRanges[slot];
+    var bisector = (range[0] + range[1]) / 2;
+    var labelStr;
+    var labelColor;
+    if (slot === puzzle.knownSlot) {
+      labelStr = puzzle.knownValue + "°";
+      labelColor = COLOR_LASER_GOLD;
+    } else if (slot === puzzle.targetSlot) {
+      labelStr = "?";
+      labelColor = COLOR_TEXT_WARN;
+      drawAngleArc(cx, cy, 32, range[0], range[1], COLOR_TEXT_GOOD);
+    } else {
+      labelStr = "";
+      labelColor = COLOR_TEXT_DIM;
+    }
+    if (labelStr !== "") {
+      drawAngleLabel(cx, cy, bisector, 32, labelStr, labelColor);
+      // theta can land exactly on 90 now that the perpendicular case
+      // is no longer excluded -- when it does, mark it the same way
+      // supplementary does, right on whichever labeled wedge is
+      // actually a right angle.
+      if (range[1] - range[0] === 90) { drawRightAngleMarker(cx, cy, range[0], 15); }
+    }
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 16: PUZZLE GENERATION -- PARALLEL LINES + TRANSVERSAL
+// ----------------------------------------------------------------
+// 8 angles are produced at two intersections (A = upper line, B =
+// lower line) by one transversal. Positions at each intersection:
+// topLeft, topRight, bottomRight, bottomLeft (clockwise).
+// Because the two lines are parallel, the SAME position always has
+// the SAME value at both intersections -- this single fact is what
+// makes every classic relationship (corresponding, alternate
+// interior/exterior, co-interior) fall out correctly below.
+function angleValueForPosition(position, theta) {
+  // theta = the angle (0-180) the downward-pointing transversal ray
+  // makes with the rightward horizontal ray. That pins down all four
+  // real wedges around a joint exactly: bottomRight sits between the
+  // rightward ray and the downward transversal ray (size theta),
+  // topLeft is its vertical-angle twin on the opposite side (also
+  // theta); bottomLeft and topRight split the remaining 180-theta.
+  if (position === "topLeft" || position === "bottomRight") {
+    return theta;
+  }
+  return 180 - theta;
+}
+
+function classifyParallelRelationship(posKnown, intKnown, posTarget, intTarget) {
+  if (intKnown === intTarget) {
+    var oppositePairs = { topLeft: "bottomRight", bottomRight: "topLeft", topRight: "bottomLeft", bottomLeft: "topRight" };
+    if (oppositePairs[posKnown] === posTarget) {
+      return { name: "Vertical Angles", equal: true };
+    }
+    return { name: "Linear Pair", equal: false };
+  }
+
+  if (posKnown === posTarget) {
+    return { name: "Corresponding Angles", equal: true };
+  }
+
+  var interiorPositionsA = { bottomLeft: true, bottomRight: true }; // interior at upper line
+  var interiorPositionsB = { topLeft: true, topRight: true };       // interior at lower line
+  var knownIsInterior = (intKnown === "A") ? !!interiorPositionsA[posKnown] : !!interiorPositionsB[posKnown];
+  var targetIsInterior = (intTarget === "A") ? !!interiorPositionsA[posTarget] : !!interiorPositionsB[posTarget];
+
+  var leftSide = { topLeft: true, bottomLeft: true };
+  var knownLeft = !!leftSide[posKnown];
+  var targetLeft = !!leftSide[posTarget];
+  var sameSide = knownLeft === targetLeft;
+
+  if (knownIsInterior && targetIsInterior) {
+    if (sameSide) {
+      return { name: "Co-Interior Angles (Same-Side Interior)", equal: false };
+    }
+    return { name: "Alternate Interior Angles", equal: true };
+  }
+
+  if (!knownIsInterior && !targetIsInterior) {
+    if (sameSide) {
+      return { name: "Co-Exterior Angles (Same-Side Exterior)", equal: false };
+    }
+    return { name: "Alternate Exterior Angles", equal: true };
+  }
+
+  // One interior, one exterior, not aligned by the cases above.
+  return { name: "Angle Pair", equal: false };
+}
+
+function generateParallelPuzzle() {
+  var theta = randomInt(4, 176); // anything above 3 degrees, perpendicular included
+  var positions = ["topLeft", "topRight", "bottomRight", "bottomLeft"];
+  var intersections = ["A", "B"];
+
+  var knownPos = positions[randomInt(0, 3)];
+  var knownInt = intersections[randomInt(0, 1)];
+  var targetPos, targetInt;
+  do {
+    targetPos = positions[randomInt(0, 3)];
+    targetInt = intersections[randomInt(0, 1)];
+  } while (targetPos === knownPos && targetInt === knownInt);
+
+  var knownValue = angleValueForPosition(knownPos, theta);
+  var targetValue = angleValueForPosition(targetPos, theta);
+  var relationship = classifyParallelRelationship(knownPos, knownInt, targetPos, targetInt);
+
+  return {
+    type: "parallel",
+    relationshipName: relationship.name,
+    ruleText: relationship.equal
+      ? relationship.name + " are equal."
+      : relationship.name + " are supplementary (sum to 180°).",
+    theta: theta,
+    knownPos: knownPos,
+    knownInt: knownInt,
+    targetPos: targetPos,
+    targetInt: targetInt,
+    knownValue: knownValue,
+    correctAnswer: targetValue,
+    baseAngleDeg: 0
+  };
+}
+
+function drawParallelDiagram(puzzle, cx, cy) {
+  var halfWidth = 110;
+  var lineAY = cy - 50;
+  var lineBY = cy + 50;
+
+  // Two parallel ventilation duct runs, vents included.
+  drawDuctRun(cx - halfWidth, cx + halfWidth, lineAY, 6);
+  drawDuctRun(cx - halfWidth, cx + halfWidth, lineBY, 6);
+  var grateOffsets = [-75, 0, 75];
+  for (var g = 0; g < grateOffsets.length; g++) {
+    drawVentGrateIcon(cx + grateOffsets[g], lineAY);
+    drawVentGrateIcon(cx + grateOffsets[g], lineBY);
+  }
+
+  // The transversal is the single diagonal connector duct linking
+  // the two runs -- the crew crawls through it to cross from one to
+  // the other -- long enough to reach both runs within the canvas.
+  var thetaRad = puzzle.theta * Math.PI / 180;
+  var dx = Math.cos(thetaRad);
+  var dy = Math.sin(thetaRad);
+  var transLen = 220;
+  var tx1 = cx - dx * transLen / 2;
+  var ty1 = cy - dy * transLen / 2;
+  var tx2 = cx + dx * transLen / 2;
+  var ty2 = cy + dy * transLen / 2;
+  drawDuctConnector(tx1, ty1, tx2, ty2);
+
+  // Find where the connector duct meets each run.
+  var intersectA = lineIntersectHorizontal(tx1, ty1, tx2, ty2, lineAY);
+  var intersectB = lineIntersectHorizontal(tx1, ty1, tx2, ty2, lineBY);
+
+  drawParallelSlotLabels(puzzle, intersectA.x, intersectA.y, "A");
+  drawParallelSlotLabels(puzzle, intersectB.x, intersectB.y, "B");
+
+  drawDuctJoint(intersectA.x, intersectA.y);
+  drawDuctJoint(intersectB.x, intersectB.y);
+}
+
+function lineIntersectHorizontal(x1, y1, x2, y2, yLevel) {
+  var t = (yLevel - y1) / (y2 - y1);
+  return { x: x1 + (x2 - x1) * t, y: yLevel };
+}
+
+// The horizontal duct (rays at 0 deg/right and 180 deg/left) and the
+// diagonal connector (rays at theta deg -- always pointing below the
+// horizontal since 0 < theta < 180 -- and its opposite, 180+theta
+// deg, pointing above it) meet at each joint and, going around the
+// point, split it into exactly four wedges, each bounded by one
+// horizontal ray and one transversal ray. That pairing of bounding
+// rays is the actual definition of "top-left/top-right/bottom-left/
+// bottom-right" at a transversal crossing, so each position maps to
+// exactly one of the four -- no guessing between two same-sized
+// wedges required:
+//   bottomRight: rightward ray -> downward transversal ray
+//   bottomLeft:  downward transversal ray -> leftward ray
+//   topLeft:     leftward ray -> upward transversal ray
+//   topRight:    upward transversal ray -> rightward ray
+function resolveParallelWedge(position, theta) {
+  if (position === "bottomRight") { return { start: 0, end: theta }; }
+  if (position === "bottomLeft") { return { start: theta, end: 180 }; }
+  if (position === "topLeft") { return { start: 180, end: 180 + theta }; }
+  if (position === "topRight") { return { start: 180 + theta, end: 360 }; }
+  return null;
+}
+
+function drawParallelSlotLabels(puzzle, px, py, intersectionId) {
+  var positions = ["topLeft", "topRight", "bottomRight", "bottomLeft"];
+  for (var i = 0; i < positions.length; i++) {
+    var pos = positions[i];
+    var isKnown = (pos === puzzle.knownPos && intersectionId === puzzle.knownInt);
+    var isTarget = (pos === puzzle.targetPos && intersectionId === puzzle.targetInt);
+    if (!isKnown && !isTarget) { continue; }
+
+    var wedge = resolveParallelWedge(pos, puzzle.theta);
+    if (!wedge) { continue; }
+
+    var labelStr = isKnown ? (puzzle.knownValue + "°") : "?";
+    var labelColor = isKnown ? COLOR_LASER_GOLD : COLOR_TEXT_WARN;
+    var bisector = (wedge.start + wedge.end) / 2;
+
+    // The arc makes the exact wedge visible, and the label sits
+    // dead-center on its bisector -- so it's unambiguous which
+    // angle the number belongs to, not just "somewhere near this
+    // corner."
+    drawAngleArc(px, py, 16, wedge.start, wedge.end, labelColor);
+    drawAngleLabel(px, py, bisector, 16, labelStr, labelColor);
+
+    // theta can land exactly on 90 now that the perpendicular case
+    // is no longer excluded -- mark it the same way every other
+    // diagram does. Smaller than the other diagrams' markers since
+    // this one's whole wedge only has a 16px radius to work with.
+    if (wedge.end - wedge.start === 90) { drawRightAngleMarker(px, py, wedge.start, 8); }
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 17: PUZZLE GENERATION -- MIXED (boss level / challenge)
+// ----------------------------------------------------------------
+function generateMixedPuzzle() {
+  var pick = randomInt(0, 3);
+  if (pick === 0) { return generateSupplementaryPuzzle(); }
+  if (pick === 1) { return generateComplementaryPuzzle(); }
+  if (pick === 2) { return generateVerticalPuzzle(); }
+  return generateParallelPuzzle();
+}
+
+function generatePuzzleForLevel(levelType) {
+  if (levelType === "supplementary") { return generateSupplementaryPuzzle(); }
+  if (levelType === "complementary") { return generateComplementaryPuzzle(); }
+  if (levelType === "vertical") { return generateVerticalPuzzle(); }
+  if (levelType === "parallel") { return generateParallelPuzzle(); }
+  return generateMixedPuzzle();
+}
+
+function drawDiagramForPuzzle(puzzle, cx, cy) {
+  if (puzzle.type === "supplementary") { drawSupplementaryDiagram(puzzle, cx, cy); }
+  else if (puzzle.type === "complementary") { drawComplementaryDiagram(puzzle, cx, cy); }
+  else if (puzzle.type === "vertical") { drawVerticalDiagram(puzzle, cx, cy); }
+  else if (puzzle.type === "parallel") { drawParallelDiagram(puzzle, cx, cy); }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 18: SCORING + STREAK LOGIC
+// ----------------------------------------------------------------
+function computeMultiplierFromStreak(s) {
+  if (s >= 10) { return 4; }
+  if (s >= 6) { return 3; }
+  if (s >= 3) { return 2; }
+  return 1;
+}
+
+function addScoreForCorrectAnswer() {
+  var basePoints = 100;
+  var timeRatio = clampNum(timerValue / timerMax, 0, 1);
+  var timeBonus = Math.round(50 * timeRatio);
+  scoreMultiplier = computeMultiplierFromStreak(streak);
+  var total = (basePoints + timeBonus) * scoreMultiplier;
+  currentScore += total;
+  if (currentScore > sessionHighScore) {
+    sessionHighScore = currentScore;
+  }
+  checkSkinUnlocks();
+  return total;
+}
+
+function applyWrongAnswerPenalty() {
+  streak = 0;
+  scoreMultiplier = 1;
+  lives -= 1;
+  alarmMeter = clampNum(alarmMeter + 30, 0, alarmMaxValue);
+  triggerShake(6, 14);
+  playSfx("wrong");
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 20: LEVEL / PUZZLE FLOW
+// ----------------------------------------------------------------
+function startLevel(levelIndex) {
+  currentLevelIndex = levelIndex;
+  puzzlesSolvedInLevel = 0;
+  alarmMeter = 0;
+  alarmAlertPlayed = false;
+  gameState = STATE_LEVEL_INTRO;
+}
+
+function beginPlayingCurrentLevel() {
+  gameState = STATE_PLAYING;
+  loadNextPuzzle();
+}
+
+function loadNextPuzzle() {
+  var level = LEVELS[currentLevelIndex];
+  currentPuzzle = generatePuzzleForLevel(level.type);
+  answerInput = "";
+  timerMax = level.timeLimit;
+  timerValue = level.timeLimit;
+  hasFailedThisPuzzle = false;
+  puzzlePhase = PUZZLE_PHASE_AIMING;
+  phaseTimer = 0;
+}
+
+// Returns to AIMING on the exact same puzzle after a non-fatal
+// wrong answer, instead of generating a new one. The timer stays
+// frozen (see updatePuzzleTimer) since hasFailedThisPuzzle is now
+// true, so retrying never costs any additional time.
+function retrySamePuzzle() {
+  answerInput = "";
+  puzzlePhase = PUZZLE_PHASE_AIMING;
+  phaseTimer = 0;
+}
+
+function submitAnswer() {
+  if (!currentPuzzle || answerInput === "") { return; }
+  var value = parseInt(answerInput, 10);
+  if (value === currentPuzzle.correctAnswer) {
+    handleCorrectAnswer();
+  } else {
+    handleWrongAnswer();
+  }
+}
+
+function handleCorrectAnswer() {
+  var gained = addScoreForCorrectAnswer();
+  streak += 1;
+  if (streak > bestStreakEver) { bestStreakEver = streak; }
+  alarmMeter = clampNum(alarmMeter - 15, 0, alarmMaxValue);
+  showFeedback("+" + gained + "  STREAK x" + scoreMultiplier, COLOR_TEXT_GOOD, 40);
+  playSfx("correct");
+  puzzlesSolvedInLevel += 1;
+
+  // The score updates immediately, but advancing to the next room
+  // waits for you to actually sneak the robber past the guard --
+  // see startSneakingPhase(). That's what makes the correct angle
+  // feel like it actually opened a path, not just added points.
+  if (isChallengeMode) {
+    challengePuzzlesSolved += 1;
+    if (challengePuzzlesSolved % 5 === 0) {
+      challengeDifficulty += 1;
+    }
+    pendingAdvance = "NEXT_PUZZLE";
+  } else {
+    var level = LEVELS[currentLevelIndex];
+    pendingAdvance = (puzzlesSolvedInLevel >= level.puzzlesToClear) ? "COMPLETE_LEVEL" : "NEXT_PUZZLE";
+  }
+
+  startSneakingPhase();
+}
+
+function handleWrongAnswer() {
+  applyWrongAnswerPenalty();
+  answerInput = "";
+  hasFailedThisPuzzle = true;
+
+  if (lives <= 0 || alarmMeter >= alarmMaxValue) {
+    // The heist is over either way, so it's fine to reveal the
+    // answer here -- there's no more retry to spoil.
+    showFeedback("Correct answer: " + currentPuzzle.correctAnswer + "°", COLOR_TEXT_WARN, 50);
+    pendingAdvance = "GAME_OVER";
+  } else {
+    // Same puzzle, another shot -- don't give away the answer.
+    showFeedback("Not quite -- try again!", COLOR_TEXT_WARN, 40);
+    pendingAdvance = "RETRY_SAME_PUZZLE";
+  }
+  puzzlePhase = PUZZLE_PHASE_CAUGHT;
+  phaseTimer = CAUGHT_DURATION;
+}
+
+// Runs every frame while the spy is reacting to being spotted after
+// a wrong answer. Once the reaction finishes, it carries out
+// whatever the answer actually earned: the next puzzle, or game
+// over. (The SNEAKING phase has its own update function, since it's
+// player-controlled and runs on real time instead of a frame count.)
+function updateCaughtPhase() {
+  phaseTimer -= 1;
+  if (phaseTimer <= 0) {
+    resolvePendingAdvance();
+  }
+}
+
+function resolvePendingAdvance() {
+  var action = pendingAdvance;
+  pendingAdvance = null;
+
+  if (action === "COMPLETE_LEVEL") {
+    completeLevel();
+    return;
+  }
+  if (action === "GAME_OVER") {
+    triggerGameOver();
+    return;
+  }
+  if (action === "RETRY_SAME_PUZZLE") {
+    retrySamePuzzle();
+    return;
+  }
+
+  loadNextPuzzle();
+  if (isChallengeMode) {
+    timerMax = Math.max(6, 15 - challengeDifficulty);
+    timerValue = timerMax;
+  }
+}
+
+function completeLevel() {
+  playSfx("levelup");
+  saveHighScores();
+  if (currentLevelIndex >= LEVELS.length - 1) {
+    gameState = STATE_VICTORY;
+  } else {
+    gameState = STATE_LEVEL_COMPLETE;
+  }
+}
+
+function triggerGameOver() {
+  playSfx("gameover");
+  saveHighScores();
+  gameState = STATE_GAME_OVER;
+}
+
+function resetFullGame() {
+  currentLevelIndex = 0;
+  currentScore = 0;
+  lives = maxLives;
+  streak = 0;
+  scoreMultiplier = 1;
+  alarmMeter = 0;
+  alarmAlertPlayed = false;
+  isChallengeMode = false;
+  challengeDifficulty = 1;
+  challengePuzzlesSolved = 0;
+  puzzlesSolvedInLevel = 0;
+}
+
+function startChallengeMode() {
+  resetFullGame();
+  isChallengeMode = true;
+  challengeDifficulty = 1;
+  challengePuzzlesSolved = 0;
+  timerMax = 15;
+  timerValue = 15;
+  gameState = STATE_PLAYING;
+  loadNextPuzzle();
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 21: TIMER UPDATE (per-frame countdown during PLAYING)
+// ----------------------------------------------------------------
+function updatePuzzleTimer(dt) {
+  // Once you've gotten this puzzle wrong at least once, the clock
+  // stops -- retrying costs you another life/alarm hit if you're
+  // wrong again, but never any more time.
+  if (hasFailedThisPuzzle) { return; }
+  timerValue -= dt;
+  if (timerValue <= 0) {
+    timerValue = 0;
+    handleWrongAnswer();
+  }
+}
+
+function updateAlarmDecay() {
+  if (alarmMeter > 0) {
+    alarmMeter = clampNum(alarmMeter - alarmDecayPerFrame, 0, alarmMaxValue);
+  }
+  updateAlarmAlertSound();
+}
+
+// Plays the alert siren once when the alarm meter crosses into the
+// critical zone, not every single frame while it stays there.
+var alarmAlertPlayed = false;
+var ALARM_CRITICAL_RATIO = 0.75;
+
+function updateAlarmAlertSound() {
+  var ratio = alarmMeter / alarmMaxValue;
+  if (ratio >= ALARM_CRITICAL_RATIO && !alarmAlertPlayed) {
+    playSfx("alarm");
+    alarmAlertPlayed = true;
+  } else if (ratio < ALARM_CRITICAL_RATIO) {
+    alarmAlertPlayed = false;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 21B: HEIST SCENE (the sneak-past-the-guards minigame)
+// ----------------------------------------------------------------
+// This is the payoff for answering correctly: the danger wedge you
+// just calculated becomes a literal illuminated cone cast from the
+// guard/camera/laser sitting at the vertex, and you take direct
+// control of the robber to actually dodge it and reach the exit.
+// Getting spotted mid-sneak costs a life and plays a short chase
+// animation -- the robber flees off screen with every guard on their
+// tail -- and then it's straight on to the next puzzle. One catch
+// ends the run at this room.
+var SPY_START_X = 28;
+var SPY_END_X   = 372;
+
+var ROOM_LEFT = 6, ROOM_RIGHT = 394, ROOM_TOP = 58, ROOM_BOTTOM = 306;
+var ROOM_CENTER_X = (ROOM_LEFT + ROOM_RIGHT) / 2;
+var ROOM_CENTER_Y = (ROOM_TOP + ROOM_BOTTOM) / 2;
+var ROBBER_RADIUS = 7; // nominal solid footprint, used for sprite scale (see SPRITE_MAZE_SCALE)
+var SPRITE_MAZE_SCALE = 1.1;
+var ROBBER_SPEED = 130; // pixels/second -- only used by the caught/fleeing chase sequence now
+
+// Movement is grid-stepped, not free-roaming: one key press moves the
+// robber exactly one cell in that direction (a whole corridor's
+// length -- two super-grid units, room-cell to room-cell), animated
+// as a short tween rather than an instant jump so it still reads as
+// motion. Holding a direction auto-repeats the step once the current
+// one finishes; nothing ever slides a fraction of a cell.
+var ROBBER_STEP_DURATION = 0.09; // seconds for one cell-to-cell step
+
+var robberX = ROOM_LEFT + 20;
+var robberY = ROOM_CENTER_Y;
+var robberCellGr = 1, robberCellGc = 1; // current room cell, kept in lockstep with robberX/Y
+var robberStepFromX = robberX, robberStepFromY = robberY;
+var robberStepToX = robberX, robberStepToY = robberY;
+var robberStepT = 1; // 1 = at rest on robberCellGr/Gc, not mid-step
+
+// A single quick tap can land between two draw() polls and never
+// show up as "down" during either one's keyDown() check -- polling
+// alone can miss it. keyPressed() instead fires on the actual
+// browser key-down EVENT no matter how brief the tap was, so it
+// queues the step here; updateSneakingPhase consumes (and clears)
+// this on its next frame, guaranteeing a single press always
+// produces exactly one step.
+var stepQueuedDGr = 0, stepQueuedDGc = 0;
+var stepQueued = false;
+
+var sneakWasSpotted    = false;
+
+var SNEAK_DOOR_RADIUS = 16;
+var sneakStartX = 0, sneakStartY = 0;
+var sneakStartCellGr = 1, sneakStartCellGc = 1; // spawn's room cell -- guards steer clear of it, see isTooCloseToSpawn
+var sneakDoorX  = 0, sneakDoorY  = 0;
+
+// A brief window right when you gain control where nothing can spot
+// you yet -- so a guard that happens to be facing your start point
+// never catches you before you've had a chance to move.
+var SNEAK_GRACE_PERIOD = 1.3; // seconds
+var sneakGraceTimer = 0;
+
+// Getting spotted costs a life and plays a short chase animation --
+// the caught robber flees off screen with every guard on their
+// tail -- and one catch ends the run at this room; the crew moves
+// straight on to the next puzzle once it plays out.
+var SNEAK_CHASE_DURATION = 1.4; // seconds -- a bit longer since everyone moves slower now
+var sneakChaseTimer = 0;
+var sneakFleeDirX = 0, sneakFleeDirY = 0;
+
+var PATROL_GUARD_COUNT = 4;
+var patrolGuards = [];
+
+// The current room's corridor graph (see buildRoomGraph), kept
+// around after setup so a guard that reaches a room cell can look up
+// its real neighbors and wander off toward a random one -- an actual
+// unpredictable search of the maze instead of a fixed back-and-forth
+// on one corridor.
+var sneakRoomAdj = null;
+
+// A small proximity ring around every patrol guard -- step inside
+// it and they notice you regardless of which way they're looking.
+var GUARD_ALERT_RADIUS = 20;
+
+// ---- Pac-Man-style maze ----
+// The room is divided into a grid using the classic "odd cells are
+// rooms, even cells are walls" representation: a MAZE_ROWS x
+// MAZE_COLS grid of rooms becomes a (2*ROWS+1) x (2*COLS+1) super-
+// grid, where carving a wall at an even/odd position opens a
+// corridor between the two rooms on either side of it.
+// Denser still -- many more rooms means many more real branching
+// paths through the maze, not just a couple of forks.
+var MAZE_COLS = 9;
+var MAZE_ROWS = 6;
+var mazeGridCols = MAZE_COLS * 2 + 1;
+var mazeGridRows = MAZE_ROWS * 2 + 1;
+var mazeCellW = (ROOM_RIGHT - ROOM_LEFT) / mazeGridCols;
+var mazeCellH = (ROOM_BOTTOM - ROOM_TOP) / mazeGridRows;
+var mazeWalls = []; // mazeWalls[row][col] === true means blocked
+var mazeWallRects = []; // flat {x,y} list of wall cells, cached per maze
+
+function superGridToPixel(gr, gc) {
+  return {
+    x: ROOM_LEFT + (gc + 0.5) * mazeCellW,
+    y: ROOM_TOP + (gr + 0.5) * mazeCellH
+  };
+}
+
+// Randomized recursive backtracker: carves a spanning tree through
+// every room cell, which by construction guarantees every room is
+// reachable from every other room -- there is ALWAYS a route to the
+// exit door, no matter how the maze comes out.
+function generateMaze() {
+  var r, c;
+  mazeWalls = [];
+  for (r = 0; r < mazeGridRows; r++) {
+    var row = [];
+    for (c = 0; c < mazeGridCols; c++) { row.push(true); }
+    mazeWalls.push(row);
+  }
+
+  var visited = [];
+  for (r = 0; r < MAZE_ROWS; r++) {
+    var vrow = [];
+    for (c = 0; c < MAZE_COLS; c++) { vrow.push(false); }
+    visited.push(vrow);
+  }
+  for (r = 0; r < MAZE_ROWS; r++) {
+    for (c = 0; c < MAZE_COLS; c++) {
+      mazeWalls[r * 2 + 1][c * 2 + 1] = false;
+    }
+  }
+
+  var dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  var stack = [{ r: randomInt(0, MAZE_ROWS - 1), c: randomInt(0, MAZE_COLS - 1) }];
+  visited[stack[0].r][stack[0].c] = true;
+
+  while (stack.length > 0) {
+    var cur = stack[stack.length - 1];
+    var options = [];
+    for (var d = 0; d < dirs.length; d++) {
+      var nr = cur.r + dirs[d][0];
+      var nc = cur.c + dirs[d][1];
+      if (nr >= 0 && nr < MAZE_ROWS && nc >= 0 && nc < MAZE_COLS && !visited[nr][nc]) {
+        options.push({ r: nr, c: nc, dr: dirs[d][0], dc: dirs[d][1] });
+      }
+    }
+    if (options.length > 0) {
+      var pick = options[randomInt(0, options.length - 1)];
+      mazeWalls[cur.r * 2 + 1 + pick.dr][cur.c * 2 + 1 + pick.dc] = false;
+      visited[pick.r][pick.c] = true;
+      stack.push({ r: pick.r, c: pick.c });
+    } else {
+      stack.pop();
+    }
+  }
+
+  // A SMALL number of extra openings for the occasional loop instead
+  // of a pure tree of dead ends -- kept light on purpose. Too many
+  // loops means there's always some totally clear detour around
+  // every guard, which makes them irrelevant; a mostly tree-shaped
+  // maze means the natural route to the door tends to be closer to
+  // the only one, so guards placed on it (see setupPatrolGuards)
+  // actually have to be dealt with. This only ever REMOVES walls, so
+  // the guaranteed connectivity from the spanning tree above can
+  // only ever improve, never break.
+  var extra = Math.floor(MAZE_ROWS * MAZE_COLS * 0.08);
+  for (var e = 0; e < extra; e++) {
+    var er = randomInt(1, mazeGridRows - 2);
+    var ec = randomInt(1, mazeGridCols - 2);
+    mazeWalls[er][ec] = false;
+  }
+
+  rebuildMazeWallCache();
+}
+
+// Rebuilds the flat wall-cell cache used by drawMazeWalls from
+// whatever mazeWalls currently is. Called once after the initial
+// generation.
+// Every wall cell renders as its FULL cell span now, no inset --
+// movement is grid-stepped (see ROBBER_STEP_DURATION), so the robber
+// only ever occupies a room cell's exact center and jumps straight to
+// an adjacent one. Insetting walls to look "thin" used to matter for
+// a continuously-sliding collision circle, but with stepped movement
+// it only ever created a visual gap that LOOKED like a squeeze-through
+// opening but wasn't an actual graph edge -- an inaccessible-looking
+// opening next to a solid wall. A full, uninset block means every gap
+// in the wall pattern is exactly a real corridor (an open connector
+// cell -- see collectOpenEdges) and nothing else. Guard/camera vision
+// (castRayDistance) uses these exact same bounds too.
+function isWallCellAt(gr, gc) {
+  if (gr < 0 || gr >= mazeGridRows || gc < 0 || gc >= mazeGridCols) { return true; }
+  return mazeWalls[gr][gc];
+}
+
+function getWallCellBounds(gr, gc) {
+  var cellLeft = ROOM_LEFT + gc * mazeCellW;
+  var cellTop = ROOM_TOP + gr * mazeCellH;
+  return {
+    left: cellLeft,
+    right: cellLeft + mazeCellW,
+    top: cellTop,
+    bottom: cellTop + mazeCellH
+  };
+}
+
+function rebuildMazeWallCache() {
+  mazeWallRects = [];
+  for (var r = 0; r < mazeGridRows; r++) {
+    for (var c = 0; c < mazeGridCols; c++) {
+      if (mazeWalls[r][c]) {
+        mazeWallRects.push(getWallCellBounds(r, c));
+      }
+    }
+  }
+}
+
+// Exact ray-vs-rectangle entry distance (the standard "slab" test),
+// clamped to [tMin,tMax] -- returns null if the ray doesn't actually
+// cross rect within that window. dx/dy must be non-zero (see
+// castRayDistance, which nudges them off zero before calling this).
+function rayRectEntry(vx, vy, dx, dy, rect, tMin, tMax) {
+  var tx1 = (rect.left - vx) / dx;
+  var tx2 = (rect.right - vx) / dx;
+  if (tx1 > tx2) { var tmp = tx1; tx1 = tx2; tx2 = tmp; }
+  var ty1 = (rect.top - vy) / dy;
+  var ty2 = (rect.bottom - vy) / dy;
+  if (ty1 > ty2) { var tmp2 = ty1; ty1 = ty2; ty2 = tmp2; }
+  var tEnter = Math.max(tx1, ty1, tMin);
+  var tExit = Math.min(tx2, ty2, tMax);
+  if (tEnter <= tExit + 0.001) { return Math.max(tEnter, tMin); }
+  return null;
+}
+
+// Finds exactly how far (vx,vy) can look along angleDeg before
+// hitting a wall (or maxRadius, if it never does) -- this is what
+// stops a guard/camera's cone, and what hasLineOfSight is built on,
+// at a wall instead of letting sight pass straight through.
+//
+// This walks the actual grid cells the ray crosses (a standard DDA
+// line traversal -- the same technique used for tile-based
+// raycasting), so it can never step clean over a wall no matter how
+// thin the wall is rendered, and tests each wall cell it reaches
+// against its EXACT rendered bounds (getWallCellBounds) via
+// rayRectEntry -- an exact intersection, not a fixed-step
+// approximation. Since it only visits
+// the handful of cells actually along the ray (at most a few for
+// these cone radii) instead of marching pixel-by-pixel across the
+// whole distance, this is also cheaper than the fixed-step approach
+// it replaced, not just more accurate.
+function castRayDistance(vx, vy, angleDeg, maxRadius) {
+  var rad = angleDeg * Math.PI / 180;
+  var dx = Math.cos(rad);
+  var dy = Math.sin(rad);
+  if (dx === 0) { dx = 0.000001; }
+  if (dy === 0) { dy = 0.000001; }
+
+  var gc = Math.floor((vx - ROOM_LEFT) / mazeCellW);
+  var gr = Math.floor((vy - ROOM_TOP) / mazeCellH);
+  var stepC = dx > 0 ? 1 : -1;
+  var stepR = dy > 0 ? 1 : -1;
+
+  var nextBoundX = ROOM_LEFT + (gc + (stepC > 0 ? 1 : 0)) * mazeCellW;
+  var nextBoundY = ROOM_TOP + (gr + (stepR > 0 ? 1 : 0)) * mazeCellH;
+  var tMaxX = (nextBoundX - vx) / dx;
+  var tMaxY = (nextBoundY - vy) / dy;
+  var tDeltaX = Math.abs(mazeCellW / dx);
+  var tDeltaY = Math.abs(mazeCellH / dy);
+
+  var iterations = 0;
+  while (iterations < 128) {
+    iterations++;
+    var tEnterCell;
+    if (tMaxX < tMaxY) {
+      tEnterCell = tMaxX;
+      gc += stepC;
+      tMaxX += tDeltaX;
+    } else {
+      tEnterCell = tMaxY;
+      gr += stepR;
+      tMaxY += tDeltaY;
+    }
+    if (tEnterCell > maxRadius) { break; }
+    var tExitCell = Math.min(tMaxX, tMaxY, maxRadius);
+    if (isWallCellAt(gr, gc)) {
+      var hit = rayRectEntry(vx, vy, dx, dy, getWallCellBounds(gr, gc), tEnterCell, tExitCell);
+      if (hit !== null) { return hit; }
+    }
+  }
+  return maxRadius;
+}
+
+// Same idea, but between two specific points -- used so a guard or
+// camera can never spot the robber through a wall even when the
+// robber falls within cone angle and radius. Built directly on
+// castRayDistance's exact wall test: if the clear distance in that
+// direction reaches (or passes) the robber, there's nothing solid in
+// between.
+function hasLineOfSight(x1, y1, x2, y2) {
+  var dx = x2 - x1, dy = y2 - y1;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 1) { return true; }
+  var angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+  return castRayDistance(x1, y1, angleDeg, dist) >= dist - 0.5;
+}
+
+// Every open corridor connecting two adjacent room cells -- used to
+// keep patrol guards moving along real corridors instead of cutting
+// through walls.
+function collectOpenEdges() {
+  var edges = [];
+  for (var r = 0; r < mazeGridRows; r++) {
+    for (var c = 0; c < mazeGridCols; c++) {
+      if (mazeWalls[r][c]) { continue; }
+      var rOdd = (r % 2 === 1), cOdd = (c % 2 === 1);
+      if (rOdd && !cOdd && c > 0 && c < mazeGridCols - 1) {
+        edges.push({ aR: r, aC: c - 1, bR: r, bC: c + 1 });
+      } else if (!rOdd && cOdd && r > 0 && r < mazeGridRows - 1) {
+        edges.push({ aR: r - 1, aC: c, bR: r + 1, bC: c });
+      }
+    }
+  }
+  return edges;
+}
+
+// True if the room cell at (gr,gc) IS targetGr/targetGc, or is one
+// step away from it (shares a corridor with it) -- used to keep
+// guard patrols off of both the cell itself and its immediate
+// neighbors, not just the exact cell.
+function isCellNear(gr, gc, targetGr, targetGc) {
+  if (gr === targetGr && gc === targetGc) { return true; }
+  var dr = Math.abs(gr - targetGr);
+  var dc = Math.abs(gc - targetGc);
+  return (dr === 2 && dc === 0) || (dr === 0 && dc === 2);
+}
+
+// Room cells on the outer ring of the maze -- valid candidates for
+// the start point and the exit door.
+function collectBorderRoomCells() {
+  var cells = [];
+  for (var i = 0; i < MAZE_ROWS; i++) {
+    for (var j = 0; j < MAZE_COLS; j++) {
+      if (i === 0 || i === MAZE_ROWS - 1 || j === 0 || j === MAZE_COLS - 1) {
+        cells.push({ gr: i * 2 + 1, gc: j * 2 + 1 });
+      }
+    }
+  }
+  return cells;
+}
+
+function angularDistance(a, b) {
+  var d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+// Picks a random border room cell for the exit door -- no camera to
+// route around anymore, so any border cell is as good as any other.
+function pickDoorCell() {
+  var cells = collectBorderRoomCells();
+  var pick = cells[randomInt(0, cells.length - 1)];
+  var p = superGridToPixel(pick.gr, pick.gc);
+  pick.px = p.x;
+  pick.py = p.y;
+  return pick;
+}
+
+// Picks a border room cell for the start point, well away (angularly)
+// from the door, so the crossing is a real one and not a hop next
+// door -- and never the same cell as the door.
+// Spread relative to the room's center, not the camera -- this is
+// just about putting real distance between the start point and the
+// door, regardless of where the camera happens to be. avoidCell
+// keeps it off the camera's own cell too.
+function pickStartCell(doorCell, avoidCell) {
+  var cells = collectBorderRoomCells();
+  var i;
+  for (i = 0; i < cells.length; i++) {
+    var p = superGridToPixel(cells[i].gr, cells[i].gc);
+    cells[i].px = p.x;
+    cells[i].py = p.y;
+    cells[i].angle = Math.atan2(p.y - ROOM_CENTER_Y, p.x - ROOM_CENTER_X) * 180 / Math.PI;
+  }
+  var doorAngleFromCenter = Math.atan2(doorCell.py - ROOM_CENTER_Y, doorCell.px - ROOM_CENTER_X) * 180 / Math.PI;
+
+  var far = [];
+  for (i = 0; i < cells.length; i++) {
+    var isDoorCell = (cells[i].gr === doorCell.gr && cells[i].gc === doorCell.gc);
+    var isAvoided = avoidCell && cells[i].gr === avoidCell.gr && cells[i].gc === avoidCell.gc;
+    if (!isDoorCell && !isAvoided && angularDistance(cells[i].angle, doorAngleFromCenter) > 100) {
+      far.push(cells[i]);
+    }
+  }
+  if (far.length > 0) { return far[randomInt(0, far.length - 1)]; }
+
+  var any = [];
+  for (i = 0; i < cells.length; i++) {
+    var isDoorCell2 = (cells[i].gr === doorCell.gr && cells[i].gc === doorCell.gc);
+    var isAvoided2 = avoidCell && cells[i].gr === avoidCell.gr && cells[i].gc === avoidCell.gc;
+    if (!isDoorCell2 && !isAvoided2) { any.push(cells[i]); }
+  }
+  return any.length > 0 ? any[randomInt(0, any.length - 1)] : cells[0];
+}
+
+// Builds a room-cell graph from the maze's open corridors, for the
+// reachability check below.
+function buildRoomGraph(edges) {
+  var adj = {};
+  for (var i = 0; i < edges.length; i++) {
+    var e = edges[i];
+    var keyA = e.aR + "," + e.aC;
+    var keyB = e.bR + "," + e.bC;
+    if (!adj[keyA]) { adj[keyA] = []; }
+    if (!adj[keyB]) { adj[keyB] = []; }
+    adj[keyA].push({ gr: e.bR, gc: e.bC, idx: i });
+    adj[keyB].push({ gr: e.aR, gc: e.aC, idx: i });
+  }
+  return adj;
+}
+
+// BFS from startCell to doorCell using only corridors NOT marked in
+// blockedIdx -- this is what actually proves a guard-free path
+// exists, rather than just hoping one does.
+function isReachableAvoidingEdges(adj, startCell, doorCell, blockedIdx) {
+  var startKey = startCell.gr + "," + startCell.gc;
+  var doorKey = doorCell.gr + "," + doorCell.gc;
+  if (startKey === doorKey) { return true; }
+  var visited = {};
+  visited[startKey] = true;
+  var queue = [startKey];
+  while (queue.length > 0) {
+    var cur = queue.shift();
+    var neighbors = adj[cur] || [];
+    for (var i = 0; i < neighbors.length; i++) {
+      var nb = neighbors[i];
+      if (blockedIdx[nb.idx]) { continue; }
+      if (nb.gr + "," + nb.gc === doorKey) { return true; }
+      var key = nb.gr + "," + nb.gc;
+      if (!visited[key]) {
+        visited[key] = true;
+        queue.push(key);
+      }
+    }
+  }
+  return false;
+}
+
+// Finds ONE actual route (as a list of edge indices) from startCell
+// to doorCell avoiding blockedIdx, via BFS with predecessor
+// tracking. Used to find the "natural" path through the maze so
+// guards can be placed ON it -- crossing paths with the player on
+// purpose -- rather than scattered wherever happens to leave every
+// route untouched.
+function findPathEdges(adj, startCell, doorCell, blockedIdx) {
+  var startKey = startCell.gr + "," + startCell.gc;
+  var doorKey = doorCell.gr + "," + doorCell.gc;
+  if (startKey === doorKey) { return []; }
+
+  var visited = {};
+  var cameFromEdge = {};
+  var cameFromKey = {};
+  visited[startKey] = true;
+  var queue = [startKey];
+
+  while (queue.length > 0) {
+    var cur = queue.shift();
+    if (cur === doorKey) { break; }
+    var neighbors = adj[cur] || [];
+    for (var i = 0; i < neighbors.length; i++) {
+      var nb = neighbors[i];
+      if (blockedIdx[nb.idx]) { continue; }
+      var key = nb.gr + "," + nb.gc;
+      if (visited[key]) { continue; }
+      visited[key] = true;
+      cameFromEdge[key] = nb.idx;
+      cameFromKey[key] = cur;
+      queue.push(key);
+    }
+  }
+
+  if (!visited[doorKey]) { return []; }
+  var path = [];
+  var cur2 = doorKey;
+  while (cur2 !== startKey) {
+    path.push(cameFromEdge[cur2]);
+    cur2 = cameFromKey[cur2];
+  }
+  return path;
+}
+
+// True if start and door are connected by more than just one
+// fragile route: finds a path, then checks that removing any SINGLE
+// edge along it still leaves a way through. If some edge on the
+// path is a bridge (its removal disconnects start from door
+// entirely), there's currently only one real way through.
+function hasTwoDistinctPaths(adj, startCell, doorCell, excludedIdx) {
+  var pathEdges = findPathEdges(adj, startCell, doorCell, excludedIdx);
+  if (pathEdges.length === 0) { return false; }
+  for (var i = 0; i < pathEdges.length; i++) {
+    var testBlocked = {};
+    for (var key in excludedIdx) { testBlocked[key] = true; }
+    testBlocked[pathEdges[i]] = true;
+    if (!isReachableAvoidingEdges(adj, startCell, doorCell, testBlocked)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Repairs the maze in place (opening a few more walls, same as the
+// generation-time loop openings -- only ever removes walls) until
+// hasTwoDistinctPaths passes, so there's always a real alternate
+// route to fall back on from the spawn point, not just a single
+// corridor the whole crossing depends on. Rebuilds allEdges/adj/the
+// wall render cache each time something changes, since new openings
+// can shift which edges exist. Returns the final {edges, adj} to
+// keep using.
+function ensureTwoDistinctPaths(edges, adj, startCell, doorCell, excludedIdx) {
+  // Each hasTwoDistinctPaths call can run several BFS passes (one to
+  // find a path, one more per edge on it to prove it's not a bridge),
+  // and Game Lab's interpreter is slow enough per-operation that a
+  // worst-case run through a large ceiling here was actually showing
+  // up as a real, noticeable pause right after answering correctly.
+  // 15 is still generous -- the maze's own baseline loop-openings
+  // usually mean this passes on the very first check anyway.
+  var maxRepairs = 15;
+  for (var attempt = 0; attempt < maxRepairs; attempt++) {
+    if (hasTwoDistinctPaths(adj, startCell, doorCell, excludedIdx)) { break; }
+    var er = randomInt(1, mazeGridRows - 2);
+    var ec = randomInt(1, mazeGridCols - 2);
+    mazeWalls[er][ec] = false;
+    edges = collectOpenEdges();
+    adj = buildRoomGraph(edges);
+  }
+  rebuildMazeWallCache();
+  return { edges: edges, adj: adj };
+}
+
+// Fisher-Yates shuffle, used to try candidate corridors in random
+// order without repeats.
+function shuffledIndexes(count) {
+  var arr = [];
+  for (var i = 0; i < count; i++) { arr.push(i); }
+  for (var j = arr.length - 1; j > 0; j--) {
+    var k = randomInt(0, j);
+    var tmp = arr[j];
+    arr[j] = arr[k];
+    arr[k] = tmp;
+  }
+  return arr;
+}
+
+// Turns a list into a random-order copy without disturbing the
+// original -- built on shuffledIndexes so there's one shuffle
+// implementation instead of two.
+function shuffleArrayCopy(arr) {
+  var order = shuffledIndexes(arr.length);
+  var result = [];
+  for (var i = 0; i < order.length; i++) { result.push(arr[order[i]]); }
+  return result;
+}
+
+// The grid-space midpoint of a corridor edge -- used only as a
+// position to measure spread-out-ness between guards, not a real
+// cell (can land on a half-integer between two room cells).
+function edgeMidCell(edge) {
+  return { gr: (edge.aR + edge.bR) / 2, gc: (edge.aC + edge.bC) / 2 };
+}
+
+function gridCellDistance(a, b) {
+  var dr = a.gr - b.gr, dc = a.gc - b.gc;
+  return Math.sqrt(dr * dr + dc * dc);
+}
+
+// Several roaming guards, Pac-Man-ghost style, each patrolling back
+// and forth along ONE real open corridor of the maze -- never
+// through a wall, never on a corridor the camera's cone already
+// covers (alreadyBlockedIdx), and never anywhere near avoidCells
+// (the start point and the exit door, so neither end of the
+// crossing can ever be watched).
+//
+// The first guard is placed ON the natural route from start to door
+// whenever possible -- a genuine "weave past with real timing"
+// challenge instead of a hazard you'd never even walk near. Every
+// guard after that is greedily placed as far (in grid cells) as
+// possible from every guard already chosen, so with more than one
+// guard on the map they end up spread across the maze instead of a
+// shuffle happening to cluster several of them in the same corner.
+// This is still always fair: a guard patrols back and forth and is
+// never anywhere permanently, so a corridor it covers is only ever
+// blocked some of the time, never all of it -- and however many
+// guards end up on the two proven camera-safe routes (see
+// ensureTwoDistinctPaths), waiting for each one's cone to swing
+// clear always eventually gets you through. The camera is the one
+// thing that's ALWAYS avoidable outright -- it never moves, so if it
+// were the only way through, no amount of timing would ever fix
+// that (see startSneakingPhase's retry loop instead).
+function setupPatrolGuards(edges, adj, avoidCells, startCell, doorCell, alreadyBlockedIdx) {
+  patrolGuards = [];
+  if (edges.length === 0) { return; }
+
+  var candidateIdx = [];
+  for (var ci = 0; ci < edges.length; ci++) {
+    if (alreadyBlockedIdx[ci]) { continue; }
+    var edge = edges[ci];
+    // A wider berth around the spawn point specifically (see
+    // isTooCloseToSpawn/SPAWN_GUARD_MIN_STEPS) than the plain
+    // immediate-neighbor check used for avoidCells in general (which
+    // still covers the door) -- no initial guard corridor is allowed
+    // to even start within sight-ish range of where the player spawns.
+    if (isTooCloseToSpawn(edge.aR, edge.aC) || isTooCloseToSpawn(edge.bR, edge.bC)) { continue; }
+    var blockedByAvoid = false;
+    for (var ai = 0; ai < avoidCells.length; ai++) {
+      var ac = avoidCells[ai];
+      if (isCellNear(edge.aR, edge.aC, ac.gr, ac.gc) || isCellNear(edge.bR, edge.bC, ac.gr, ac.gc)) {
+        blockedByAvoid = true;
+        break;
+      }
+    }
+    if (!blockedByAvoid) { candidateIdx.push(ci); }
+  }
+  if (candidateIdx.length === 0) { return; }
+
+  var pathEdges = findPathEdges(adj, startCell, doorCell, alreadyBlockedIdx);
+  var onPath = [];
+  var offPath = [];
+  for (var pi = 0; pi < candidateIdx.length; pi++) {
+    var candidate = candidateIdx[pi];
+    if (pathEdges.indexOf(candidate) !== -1) { onPath.push(candidate); } else { offPath.push(candidate); }
+  }
+
+  var chosenIdx = [];
+  var chosenCells = [];
+  var remaining = shuffleArrayCopy(onPath).concat(shuffleArrayCopy(offPath));
+  if (remaining.length > 0) {
+    chosenIdx.push(remaining[0]);
+    chosenCells.push(edgeMidCell(edges[remaining[0]]));
+    remaining.splice(0, 1);
+  }
+  while (chosenIdx.length < PATROL_GUARD_COUNT && remaining.length > 0) {
+    var farIdx = 0;
+    var farScore = -1;
+    for (var ri = 0; ri < remaining.length; ri++) {
+      var candidateCell = edgeMidCell(edges[remaining[ri]]);
+      var minDist = Infinity;
+      for (var cj = 0; cj < chosenCells.length; cj++) {
+        var d = gridCellDistance(candidateCell, chosenCells[cj]);
+        if (d < minDist) { minDist = d; }
+      }
+      if (minDist > farScore) { farScore = minDist; farIdx = ri; }
+    }
+    chosenIdx.push(remaining[farIdx]);
+    chosenCells.push(edgeMidCell(edges[remaining[farIdx]]));
+    remaining.splice(farIdx, 1);
+  }
+
+  // Each guard starts on one of the picked corridors, but doesn't
+  // just ping-pong along it forever -- see updatePatrolGuards, which
+  // sends it wandering to a random neighboring room cell every time
+  // it arrives somewhere, using sneakRoomAdj.
+  for (var i = 0; i < chosenIdx.length; i++) {
+    var chosen = edges[chosenIdx[i]];
+    var guard = {
+      fromCell: { gr: chosen.aR, gc: chosen.aC },
+      toCell: { gr: chosen.bR, gc: chosen.bC },
+      progress: random(0, 1),
+      speed: GUARD_SPEED_PX_BASE + i * 2, // pixels/sec -- kept slow and deliberate on purpose
+      coneWidth: 50,
+      coneRadius: 55
+    };
+    var pa = superGridToPixel(guard.fromCell.gr, guard.fromCell.gc);
+    var pb = superGridToPixel(guard.toCell.gr, guard.toCell.gc);
+    guard.x = pa.x + (pb.x - pa.x) * guard.progress;
+    guard.y = pa.y + (pb.y - pa.y) * guard.progress;
+    guard.facing = Math.atan2(pb.y - pa.y, pb.x - pa.x) * 180 / Math.PI;
+    patrolGuards.push(guard);
+  }
+}
+
+// Guard turn rate -- how many degrees per second a guard's body
+// (and therefore their cone) can rotate. At the ends of a patrol
+// corridor the guard's walking direction reverses instantly, but
+// this makes them physically turn around over about a second and a
+// half instead of snapping 180 degrees in a single frame, so the
+// cone visibly sweeps as they do it.
+var GUARD_TURN_SPEED = 100; // degrees per second
+
+// Base guard walking speed in pixels/second (each guard gets a
+// slightly different one so they don't all move in lockstep) --
+// deliberately slow, same unhurried pace as the old fixed-corridor
+// patrol, just now applied to real point-to-point travel between
+// room cells instead of a single hardcoded edge.
+var GUARD_SPEED_PX_BASE = 7;
+
+// Steps `current` toward `target` by at most maxStepDeg, always the
+// short way around the circle.
+function rotateTowardAngle(current, target, maxStepDeg) {
+  var diff = target - current;
+  diff = ((diff % 360) + 540) % 360 - 180;
+  if (diff > maxStepDeg) { diff = maxStepDeg; }
+  if (diff < -maxStepDeg) { diff = -maxStepDeg; }
+  return current + diff;
+}
+
+function cellKey(gr, gc) { return gr + "," + gc; }
+
+// Minimum distance, in whole room-cell steps, a guard is ever allowed
+// to wander toward the player's spawn point. Room cells are 2
+// super-grid units apart, hence the /2.
+var SPAWN_GUARD_MIN_STEPS = 3;
+
+function isTooCloseToSpawn(gr, gc) {
+  var dr = (gr - sneakStartCellGr) / 2;
+  var dc = (gc - sneakStartCellGc) / 2;
+  return Math.sqrt(dr * dr + dc * dc) < SPAWN_GUARD_MIN_STEPS;
+}
+
+// Where a guard heads next after arriving at arrivedCell: a random
+// real neighbor from the room graph, not the fixed reverse trip of
+// the old back-and-forth patrol. Prefers a neighbor that's neither
+// an immediate U-turn NOR a step toward the player's spawn point --
+// if every forward option would close in on the spawn, the guard
+// takes the U-turn instead, i.e. it visibly turns around rather than
+// ever closing in on where the player starts.
+function pickNextWanderCell(arrivedCell, cameFromCell) {
+  var neighbors = (sneakRoomAdj && sneakRoomAdj[cellKey(arrivedCell.gr, arrivedCell.gc)]) || [];
+  if (neighbors.length === 0) { return cameFromCell || arrivedCell; }
+
+  var forwardSafe = [];
+  var anySafe = [];
+  for (var i = 0; i < neighbors.length; i++) {
+    var nb = neighbors[i];
+    var isBacktrack = cameFromCell && nb.gr === cameFromCell.gr && nb.gc === cameFromCell.gc;
+    var tooClose = isTooCloseToSpawn(nb.gr, nb.gc);
+    if (!tooClose) {
+      anySafe.push(nb);
+      if (!isBacktrack) { forwardSafe.push(nb); }
+    }
+  }
+
+  var pool = forwardSafe.length > 0 ? forwardSafe : (anySafe.length > 0 ? anySafe : neighbors);
+  var pick = pool[randomInt(0, pool.length - 1)];
+  return { gr: pick.gr, gc: pick.gc };
+}
+
+// Guards walk continuously from fromCell to toCell; on arrival they
+// pick a new random neighboring cell to head to next (see
+// pickNextWanderCell) instead of turning around on cue -- an actual
+// unpredictable search pattern instead of a fixed shuttle.
+function updatePatrolGuards(dt) {
+  var maxStep = GUARD_TURN_SPEED * dt;
+  for (var i = 0; i < patrolGuards.length; i++) {
+    var g = patrolGuards[i];
+    var pa = superGridToPixel(g.fromCell.gr, g.fromCell.gc);
+    var pb = superGridToPixel(g.toCell.gr, g.toCell.gc);
+    var edgeLen = Math.sqrt((pb.x - pa.x) * (pb.x - pa.x) + (pb.y - pa.y) * (pb.y - pa.y));
+    g.progress += edgeLen > 0.01 ? (g.speed * dt) / edgeLen : 1;
+
+    if (g.progress >= 1) {
+      g.progress = 0;
+      var arrivedCell = g.toCell;
+      var cameFromCell = g.fromCell;
+      g.fromCell = arrivedCell;
+      g.toCell = pickNextWanderCell(arrivedCell, cameFromCell);
+      pa = superGridToPixel(g.fromCell.gr, g.fromCell.gc);
+      pb = superGridToPixel(g.toCell.gr, g.toCell.gc);
+    }
+
+    var prevX = g.x, prevY = g.y;
+    g.x = pa.x + (pb.x - pa.x) * g.progress;
+    g.y = pa.y + (pb.y - pa.y) * g.progress;
+    var vx = g.x - prevX, vy = g.y - prevY;
+    if (Math.abs(vx) > 0.001 || Math.abs(vy) > 0.001) {
+      var targetFacing = Math.atan2(vy, vx) * 180 / Math.PI;
+      g.facing = rotateTowardAngle(g.facing, targetFacing, maxStep);
+    }
+  }
+}
+
+// Is angleDeg inside [startDeg, endDeg]? Handles wraparound past 360
+// the same way the vertical diagram's slot D range does.
+function isAngleInWedge(angleDeg, startDeg, endDeg) {
+  var span = endDeg - startDeg;
+  var rel = angleDeg - startDeg;
+  rel = ((rel % 360) + 360) % 360;
+  return rel <= span;
+}
+
+// Checks the robber against every roaming patrol guard and reports
+// WHO caught them (position), not just whether -- the chase
+// animation needs somewhere for the guard to lurch from.
+function checkForSpotting() {
+  for (var i = 0; i < patrolGuards.length; i++) {
+    var g = patrolGuards[i];
+    var gdx = robberX - g.x;
+    var gdy = robberY - g.y;
+    var gdist = Math.sqrt(gdx * gdx + gdy * gdy);
+
+    // Get this close and the guard notices you no matter which way
+    // they're facing -- a personal-space alert on top of the cone.
+    // A wall between you still protects you, same as the cone does.
+    if (gdist < GUARD_ALERT_RADIUS && hasLineOfSight(g.x, g.y, robberX, robberY)) {
+      return { caught: true, x: g.x, y: g.y };
+    }
+
+    if (gdist < g.coneRadius) {
+      var gang = Math.atan2(gdy, gdx) * 180 / Math.PI;
+      var half = g.coneWidth / 2;
+      if (isAngleInWedge(gang, g.facing - half, g.facing + half) &&
+          hasLineOfSight(g.x, g.y, robberX, robberY)) {
+        return { caught: true, x: g.x, y: g.y };
+      }
+    }
+  }
+  return { caught: false, x: 0, y: 0 };
+}
+
+// A filled, glowing wedge -- the guard/camera/laser's actual cast
+// light, not just an outline. Built as a triangle fan since that's
+// the safest drawing primitive to assume Game Lab supports.
+function drawIlluminatedCone(vx, vy, radius, startDeg, endDeg, colorRGB) {
+  var steps = 14;
+  noStroke();
+  fill(colorRGB[0], colorRGB[1], colorRGB[2], 55);
+  var prevOuter = pointOnCircle(vx, vy, radius, startDeg);
+  for (var i = 1; i <= steps; i++) {
+    var d = startDeg + (endDeg - startDeg) * (i / steps);
+    var curr = pointOnCircle(vx, vy, radius, d);
+    triangle(vx, vy, prevOuter.x, prevOuter.y, curr.x, curr.y);
+    prevOuter = curr;
+  }
+  fill(colorRGB[0], colorRGB[1], colorRGB[2], 100);
+  var prevInner = pointOnCircle(vx, vy, radius * 0.35, startDeg);
+  for (var j = 1; j <= steps; j++) {
+    var dj = startDeg + (endDeg - startDeg) * (j / steps);
+    var currInner = pointOnCircle(vx, vy, radius * 0.35, dj);
+    triangle(vx, vy, prevInner.x, prevInner.y, currInner.x, currInner.y);
+    prevInner = currInner;
+  }
+}
+
+// The wall-clipped outline of an illuminated wedge, as a list of
+// points -- split out from the actual drawing so a cone whose
+// origin and angles never change (the stationary camera) can have
+// its rays cast ONCE and just redraw the cached points every frame,
+// instead of re-marching every ray 60 times a second for a shape
+// that never moves.
+function computeConePoints(vx, vy, radius, startDeg, endDeg, steps) {
+  var pts = [];
+  for (var i = 0; i <= steps; i++) {
+    var d = startDeg + (endDeg - startDeg) * (i / steps);
+    var clipped = castRayDistance(vx, vy, d, radius);
+    pts.push(pointOnCircle(vx, vy, clipped, d));
+  }
+  return pts;
+}
+
+// A single wedge -- one field of view per hazard, not a dim outer
+// layer plus a separate brighter inner one (which read as two
+// overlapping cones).
+function drawConePoints(vx, vy, pts, colorRGB) {
+  noStroke();
+  fill(colorRGB[0], colorRGB[1], colorRGB[2], 75);
+  for (var j = 1; j < pts.length; j++) {
+    triangle(vx, vy, pts[j - 1].x, pts[j - 1].y, pts[j].x, pts[j].y);
+  }
+}
+
+// Same illuminated wedge, but stopped dead by the maze's walls --
+// used for the roaming patrol guards, whose origin and facing change
+// every frame so their rays can't be cached like the camera's.
+function drawIlluminatedConeClipped(vx, vy, radius, startDeg, endDeg, colorRGB, steps) {
+  var pts = computeConePoints(vx, vy, radius, startDeg, endDeg, steps || 8);
+  drawConePoints(vx, vy, pts, colorRGB);
+}
+
+// A soft, gently pulsing red glow radiating out from a guard --
+// built from layered translucent circles (denser near the guard,
+// fading out toward the edge) since plain radial gradients aren't a
+// safe assumption for Game Lab's drawing API.
+function drawGuardAura(x, y, baseRadius) {
+  var t = (typeof millis === "function") ? millis() : 0;
+  var pulse = 1 + Math.sin(t * 0.006) * 0.12;
+  var radius = baseRadius * pulse;
+  var layers = 4;
+  noStroke();
+  for (var i = layers; i >= 1; i--) {
+    var r = radius * (i / layers);
+    var alpha = 100 - (i / layers) * 75;
+    fill(255, 40, 60, alpha);
+    ellipse(x, y, r * 2, r * 2);
+  }
+}
+
+// Kept small and centered close to (x,y) at the default scale on
+// purpose -- movement in the maze snaps exactly from one room cell's
+// center to the next (see ROBBER_STEP_DURATION), so the sprite only
+// needs to read clearly within roughly ROBBER_RADIUS of that point,
+// not spill into a neighboring wall or corridor. Callers showing the
+// robber somewhere OTHER than the maze (like standing at the door
+// during the question itself) can pass a bigger sizeScale so it
+// doesn't look like an ant next to the puzzle.
+function drawSpySprite(x, y, isFlashing, sizeScale) {
+  var suitColor  = isFlashing ? [255, 70, 70]   : [35, 45, 78];
+  var visorColor = isFlashing ? [255, 210, 210] : [90, 225, 255];
+
+  push();
+  translate(x, y);
+  scale(sizeScale || 1);
+
+  stroke(suitColor[0], suitColor[1], suitColor[2]);
+  strokeWeight(2.5);
+  line(-2, 5, -2, 7);
+  line(2, 5, 2, 7);
+
+  noStroke();
+  fill(suitColor[0], suitColor[1], suitColor[2]);
+  rect(-3, -1, 6, 7, 2);
+
+  fill(suitColor[0], suitColor[1], suitColor[2]);
+  ellipse(0, -4, 7, 7);
+
+  // Visor -- the only bright spot on an otherwise stealthy figure.
+  fill(visorColor[0], visorColor[1], visorColor[2]);
+  rect(-2.5, -5, 5, 1.5, 1);
+
+  pop();
+}
+
+function drawExitDoor(x, y, isActive) {
+  var glow = isActive ? COLOR_TEXT_GOOD : COLOR_TEXT_DIM;
+  noFill();
+  stroke(glow[0], glow[1], glow[2]);
+  strokeWeight(isActive ? 3 : 1.5);
+  rect(x - 9, y - 24, 18, 48, 4);
+  if (isActive) {
+    noStroke();
+    fill(glow[0], glow[1], glow[2], 50);
+    rect(x - 9, y - 24, 18, 48, 4);
+  }
+}
+
+// The idle/caught pose shown while you're still aiming, or while
+// reacting to a wrong answer -- the robber just waits at the door.
+var SPY_IDLE_SCALE = 2.8; // bigger while you're still solving the angle -- no maze collision to fit inside here
+
+function drawHeistScene(sceneY) {
+  var isFlashing = (puzzlePhase === PUZZLE_PHASE_CAUGHT) && (Math.floor(phaseTimer / 4) % 2 === 0);
+  var spyX = (puzzlePhase === PUZZLE_PHASE_CAUGHT) ? SPY_START_X - 3 : SPY_START_X;
+  drawExitDoor(SPY_END_X + 10, sceneY, false);
+  drawSpySprite(spyX, sceneY + 14, isFlashing, SPY_IDLE_SCALE);
+}
+
+// Kicks off the Pac-Man-style sneak minigame right after a correct
+// answer. Generates a fresh maze, always guaranteed fully connected;
+// the door lands on a random border room cell; the start point lands
+// on a different, far-away border cell each time; and patrol guards
+// start roaming real corridors as extra obstacles. There's no
+// stationary camera anymore -- guards are the only hazard, and
+// setupPatrolGuards/updatePatrolGuards keep them away from the spawn
+// point specifically (see isTooCloseToSpawn).
+//
+// ensureTwoDistinctPaths opens a few more walls if needed so there's
+// always a genuinely second, independent route from the spawn point
+// to the door, never just one fragile corridor the whole crossing
+// depends on.
+function startSneakingPhase() {
+  generateMaze();
+  var allEdges = collectOpenEdges();
+  var adj = buildRoomGraph(allEdges);
+
+  var doorCell = pickDoorCell();
+  var startCell = pickStartCell(doorCell, null);
+
+  sneakDoorX = doorCell.px;
+  sneakDoorY = doorCell.py;
+
+  robberX = startCell.px;
+  robberY = startCell.py;
+  robberCellGr = startCell.gr;
+  robberCellGc = startCell.gc;
+  robberStepFromX = robberX;
+  robberStepFromY = robberY;
+  robberStepToX = robberX;
+  robberStepToY = robberY;
+  robberStepT = 1;
+  stepQueued = false; // don't carry a leftover queued step into the new room
+  sneakStartX = startCell.px;
+  sneakStartY = startCell.py;
+  sneakStartCellGr = startCell.gr;
+  sneakStartCellGc = startCell.gc;
+
+  // The maze's spanning tree already guarantees full connectivity, so
+  // there's always at least one route -- this opens a few more walls
+  // (never closes any) until a genuinely SECOND, independent route
+  // exists too, so there's always a real alternate way to the exit.
+  var repaired = ensureTwoDistinctPaths(allEdges, adj, startCell, doorCell, {});
+  allEdges = repaired.edges;
+  adj = repaired.adj;
+
+  // Kept around so a guard's random wander (see updatePatrolGuards)
+  // can look up real neighbors of whatever cell it just arrived at.
+  sneakRoomAdj = adj;
+
+  setupPatrolGuards(allEdges, adj, [
+    { gr: startCell.gr, gc: startCell.gc },
+    { gr: doorCell.gr, gc: doorCell.gc }
+  ], startCell, doorCell, {});
+
+  sneakGraceTimer = SNEAK_GRACE_PERIOD;
+  sneakChaseTimer = 0;
+  sneakWasSpotted = false;
+  puzzlePhase = PUZZLE_PHASE_SNEAKING;
+}
+
+// Attempts to begin exactly one grid step from whatever direction is
+// queued (a real key-down event, see keyPressed) or, failing that,
+// currently held. Returns false (and starts nothing) if there's no
+// directional input at all, or if the connecting corridor cell is a
+// wall. Split out from updateSneakingPhase so a step that finishes
+// mid-frame can immediately try to chain into another one using
+// leftover time, instead of only ever checking input once per frame.
+function tryStartRobberStep() {
+  var stepDGr = 0, stepDGc = 0;
+  if (stepQueued) {
+    // A real key-down event already queued this step (see
+    // keyPressed) -- guaranteed to catch it even if the tap was
+    // shorter than one draw() frame.
+    stepDGr = stepQueuedDGr;
+    stepDGc = stepQueuedDGc;
+    stepQueued = false;
+  } else if (keyEdge("left") || keyEdge("a")) { stepDGc = -2; }
+  else if (keyEdge("right") || keyEdge("d")) { stepDGc = 2; }
+  else if (keyEdge("up") || keyEdge("w")) { stepDGr = -2; }
+  else if (keyEdge("down") || keyEdge("s")) { stepDGr = 2; }
+  else if (safeKeyDown("left") || safeKeyDown("a")) { stepDGc = -2; }
+  else if (safeKeyDown("right") || safeKeyDown("d")) { stepDGc = 2; }
+  else if (safeKeyDown("up") || safeKeyDown("w")) { stepDGr = -2; }
+  else if (safeKeyDown("down") || safeKeyDown("s")) { stepDGr = 2; }
+
+  if (stepDGr === 0 && stepDGc === 0) { return false; }
+
+  // The cell directly between the current room cell and the target
+  // one IS the corridor wall between them -- open iff that maze cell
+  // isn't solid.
+  var midGr = robberCellGr + stepDGr / 2;
+  var midGc = robberCellGc + stepDGc / 2;
+  if (isWallCellAt(midGr, midGc)) { return false; }
+
+  robberCellGr += stepDGr;
+  robberCellGc += stepDGc;
+  var stepTarget = superGridToPixel(robberCellGr, robberCellGc);
+  robberStepFromX = robberX;
+  robberStepFromY = robberY;
+  robberStepToX = stepTarget.x;
+  robberStepToY = stepTarget.y;
+  robberStepT = 0;
+  return true;
+}
+
+function updateSneakingPhase(dt) {
+  // A chase animation in progress overrides everything else -- no
+  // player input, no exit check, until it plays out.
+  if (sneakChaseTimer > 0) {
+    updateChaseAnimation(dt);
+    return;
+  }
+
+  // Grid-stepped movement: a key press moves the robber exactly one
+  // full cell, tweened smoothly rather than an instant jump. A step
+  // that finishes partway through a frame immediately chains into
+  // the next one using whatever time is left over, instead of
+  // waiting for the following frame -- that's what keeps holding a
+  // direction feeling like one continuous glide through a corridor
+  // rather than a beat of hesitation at every cell boundary.
+  var remainingDt = dt;
+  var stepChainGuard = 0;
+  while (remainingDt > 0 && stepChainGuard < 8) {
+    stepChainGuard++;
+    if (robberStepT < 1) {
+      var deltaT = remainingDt / ROBBER_STEP_DURATION;
+      var neededT = 1 - robberStepT;
+      if (deltaT >= neededT) {
+        robberStepT = 1;
+        robberX = robberStepToX;
+        robberY = robberStepToY;
+        remainingDt -= neededT * ROBBER_STEP_DURATION;
+      } else {
+        robberStepT += deltaT;
+        robberX = robberStepFromX + (robberStepToX - robberStepFromX) * robberStepT;
+        robberY = robberStepFromY + (robberStepToY - robberStepFromY) * robberStepT;
+        remainingDt = 0;
+      }
+    } else if (!tryStartRobberStep()) {
+      break; // no queued/held direction, or the way is blocked -- nothing more to do this frame
+    }
+  }
+
+  updatePatrolGuards(dt);
+
+  if (sneakGraceTimer > 0) {
+    sneakGraceTimer -= dt;
+  } else {
+    var spot = checkForSpotting();
+    if (spot.caught) {
+      startChaseSequence(spot.x, spot.y);
+      return;
+    }
+  }
+
+  var ddx = robberX - sneakDoorX;
+  var ddy = robberY - sneakDoorY;
+  var reachedExit = Math.sqrt(ddx * ddx + ddy * ddy) < SNEAK_DOOR_RADIUS;
+  if (reachedExit) {
+    finishSneaking();
+  }
+}
+
+// Being spotted costs a life -- the crew tripped an alarm mid-heist,
+// not a free mistake -- and kicks off a short chase: the robber
+// flees off screen with every guard on their tail. This one room's
+// attempt is over either way once it plays out.
+function startChaseSequence(chaserX, chaserY) {
+  sneakWasSpotted = true;
+  triggerShake(6, 14);
+  playSfx("wrong");
+  lives -= 1;
+  showFeedback("CAUGHT! -1 LIFE", COLOR_TEXT_WARN, 40);
+
+  var dx = robberX - chaserX;
+  var dy = robberY - chaserY;
+  var mag = Math.sqrt(dx * dx + dy * dy);
+  if (mag < 0.01) { dx = 1; dy = 0; mag = 1; }
+  sneakFleeDirX = dx / mag;
+  sneakFleeDirY = dy / mag;
+
+  sneakChaseTimer = SNEAK_CHASE_DURATION;
+}
+
+// The robber sprints off the edge of the room (ignoring walls and
+// bounds on purpose -- that's the "off screen" part) while EVERY
+// guard actively pursues -- each one steers straight at the
+// robber's CURRENT position every frame (not a single fixed
+// direction picked at the start), so they visibly close in and,
+// since the robber is fleeing in a straight line, naturally end up
+// falling in directly behind them by the time the animation ends.
+// One catch ends the run at this room: once it plays out, either
+// the heist is over (out of lives) or the crew just moves on to
+// whatever the correct answer already earned -- the next puzzle, or
+// clearing the sector -- same as reaching the door would.
+function updateChaseAnimation(dt) {
+  var fleeSpeed = ROBBER_SPEED * 1.3;
+  robberX += sneakFleeDirX * fleeSpeed * dt;
+  robberY += sneakFleeDirY * fleeSpeed * dt;
+
+  var guardChaseSpeed = fleeSpeed * 1.05; // just fast enough to close the gap
+  for (var i = 0; i < patrolGuards.length; i++) {
+    var g = patrolGuards[i];
+    var dx = robberX - g.x;
+    var dy = robberY - g.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0.01) {
+      g.x += (dx / dist) * guardChaseSpeed * dt;
+      g.y += (dy / dist) * guardChaseSpeed * dt;
+      g.facing = Math.atan2(dy, dx) * 180 / Math.PI;
+    }
+  }
+
+  sneakChaseTimer -= dt;
+  if (sneakChaseTimer <= 0) {
+    sneakChaseTimer = 0;
+    if (lives <= 0) {
+      triggerGameOver();
+      return;
+    }
+    resolvePendingAdvance();
+  }
+}
+
+// Only ever called once the robber has actually reached the door --
+// there's no time limit to run out on anymore, so this always means
+// success. The bonus just reflects whether you got there clean.
+function finishSneaking() {
+  if (!sneakWasSpotted) {
+    currentScore += 40;
+    showFeedback("CLEAN GETAWAY! +40", COLOR_TEXT_GOOD, 45);
+  } else {
+    currentScore += 15;
+    showFeedback("MADE IT THROUGH! +15", COLOR_TEXT_GOOD, 45);
+  }
+  if (currentScore > sessionHighScore) { sessionHighScore = currentScore; }
+  checkSkinUnlocks();
+  resolvePendingAdvance();
+}
+
+function drawDoorMarker(x, y) {
+  noStroke();
+  fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2], 60);
+  ellipse(x, y, 28, 28);
+  noFill();
+  stroke(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
+  strokeWeight(3);
+  ellipse(x, y, 18, 18);
+  noStroke();
+  fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(8);
+  text("EXIT", x, y + 16);
+}
+
+// The maze walls themselves -- solid blocks the robber and the
+// patrol guards both have to go around, Pac-Man style. A flat dark
+// hedge-green fill, one rect per cell -- there can be well over a
+// hundred of these on screen at once with the denser grid, so this
+// deliberately skips per-cell texture (a shadow + leafy flecks, tried
+// earlier) that multiplied every wall cell's draw cost 5x for a
+// detail nobody could see at this scale anyway. The color alone
+// still reads as hedge, not the old tech-panel gray.
+function drawMazeWalls() {
+  noStroke();
+  fill(COLOR_HEDGE_DARK[0], COLOR_HEDGE_DARK[1], COLOR_HEDGE_DARK[2]);
+  for (var i = 0; i < mazeWallRects.length; i++) {
+    var b = mazeWallRects[i];
+    rect(b.left, b.top, b.right - b.left, b.bottom - b.top);
+  }
+}
+
+function drawSneakingScene() {
+  // A gravel path floor, not the techy grid the puzzle rooms use --
+  // this room reads as a real hedge maze.
+  noStroke();
+  fill(COLOR_MAZE_PATH[0], COLOR_MAZE_PATH[1], COLOR_MAZE_PATH[2]);
+  rect(ROOM_LEFT, ROOM_TOP, ROOM_RIGHT - ROOM_LEFT, ROOM_BOTTOM - ROOM_TOP, 6);
+
+  noFill();
+  stroke(COLOR_HEDGE_DARK[0], COLOR_HEDGE_DARK[1], COLOR_HEDGE_DARK[2]);
+  strokeWeight(2);
+  rect(ROOM_LEFT, ROOM_TOP, ROOM_RIGHT - ROOM_LEFT, ROOM_BOTTOM - ROOM_TOP, 6);
+
+  drawMazeWalls();
+  drawDoorMarker(sneakDoorX, sneakDoorY);
+
+  // The roaming patrol guards -- the only hazard in the room now --
+  // each radiating a small red alert aura -- get inside it and they
+  // notice you no matter which way they're looking, on top of
+  // whatever their wall-clipped cone already covers. A guard's
+  // position and facing change every frame, so its cone gets
+  // re-cast fresh each time (see castRayDistance).
+  for (var i = 0; i < patrolGuards.length; i++) {
+    var g = patrolGuards[i];
+    var half = g.coneWidth / 2;
+    drawIlluminatedConeClipped(g.x, g.y, g.coneRadius, g.facing - half, g.facing + half, COLOR_LASER_GOLD, 8);
+    drawGuardAura(g.x, g.y, GUARD_ALERT_RADIUS);
+    drawGroundShadow(g.x, g.y, 7);
+    drawGuardIcon(g.x, g.y);
+  }
+
+  if (sneakChaseTimer > 0) {
+    drawChaseAnimation();
+  } else {
+    drawGroundShadow(robberX, robberY, 8);
+    drawSpySprite(robberX, robberY, false, SPRITE_MAZE_SCALE);
+  }
+}
+
+// A small dark ellipse under a character's feet -- cheap depth cue,
+// consistent with the hedges' own dropped shadows.
+function drawGroundShadow(x, y, r) {
+  noStroke();
+  fill(COLOR_MAZE_SHADOW[0], COLOR_MAZE_SHADOW[1], COLOR_MAZE_SHADOW[2], 110);
+  ellipse(x + 2, y + 3, r * 2, r);
+}
+
+// The guard who spotted the robber lurches after them (with an
+// alert "!" overhead) while the robber sprints off screen -- drawn
+// last/on top and deliberately allowed to go past the room bounds.
+function drawChaseAnimation() {
+  for (var i = 0; i < patrolGuards.length; i++) {
+    var g = patrolGuards[i];
+    drawGuardIcon(g.x, g.y);
+    noStroke();
+    fill(255, 60, 60);
+    textAlign(CENTER, CENTER);
+    textSize(14);
+    text("!", g.x, g.y - 20);
+  }
+
+  drawSpySprite(robberX, robberY, true, SPRITE_MAZE_SCALE);
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 22: HUD DRAWING
+// ----------------------------------------------------------------
+function drawHUD() {
+  // Top bar background.
+  noStroke();
+  fill(COLOR_PANEL[0], COLOR_PANEL[1], COLOR_PANEL[2]);
+  rect(0, 0, CANVAS_W, 46);
+  stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
+  strokeWeight(1);
+  line(0, 46, CANVAS_W, 46);
+
+  textAlign(LEFT, CENTER);
+  textSize(13);
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  text("SCORE " + currentScore, 8, 14);
+
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textSize(11);
+  var levelLabel;
+  if (isChallengeMode) {
+    levelLabel = "CHALLENGE Lv." + challengeDifficulty + "  (run: " + challengePuzzlesSolved + ")";
+  } else {
+    var lvl = LEVELS[currentLevelIndex];
+    var roomNumber = Math.min(puzzlesSolvedInLevel + 1, lvl.puzzlesToClear);
+    levelLabel = lvl.name + "  (room " + roomNumber + "/" + lvl.puzzlesToClear + ")";
+  }
+  text(levelLabel, 8, 30);
+
+  drawLivesIcons(CANVAS_W - 8, 12);
+  drawStreakBadge(CANVAS_W - 8, 30);
+  drawAlarmMeter(8, 40, CANVAS_W - 16, 5);
+  drawTimerBar(8, 50, CANVAS_W - 16, 6);
+}
+
+function drawSkillNameBanner(puzzle, y) {
+  if (!puzzle || !puzzle.relationshipName) { return; }
+  noStroke();
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textAlign(CENTER, CENTER);
+  textSize(11);
+  text(puzzle.relationshipName, CANVAS_W / 2, y);
+}
+
+function drawLivesIcons(rightX, y) {
+  textAlign(RIGHT, CENTER);
+  textSize(13);
+  noStroke();
+  fill(COLOR_TEXT_WARN[0], COLOR_TEXT_WARN[1], COLOR_TEXT_WARN[2]);
+  var heartStr = "";
+  for (var i = 0; i < lives; i++) { heartStr += "♥ "; }
+  for (var j = lives; j < maxLives; j++) { heartStr += "♡ "; }
+  text(heartStr, rightX, y);
+}
+
+function drawStreakBadge(rightX, y) {
+  textAlign(RIGHT, CENTER);
+  textSize(11);
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  text("STREAK " + streak + " (x" + computeMultiplierFromStreak(streak) + ")", rightX, y);
+}
+
+function drawAlarmMeter(x, y, w, h) {
+  noStroke();
+  fill(30, 30, 30);
+  rect(x, y, w, h);
+  var ratio = alarmMeter / alarmMaxValue;
+  var r = COLOR_ALARM_EMPTY[0] + (COLOR_ALARM_FULL[0] - COLOR_ALARM_EMPTY[0]) * ratio;
+  var g = COLOR_ALARM_EMPTY[1] + (COLOR_ALARM_FULL[1] - COLOR_ALARM_EMPTY[1]) * ratio;
+  var b = COLOR_ALARM_EMPTY[2] + (COLOR_ALARM_FULL[2] - COLOR_ALARM_EMPTY[2]) * ratio;
+  fill(r, g, b);
+  rect(x, y, w * ratio, h);
+  if (ratio > 0.75) {
+    noStroke();
+    fill(255, 60, 60);
+    textAlign(CENTER, CENTER);
+    textSize(9);
+    text("ALARM CRITICAL", x + w / 2, y - 6);
+  }
+}
+
+function drawTimerBar(x, y, w, h) {
+  // No countdown while sneaking -- take as long as you need to
+  // reach the door.
+  if (puzzlePhase === PUZZLE_PHASE_SNEAKING) { return; }
+
+  noStroke();
+  fill(30, 30, 30);
+  rect(x, y, w, h);
+
+  var ratio, barColor;
+  if (hasFailedThisPuzzle) {
+    ratio = clampNum(timerValue / timerMax, 0, 1);
+    barColor = COLOR_TEXT_DIM;
+  } else {
+    ratio = clampNum(timerValue / timerMax, 0, 1);
+    barColor = ratio < 0.25 ? COLOR_TEXT_WARN : COLOR_LASER_GREEN;
+  }
+  fill(barColor[0], barColor[1], barColor[2]);
+  rect(x, y, w * ratio, h);
+
+  if (hasFailedThisPuzzle) {
+    noStroke();
+    fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+    textAlign(LEFT, CENTER);
+    textSize(8);
+    text("TIME FROZEN -- RETRY!", x, y - 6);
+  }
+}
+
+// ----------------------------------------------------------------
+// SECTION 23: ANSWER INPUT (typing is the only way to answer)
+// ----------------------------------------------------------------
+function drawAnswerBox(cx, cy) {
+  var boxW = 120;
+  var boxH = 34;
+  var boxX = cx - boxW / 2;
+  var boxY = cy - boxH / 2;
+
+  stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
+  strokeWeight(2);
+  fill(COLOR_PANEL[0], COLOR_PANEL[1], COLOR_PANEL[2]);
+  rect(boxX, boxY, boxW, boxH, 6);
+
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  var displayStr = answerInput.length > 0 ? (answerInput + "°") : "?";
+  text(displayStr, boxX + boxW / 2, boxY + boxH / 2);
+
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textSize(10);
+  text("Type the degrees, ENTER to submit", cx, boxY + boxH + 14);
+}
+
+// Shown in place of the answer box during the sneak minigame.
+function drawSneakPrompt(cx, cy) {
+  noStroke();
+  fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(13);
+  text("Correct! Sneak to the green exit!", cx, cy - 6);
+
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textSize(10);
+  text("Arrow keys / WASD -- dodge the camera & patrol guards", cx, cy + 12);
+}
+
+function handleAnswerTyping() {
+  for (var d = 0; d <= 9; d++) {
+    if (keyEdge(String(d))) {
+      if (answerInput.length < ANSWER_MAX_DIGITS) {
+        answerInput += String(d);
+      }
+    }
+  }
+  if (keyEdge("backspace") || keyEdge("delete")) {
+    answerInput = answerInput.slice(0, -1);
+  }
+  if (enterKeyEdge()) {
+    submitAnswer();
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 24: SCREEN -- TITLE
+// ----------------------------------------------------------------
+function drawTitleScreen() {
+  drawBackgroundGrid();
+
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(30);
+  text("LASER HEIST", CANVAS_W / 2, 120);
+  textSize(18);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  text("ANGLE BREAKER", CANVAS_W / 2, 150);
+
+  textSize(11);
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  text("Best Score: " + sessionHighScore + "   Best Streak: " + bestStreakEver, CANVAS_W / 2, 180);
+
+  var btnW = 180, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
+  var playY = 210, howY = 254, scoreY = 298;
+
+  drawButton(btnX, playY, btnW, btnH, "START HEIST", buttonHovered(btnX, playY, btnW, btnH));
+  drawButton(btnX, howY, btnW, btnH, "HOW TO PLAY", buttonHovered(btnX, howY, btnW, btnH));
+  drawButton(btnX, scoreY, btnW, btnH, "HIGH SCORES", buttonHovered(btnX, scoreY, btnW, btnH));
+
+  if (buttonClicked(btnX, playY, btnW, btnH)) {
+    gameState = STATE_MODE_SELECT;
+  }
+  if (buttonClicked(btnX, howY, btnW, btnH)) {
+    previousState = STATE_TITLE;
+    gameState = STATE_INSTRUCTIONS;
+  }
+  if (buttonClicked(btnX, scoreY, btnW, btnH)) {
+    gameState = STATE_HIGH_SCORES;
+  }
+}
+
+function drawBackgroundGrid() {
+  stroke(COLOR_BG_GRID[0], COLOR_BG_GRID[1], COLOR_BG_GRID[2]);
+  strokeWeight(1);
+  for (var gx = 0; gx <= CANVAS_W; gx += 20) {
+    line(gx, 0, gx, CANVAS_H);
+  }
+  for (var gy = 0; gy <= CANVAS_H; gy += 20) {
+    line(0, gy, CANVAS_W, gy);
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 25: SCREEN -- MODE SELECT
+// ----------------------------------------------------------------
+function drawModeSelectScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  text("CHOOSE YOUR HEIST", CANVAS_W / 2, 90);
+
+  var btnW = 220, btnH = 44, btnX = CANVAS_W / 2 - btnW / 2;
+  var campaignY = 128, challengeY = 184, practiceY = 240;
+
+  drawButton(btnX, campaignY, btnW, btnH, "CAMPAIGN (5 Sectors)", buttonHovered(btnX, campaignY, btnW, btnH));
+  drawButton(btnX, challengeY, btnW, btnH, "CHALLENGE (Endless)", buttonHovered(btnX, challengeY, btnW, btnH));
+  drawButton(btnX, practiceY, btnW, btnH, "PRACTICE MODE", buttonHovered(btnX, practiceY, btnW, btnH));
+
+  textAlign(CENTER, CENTER);
+  textSize(9);
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  text("Campaign teaches each angle type step by step.", CANVAS_W / 2, campaignY + btnH + 12);
+  text("Challenge mixes everything and speeds up forever.", CANVAS_W / 2, challengeY + btnH + 12);
+  text("No timer, no lives, no score -- just questions. Pick your skills.", CANVAS_W / 2, practiceY + btnH + 12);
+
+  var backW = 90, backH = 26;
+  var backX = 10, backY = CANVAS_H - 36;
+  drawButton(backX, backY, backW, backH, "< BACK", buttonHovered(backX, backY, backW, backH));
+
+  if (buttonClicked(btnX, campaignY, btnW, btnH)) {
+    resetFullGame();
+    startLevel(0);
+  }
+  if (buttonClicked(btnX, challengeY, btnW, btnH)) {
+    gameState = STATE_CHALLENGE_INTRO;
+  }
+  if (buttonClicked(btnX, practiceY, btnW, btnH)) {
+    gameState = STATE_PRACTICE_SETUP;
+  }
+  if (buttonClicked(backX, backY, backW, backH)) {
+    gameState = STATE_TITLE;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 25B: PRACTICE MODE (no timer, no score, no lives)
+// ----------------------------------------------------------------
+var PRACTICE_SKILL_OPTIONS = [
+  { key: "supplementary", label: "Supplementary Angles" },
+  { key: "complementary", label: "Complementary Angles" },
+  { key: "vertical", label: "Vertical Angles" },
+  { key: "parallel", label: "Parallel Lines + Transversal" }
+];
+
+function anyPracticeSkillSelected() {
+  for (var i = 0; i < PRACTICE_SKILL_OPTIONS.length; i++) {
+    if (practiceSkills[PRACTICE_SKILL_OPTIONS[i].key]) { return true; }
+  }
+  return false;
+}
+
+function drawPracticeSetupScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  text("PRACTICE MODE", CANVAS_W / 2, 46);
+
+  textSize(11);
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  text("Check off which skills you want to work on:", CANVAS_W / 2, 70);
+
+  var boxSize = 20;
+  var rowW = 260;
+  var rowH = 38;
+  var startY = 98;
+  var boxX = CANVAS_W / 2 - rowW / 2;
+
+  for (var i = 0; i < PRACTICE_SKILL_OPTIONS.length; i++) {
+    var opt = PRACTICE_SKILL_OPTIONS[i];
+    var y = startY + i * rowH;
+    var checked = practiceSkills[opt.key];
+    var rowHovered = buttonHovered(boxX, y, rowW, boxSize);
+
+    if (rowHovered) {
+      noStroke();
+      fill(COLOR_BUTTON_HOVER[0], COLOR_BUTTON_HOVER[1], COLOR_BUTTON_HOVER[2], 120);
+      rect(boxX - 6, y - 5, rowW + 12, boxSize + 10, 4);
+    }
+
+    stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
+    strokeWeight(2);
+    fill(COLOR_PANEL[0], COLOR_PANEL[1], COLOR_PANEL[2]);
+    rect(boxX, y, boxSize, boxSize, 4);
+    if (checked) {
+      noStroke();
+      fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
+      rect(boxX + 4, y + 4, boxSize - 8, boxSize - 8, 2);
+    }
+
+    noStroke();
+    fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+    textAlign(LEFT, CENTER);
+    textSize(13);
+    text(opt.label, boxX + boxSize + 12, y + boxSize / 2);
+
+    if (buttonClicked(boxX, y, rowW, boxSize)) {
+      practiceSkills[opt.key] = !practiceSkills[opt.key];
+    }
+  }
+
+  var anySelected = anyPracticeSkillSelected();
+  var btnW = 200, btnH = 36;
+  var btnX = CANVAS_W / 2 - btnW / 2;
+  var btnY = startY + PRACTICE_SKILL_OPTIONS.length * rowH + 16;
+  var startLabel = anySelected ? "START PRACTICE" : "SELECT AT LEAST ONE";
+  drawButton(btnX, btnY, btnW, btnH, startLabel, anySelected && buttonHovered(btnX, btnY, btnW, btnH));
+  if (anySelected && buttonClicked(btnX, btnY, btnW, btnH)) {
+    practiceAttempted = 0;
+    practiceCorrect = 0;
+    loadPracticePuzzle();
+    gameState = STATE_PRACTICE_PLAY;
+  }
+
+  var backW = 90, backH = 26, backX = 10, backY = CANVAS_H - 36;
+  drawButton(backX, backY, backW, backH, "< BACK", buttonHovered(backX, backY, backW, backH));
+  if (buttonClicked(backX, backY, backW, backH)) {
+    gameState = STATE_TITLE;
+  }
+}
+
+// Picks a random puzzle from whichever skills are checked, reusing
+// the exact same generators as the main game -- practice mode is
+// just those puzzles without a timer, score, or lives attached.
+function loadPracticePuzzle() {
+  var types = [];
+  for (var i = 0; i < PRACTICE_SKILL_OPTIONS.length; i++) {
+    if (practiceSkills[PRACTICE_SKILL_OPTIONS[i].key]) { types.push(PRACTICE_SKILL_OPTIONS[i].key); }
+  }
+  if (types.length === 0) { types.push("supplementary"); } // safety net; UI shouldn't allow this
+
+  var type = types[randomInt(0, types.length - 1)];
+  currentPuzzle = generatePuzzleForLevel(type);
+  answerInput = "";
+  practiceFeedbackShown = false;
+  practiceAdvanceTimer = 0;
+}
+
+function submitPracticeAnswer() {
+  if (!currentPuzzle || answerInput === "") { return; }
+  var value = parseInt(answerInput, 10);
+  practiceAttempted += 1;
+
+  if (value === currentPuzzle.correctAnswer) {
+    practiceCorrect += 1;
+    practiceFeedbackText = "Correct! " + currentPuzzle.correctAnswer + "°";
+    practiceFeedbackColor = COLOR_TEXT_GOOD;
+    playSfx("correct");
+  } else {
+    practiceFeedbackText = "Not quite -- it was " + currentPuzzle.correctAnswer + "°";
+    practiceFeedbackColor = COLOR_TEXT_WARN;
+    playSfx("wrong");
+  }
+  practiceFeedbackShown = true;
+  practiceAdvanceTimer = PRACTICE_ADVANCE_DELAY;
+}
+
+function handlePracticeAnswerTyping() {
+  for (var d = 0; d <= 9; d++) {
+    if (keyEdge(String(d))) {
+      if (answerInput.length < ANSWER_MAX_DIGITS) {
+        answerInput += String(d);
+      }
+    }
+  }
+  if (keyEdge("backspace") || keyEdge("delete")) {
+    answerInput = answerInput.slice(0, -1);
+  }
+  if (enterKeyEdge()) {
+    submitPracticeAnswer();
+  }
+}
+
+function drawPracticeScreen(dt) {
+  drawBackgroundGrid();
+  if (currentPuzzle) {
+    drawDiagramForPuzzle(currentPuzzle, CANVAS_W / 2, 160);
+  }
+
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(13);
+  text("PRACTICE MODE", CANVAS_W / 2, 16);
+
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textSize(10);
+  text("Correct " + practiceCorrect + " / " + practiceAttempted + " attempted", CANVAS_W / 2, 32);
+
+  if (currentPuzzle) {
+    drawSkillNameBanner(currentPuzzle, 46);
+  }
+
+  if (practiceFeedbackShown) {
+    practiceAdvanceTimer -= dt;
+    noStroke();
+    fill(practiceFeedbackColor[0], practiceFeedbackColor[1], practiceFeedbackColor[2]);
+    textAlign(CENTER, CENTER);
+    textSize(15);
+    text(practiceFeedbackText, CANVAS_W / 2, 90);
+    if (practiceAdvanceTimer <= 0) {
+      loadPracticePuzzle();
+    }
+  } else {
+    drawAnswerBox(CANVAS_W / 2, 325);
+    handlePracticeAnswerTyping();
+  }
+
+  var menuW = 90, menuH = 24, menuX = 8, menuY = CANVAS_H - 32;
+  drawButton(menuX, menuY, menuW, menuH, "MENU", buttonHovered(menuX, menuY, menuW, menuH));
+  if (buttonClicked(menuX, menuY, menuW, menuH)) {
+    gameState = STATE_TITLE;
+  }
+
+  var skillsW = 118, skillsH = 24, skillsX = CANVAS_W - 8 - skillsW, skillsY = CANVAS_H - 32;
+  drawButton(skillsX, skillsY, skillsW, skillsH, "CHANGE SKILLS", buttonHovered(skillsX, skillsY, skillsW, skillsH));
+  if (buttonClicked(skillsX, skillsY, skillsW, skillsH)) {
+    gameState = STATE_PRACTICE_SETUP;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 26: SCREEN -- INSTRUCTIONS
+// ----------------------------------------------------------------
+function drawInstructionsScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(18);
+  text("HOW TO PLAY", CANVAS_W / 2, 40);
+
+  var lines = [
+    "Every room runs on a different security system:",
+    "guards (supplementary), corner lasers",
+    "(complementary), cameras (vertical), and",
+    "duct crawls (parallel + transversal).",
+    "",
+    "Calculate the missing angle, type the number",
+    "of degrees using the number keys, then press",
+    "ENTER to submit. BACKSPACE fixes a mistyped digit.",
+    "",
+    "Get it right and you take control of the robber",
+    "in a mini heist room: dodge the camera's cone AND",
+    "roaming patrol guards using arrow keys / WASD to",
+    "reach the green exit. Start side and exit side",
+    "change every time. Get spotted and it costs a",
+    "life -- every guard chases you off screen, then",
+    "it's straight on to the next puzzle.",
+    "",
+    "Wrong answers cost a life and raise the alarm",
+    "meter -- fill it and the heist ends. You'll",
+    "retry the SAME puzzle though, and the clock",
+    "freezes after your first miss on it.",
+    "",
+    "Watch for the red aura around each guard --",
+    "get that close and they'll spot you no matter",
+    "which way they're facing."
+  ];
+  textSize(9);
+  textAlign(CENTER, CENTER);
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  for (var i = 0; i < lines.length; i++) {
+    text(lines[i], CANVAS_W / 2, 58 + i * 12);
+  }
+
+  var backW = 120, backH = 30, backX = CANVAS_W / 2 - backW / 2, backY = CANVAS_H - 44;
+  drawButton(backX, backY, backW, backH, "BACK", buttonHovered(backX, backY, backW, backH));
+  if (buttonClicked(backX, backY, backW, backH)) {
+    gameState = previousState;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 27: SCREEN -- LEVEL INTRO
+// ----------------------------------------------------------------
+function drawLevelIntroScreen() {
+  drawBackgroundGrid();
+  var level = LEVELS[currentLevelIndex];
+
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  text(level.name, CANVAS_W / 2, 90);
+
+  textSize(12);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  for (var i = 0; i < level.introText.length; i++) {
+    text(level.introText[i], CANVAS_W / 2, 140 + i * 18);
+  }
+
+  var btnW = 170, btnH = 36, btnX = CANVAS_W / 2 - btnW / 2, btnY = 240;
+  drawButton(btnX, btnY, btnW, btnH, "ENTER SECTOR", buttonHovered(btnX, btnY, btnW, btnH));
+  if (buttonClicked(btnX, btnY, btnW, btnH) || enterKeyEdge()) {
+    beginPlayingCurrentLevel();
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 28: SCREEN -- CHALLENGE INTRO
+// ----------------------------------------------------------------
+function drawChallengeIntroScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  text("CHALLENGE MODE", CANVAS_W / 2, 100);
+
+  textSize(12);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  var lines = [
+    "All four angle types, fully randomized.",
+    "Every 5 solves, the timer gets faster.",
+    "How long can you keep the vault quiet?"
+  ];
+  for (var i = 0; i < lines.length; i++) {
+    text(lines[i], CANVAS_W / 2, 150 + i * 18);
+  }
+
+  var btnW = 170, btnH = 36, btnX = CANVAS_W / 2 - btnW / 2, btnY = 230;
+  drawButton(btnX, btnY, btnW, btnH, "BEGIN", buttonHovered(btnX, btnY, btnW, btnH));
+  if (buttonClicked(btnX, btnY, btnW, btnH) || enterKeyEdge()) {
+    startChallengeMode();
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 29: SCREEN -- PLAYING (core gameplay)
+// ----------------------------------------------------------------
+function drawPlayingScreen(dt) {
+  updateAlarmDecay();
+  updateShake();
+
+  // The countdown and the answer box only respond while you're
+  // actually waiting to call the angle. A correct answer hands you
+  // the robber to steer through the sneak minigame; a wrong one
+  // plays a brief caught reaction. Either way, input is locked to
+  // that phase until the next room loads.
+  var isAiming = (puzzlePhase === PUZZLE_PHASE_AIMING);
+  var isSneaking = (puzzlePhase === PUZZLE_PHASE_SNEAKING);
+  if (isAiming) {
+    updatePuzzleTimer(dt);
+  } else if (isSneaking) {
+    updateSneakingPhase(dt);
+  } else if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
+    updateCaughtPhase();
+  }
+
+  push();
+  translate(getShakeOffsetX(), getShakeOffsetY());
+
+  if (isSneaking) {
+    // The maze fully replaces the puzzle diagram here -- drawing
+    // both was redundant clutter (a leftover camera/guard icon
+    // sitting in the middle of the maze) and, since the diagram's
+    // own cone rendering isn't cheap, a real chunk of the lag during
+    // the sneak room. The background grid is skipped too -- the
+    // maze room's opaque floor covers almost the whole canvas, so
+    // the grid was mostly 40 wasted line() calls a frame hidden
+    // underneath it; the plain dark background() clear underneath
+    // the thin remaining margin reads fine on its own.
+    drawSneakingScene();
+  } else {
+    drawBackgroundGrid();
+    if (currentPuzzle) {
+      drawDiagramForPuzzle(currentPuzzle, CANVAS_W / 2, 160);
+    }
+    drawHeistScene(160);
+  }
+  pop();
+
+  drawHUD();
+  if (isSneaking) {
+    drawSneakPrompt(CANVAS_W / 2, 325);
+  } else {
+    if (currentPuzzle) {
+      drawSkillNameBanner(currentPuzzle, 58);
+    }
+    drawAnswerBox(CANVAS_W / 2, 325);
+    if (isAiming) {
+      handleAnswerTyping();
+    }
+  }
+
+  if (keyEdge("p") || keyEdge("escape")) {
+    previousState = STATE_PLAYING;
+    gameState = STATE_PAUSE;
+  }
+
+  if (feedbackTimer > 0) {
+    feedbackTimer -= 1;
+    noStroke();
+    fill(feedbackColor[0], feedbackColor[1], feedbackColor[2]);
+    textAlign(CENTER, CENTER);
+    textSize(14);
+    text(feedbackMessage, CANVAS_W / 2, 90);
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 30: SCREEN -- LEVEL COMPLETE
+// ----------------------------------------------------------------
+// A vault door that physically cracks open a little more with each
+// sector cleared -- the tangible, persistent payoff for every angle
+// you've solved so far, not just a number going up.
+function drawVaultDoor(cx, cy, radius, progressRatio) {
+  var gap = progressRatio * radius * 0.9;
+
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2], 40 + progressRatio * 130);
+  ellipse(cx, cy, radius * 1.3, radius * 1.3);
+
+  push();
+  translate(cx - gap, cy);
+  noFill();
+  stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
+  strokeWeight(3);
+  arc(0, 0, radius * 2, radius * 2, 90, 270);
+  stroke(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  strokeWeight(1.5);
+  ellipse(0, 0, radius * 0.5, radius * 0.5);
+  pop();
+
+  push();
+  translate(cx + gap, cy);
+  noFill();
+  stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
+  strokeWeight(3);
+  arc(0, 0, radius * 2, radius * 2, 270, 450);
+  stroke(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  strokeWeight(1.5);
+  ellipse(0, 0, radius * 0.5, radius * 0.5);
+  pop();
+
+  noStroke();
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textAlign(CENTER, CENTER);
+  textSize(9);
+  text(Math.round(progressRatio * 100) + "% BREACHED", cx, cy + radius + 16);
+}
+
+function drawLevelCompleteScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(22);
+  text("SECTOR CLEARED", CANVAS_W / 2, 100);
+
+  textSize(13);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  text("Score: " + currentScore, CANVAS_W / 2, 140);
+  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 160);
+
+  var btnW = 170, btnH = 36, btnX = CANVAS_W / 2 - btnW / 2, btnY = 210;
+  drawButton(btnX, btnY, btnW, btnH, "NEXT SECTOR", buttonHovered(btnX, btnY, btnW, btnH));
+  if (buttonClicked(btnX, btnY, btnW, btnH) || enterKeyEdge()) {
+    startLevel(currentLevelIndex + 1);
+  }
+
+  var vaultProgress = (currentLevelIndex + 1) / LEVELS.length;
+  drawVaultDoor(CANVAS_W / 2, 325, 45, vaultProgress);
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 31: SCREEN -- VICTORY
+// ----------------------------------------------------------------
+function drawVictoryScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(24);
+  text("VAULT CRACKED!", CANVAS_W / 2, 100);
+
+  textSize(13);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  text("Final Score: " + currentScore, CANVAS_W / 2, 140);
+  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 160);
+  text("You mastered every angle relationship.", CANVAS_W / 2, 180);
+
+  var btnW = 200, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
+  var challengeY = 220, titleY = 262;
+  drawButton(btnX, challengeY, btnW, btnH, "TRY CHALLENGE MODE", buttonHovered(btnX, challengeY, btnW, btnH));
+  drawButton(btnX, titleY, btnW, btnH, "MAIN MENU", buttonHovered(btnX, titleY, btnW, btnH));
+
+  if (buttonClicked(btnX, challengeY, btnW, btnH)) {
+    gameState = STATE_CHALLENGE_INTRO;
+  }
+  if (buttonClicked(btnX, titleY, btnW, btnH)) {
+    gameState = STATE_TITLE;
+  }
+
+  drawVaultDoor(CANVAS_W / 2, 350, 30, 1);
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 32: SCREEN -- GAME OVER
+// ----------------------------------------------------------------
+function drawGameOverScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_TEXT_WARN[0], COLOR_TEXT_WARN[1], COLOR_TEXT_WARN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(24);
+  text("ALARM TRIPPED", CANVAS_W / 2, 100);
+
+  textSize(13);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  text("Score: " + currentScore, CANVAS_W / 2, 140);
+  text("High Score: " + sessionHighScore, CANVAS_W / 2, 160);
+  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 180);
+
+  var btnW = 170, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
+  var retryY = 220, titleY = 262;
+  var retryLabel = isChallengeMode ? "RETRY CHALLENGE" : "RETRY SECTOR";
+  drawButton(btnX, retryY, btnW, btnH, retryLabel, buttonHovered(btnX, retryY, btnW, btnH));
+  drawButton(btnX, titleY, btnW, btnH, "MAIN MENU", buttonHovered(btnX, titleY, btnW, btnH));
+
+  if (buttonClicked(btnX, retryY, btnW, btnH)) {
+    if (isChallengeMode) {
+      startChallengeMode();
+    } else {
+      var failedLevel = currentLevelIndex;
+      resetFullGame();
+      startLevel(failedLevel);
+    }
+  }
+  if (buttonClicked(btnX, titleY, btnW, btnH)) {
+    gameState = STATE_TITLE;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 33: SCREEN -- PAUSE
+// ----------------------------------------------------------------
+function drawPauseScreen() {
+  noStroke();
+  fill(0, 0, 0, 190);
+  rect(0, 0, CANVAS_W, CANVAS_H);
+
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  text("PAUSED", CANVAS_W / 2, 130);
+
+  var btnW = 160, btnH = 32, btnX = CANVAS_W / 2 - btnW / 2;
+  var resumeY = 180, menuY = 222;
+  drawButton(btnX, resumeY, btnW, btnH, "RESUME", buttonHovered(btnX, resumeY, btnW, btnH));
+  drawButton(btnX, menuY, btnW, btnH, "QUIT TO MENU", buttonHovered(btnX, menuY, btnW, btnH));
+
+  if (buttonClicked(btnX, resumeY, btnW, btnH) || keyEdge("p")) {
+    gameState = STATE_PLAYING;
+  }
+  if (buttonClicked(btnX, menuY, btnW, btnH)) {
+    gameState = STATE_TITLE;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 34: SCREEN -- HIGH SCORES
+// ----------------------------------------------------------------
+function drawHighScoresScreen() {
+  drawBackgroundGrid();
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  text("HIGH SCORES", CANVAS_W / 2, 80);
+
+  textSize(14);
+  text("Best Score: " + sessionHighScore, CANVAS_W / 2, 130);
+  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 155);
+
+  textSize(12);
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  text("Laser Skins Unlocked: " + unlockedSkinIndices.length + "/" + LASER_SKINS.length, CANVAS_W / 2, 185);
+
+  var backW = 120, backH = 30, backX = CANVAS_W / 2 - backW / 2, backY = CANVAS_H - 44;
+  drawButton(backX, backY, backW, backH, "BACK", buttonHovered(backX, backY, backW, backH));
+  if (buttonClicked(backX, backY, backW, backH)) {
+    gameState = STATE_TITLE;
+  }
+}
+
+
+// ----------------------------------------------------------------
+// SECTION 35: MAIN GAME LOOP
+// ----------------------------------------------------------------
+function setup() {
+  createCanvas(CANVAS_W, CANVAS_H);
+  try { angleMode(DEGREES); } catch (e) { /* fine, we compute in degrees manually */ }
+  textAlign(CENTER, CENTER);
+  loadHighScores();
+  lastFrameMillis = (typeof millis === "function") ? millis() : 0;
+}
+
+function draw() {
+  var nowMillis = (typeof millis === "function") ? millis() : lastFrameMillis + 33;
+  var dt = (nowMillis - lastFrameMillis) / 1000;
+  if (dt <= 0 || dt > 1) { dt = 1 / 30; }
+  lastFrameMillis = nowMillis;
+
+  mouseClickedEdge = computeMouseClickEdge();
+
+  background(COLOR_BG[0], COLOR_BG[1], COLOR_BG[2]);
+
+  if (gameState === STATE_TITLE) { drawTitleScreen(); }
+  else if (gameState === STATE_MODE_SELECT) { drawModeSelectScreen(); }
+  else if (gameState === STATE_INSTRUCTIONS) { drawInstructionsScreen(); }
+  else if (gameState === STATE_LEVEL_INTRO) { drawLevelIntroScreen(); }
+  else if (gameState === STATE_CHALLENGE_INTRO) { drawChallengeIntroScreen(); }
+  else if (gameState === STATE_PLAYING) { drawPlayingScreen(dt); }
+  else if (gameState === STATE_LEVEL_COMPLETE) { drawLevelCompleteScreen(); }
+  else if (gameState === STATE_VICTORY) { drawVictoryScreen(); }
+  else if (gameState === STATE_GAME_OVER) { drawGameOverScreen(); }
+  else if (gameState === STATE_PAUSE) { drawPauseScreen(); }
+  else if (gameState === STATE_HIGH_SCORES) { drawHighScoresScreen(); }
+  else if (gameState === STATE_PRACTICE_SETUP) { drawPracticeSetupScreen(); }
+  else if (gameState === STATE_PRACTICE_PLAY) { drawPracticeScreen(dt); }
+
+  updateInputEdgeTracking();
+}
