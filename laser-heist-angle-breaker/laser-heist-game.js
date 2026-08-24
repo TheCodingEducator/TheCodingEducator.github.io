@@ -532,10 +532,28 @@ function drawGuardIcon(x, y) {
   push();
   translate(x, y);
 
+  var jacket = [115, 100, 55];
+  var skin = [210, 180, 130];
+
+  // Legs, drawn first so the torso below covers where they attach.
+  stroke(60, 45, 20);
+  strokeWeight(2.5);
+  line(-2, 10, -2, 14);
+  line(2, 10, 2, 14);
   noStroke();
-  fill(115, 100, 55);
+
+  // Arms hang at the sides, ending in a small hand - drawn before the
+  // torso rect so it covers the shoulder attachment point cleanly.
+  fill(jacket[0], jacket[1], jacket[2]);
+  rect(-8, -2, 3, 9, 1.5);
+  rect(5, -2, 3, 9, 1.5);
+  fill(skin[0], skin[1], skin[2]);
+  ellipse(-6.5, 8, 4, 4);
+  ellipse(6.5, 8, 4, 4);
+
+  fill(jacket[0], jacket[1], jacket[2]);
   rect(-5, -3, 10, 13, 2);
-  fill(210, 180, 130);
+  fill(skin[0], skin[1], skin[2]);
   ellipse(0, -9, 9, 9);
   fill(70, 55, 25);
   rect(-6, -13, 12, 4, 1);
@@ -2269,6 +2287,10 @@ function drawSpySprite(x, y, isFlashing, sizeScale) {
   strokeWeight(2.5);
   line(-2, 5, -2, 7);
   line(2, 5, 2, 7);
+  // Arms - hang slightly out from the torso down to about hand level,
+  // drawn before the torso rect below so it covers the shoulder join.
+  line(-3.5, 0, -4.5, 4);
+  line(3.5, 0, 4.5, 4);
 
   noStroke();
   fill(suitColor[0], suitColor[1], suitColor[2]);
