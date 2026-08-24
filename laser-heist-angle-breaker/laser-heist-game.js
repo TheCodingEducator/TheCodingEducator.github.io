@@ -1369,6 +1369,21 @@ var ROBBER_SPEED = 130; // pixels/second -- only used by the caught/fleeing chas
 // one finishes; nothing ever slides a fraction of a cell.
 var ROBBER_STEP_DURATION = 0.09; // seconds for one cell-to-cell step
 
+// A single step (0.09s) is much shorter than a natural human tap - a
+// quick, deliberate press easily lasts 150-250ms, long enough to keep
+// the direction "held" through two or three step completions and
+// send the robber blowing straight past a turn the player meant to
+// take. See robberHeldDir/robberHeldDuration and tryStartRobberStep():
+// the FIRST step of any press always fires immediately (via
+// stepQueued/keyEdge), but a direction has to stay continuously held
+// for this long before a SECOND step is allowed to auto-chain - the
+// same tap-vs-repeat distinction as ordinary keyboard key-repeat, so
+// one quick tap reliably means exactly one cell, and only a
+// deliberate hold runs continuously down a corridor.
+var ROBBER_REPEAT_DELAY = 0.22;
+var robberHeldDir = null;
+var robberHeldDuration = 0;
+
 var robberX = ROOM_LEFT + 20;
 var robberY = ROOM_CENTER_Y;
 var robberCellGr = 1, robberCellGc = 1; // current room cell, kept in lockstep with robberX/Y
@@ -2383,6 +2398,7 @@ function startSneakingPhase() {
   robberStepToY = robberY;
   robberStepT = 1;
   stepQueued = false; // don't carry a leftover queued step into the new room
+  robberHeldDir = null; robberHeldDuration = 0; // don't let a key already held from the previous room skip its repeat delay in this one
   sneakStartX = startCell.px;
   sneakStartY = startCell.py;
   sneakStartCellGr = startCell.gr;
@@ -2413,17 +2429,21 @@ function startSneakingPhase() {
 
 // Attempts to begin exactly one grid step from whatever direction is
 // queued (a real key-down event, see keyPressed) or, failing that,
-// currently held. Returns false (and starts nothing) if there's no
-// directional input at all, or if the connecting corridor cell is a
-// wall. Split out from updateSneakingPhase so a step that finishes
-// mid-frame can immediately try to chain into another one using
-// leftover time, instead of only ever checking input once per frame.
+// currently held AND already past ROBBER_REPEAT_DELAY (see
+// robberHeldDir/robberHeldDuration, updated once per frame in
+// updateSneakingPhase). Returns false (and starts nothing) if there's
+// no directional input at all, the hold hasn't cleared the repeat
+// delay yet, or the connecting corridor cell is a wall. Split out
+// from updateSneakingPhase so a step that finishes mid-frame can
+// immediately try to chain into another one using leftover time,
+// instead of only ever checking input once per frame.
 function tryStartRobberStep() {
   var stepDGr = 0, stepDGc = 0;
   if (stepQueued) {
     // A real key-down event already queued this step (see
     // keyPressed) -- guaranteed to catch it even if the tap was
-    // shorter than one draw() frame.
+    // shorter than one draw() frame. This is always a fresh press,
+    // never a repeat, so it's exempt from the repeat-delay gate below.
     stepDGr = stepQueuedDGr;
     stepDGc = stepQueuedDGc;
     stepQueued = false;
@@ -2431,10 +2451,12 @@ function tryStartRobberStep() {
   else if (keyEdge("right") || keyEdge("d")) { stepDGc = 2; }
   else if (keyEdge("up") || keyEdge("w")) { stepDGr = -2; }
   else if (keyEdge("down") || keyEdge("s")) { stepDGr = 2; }
-  else if (safeKeyDown("left") || safeKeyDown("a")) { stepDGc = -2; }
-  else if (safeKeyDown("right") || safeKeyDown("d")) { stepDGc = 2; }
-  else if (safeKeyDown("up") || safeKeyDown("w")) { stepDGr = -2; }
-  else if (safeKeyDown("down") || safeKeyDown("s")) { stepDGr = 2; }
+  else if (robberHeldDuration >= ROBBER_REPEAT_DELAY) {
+    if (safeKeyDown("left") || safeKeyDown("a")) { stepDGc = -2; }
+    else if (safeKeyDown("right") || safeKeyDown("d")) { stepDGc = 2; }
+    else if (safeKeyDown("up") || safeKeyDown("w")) { stepDGr = -2; }
+    else if (safeKeyDown("down") || safeKeyDown("s")) { stepDGr = 2; }
+  }
 
   if (stepDGr === 0 && stepDGc === 0) { return false; }
 
@@ -2462,6 +2484,22 @@ function updateSneakingPhase(dt) {
   if (sneakChaseTimer > 0) {
     updateChaseAnimation(dt);
     return;
+  }
+
+  // Tracks how long the current direction has been continuously held,
+  // for tryStartRobberStep()'s repeat-delay gate (see
+  // ROBBER_REPEAT_DELAY) - switching direction (or releasing) resets
+  // the clock, same as it would for any hold-to-repeat control.
+  var curHeldDir = (safeKeyDown("left") || safeKeyDown("a")) ? "left"
+    : (safeKeyDown("right") || safeKeyDown("d")) ? "right"
+    : (safeKeyDown("up") || safeKeyDown("w")) ? "up"
+    : (safeKeyDown("down") || safeKeyDown("s")) ? "down"
+    : null;
+  if (curHeldDir !== null && curHeldDir === robberHeldDir) {
+    robberHeldDuration += dt;
+  } else {
+    robberHeldDir = curHeldDir;
+    robberHeldDuration = 0;
   }
 
   // Grid-stepped movement: a key press moves the robber exactly one
