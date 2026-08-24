@@ -1422,7 +1422,7 @@ var SNEAK_CHASE_DURATION = 1.4; // seconds -- a bit longer since everyone moves 
 var sneakChaseTimer = 0;
 var sneakFleeDirX = 0, sneakFleeDirY = 0;
 
-var PATROL_GUARD_COUNT = 3; // scaled down along with the smaller maze (see MAZE_COLS/MAZE_ROWS) - the same guard density as before, without crowding every route
+var PATROL_GUARD_COUNT = 4; // back up from 3 - with the maze less wide-open than it briefly was (see the 0.38 connector fraction below) there's room for one more real obstacle without crowding every route
 var patrolGuards = [];
 
 // The current room's corridor graph (see buildRoomGraph), kept
@@ -1544,8 +1544,14 @@ function generateMaze() {
       if (crOdd !== ccOdd) { closedConnectors.push({ r: cr, c: cc }); } // exactly one of row/col odd = a genuine connector position
     }
   }
+  // 0.55 (opening more than half of every closed connector) turned
+  // out to make the maze feel closer to an open room with a few
+  // obstacles than an actual maze with real navigation choices -
+  // trimmed back down for more genuine dead ends and wrong turns,
+  // while still comfortably above the ~1-2 effective loops the
+  // original flawed random-cell approach produced.
   var shuffledConnectors = shuffleArrayCopy(closedConnectors);
-  var extra = Math.ceil(shuffledConnectors.length * 0.55);
+  var extra = Math.ceil(shuffledConnectors.length * 0.38);
   for (var e = 0; e < extra; e++) {
     mazeWalls[shuffledConnectors[e].r][shuffledConnectors[e].c] = false;
   }
@@ -2111,7 +2117,7 @@ function isTooCloseToSpawn(gr, gc) {
 // it on a short leash means it reliably sweeps back past the same
 // spot again and again at a roughly consistent interval - something
 // a player can actually watch, count, and time a dash around.
-var HOME_RANGE_STEPS = 2;
+var HOME_RANGE_STEPS = 2; // tried 3 briefly - combined with the extra guard and tighter maze below, a totally-blind walk got caught in every test trial, well past "slightly harder". Back to 2, which still leaves the maze/guard-count changes doing the actual work.
 
 // Where a guard heads next after arriving at arrivedCell: a real
 // neighbor from the room graph, biased to stay within HOME_RANGE_STEPS
