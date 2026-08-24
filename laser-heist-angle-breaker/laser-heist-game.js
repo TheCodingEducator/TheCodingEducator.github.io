@@ -1499,21 +1499,40 @@ function generateMaze() {
     }
   }
 
-  // Extra openings for loops instead of a pure tree of dead ends -
-  // raised well above a bare minimum now that the maze itself is
-  // smaller (see MAZE_COLS/MAZE_ROWS), so there are genuinely
-  // several real routes through, not just the one spanning-tree path
-  // plus a token detour or two. That's what keeps a single guard's
-  // corridor from being able to wall off the only way through for a
-  // long stretch - there's almost always a second way to route
-  // around while timing the first. This only ever REMOVES walls, so
-  // the guaranteed connectivity from the spanning tree above can
-  // only ever improve, never break.
-  var extra = Math.floor(MAZE_ROWS * MAZE_COLS * 0.2);
+  // Extra openings for loops instead of a pure tree of dead ends, so
+  // there are genuinely several real routes through, not just the one
+  // spanning-tree path plus a token detour or two - that's what keeps
+  // a single guard's corridor from being able to wall off the only
+  // way through for a long stretch. This only ever REMOVES walls, so
+  // the guaranteed connectivity from the spanning tree above can only
+  // ever improve, never break.
+  //
+  // Picking uniformly random (row, col) positions here (the previous
+  // approach) mostly wasted attempts: only cells with mixed row/col
+  // parity are genuine connectors between two adjacent rooms at all
+  // (an even-even cell is a corner/pillar that connects nothing, and
+  // an odd-odd cell is a room cell that's already open) - roughly
+  // half of random picks landed on a position that could never do
+  // anything, and most of the rest landed on a connector the spanning
+  // tree had already opened. The actual number of NEW routes added
+  // came out far lower than intended, which is why paths still felt
+  // like there was usually only one way through even after raising
+  // the nominal percentage. Collecting every genuine CLOSED connector
+  // first and opening a large, fixed fraction of THOSE guarantees a
+  // real, predictable amount of extra connectivity regardless of maze
+  // size or how lucky the random picks would have been.
+  var closedConnectors = [];
+  for (var cr = 1; cr < mazeGridRows - 1; cr++) {
+    for (var cc = 1; cc < mazeGridCols - 1; cc++) {
+      if (!mazeWalls[cr][cc]) { continue; } // already open (part of the spanning tree, or a room cell)
+      var crOdd = (cr % 2 === 1), ccOdd = (cc % 2 === 1);
+      if (crOdd !== ccOdd) { closedConnectors.push({ r: cr, c: cc }); } // exactly one of row/col odd = a genuine connector position
+    }
+  }
+  var shuffledConnectors = shuffleArrayCopy(closedConnectors);
+  var extra = Math.ceil(shuffledConnectors.length * 0.55);
   for (var e = 0; e < extra; e++) {
-    var er = randomInt(1, mazeGridRows - 2);
-    var ec = randomInt(1, mazeGridCols - 2);
-    mazeWalls[er][ec] = false;
+    mazeWalls[shuffledConnectors[e].r][shuffledConnectors[e].c] = false;
   }
 
   rebuildMazeWallCache();
