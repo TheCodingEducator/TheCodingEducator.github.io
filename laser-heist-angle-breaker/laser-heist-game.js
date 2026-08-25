@@ -257,18 +257,31 @@ var practiceAdvanceTimer = 0;
 var shakeTimer     = 0;
 var shakeMagnitude = 0;
 
-// Heist scene: a correct lock-in hands you direct control of the
-// robber for a short sneak-past-the-guards minigame; a wrong one
-// plays a brief "caught" reaction. This is what makes solving the
-// angle feel like it actually did something, instead of just
-// scoring points in the background.
-var PUZZLE_PHASE_AIMING   = "AIMING";
-var PUZZLE_PHASE_SNEAKING = "SNEAKING";
-var PUZZLE_PHASE_CAUGHT   = "CAUGHT";
+// Heist scene: a correct lock-in first plays a brief reaction right
+// on the puzzle screen -- the robber visibly slips through the SAFE
+// wedge (the one you just solved for) and out toward the door -- then
+// hands you direct control for the sneak-past-the-guards minigame. A
+// wrong answer plays the mirror image: the robber walks into the
+// WATCHED wedge instead, gets spotted, and a guard chases them off
+// screen. This is what makes solving the angle feel like it actually
+// did something, instead of just scoring points in the background.
+var PUZZLE_PHASE_AIMING    = "AIMING";
+var PUZZLE_PHASE_ESCAPING  = "ESCAPING";
+var PUZZLE_PHASE_SNEAKING  = "SNEAKING";
+var PUZZLE_PHASE_CAUGHT    = "CAUGHT";
 var puzzlePhase   = PUZZLE_PHASE_AIMING;
 var phaseTimer    = 0;
-var CAUGHT_DURATION = 34; // frames the "spy gets spotted" animation takes
+var CAUGHT_DURATION = 100; // frames the "spotted, then chased off" reaction takes -- long enough for both beats (see computeCaughtScenePositions)
 var pendingAdvance  = null; // what to do once the current phase finishes
+
+var ESCAPE_DURATION = 1.1; // seconds -- the "slips through the safe wedge and out the door" reaction after a correct answer
+var escapeTimer = 0;
+
+// Which screen edge the chasing guard rushes in from on a wrong
+// answer -- rolled once per CAUGHT phase (see handleWrongAnswer) so
+// the guard's entrance and the flee direction stay consistent for the
+// whole reaction instead of flickering between edges every frame.
+var caughtGuardFromLeft = true;
 
 var isChallengeMode = false;
 var challengeDifficulty = 1;
@@ -1068,17 +1081,21 @@ function drawParallelDiagram(puzzle, cx, cy) {
   // abstract diagram floating apart from the story. Drawn last (on
   // top of the joints/labels) and kept clear of both ends -- see
   // crawlMargin -- so it never covers the flange, arc, or number it's
-  // crawling toward.
-  var ductLength = Math.sqrt(Math.pow(intersectB.x - intersectA.x, 2) + Math.pow(intersectB.y - intersectA.y, 2));
-  var crawlMargin = 34;
-  var crawlRange = Math.max(ductLength - crawlMargin * 2, 10);
-  var phase = ((typeof millis === "function") ? millis() : 0) * 0.0012;
-  var crawlS = crawlMargin + crawlRange * (0.5 + 0.5 * Math.sin(phase));
-  var crawlX = intersectA.x + dx * crawlS;
-  var crawlY = intersectA.y + dy * crawlS;
-  var movingTowardB = Math.cos(phase) >= 0;
-  var crawlFacing = movingTowardB ? puzzle.theta : puzzle.theta + 180;
-  drawSpyCrawling(crawlX, crawlY, crawlFacing);
+  // crawling toward. Only while still aiming -- once you've actually
+  // answered, drawHeistScene's own escaping/caught reactions take
+  // over showing the crew member, so this doesn't double up with them.
+  if (puzzlePhase === PUZZLE_PHASE_AIMING) {
+    var ductLength = Math.sqrt(Math.pow(intersectB.x - intersectA.x, 2) + Math.pow(intersectB.y - intersectA.y, 2));
+    var crawlMargin = 34;
+    var crawlRange = Math.max(ductLength - crawlMargin * 2, 10);
+    var phase = ((typeof millis === "function") ? millis() : 0) * 0.0012;
+    var crawlS = crawlMargin + crawlRange * (0.5 + 0.5 * Math.sin(phase));
+    var crawlX = intersectA.x + dx * crawlS;
+    var crawlY = intersectA.y + dy * crawlS;
+    var movingTowardB = Math.cos(phase) >= 0;
+    var crawlFacing = movingTowardB ? puzzle.theta : puzzle.theta + 180;
+    drawSpyCrawling(crawlX, crawlY, crawlFacing);
+  }
 }
 
 // The horizontal duct (rays at 0 deg/right and 180 deg/left) and the
@@ -1252,9 +1269,11 @@ function handleCorrectAnswer() {
   puzzlesSolvedInLevel += 1;
 
   // The score updates immediately, but advancing to the next room
-  // waits for you to actually sneak the robber past the guard --
-  // see startSneakingPhase(). That's what makes the correct angle
-  // feel like it actually opened a path, not just added points.
+  // waits for a brief "slips through the safe wedge" reaction (see
+  // updateEscapingPhase) and then actually sneaking the robber past
+  // the guard -- see startSneakingPhase. That's what makes the
+  // correct angle feel like it actually opened a path, not just
+  // added points.
   if (isChallengeMode) {
     challengePuzzlesSolved += 1;
     if (challengePuzzlesSolved % 5 === 0) {
@@ -1266,7 +1285,18 @@ function handleCorrectAnswer() {
     pendingAdvance = (puzzlesSolvedInLevel >= level.puzzlesToClear) ? "COMPLETE_LEVEL" : "NEXT_PUZZLE";
   }
 
-  startSneakingPhase();
+  puzzlePhase = PUZZLE_PHASE_ESCAPING;
+  escapeTimer = ESCAPE_DURATION;
+}
+
+// Runs every frame during the post-correct-answer reaction -- see
+// drawHeistScene's PUZZLE_PHASE_ESCAPING branch for what's actually
+// drawn. Once it finishes, the sneak minigame begins for real.
+function updateEscapingPhase(dt) {
+  escapeTimer -= dt;
+  if (escapeTimer <= 0) {
+    startSneakingPhase();
+  }
 }
 
 function handleWrongAnswer() {
@@ -1286,6 +1316,7 @@ function handleWrongAnswer() {
   }
   puzzlePhase = PUZZLE_PHASE_CAUGHT;
   phaseTimer = CAUGHT_DURATION;
+  caughtGuardFromLeft = random(0, 1) < 0.5;
 }
 
 // Runs every frame while the spy is reacting to being spotted after
@@ -2787,24 +2818,162 @@ function drawExitDoor(x, y, isActive) {
   }
 }
 
-// The idle/caught pose shown while you're still aiming, or while
-// reacting to a wrong answer -- the robber just waits at the door.
+// The idle pose shown while you're still aiming -- the robber just
+// waits at the door.
 var SPY_IDLE_SCALE = 2.8; // bigger while you're still solving the angle -- no maze collision to fit inside here
+var SPY_REACT_SCALE = 2.1; // a touch smaller for the escaping/caught reactions, which actually move around the scene
+
+// The same {cx, cy, radius, knownRange, targetRange} shape every
+// vertex-based diagram (supplementary/complementary/vertical) already
+// computes internally to draw its own cone/arc -- pulled out here so
+// the escaping/caught reactions walk through the EXACT wedge the
+// diagram actually drew, not a separate approximation of it. Returns
+// null for "parallel", a structurally different two-intersection
+// diagram whose own crawling animation already lives in
+// drawParallelDiagram -- see its PUZZLE_PHASE_AIMING gate.
+function getPuzzleWedgeGeometry(puzzle) {
+  if (!puzzle) { return null; }
+  var cx = CANVAS_W / 2, cy = 160;
+  var base = puzzle.baseAngleDeg;
+
+  if (puzzle.type === "supplementary") {
+    var w1 = puzzle.knownIsFirst ? puzzle.knownValue : puzzle.correctAnswer;
+    var split = base + w1;
+    return {
+      cx: cx, cy: cy, radius: 90,
+      knownRange: puzzle.knownIsFirst ? [base, split] : [split, base + 180],
+      targetRange: puzzle.knownIsFirst ? [split, base + 180] : [base, split]
+    };
+  }
+  if (puzzle.type === "complementary") {
+    var w2 = puzzle.knownIsFirst ? puzzle.knownValue : puzzle.correctAnswer;
+    var split2 = base + w2;
+    return {
+      cx: cx, cy: cy, radius: 90,
+      knownRange: puzzle.knownIsFirst ? [base, split2] : [split2, base + 90],
+      targetRange: puzzle.knownIsFirst ? [split2, base + 90] : [base, split2]
+    };
+  }
+  if (puzzle.type === "vertical") {
+    var spread = puzzle.theta;
+    var slotRanges = {
+      A: [base, base + spread],
+      B: [base + spread, base + 180],
+      C: [base + 180, base + 180 + spread],
+      D: [base + 180 + spread, base + 360]
+    };
+    return { cx: cx, cy: cy, radius: 95, knownRange: slotRanges[puzzle.knownSlot], targetRange: slotRanges[puzzle.targetSlot] };
+  }
+  return null;
+}
+
+// Where the robber sprite sits at a given 0..1 progress through the
+// post-correct-answer reaction: out from the vertex along the middle
+// of the SAFE wedge (targetRange -- the one whose angle the player
+// just correctly worked out), then curving over to the exit door.
+// Falls back to a fairly direct line toward the door for puzzle types
+// with no single-vertex wedge geometry (parallel).
+function computeEscapePoint(puzzle, progress) {
+  var doorX = SPY_END_X + 10, doorY = 160;
+  var geo = getPuzzleWedgeGeometry(puzzle);
+  if (!geo) {
+    return { x: SPY_START_X + (doorX - SPY_START_X) * progress, y: 160 };
+  }
+  var bisector = (geo.targetRange[0] + geo.targetRange[1]) / 2 * Math.PI / 180;
+  var outDist = geo.radius * 0.65;
+  var outX = geo.cx + Math.cos(bisector) * outDist;
+  var outY = geo.cy + Math.sin(bisector) * outDist;
+
+  if (progress < 0.5) {
+    var p1 = progress / 0.5;
+    return { x: geo.cx + (outX - geo.cx) * p1, y: geo.cy + (outY - geo.cy) * p1 };
+  }
+  var p2 = (progress - 0.5) / 0.5;
+  return { x: outX + (doorX - outX) * p2, y: outY + (doorY - outY) * p2 };
+}
+
+// Mirror image of computeEscapePoint for the first beat of a wrong
+// answer: from the vertex, into the WATCHED wedge (knownRange) --
+// where the player misjudged the danger, hence getting caught.
+function computeCaughtApproachPoint(puzzle, progress) {
+  var geo = getPuzzleWedgeGeometry(puzzle);
+  if (!geo) {
+    return { x: SPY_START_X + 40 * progress, y: 160 };
+  }
+  var bisector = (geo.knownRange[0] + geo.knownRange[1]) / 2 * Math.PI / 180;
+  var dist = geo.radius * 0.55 * progress;
+  return { x: geo.cx + Math.cos(bisector) * dist, y: geo.cy + Math.sin(bisector) * dist };
+}
+
+// Full CAUGHT-phase scene for a given 0..1 total progress through
+// CAUGHT_DURATION: an approach beat (walking into the watched wedge),
+// then a chase beat (a guard rushes in from whichever edge
+// caughtGuardFromLeft picked, closes in, and both flee off the
+// opposite edge together) -- the same "guard right behind, both exit
+// the frame" language the maze's own chase animation already uses.
+var CAUGHT_APPROACH_FRACTION = 0.32;
+function computeCaughtScenePositions(puzzle, totalProgress) {
+  if (totalProgress < CAUGHT_APPROACH_FRACTION) {
+    var p = totalProgress / CAUGHT_APPROACH_FRACTION;
+    return { spy: computeCaughtApproachPoint(puzzle, p), guard: null, flashing: false };
+  }
+
+  var geo = getPuzzleWedgeGeometry(puzzle);
+  var cy = geo ? geo.cy : 160;
+  var chaseP = (totalProgress - CAUGHT_APPROACH_FRACTION) / (1 - CAUGHT_APPROACH_FRACTION);
+  var spotPt = computeCaughtApproachPoint(puzzle, 1);
+
+  var guardStart = caughtGuardFromLeft ? { x: -20, y: cy } : { x: CANVAS_W + 20, y: cy };
+  var closeP = Math.min(chaseP / 0.45, 1);
+  var guardX = guardStart.x + (spotPt.x - guardStart.x) * closeP;
+  var guardY = guardStart.y + (spotPt.y - guardStart.y) * closeP;
+
+  var fleeDirX = caughtGuardFromLeft ? 1 : -1;
+  var fleeP = Math.max(0, (chaseP - 0.45) / 0.55);
+  var fleeDist = fleeP * 260;
+
+  return {
+    spy: { x: spotPt.x + fleeDirX * fleeDist, y: spotPt.y + fleeDist * 0.15 },
+    guard: { x: guardX + fleeDirX * fleeDist * 0.92, y: guardY + fleeDist * 0.15 },
+    flashing: true
+  };
+}
 
 function drawHeistScene(sceneY, puzzle) {
-  var isFlashing = (puzzlePhase === PUZZLE_PHASE_CAUGHT) && (Math.floor(phaseTimer / 4) % 2 === 0);
-  var spyX = (puzzlePhase === PUZZLE_PHASE_CAUGHT) ? SPY_START_X - 3 : SPY_START_X;
   drawExitDoor(SPY_END_X + 10, sceneY, false);
 
-  // Parallel-type puzzles already show the crew member crawling
-  // INSIDE the duct diagram itself (see drawParallelDiagram) -- a
-  // second, static spy waiting off to the side would just be a
-  // redundant duplicate. Still shown during the CAUGHT reaction
-  // regardless of type, since that's a generic "tripped the alarm"
-  // beat, not part of the angle-solving moment.
-  var showIdleSpy = puzzlePhase === PUZZLE_PHASE_CAUGHT || !puzzle || puzzle.type !== "parallel";
-  if (showIdleSpy) {
-    drawSpySprite(spyX, sceneY + 14, isFlashing, SPY_IDLE_SCALE);
+  if (puzzlePhase === PUZZLE_PHASE_ESCAPING) {
+    var escProgress = clampNum(1 - (escapeTimer / ESCAPE_DURATION), 0, 1);
+    var escPt = computeEscapePoint(puzzle, escProgress);
+    drawSpySprite(escPt.x, escPt.y, false, SPY_REACT_SCALE);
+    return;
+  }
+
+  if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
+    var totalProgress = clampNum(1 - (phaseTimer / CAUGHT_DURATION), 0, 1);
+    var scene = computeCaughtScenePositions(puzzle, totalProgress);
+    drawSpySprite(scene.spy.x, scene.spy.y, scene.flashing, SPY_REACT_SCALE);
+    if (scene.guard) {
+      push();
+      translate(scene.guard.x, scene.guard.y);
+      scale(2.2);
+      drawGuardIcon(0, 0);
+      pop();
+      noStroke();
+      fill(255, 60, 60);
+      textAlign(CENTER, CENTER);
+      textSize(14);
+      text("!", scene.guard.x, scene.guard.y - 42);
+    }
+    return;
+  }
+
+  // Idle pose while still aiming -- parallel-type puzzles already
+  // show the crew member crawling INSIDE the duct diagram itself
+  // (see drawParallelDiagram), so a second, static spy waiting off to
+  // the side here would just be a redundant duplicate.
+  if (!puzzle || puzzle.type !== "parallel") {
+    drawSpySprite(SPY_START_X, sceneY + 14, false, SPY_IDLE_SCALE);
   }
 }
 
@@ -3888,10 +4057,13 @@ function drawPlayingScreen(dt) {
   // that phase until the next room loads.
   var isAiming = (puzzlePhase === PUZZLE_PHASE_AIMING);
   var isSneaking = (puzzlePhase === PUZZLE_PHASE_SNEAKING);
+  var isEscaping = (puzzlePhase === PUZZLE_PHASE_ESCAPING);
   if (isAiming) {
     updatePuzzleTimer(dt);
   } else if (isSneaking) {
     updateSneakingPhase(dt);
+  } else if (isEscaping) {
+    updateEscapingPhase(dt);
   } else if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
     updateCaughtPhase();
   }
@@ -3922,7 +4094,7 @@ function drawPlayingScreen(dt) {
   drawHUD();
   if (isSneaking) {
     drawSneakPrompt(CANVAS_W / 2, 325);
-  } else {
+  } else if (!isEscaping) {
     if (currentPuzzle) {
       drawSkillNameBanner(currentPuzzle, 58);
     }
