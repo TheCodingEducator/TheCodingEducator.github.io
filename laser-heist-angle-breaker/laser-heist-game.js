@@ -531,6 +531,21 @@ function drawButton(x, y, w, h, label, isHovered) {
   text(label, x + w / 2, y + h / 2);
 }
 
+// A consistent bordered content box -- used across the menu screens
+// to visually group a block of stats/text/controls instead of
+// leaving it floating directly on the busy background grid, the same
+// way the answer box and practice checkboxes already read as
+// distinct panels rather than bare text.
+function drawScreenPanel(x, y, w, h) {
+  noStroke();
+  fill(COLOR_PANEL[0], COLOR_PANEL[1], COLOR_PANEL[2], 235);
+  rect(x, y, w, h, 8);
+  stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
+  strokeWeight(1.5);
+  noFill();
+  rect(x, y, w, h, 8);
+}
+
 function buttonClicked(x, y, w, h) {
   return mouseClickedEdge && isInsideRect(mouseX, mouseY, x, y, w, h);
 }
@@ -3719,20 +3734,31 @@ function drawChaseAnimation() {
 // ----------------------------------------------------------------
 // SECTION 22: HUD DRAWING
 // ----------------------------------------------------------------
+// Top HUD height -- covers the two stat rows plus the meters row as
+// one clean panel, instead of the meters spilling out past the
+// panel's own bottom edge into open background the way they used to.
+var HUD_PANEL_HEIGHT = 56;
+
 function drawHUD() {
-  // Top bar background.
   noStroke();
   fill(COLOR_PANEL[0], COLOR_PANEL[1], COLOR_PANEL[2]);
-  rect(0, 0, CANVAS_W, 46);
+  rect(0, 0, CANVAS_W, HUD_PANEL_HEIGHT);
   stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2]);
   strokeWeight(1);
-  line(0, 46, CANVAS_W, 46);
+  line(0, HUD_PANEL_HEIGHT, CANVAS_W, HUD_PANEL_HEIGHT);
+  // A light inner divider between the stat rows and the meters row,
+  // so the two are read as separate groups instead of one crowded
+  // block -- "how you're doing" up top, "how much time/risk is left"
+  // below.
+  stroke(COLOR_PANEL_BORDER[0], COLOR_PANEL_BORDER[1], COLOR_PANEL_BORDER[2], 90);
+  strokeWeight(1);
+  line(8, 34, CANVAS_W - 8, 34);
 
   textAlign(LEFT, CENTER);
   textSize(13);
   noStroke();
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("SCORE " + currentScore, 8, 14);
+  text("SCORE " + currentScore, 8, 13);
 
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textSize(11);
@@ -3744,28 +3770,69 @@ function drawHUD() {
     var roomNumber = Math.min(puzzlesSolvedInLevel + 1, lvl.puzzlesToClear);
     levelLabel = lvl.name + "  (room " + roomNumber + "/" + lvl.puzzlesToClear + ")";
   }
-  text(levelLabel, 8, 30);
+  text(levelLabel, 8, 27);
 
-  drawLivesIcons(CANVAS_W - 8, 12);
-  drawStreakBadge(CANVAS_W - 8, 30);
+  drawLivesIcons(CANVAS_W - 8, 13);
+  drawStreakBadge(CANVAS_W - 8, 27);
 
   // Once a wrong answer freezes the clock for the retry, the alarm
   // meter (which keeps decaying every frame on its own timer,
   // regardless of puzzlePhase) reads as a second bar still visibly
   // moving right next to one that says it's frozen -- confusing, not
-  // informative. Replace both bars with just the message during that
-  // retry window instead of showing a frozen bar and a still-live one
-  // side by side.
+  // informative. Replace both meters with just the message during
+  // that retry window instead of showing a frozen bar and a
+  // still-live one side by side.
   if (hasFailedThisPuzzle && puzzlePhase === PUZZLE_PHASE_AIMING) {
     noStroke();
     fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
     textAlign(CENTER, CENTER);
     textSize(10);
-    text("TIME FROZEN -- RETRY!", CANVAS_W / 2, 43);
-  } else {
-    drawAlarmMeter(8, 40, CANVAS_W - 16, 5);
-    drawTimerBar(8, 50, CANVAS_W - 16, 6);
+    text("TIME FROZEN -- RETRY!", CANVAS_W / 2, 45);
+    return;
   }
+
+  // No per-puzzle timer while sneaking -- ALARM gets the full width
+  // to itself instead of leaving a labeled-but-empty TIME half.
+  var showTimer = puzzlePhase !== PUZZLE_PHASE_SNEAKING;
+  var halfW = (CANVAS_W - 16 - 8) / 2; // two meters with an 8px gap between them
+  var alarmW = showTimer ? halfW : (CANVAS_W - 16);
+  var alarmCritical = (alarmMeter / alarmMaxValue) > 0.75;
+  drawLabeledMeter(alarmCritical ? "ALARM!" : "ALARM", 8, 45, alarmW, alarmMeter / alarmMaxValue, computeAlarmBarColor(), alarmCritical);
+  if (showTimer) {
+    var timerRatio = clampNum(timerValue / timerMax, 0, 1);
+    var timerColor = timerRatio < 0.25 ? COLOR_TEXT_WARN : COLOR_LASER_GREEN;
+    drawLabeledMeter("TIME", 8 + halfW + 8, 45, halfW, timerRatio, timerColor, false);
+  }
+}
+
+// A small caption immediately to the left of its own mini-bar,
+// instead of an unlabeled strip of color a player has to already
+// know the meaning of -- isCritical swaps the caption to a warning
+// color rather than adding a separate floating line of text above
+// the bar, which would need more vertical room than this row has.
+function drawLabeledMeter(label, x, y, w, ratio, barColorArr, isCritical) {
+  var labelColor = isCritical ? COLOR_TEXT_WARN : COLOR_TEXT_DIM;
+  noStroke();
+  fill(labelColor[0], labelColor[1], labelColor[2]);
+  textAlign(LEFT, CENTER);
+  textSize(8);
+  text(label, x, y);
+  var labelW = textWidth(label) + 6;
+  var barX = x + labelW, barW = Math.max(w - labelW, 10);
+
+  fill(30, 30, 30);
+  rect(barX, y - 3.5, barW, 7);
+  fill(barColorArr[0], barColorArr[1], barColorArr[2]);
+  rect(barX, y - 3.5, barW * clampNum(ratio, 0, 1), 7);
+}
+
+function computeAlarmBarColor() {
+  var ratio = alarmMeter / alarmMaxValue;
+  return [
+    COLOR_ALARM_EMPTY[0] + (COLOR_ALARM_FULL[0] - COLOR_ALARM_EMPTY[0]) * ratio,
+    COLOR_ALARM_EMPTY[1] + (COLOR_ALARM_FULL[1] - COLOR_ALARM_EMPTY[1]) * ratio,
+    COLOR_ALARM_EMPTY[2] + (COLOR_ALARM_FULL[2] - COLOR_ALARM_EMPTY[2]) * ratio
+  ];
 }
 
 function drawSkillNameBanner(puzzle, y) {
@@ -3809,54 +3876,6 @@ function drawStreakBadge(rightX, y) {
   noStroke();
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
   text("STREAK " + streak + " (x" + computeMultiplierFromStreak(streak) + ")", rightX, y);
-}
-
-function drawAlarmMeter(x, y, w, h) {
-  noStroke();
-  fill(30, 30, 30);
-  rect(x, y, w, h);
-  var ratio = alarmMeter / alarmMaxValue;
-  var r = COLOR_ALARM_EMPTY[0] + (COLOR_ALARM_FULL[0] - COLOR_ALARM_EMPTY[0]) * ratio;
-  var g = COLOR_ALARM_EMPTY[1] + (COLOR_ALARM_FULL[1] - COLOR_ALARM_EMPTY[1]) * ratio;
-  var b = COLOR_ALARM_EMPTY[2] + (COLOR_ALARM_FULL[2] - COLOR_ALARM_EMPTY[2]) * ratio;
-  fill(r, g, b);
-  rect(x, y, w * ratio, h);
-  if (ratio > 0.75) {
-    noStroke();
-    fill(255, 60, 60);
-    textAlign(CENTER, CENTER);
-    textSize(9);
-    text("ALARM CRITICAL", x + w / 2, y - 6);
-  }
-}
-
-function drawTimerBar(x, y, w, h) {
-  // No countdown while sneaking -- take as long as you need to
-  // reach the door.
-  if (puzzlePhase === PUZZLE_PHASE_SNEAKING) { return; }
-
-  noStroke();
-  fill(30, 30, 30);
-  rect(x, y, w, h);
-
-  var ratio, barColor;
-  if (hasFailedThisPuzzle) {
-    ratio = clampNum(timerValue / timerMax, 0, 1);
-    barColor = COLOR_TEXT_DIM;
-  } else {
-    ratio = clampNum(timerValue / timerMax, 0, 1);
-    barColor = ratio < 0.25 ? COLOR_TEXT_WARN : COLOR_LASER_GREEN;
-  }
-  fill(barColor[0], barColor[1], barColor[2]);
-  rect(x, y, w * ratio, h);
-
-  if (hasFailedThisPuzzle) {
-    noStroke();
-    fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
-    textAlign(LEFT, CENTER);
-    textSize(8);
-    text("TIME FROZEN -- RETRY!", x, y - 6);
-  }
 }
 
 // ----------------------------------------------------------------
@@ -3925,17 +3944,19 @@ function drawTitleScreen() {
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
   textAlign(CENTER, CENTER);
   textSize(30);
-  text("LASER HEIST", CANVAS_W / 2, 120);
+  text("LASER HEIST", CANVAS_W / 2, 90);
   textSize(18);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("ANGLE BREAKER", CANVAS_W / 2, 150);
+  text("ANGLE BREAKER", CANVAS_W / 2, 120);
 
+  var statsW = 220, statsH = 28, statsX = CANVAS_W / 2 - statsW / 2, statsY = 148;
+  drawScreenPanel(statsX, statsY, statsW, statsH);
   textSize(11);
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
-  text("Best Score: " + sessionHighScore + "   Best Streak: " + bestStreakEver, CANVAS_W / 2, 180);
+  text("Best Score: " + sessionHighScore + "   Best Streak: " + bestStreakEver, CANVAS_W / 2, statsY + statsH / 2);
 
   var btnW = 180, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
-  var playY = 210, howY = 254, scoreY = 298;
+  var playY = 200, howY = 244, scoreY = 288;
 
   drawButton(btnX, playY, btnW, btnH, "START HEIST", buttonHovered(btnX, playY, btnW, btnH));
   drawButton(btnX, howY, btnW, btnH, "HOW TO PLAY", buttonHovered(btnX, howY, btnW, btnH));
@@ -3968,40 +3989,55 @@ function drawBackgroundGrid() {
 // ----------------------------------------------------------------
 // SECTION 25: SCREEN -- MODE SELECT
 // ----------------------------------------------------------------
+// A full mode option as one card -- name and caption both live inside
+// the same bordered box (instead of a button with a separate caption
+// floating below it, which at this screen's old spacing landed
+// exactly on top of the NEXT button down) and the whole card is the
+// click target, not just its upper half.
+function drawModeCard(x, y, w, h, title, caption, isHovered) {
+  fill(isHovered ? COLOR_BUTTON_HOVER[0] : COLOR_BUTTON[0], isHovered ? COLOR_BUTTON_HOVER[1] : COLOR_BUTTON[1], isHovered ? COLOR_BUTTON_HOVER[2] : COLOR_BUTTON[2]);
+  stroke(COLOR_BUTTON_BORDER[0], COLOR_BUTTON_BORDER[1], COLOR_BUTTON_BORDER[2]);
+  strokeWeight(2);
+  rect(x, y, w, h, 8);
+
+  noStroke();
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER);
+  textSize(15);
+  text(title, x + w / 2, y + 21);
+
+  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+  textSize(9);
+  text(caption, x + w / 2, y + h - 16, w - 24);
+}
+
 function drawModeSelectScreen() {
   drawBackgroundGrid();
   noStroke();
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(20);
-  text("CHOOSE YOUR HEIST", CANVAS_W / 2, 90);
+  text("CHOOSE YOUR HEIST", CANVAS_W / 2, 76);
 
-  var btnW = 220, btnH = 44, btnX = CANVAS_W / 2 - btnW / 2;
-  var campaignY = 128, challengeY = 184, practiceY = 240;
+  var cardW = 280, cardH = 62, cardX = CANVAS_W / 2 - cardW / 2, gap = 14;
+  var campaignY = 104, challengeY = campaignY + cardH + gap, practiceY = challengeY + cardH + gap;
 
-  drawButton(btnX, campaignY, btnW, btnH, "CAMPAIGN (5 Sectors)", buttonHovered(btnX, campaignY, btnW, btnH));
-  drawButton(btnX, challengeY, btnW, btnH, "CHALLENGE (Endless)", buttonHovered(btnX, challengeY, btnW, btnH));
-  drawButton(btnX, practiceY, btnW, btnH, "PRACTICE MODE", buttonHovered(btnX, practiceY, btnW, btnH));
-
-  textAlign(CENTER, CENTER);
-  textSize(9);
-  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
-  text("Campaign teaches each angle type step by step.", CANVAS_W / 2, campaignY + btnH + 12);
-  text("Challenge mixes everything and speeds up forever.", CANVAS_W / 2, challengeY + btnH + 12);
-  text("No timer, no lives, no score -- just questions. Pick your skills.", CANVAS_W / 2, practiceY + btnH + 12);
+  drawModeCard(cardX, campaignY, cardW, cardH, "CAMPAIGN (5 Sectors)", "Teaches each angle type step by step.", buttonHovered(cardX, campaignY, cardW, cardH));
+  drawModeCard(cardX, challengeY, cardW, cardH, "CHALLENGE (Endless)", "All four types mixed, speeds up forever.", buttonHovered(cardX, challengeY, cardW, cardH));
+  drawModeCard(cardX, practiceY, cardW, cardH, "PRACTICE MODE", "No timer, no lives, no score -- pick your skills.", buttonHovered(cardX, practiceY, cardW, cardH));
 
   var backW = 90, backH = 26;
   var backX = 10, backY = CANVAS_H - 36;
   drawButton(backX, backY, backW, backH, "< BACK", buttonHovered(backX, backY, backW, backH));
 
-  if (buttonClicked(btnX, campaignY, btnW, btnH)) {
+  if (buttonClicked(cardX, campaignY, cardW, cardH)) {
     resetFullGame();
     startLevel(0);
   }
-  if (buttonClicked(btnX, challengeY, btnW, btnH)) {
+  if (buttonClicked(cardX, challengeY, cardW, cardH)) {
     gameState = STATE_CHALLENGE_INTRO;
   }
-  if (buttonClicked(btnX, practiceY, btnW, btnH)) {
+  if (buttonClicked(cardX, practiceY, cardW, cardH)) {
     gameState = STATE_PRACTICE_SETUP;
   }
   if (buttonClicked(backX, backY, backW, backH)) {
@@ -4044,6 +4080,9 @@ function drawPracticeSetupScreen() {
   var rowH = 38;
   var startY = 98;
   var boxX = CANVAS_W / 2 - rowW / 2;
+
+  var panelW = rowW + 40;
+  drawScreenPanel(CANVAS_W / 2 - panelW / 2, startY - 12, panelW, PRACTICE_SKILL_OPTIONS.length * rowH + 24);
 
   for (var i = 0; i < PRACTICE_SKILL_OPTIONS.length; i++) {
     var opt = PRACTICE_SKILL_OPTIONS[i];
@@ -4202,49 +4241,67 @@ function drawPracticeScreen(dt) {
 // ----------------------------------------------------------------
 // SECTION 26: SCREEN -- INSTRUCTIONS
 // ----------------------------------------------------------------
+// Grouped under short, colored section headers instead of a single
+// undifferentiated wall of 24 lines separated only by blank-line
+// gaps -- a reader can find "how do I answer" or "what happens if I
+// get caught" at a glance instead of hunting through a block.
+var INSTRUCTIONS_SECTIONS = [
+  { header: "THE SETUP", lines: [
+    "Every room runs on a different security system:",
+    "guards (supplementary), corner lasers (complementary),",
+    "cameras (vertical), and duct crawls (parallel lines)."
+  ]},
+  { header: "ANSWERING", lines: [
+    "Type the missing angle's degrees with the number keys,",
+    "then press ENTER. BACKSPACE fixes a mistyped digit."
+  ]},
+  { header: "THE SNEAK", lines: [
+    "Get it right and you steer the robber through a maze",
+    "-- arrow keys / WASD -- dodging cameras and roaming",
+    "guards to reach the exit. Get spotted, lose a life."
+  ]},
+  { header: "MISTAKES", lines: [
+    "A wrong answer costs a life and raises the alarm meter",
+    "-- fill it and the heist ends. You'll retry the SAME",
+    "puzzle, clock frozen, after your first miss on it."
+  ]},
+  { header: "TIP", lines: [
+    "Watch for the red aura around each guard -- get that",
+    "close and they'll spot you no matter which way they face."
+  ]}
+];
+
 function drawInstructionsScreen() {
   drawBackgroundGrid();
   noStroke();
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(18);
-  text("HOW TO PLAY", CANVAS_W / 2, 40);
+  text("HOW TO PLAY", CANVAS_W / 2, 34);
 
-  var lines = [
-    "Every room runs on a different security system:",
-    "guards (supplementary), corner lasers",
-    "(complementary), cameras (vertical), and",
-    "duct crawls (parallel + transversal).",
-    "",
-    "Calculate the missing angle, type the number",
-    "of degrees using the number keys, then press",
-    "ENTER to submit. BACKSPACE fixes a mistyped digit.",
-    "",
-    "Get it right and you take control of the robber",
-    "in a mini heist room: dodge the camera's cone AND",
-    "roaming patrol guards using arrow keys / WASD to",
-    "reach the green exit. Start side and exit side",
-    "change every time. Get spotted and it costs a",
-    "life -- every guard chases you off screen, then",
-    "it's straight on to the next puzzle.",
-    "",
-    "Wrong answers cost a life and raise the alarm",
-    "meter -- fill it and the heist ends. You'll",
-    "retry the SAME puzzle though, and the clock",
-    "freezes after your first miss on it.",
-    "",
-    "Watch for the red aura around each guard --",
-    "get that close and they'll spot you no matter",
-    "which way they're facing."
-  ];
-  textSize(9);
-  textAlign(CENTER, CENTER);
-  fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
-  for (var i = 0; i < lines.length; i++) {
-    text(lines[i], CANVAS_W / 2, 58 + i * 12);
+  var panelY = 48, panelH = 296;
+  drawScreenPanel(20, panelY, CANVAS_W - 40, panelH);
+
+  var y = panelY + 20;
+  for (var s = 0; s < INSTRUCTIONS_SECTIONS.length; s++) {
+    var section = INSTRUCTIONS_SECTIONS[s];
+    noStroke();
+    fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+    textAlign(CENTER, CENTER);
+    textSize(10);
+    text(section.header, CANVAS_W / 2, y);
+    y += 15;
+
+    fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+    textSize(9);
+    for (var i = 0; i < section.lines.length; i++) {
+      text(section.lines[i], CANVAS_W / 2, y);
+      y += 12;
+    }
+    y += 8; // breathing room before the next section's header
   }
 
-  var backW = 120, backH = 30, backX = CANVAS_W / 2 - backW / 2, backY = CANVAS_H - 44;
+  var backW = 120, backH = 30, backX = CANVAS_W / 2 - backW / 2, backY = CANVAS_H - 34;
   drawButton(backX, backY, backW, backH, "BACK", buttonHovered(backX, backY, backW, backH));
   if (buttonClicked(backX, backY, backW, backH)) {
     gameState = previousState;
@@ -4265,6 +4322,7 @@ function drawLevelIntroScreen() {
   textSize(20);
   text(level.name, CANVAS_W / 2, 90);
 
+  drawScreenPanel(40, 116, CANVAS_W - 80, level.introText.length * 18 + 36);
   textSize(12);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   for (var i = 0; i < level.introText.length; i++) {
@@ -4290,13 +4348,14 @@ function drawChallengeIntroScreen() {
   textSize(20);
   text("CHALLENGE MODE", CANVAS_W / 2, 100);
 
-  textSize(12);
-  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   var lines = [
     "All four angle types, fully randomized.",
     "Every 5 solves, the timer gets faster.",
     "How long can you keep the vault quiet?"
   ];
+  drawScreenPanel(40, 126, CANVAS_W - 80, lines.length * 18 + 36);
+  textSize(12);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   for (var i = 0; i < lines.length; i++) {
     text(lines[i], CANVAS_W / 2, 150 + i * 18);
   }
@@ -4437,6 +4496,7 @@ function drawLevelCompleteScreen() {
   textSize(22);
   text("SECTOR CLEARED", CANVAS_W / 2, 100);
 
+  drawScreenPanel(CANVAS_W / 2 - 110, 122, 220, 52);
   textSize(13);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   text("Score: " + currentScore, CANVAS_W / 2, 140);
@@ -4464,6 +4524,7 @@ function drawVictoryScreen() {
   textSize(24);
   text("VAULT CRACKED!", CANVAS_W / 2, 100);
 
+  drawScreenPanel(CANVAS_W / 2 - 130, 122, 260, 72);
   textSize(13);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   text("Final Score: " + currentScore, CANVAS_W / 2, 140);
@@ -4497,6 +4558,7 @@ function drawGameOverScreen() {
   textSize(24);
   text("ALARM TRIPPED", CANVAS_W / 2, 100);
 
+  drawScreenPanel(CANVAS_W / 2 - 110, 122, 220, 72);
   textSize(13);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   text("Score: " + currentScore, CANVAS_W / 2, 140);
@@ -4562,7 +4624,9 @@ function drawHighScoresScreen() {
   textSize(20);
   text("HIGH SCORES", CANVAS_W / 2, 80);
 
+  drawScreenPanel(CANVAS_W / 2 - 140, 106, 280, 100);
   textSize(14);
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   text("Best Score: " + sessionHighScore, CANVAS_W / 2, 130);
   text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 155);
 
