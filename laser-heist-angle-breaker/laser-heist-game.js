@@ -3823,7 +3823,13 @@ function drawPuzzleContextLine(puzzle, y) {
   fill(color[0], color[1], color[2]);
   textAlign(CENTER, CENTER);
   textSize(11);
-  text(line, CANVAS_W / 2, y, CANVAS_W - 40);
+  // text()'s (x, y) is the wrap box's TOP-LEFT corner whenever a width
+  // is passed -- textAlign only controls how each line sits inside
+  // that box, not where the box itself sits. Centering the box here
+  // means starting it at CANVAS_W/2 minus half its own width, not at
+  // CANVAS_W/2 itself (which ran the whole box off the right edge).
+  var boxW = CANVAS_W - 40;
+  text(line, (CANVAS_W - boxW) / 2, y, boxW);
 }
 
 function drawLivesIcons(rightX, y) {
@@ -3975,7 +3981,10 @@ function drawModeCard(x, y, w, h, title, caption, isHovered) {
 
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textSize(9);
-  text(caption, x + w / 2, y + h - 16, w - 24);
+  // Same wrap-box-is-top-left-anchored gotcha as drawPuzzleContextLine:
+  // box must start at x + 12 (half of the 24px margin) to stay
+  // centered in the card, not at the card's own center.
+  text(caption, x + 12, y + h - 16, w - 24);
 }
 
 function drawModeSelectScreen() {
