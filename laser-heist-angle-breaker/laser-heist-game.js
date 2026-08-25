@@ -600,12 +600,12 @@ function drawCameraIcon(x, y, facingDeg) {
 function drawVentGrateIcon(x, y) {
   noStroke();
   fill(90, 95, 105);
-  rect(x - 7, y - 5, 14, 10, 1);
+  rect(x - 8, y - 6, 16, 12, 1);
   stroke(40, 44, 50);
   strokeWeight(1);
-  line(x - 5, y - 2, x + 5, y - 2);
-  line(x - 5, y, x + 5, y);
-  line(x - 5, y + 2, x + 5, y + 2);
+  line(x - 6, y - 3, x + 6, y - 3);
+  line(x - 6, y, x + 6, y);
+  line(x - 6, y + 3, x + 6, y + 3);
 }
 
 // A straight run of ductwork -- drawn as a filled band with edge
@@ -628,13 +628,15 @@ function drawDuctRun(x1, x2, y, halfThickness) {
 
 // The diagonal connector duct joining the two parallel runs -- a
 // thick dark body with a lighter center seam, instead of a plain
-// line, so it reads as a physical crawlable duct.
+// line, so it reads as a physical crawlable duct. Wide enough for
+// drawSpyCrawling to actually fit inside it, not just symbolically
+// overlap it.
 function drawDuctConnector(x1, y1, x2, y2) {
   stroke(60, 66, 78);
-  strokeWeight(10);
+  strokeWeight(22);
   line(x1, y1, x2, y2);
   stroke(140, 148, 160);
-  strokeWeight(3);
+  strokeWeight(7);
   line(x1, y1, x2, y2);
 }
 
@@ -642,14 +644,14 @@ function drawDuctConnector(x1, y1, x2, y2) {
 function drawDuctJoint(x, y) {
   noStroke();
   fill(150, 158, 170);
-  ellipse(x, y, 13, 13);
+  ellipse(x, y, 24, 24);
   stroke(60, 66, 78);
   strokeWeight(1.5);
   noFill();
-  ellipse(x, y, 13, 13);
+  ellipse(x, y, 24, 24);
   noStroke();
   fill(90, 95, 105);
-  ellipse(x, y, 5, 5);
+  ellipse(x, y, 9, 9);
 }
 
 
@@ -974,15 +976,23 @@ function generateParallelPuzzle() {
 
   var knownPos = positions[randomInt(0, 3)];
   var knownInt = intersections[randomInt(0, 1)];
-  var targetPos, targetInt;
+  var targetPos, targetInt, relationship;
   do {
     targetPos = positions[randomInt(0, 3)];
     targetInt = intersections[randomInt(0, 1)];
-  } while (targetPos === knownPos && targetInt === knownInt);
+    relationship = classifyParallelRelationship(knownPos, knownInt, targetPos, targetInt);
+    // Co-Exterior (same-side exterior) is a real relationship but not
+    // one this game quizzes on -- by request, only Vertical, Linear
+    // Pair, Corresponding, Co-Interior, Alternate Interior, and
+    // Alternate Exterior ever get asked. Reject and re-roll the
+    // target position/intersection instead of relabeling it, since
+    // Co-Exterior genuinely isn't any of those (it's supplementary,
+    // not equal, so it can't just be renamed to Alternate Exterior).
+  } while ((targetPos === knownPos && targetInt === knownInt) ||
+    relationship.name === "Co-Exterior Angles (Same-Side Exterior)");
 
   var knownValue = angleValueForPosition(knownPos, theta);
   var targetValue = angleValueForPosition(targetPos, theta);
-  var relationship = classifyParallelRelationship(knownPos, knownInt, targetPos, targetInt);
 
   return {
     type: "parallel",
@@ -1006,9 +1016,11 @@ function drawParallelDiagram(puzzle, cx, cy) {
   var lineAY = cy - 50;
   var lineBY = cy + 50;
 
-  // Two parallel ventilation duct runs, vents included.
-  drawDuctRun(cx - halfWidth, cx + halfWidth, lineAY, 6);
-  drawDuctRun(cx - halfWidth, cx + halfWidth, lineBY, 6);
+  // Two parallel ventilation duct runs, vents included -- wide enough
+  // for drawSpyCrawling to visibly fit inside one, not just a thin
+  // line standing in for a duct.
+  drawDuctRun(cx - halfWidth, cx + halfWidth, lineAY, 11);
+  drawDuctRun(cx - halfWidth, cx + halfWidth, lineBY, 11);
   var grateOffsets = [-90, 0, 90];
   for (var g = 0; g < grateOffsets.length; g++) {
     drawVentGrateIcon(cx + grateOffsets[g], lineAY);
@@ -1049,6 +1061,24 @@ function drawParallelDiagram(puzzle, cx, cy) {
 
   drawDuctJoint(intersectA.x, intersectA.y);
   drawDuctJoint(intersectB.x, intersectB.y);
+
+  // The crew member actually crawling the connector duct, right now
+  // -- this is the physical version of "figure out the angle to know
+  // which way through the ducts" the puzzle is asking about, not an
+  // abstract diagram floating apart from the story. Drawn last (on
+  // top of the joints/labels) and kept clear of both ends -- see
+  // crawlMargin -- so it never covers the flange, arc, or number it's
+  // crawling toward.
+  var ductLength = Math.sqrt(Math.pow(intersectB.x - intersectA.x, 2) + Math.pow(intersectB.y - intersectA.y, 2));
+  var crawlMargin = 34;
+  var crawlRange = Math.max(ductLength - crawlMargin * 2, 10);
+  var phase = ((typeof millis === "function") ? millis() : 0) * 0.0012;
+  var crawlS = crawlMargin + crawlRange * (0.5 + 0.5 * Math.sin(phase));
+  var crawlX = intersectA.x + dx * crawlS;
+  var crawlY = intersectA.y + dy * crawlS;
+  var movingTowardB = Math.cos(phase) >= 0;
+  var crawlFacing = movingTowardB ? puzzle.theta : puzzle.theta + 180;
+  drawSpyCrawling(crawlX, crawlY, crawlFacing);
 }
 
 // The horizontal duct (rays at 0 deg/right and 180 deg/left) and the
@@ -2648,6 +2678,45 @@ function drawSpySprite(x, y, isFlashing, sizeScale) {
   pop();
 }
 
+// A belly-down crawling pose, drawn along the local +x axis and then
+// rotated by the caller to match whichever duct it's crawling
+// through -- rotating the upright drawSpySprite wholesale would just
+// make it look like it fell over, not like it's actually moving
+// through a duct. Used by drawParallelDiagram to put the crew member
+// physically inside the connector duct between the two angle
+// intersections, instead of just standing off to the side of the
+// diagram waiting.
+function drawSpyCrawling(x, y, facingDeg) {
+  var suitColor = [35, 45, 78];
+  var visorColor = [90, 225, 255];
+
+  push();
+  translate(x, y);
+  rotate(facingDeg);
+
+  // Limbs first so the body covers their attachment points -- two
+  // reaching forward, two pushing off behind, the classic low-crawl
+  // silhouette.
+  stroke(suitColor[0], suitColor[1], suitColor[2]);
+  strokeWeight(2.5);
+  line(5, -3, 11, -7);
+  line(5, 3, 11, 7);
+  line(-5, -3, -11, -7);
+  line(-5, 3, -11, 7);
+
+  noStroke();
+  fill(suitColor[0], suitColor[1], suitColor[2]);
+  ellipse(0, 0, 21, 10);
+  ellipse(10, 0, 8, 8);
+
+  // Visor -- leading edge, so it reads as facing/looking the
+  // direction it's crawling.
+  fill(visorColor[0], visorColor[1], visorColor[2]);
+  ellipse(12, 0, 3.5, 3.5);
+
+  pop();
+}
+
 function drawExitDoor(x, y, isActive) {
   var glow = isActive ? COLOR_TEXT_GOOD : COLOR_TEXT_DIM;
   noFill();
@@ -2665,11 +2734,21 @@ function drawExitDoor(x, y, isActive) {
 // reacting to a wrong answer -- the robber just waits at the door.
 var SPY_IDLE_SCALE = 2.8; // bigger while you're still solving the angle -- no maze collision to fit inside here
 
-function drawHeistScene(sceneY) {
+function drawHeistScene(sceneY, puzzle) {
   var isFlashing = (puzzlePhase === PUZZLE_PHASE_CAUGHT) && (Math.floor(phaseTimer / 4) % 2 === 0);
   var spyX = (puzzlePhase === PUZZLE_PHASE_CAUGHT) ? SPY_START_X - 3 : SPY_START_X;
   drawExitDoor(SPY_END_X + 10, sceneY, false);
-  drawSpySprite(spyX, sceneY + 14, isFlashing, SPY_IDLE_SCALE);
+
+  // Parallel-type puzzles already show the crew member crawling
+  // INSIDE the duct diagram itself (see drawParallelDiagram) -- a
+  // second, static spy waiting off to the side would just be a
+  // redundant duplicate. Still shown during the CAUGHT reaction
+  // regardless of type, since that's a generic "tripped the alarm"
+  // beat, not part of the angle-solving moment.
+  var showIdleSpy = puzzlePhase === PUZZLE_PHASE_CAUGHT || !puzzle || puzzle.type !== "parallel";
+  if (showIdleSpy) {
+    drawSpySprite(spyX, sceneY + 14, isFlashing, SPY_IDLE_SCALE);
+  }
 }
 
 // Kicks off the Pac-Man-style sneak minigame right after a correct
@@ -3736,7 +3815,7 @@ function drawPlayingScreen(dt) {
     if (currentPuzzle) {
       drawDiagramForPuzzle(currentPuzzle, CANVAS_W / 2, 160);
     }
-    drawHeistScene(160);
+    drawHeistScene(160, currentPuzzle);
   }
   pop();
 
