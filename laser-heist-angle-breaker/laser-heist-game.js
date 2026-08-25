@@ -97,6 +97,28 @@ var COLOR_CAMERA_BEAM    = [90, 210, 255];
 var COLOR_BUSH           = [34, 70, 36];
 var COLOR_BUSH_HIGHLIGHT = [52, 100, 52];
 
+// ---- Room styles ----
+// The sneak room's whole environment (walls, floor, hiding spots) is
+// re-skinned per style, picked once when the maze is generated (see
+// startSneakingPhase) -- a hedge maze with bushes to duck into reads
+// fine as an outdoor perimeter, but the same bushes stop making sense
+// the moment the walls are supposed to be an indoor vault corridor
+// instead. Every style swaps its own matched set (drawMazeWalls,
+// drawSneakingScene's floor, and the hiding-spot icon), never mixing
+// pieces from two styles in the same room. Guards/cameras/the robber
+// itself stay the same security equipment regardless -- only the
+// building around them changes.
+var ROOM_STYLE_HEDGE = "hedge"; // outdoor perimeter: hedge walls, gravel path, bushes to hide in
+var ROOM_STYLE_VAULT = "vault"; // indoor corridor: riveted metal walls, tiled floor, storage crates to hide behind
+var ROOM_STYLES = [ROOM_STYLE_HEDGE, ROOM_STYLE_VAULT];
+var currentRoomStyle = ROOM_STYLE_HEDGE;
+
+var COLOR_VAULT_WALL         = [50, 55, 68];
+var COLOR_VAULT_WALL_SEAM    = [82, 90, 108];
+var COLOR_VAULT_FLOOR        = [24, 26, 33];
+var COLOR_CRATE              = [92, 68, 42];
+var COLOR_CRATE_HIGHLIGHT    = [126, 96, 58];
+
 // Unlockable laser color skins, unlocked at score thresholds.
 var LASER_SKINS = [
   { name: "Ruby Red",     unlockScore: 0,    color: [255, 45, 60] },
@@ -610,16 +632,21 @@ function drawGuardIcon(x, y) {
 
 // A security camera -- used to dress up the vertical-angle
 // "camera crossfire" diagrams.
-function drawCameraIcon(x, y, facingDeg) {
+// isOn defaults to true (every decorative call in the puzzle diagrams
+// omits it, and those cameras are always "on") -- the sneak maze's
+// stationary cameras are the only caller that ever passes false, when
+// isCameraOn(cam) says this one is mid-cycle-off.
+function drawCameraIcon(x, y, facingDeg, isOn) {
+  var on = isOn !== false;
   push();
   translate(x, y);
   rotate(facingDeg);
   noStroke();
   fill(42, 46, 64);
   rect(-9, -6, 18, 12, 3);
-  fill(90, 225, 255);
+  fill(on ? 90 : 60, on ? 225 : 65, on ? 255 : 72);
   ellipse(8, 0, 8, 8);
-  fill(255, 60, 60);
+  fill(on ? 255 : 90, on ? 60 : 65, on ? 60 : 72);
   ellipse(-6, -7, 3, 3);
   pop();
 }
@@ -1578,12 +1605,33 @@ var GUARD_ALERT_RADIUS = 20;
 // cone (which sweeps clear again and again, so waiting it out always
 // eventually works), a camera's coverage never lets up. See
 // setupStationaryCameras/ensureCameraFreePath: placement always
-// leaves a genuine camera-free route to the door, so a camera is
-// never something you have to out-wait -- only something you have to
-// route around, or duck past through a bush (see SAFE_ZONE_COUNT).
+// leaves a genuine camera-free ROUTE to the door -- that guarantee is
+// built assuming every camera is always on, so it holds regardless of
+// the cycling below, which only ever makes an individual camera less
+// of a threat, never more. On top of that baseline, each camera also
+// cycles on and off in real time (see isCameraOn) -- a real, timeable
+// second option for a corridor a camera happens to watch, not just
+// something you have to route around, or duck past through a bush
+// (see SAFE_ZONE_COUNT).
 var STATIONARY_CAMERA_COUNT = 3; // up from 2 -- with only 2, the spawn/door safety margins (isTooCloseToSpawn, avoidCells) often ate up every candidate actually on the natural route, leaving a real chunk of mazes where neither camera was ever relevant to a normal playthrough at all
 var CAMERA_CONE_RADIUS = 62;
 var CAMERA_CONE_WIDTH = 62;
+
+// Each camera is on for CAMERA_CYCLE_ON_SECONDS, then dark for
+// CAMERA_CYCLE_OFF_SECONDS, on a repeating loop -- driven by
+// millis(), so it needs no per-frame update of its own, just a random
+// per-camera cycleOffset (see setupStationaryCameras) so they don't
+// all blink together.
+var CAMERA_CYCLE_ON_SECONDS = 5;
+var CAMERA_CYCLE_OFF_SECONDS = 2;
+var CAMERA_CYCLE_TOTAL_SECONDS = CAMERA_CYCLE_ON_SECONDS + CAMERA_CYCLE_OFF_SECONDS;
+
+function isCameraOn(cam) {
+  var t = (typeof millis === "function") ? millis() / 1000 : 0;
+  var phase = (t + cam.cycleOffset) % CAMERA_CYCLE_TOTAL_SECONDS;
+  return phase < CAMERA_CYCLE_ON_SECONDS;
+}
+
 var stationaryCameras = [];
 
 // ---- Safe zones (hiding bushes) ----
@@ -2308,7 +2356,12 @@ function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells) {
       x: pMid.x, y: pMid.y,
       facing: facing,
       coneWidth: CAMERA_CONE_WIDTH,
-      coneRadius: CAMERA_CONE_RADIUS
+      coneRadius: CAMERA_CONE_RADIUS,
+      // Its own random point in the on/off cycle (see isCameraOn) so
+      // cameras don't all blink in lockstep -- each one independently
+      // goes dark for CAMERA_CYCLE_OFF_SECONDS out of every
+      // CAMERA_CYCLE_TOTAL_SECONDS.
+      cycleOffset: random(0, CAMERA_CYCLE_TOTAL_SECONDS)
     };
     camera.conePoints = computeConePoints(camera.x, camera.y, camera.coneRadius, camera.facing - camera.coneWidth / 2, camera.facing + camera.coneWidth / 2, 10);
     stationaryCameras.push(camera);
@@ -2635,9 +2688,11 @@ function checkForSpotting() {
 
   // Cameras have no personal-space alert (they're not "aware" the
   // way a guard is) -- just the cone itself, same angle/radius/
-  // line-of-sight test as a guard's.
+  // line-of-sight test as a guard's, and only while actually on (see
+  // isCameraOn) -- a dark camera sees nothing, full stop.
   for (var c = 0; c < stationaryCameras.length; c++) {
     var cam = stationaryCameras[c];
+    if (!isCameraOn(cam)) { continue; }
     var cdx = robberX - cam.x;
     var cdy = robberY - cam.y;
     var cdist = Math.sqrt(cdx * cdx + cdy * cdy);
@@ -2679,7 +2734,7 @@ function computeTensionActive() {
     if (isNearMissWithHazard(patrolGuards[i])) { return true; }
   }
   for (i = 0; i < stationaryCameras.length; i++) {
-    if (isNearMissWithHazard(stationaryCameras[i])) { return true; }
+    if (isCameraOn(stationaryCameras[i]) && isNearMissWithHazard(stationaryCameras[i])) { return true; }
   }
   return false;
 }
@@ -3128,6 +3183,7 @@ function drawHeistScene(sceneY, puzzle) {
 // a guard) a camera's coverage never lets up -- see its own comment
 // for why that needs a completely separate check.
 function startSneakingPhase() {
+  currentRoomStyle = ROOM_STYLES[randomInt(0, ROOM_STYLES.length - 1)];
   generateMaze();
   var allEdges = collectOpenEdges();
   var adj = buildRoomGraph(allEdges);
@@ -3483,22 +3539,48 @@ function drawSpawnPulse(x, y) {
 // still reads as hedge, not the old tech-panel gray.
 function drawMazeWalls() {
   noStroke();
-  fill(COLOR_HEDGE_DARK[0], COLOR_HEDGE_DARK[1], COLOR_HEDGE_DARK[2]);
+  if (currentRoomStyle === ROOM_STYLE_VAULT) {
+    fill(COLOR_VAULT_WALL[0], COLOR_VAULT_WALL[1], COLOR_VAULT_WALL[2]);
+  } else {
+    fill(COLOR_HEDGE_DARK[0], COLOR_HEDGE_DARK[1], COLOR_HEDGE_DARK[2]);
+  }
   for (var i = 0; i < mazeWallRects.length; i++) {
     var b = mazeWallRects[i];
     rect(b.left, b.top, b.right - b.left, b.bottom - b.top);
   }
+
+  // Riveted panel seams -- matches the same riveted-metal language
+  // already used for duct joints elsewhere in the game, instead of
+  // the hedge style's flat, textureless fill.
+  if (currentRoomStyle === ROOM_STYLE_VAULT) {
+    stroke(COLOR_VAULT_WALL_SEAM[0], COLOR_VAULT_WALL_SEAM[1], COLOR_VAULT_WALL_SEAM[2], 130);
+    strokeWeight(1);
+    for (var j = 0; j < mazeWallRects.length; j++) {
+      var wb = mazeWallRects[j];
+      var midX = (wb.left + wb.right) / 2, midY = (wb.top + wb.bottom) / 2;
+      if (wb.right - wb.left > wb.bottom - wb.top) {
+        line(wb.left + 3, midY, wb.right - 3, midY);
+      } else {
+        line(midX, wb.top + 3, midX, wb.bottom - 3);
+      }
+    }
+    noStroke();
+  }
 }
 
 function drawSneakingScene() {
-  // A gravel path floor, not the techy grid the puzzle rooms use --
-  // this room reads as a real hedge maze.
+  // The floor and outer border both follow currentRoomStyle too --
+  // a gravel path inside a hedge perimeter, or a tiled floor inside a
+  // vault corridor's own wall color, never a mismatched pairing.
+  var floorColor = currentRoomStyle === ROOM_STYLE_VAULT ? COLOR_VAULT_FLOOR : COLOR_MAZE_PATH;
+  var borderColor = currentRoomStyle === ROOM_STYLE_VAULT ? COLOR_VAULT_WALL : COLOR_HEDGE_DARK;
+
   noStroke();
-  fill(COLOR_MAZE_PATH[0], COLOR_MAZE_PATH[1], COLOR_MAZE_PATH[2]);
+  fill(floorColor[0], floorColor[1], floorColor[2]);
   rect(ROOM_LEFT, ROOM_TOP, ROOM_RIGHT - ROOM_LEFT, ROOM_BOTTOM - ROOM_TOP, 6);
 
   noFill();
-  stroke(COLOR_HEDGE_DARK[0], COLOR_HEDGE_DARK[1], COLOR_HEDGE_DARK[2]);
+  stroke(borderColor[0], borderColor[1], borderColor[2]);
   strokeWeight(2);
   rect(ROOM_LEFT, ROOM_TOP, ROOM_RIGHT - ROOM_LEFT, ROOM_BOTTOM - ROOM_TOP, 6);
 
@@ -3509,11 +3591,14 @@ function drawSneakingScene() {
 
   // Cameras never move, so their cone's point list was already cast
   // once at placement time (see setupStationaryCameras) -- this just
-  // redraws the cached points, no fresh ray-marching per frame.
+  // redraws the cached points, no fresh ray-marching per frame. The
+  // cone itself only shows while the camera's actually on (see
+  // isCameraOn) -- dark means genuinely blind, not just dim.
   for (var c = 0; c < stationaryCameras.length; c++) {
     var cam = stationaryCameras[c];
-    drawConePoints(cam.x, cam.y, cam.conePoints, COLOR_CAMERA_BEAM);
-    drawCameraIcon(cam.x, cam.y, cam.facing);
+    var camOn = isCameraOn(cam);
+    if (camOn) { drawConePoints(cam.x, cam.y, cam.conePoints, COLOR_CAMERA_BEAM); }
+    drawCameraIcon(cam.x, cam.y, cam.facing, camOn);
   }
 
   // The roaming patrol guards -- each radiating a small red alert
@@ -3537,11 +3622,13 @@ function drawSneakingScene() {
     drawGroundShadow(robberX, robberY, 8);
     drawSpySprite(robberX, robberY, false, SPRITE_MAZE_SCALE);
     if (isRobberInSafeZone()) {
-      // A soft foliage-tinted veil over the sprite -- the visible
-      // tell that you're actually concealed right now, not just
-      // standing near a bush.
+      // A soft veil over the sprite, tinted to match whichever hiding
+      // spot this room style actually uses -- the visible tell that
+      // you're actually concealed right now, not just standing near
+      // one.
+      var hideTint = currentRoomStyle === ROOM_STYLE_VAULT ? COLOR_CRATE : COLOR_BUSH;
       noStroke();
-      fill(COLOR_BUSH[0], COLOR_BUSH[1], COLOR_BUSH[2], 150);
+      fill(hideTint[0], hideTint[1], hideTint[2], 150);
       ellipse(robberX, robberY, 26, 22);
     }
   }
@@ -3565,9 +3652,29 @@ function drawBushIcon(x, y) {
   ellipse(x + 5, y, 7, 5);
 }
 
+// The Vault Corridor style's hiding spot -- a couple of stacked
+// shipping crates, the indoor equivalent of the hedge style's bush:
+// a plausible thing to duck behind inside a building, planks and
+// strapping included so it doesn't read as just a plain brown box.
+function drawCrateIcon(x, y) {
+  noStroke();
+  fill(COLOR_CRATE[0], COLOR_CRATE[1], COLOR_CRATE[2]);
+  rect(x - 10, y - 4, 13, 12, 1);
+  rect(x + 1, y - 9, 11, 15, 1);
+  fill(COLOR_CRATE_HIGHLIGHT[0], COLOR_CRATE_HIGHLIGHT[1], COLOR_CRATE_HIGHLIGHT[2]);
+  rect(x - 10, y - 4, 13, 3);
+  rect(x + 1, y - 9, 11, 3);
+  stroke(COLOR_MAZE_SHADOW[0], COLOR_MAZE_SHADOW[1], COLOR_MAZE_SHADOW[2]);
+  strokeWeight(1);
+  line(x - 3.5, y - 4, x - 3.5, y + 8);
+  line(x + 6.5, y - 9, x + 6.5, y + 6);
+  noStroke();
+}
+
 function drawSafeZones() {
+  var drawIcon = currentRoomStyle === ROOM_STYLE_VAULT ? drawCrateIcon : drawBushIcon;
   for (var i = 0; i < safeZoneCells.length; i++) {
-    drawBushIcon(safeZoneCells[i].px, safeZoneCells[i].py);
+    drawIcon(safeZoneCells[i].px, safeZoneCells[i].py);
   }
 }
 
