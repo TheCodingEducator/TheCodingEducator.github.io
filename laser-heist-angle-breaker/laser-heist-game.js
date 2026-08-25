@@ -6,13 +6,13 @@
 //
 // STORY: You're running a heist crew. Every room hides a different
 // security system, and every system runs on angles:
+//   - Laser Grids (COMPLEMENTARY) -- a beam clips a corner mirror
+//     and splits into two paths that always sum to 90 degrees.
+//     Know one, know exactly where the other one is aimed.
 //   - Watch Teams (SUPPLEMENTARY) -- two guards eyeball a hallway
 //     from opposite ends, their combined sightline a flat 180
 //     degrees. Work out how much of that line is dead space and
 //     the crew slips through the gap.
-//   - Laser Grids (COMPLEMENTARY) -- a beam clips a corner mirror
-//     and splits into two paths that always sum to 90 degrees.
-//     Know one, know exactly where the other one is aimed.
 //   - Security Cameras (VERTICAL ANGLES) -- two cameras stare at
 //     each other across the floor. Their blind spots sit directly
 //     opposite one another -- equal angles, dead ahead.
@@ -137,20 +137,7 @@ var previousState = STATE_TITLE;
 var LEVELS = [
   {
     id: 0,
-    name: "Sector 1: Watch Team Hallway",
-    type: "supplementary",
-    puzzlesToClear: 4,
-    timeLimit: 18,
-    introText: [
-      "Two guards watch this hallway from opposite doors --",
-      "together their sightline is a flat 180-degree line.",
-      "Read the active guard's watched angle, then work out",
-      "how wide the dead-space gap is before the crew moves."
-    ]
-  },
-  {
-    id: 1,
-    name: "Sector 2: Laser Grid Corner",
+    name: "Sector 1: Laser Grid Corner",
     type: "complementary",
     puzzlesToClear: 4,
     timeLimit: 16,
@@ -159,6 +146,19 @@ var LEVELS = [
       "into two beams that always sum to 90 degrees.",
       "Know one beam's angle and you know exactly where",
       "the other one is sweeping -- and where it isn't."
+    ]
+  },
+  {
+    id: 1,
+    name: "Sector 2: Watch Team Hallway",
+    type: "supplementary",
+    puzzlesToClear: 4,
+    timeLimit: 18,
+    introText: [
+      "Two guards watch this hallway from opposite doors --",
+      "together their sightline is a flat 180-degree line.",
+      "Read the active guard's watched angle, then work out",
+      "how wide the dead-space gap is before the crew moves."
     ]
   },
   {
