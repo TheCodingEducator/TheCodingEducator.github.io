@@ -1941,73 +1941,55 @@ function isCellNear(gr, gc, targetGr, targetGc) {
   return (dr === 2 && dc === 0) || (dr === 0 && dc === 2);
 }
 
-// Room cells on the outer ring of the maze -- valid candidates for
-// the start point and the exit door.
-function collectBorderRoomCells() {
-  var cells = [];
-  for (var i = 0; i < MAZE_ROWS; i++) {
-    for (var j = 0; j < MAZE_COLS; j++) {
-      if (i === 0 || i === MAZE_ROWS - 1 || j === 0 || j === MAZE_COLS - 1) {
-        cells.push({ gr: i * 2 + 1, gc: j * 2 + 1 });
-      }
-    }
-  }
-  return cells;
+// The four actual corner rooms of the maze -- the exit door and the
+// spawn point always land on opposite ones (see pickDoorCell/
+// pickStartCell), so every crossing genuinely spans the whole maze
+// diagonally instead of sometimes landing on two border cells that
+// happen to be close together despite being on different edges.
+function collectCornerRoomCells() {
+  var maxGr = (MAZE_ROWS - 1) * 2 + 1;
+  var maxGc = (MAZE_COLS - 1) * 2 + 1;
+  return [
+    { gr: 1, gc: 1 },
+    { gr: 1, gc: maxGc },
+    { gr: maxGr, gc: 1 },
+    { gr: maxGr, gc: maxGc }
+  ];
 }
 
-function angularDistance(a, b) {
-  var d = Math.abs(a - b) % 360;
-  return d > 180 ? 360 - d : d;
+// The corner diagonally opposite a given one -- flips each axis
+// between its two possible corner values independently, so it works
+// regardless of which specific corner was passed in.
+function oppositeCornerCell(cell) {
+  var maxGr = (MAZE_ROWS - 1) * 2 + 1;
+  var maxGc = (MAZE_COLS - 1) * 2 + 1;
+  return { gr: cell.gr === 1 ? maxGr : 1, gc: cell.gc === 1 ? maxGc : 1 };
 }
 
-// Picks a random border room cell for the exit door -- cameras and
-// guards are placed afterward, always steering clear of wherever this
-// lands (see setupStationaryCameras/setupPatrolGuards), so any border
-// cell is as good as any other here.
+// Picks a random corner room for the exit door -- cameras and guards
+// are placed afterward, always steering clear of wherever this lands
+// (see setupStationaryCameras/setupPatrolGuards), so any corner is as
+// good as any other here.
 function pickDoorCell() {
-  var cells = collectBorderRoomCells();
-  var pick = cells[randomInt(0, cells.length - 1)];
+  var corners = collectCornerRoomCells();
+  var pick = corners[randomInt(0, corners.length - 1)];
   var p = superGridToPixel(pick.gr, pick.gc);
   pick.px = p.x;
   pick.py = p.y;
   return pick;
 }
 
-// Picks a border room cell for the start point, well away (angularly)
-// from the door, so the crossing is a real one and not a hop next
-// door -- and never the same cell as the door. Spread relative to
-// the room's center -- this is just about putting real distance
-// between the start point and the door. avoidCell lets a caller keep
-// it off some other specific cell too, though startSneakingPhase
-// doesn't currently use that (it passes null).
+// Always the corner diagonally opposite the door -- the maximum
+// possible distance across this maze, guaranteeing every crossing is
+// a real one rather than sometimes lucking into two nearby corners.
+// avoidCell is unused (startSneakingPhase always passes null) but
+// kept in the signature since callers already rely on this shape.
 function pickStartCell(doorCell, avoidCell) {
-  var cells = collectBorderRoomCells();
-  var i;
-  for (i = 0; i < cells.length; i++) {
-    var p = superGridToPixel(cells[i].gr, cells[i].gc);
-    cells[i].px = p.x;
-    cells[i].py = p.y;
-    cells[i].angle = Math.atan2(p.y - ROOM_CENTER_Y, p.x - ROOM_CENTER_X) * 180 / Math.PI;
-  }
-  var doorAngleFromCenter = Math.atan2(doorCell.py - ROOM_CENTER_Y, doorCell.px - ROOM_CENTER_X) * 180 / Math.PI;
-
-  var far = [];
-  for (i = 0; i < cells.length; i++) {
-    var isDoorCell = (cells[i].gr === doorCell.gr && cells[i].gc === doorCell.gc);
-    var isAvoided = avoidCell && cells[i].gr === avoidCell.gr && cells[i].gc === avoidCell.gc;
-    if (!isDoorCell && !isAvoided && angularDistance(cells[i].angle, doorAngleFromCenter) > 100) {
-      far.push(cells[i]);
-    }
-  }
-  if (far.length > 0) { return far[randomInt(0, far.length - 1)]; }
-
-  var any = [];
-  for (i = 0; i < cells.length; i++) {
-    var isDoorCell2 = (cells[i].gr === doorCell.gr && cells[i].gc === doorCell.gc);
-    var isAvoided2 = avoidCell && cells[i].gr === avoidCell.gr && cells[i].gc === avoidCell.gc;
-    if (!isDoorCell2 && !isAvoided2) { any.push(cells[i]); }
-  }
-  return any.length > 0 ? any[randomInt(0, any.length - 1)] : cells[0];
+  var opp = oppositeCornerCell(doorCell);
+  var p = superGridToPixel(opp.gr, opp.gc);
+  opp.px = p.x;
+  opp.py = p.y;
+  return opp;
 }
 
 // Builds a room-cell graph from the maze's open corridors, for the
@@ -2462,36 +2444,52 @@ function setupPatrolGuards(edges, adj, avoidCells, startCell, doorCell, alreadyB
   if (candidateIdx.length === 0) { return; }
 
   var pathEdges = findPathEdges(adj, startCell, doorCell, alreadyBlockedIdx);
-  var onPath = [];
-  var offPath = [];
-  for (var pi = 0; pi < candidateIdx.length; pi++) {
-    var candidate = candidateIdx[pi];
-    if (pathEdges.indexOf(candidate) !== -1) { onPath.push(candidate); } else { offPath.push(candidate); }
+  var onPathSet = {};
+  for (var pi = 0; pi < pathEdges.length; pi++) { onPathSet[pathEdges[pi]] = true; }
+
+  // One guard per zone, zones laid out in a grid that covers the
+  // maze's actual shape (more columns than rows for a wider-than-tall
+  // maze) rather than picking each new guard just to be far from the
+  // ones already chosen -- greedy farthest-point selection optimizes
+  // pairwise distance, which tends to push guards out toward a few
+  // extreme corners instead of genuinely covering the whole maze, and
+  // was leaving real gaps down the middle. Each zone's guard is
+  // whichever valid candidate corridor is closest to that zone's own
+  // center, with a small on-path bonus (never enough to override a
+  // genuinely closer off-path option) so a guard still often ends up
+  // crossing the player's natural route the way the single greedy
+  // seed guard used to.
+  var zoneCount = PATROL_GUARD_COUNT;
+  var zoneCols = Math.max(1, Math.round(Math.sqrt(zoneCount * MAZE_COLS / MAZE_ROWS)));
+  var zoneRows = Math.max(1, Math.ceil(zoneCount / zoneCols));
+  var zoneCenters = [];
+  for (var zr = 0; zr < zoneRows && zoneCenters.length < zoneCount; zr++) {
+    for (var zc = 0; zc < zoneCols && zoneCenters.length < zoneCount; zc++) {
+      var roomRow = clampNum(Math.round(((zr + 0.5) / zoneRows) * MAZE_ROWS - 0.5), 0, MAZE_ROWS - 1);
+      var roomCol = clampNum(Math.round(((zc + 0.5) / zoneCols) * MAZE_COLS - 0.5), 0, MAZE_COLS - 1);
+      zoneCenters.push({ gr: roomRow * 2 + 1, gc: roomCol * 2 + 1 });
+    }
   }
+  zoneCenters = shuffleArrayCopy(zoneCenters); // don't always fill zones in the same reading order
 
   var chosenIdx = [];
   var chosenCells = [];
-  var remaining = shuffleArrayCopy(onPath).concat(shuffleArrayCopy(offPath));
-  if (remaining.length > 0) {
-    chosenIdx.push(remaining[0]);
-    chosenCells.push(edgeMidCell(edges[remaining[0]]));
-    remaining.splice(0, 1);
-  }
-  while (chosenIdx.length < PATROL_GUARD_COUNT && remaining.length > 0) {
-    var farIdx = 0;
-    var farScore = -1;
-    for (var ri = 0; ri < remaining.length; ri++) {
-      var candidateCell = edgeMidCell(edges[remaining[ri]]);
-      var minDist = Infinity;
-      for (var cj = 0; cj < chosenCells.length; cj++) {
-        var d = gridCellDistance(candidateCell, chosenCells[cj]);
-        if (d < minDist) { minDist = d; }
-      }
-      if (minDist > farScore) { farScore = minDist; farIdx = ri; }
+  var claimed = {};
+  var ON_PATH_BONUS = 1.5; // grid cells -- enough to win a close tie, not enough to reach across a whole zone for it
+  for (var zi = 0; zi < zoneCenters.length && chosenIdx.length < PATROL_GUARD_COUNT; zi++) {
+    var zoneCenter = zoneCenters[zi];
+    var bestIdx = -1, bestScore = Infinity;
+    for (var ci2 = 0; ci2 < candidateIdx.length; ci2++) {
+      var cIdx = candidateIdx[ci2];
+      if (claimed[cIdx]) { continue; }
+      var mid2 = edgeMidCell(edges[cIdx]);
+      var score = gridCellDistance(mid2, zoneCenter) - (onPathSet[cIdx] ? ON_PATH_BONUS : 0);
+      if (score < bestScore) { bestScore = score; bestIdx = cIdx; }
     }
-    chosenIdx.push(remaining[farIdx]);
-    chosenCells.push(edgeMidCell(edges[remaining[farIdx]]));
-    remaining.splice(farIdx, 1);
+    if (bestIdx === -1) { continue; } // every remaining candidate already claimed by an earlier zone
+    claimed[bestIdx] = true;
+    chosenIdx.push(bestIdx);
+    chosenCells.push(edgeMidCell(edges[bestIdx]));
   }
 
   // Each guard starts on one of the picked corridors and stays
@@ -2979,26 +2977,47 @@ function pointAtAngleDist(cx, cy, angleDeg, dist) {
   return { x: cx + Math.cos(rad) * dist, y: cy + Math.sin(rad) * dist };
 }
 
+// Where the exit door itself sits -- X is always the same fixed spot
+// near the right edge (matching the established "enter left, exit
+// right" reading direction), but Y leans up or down depending on
+// which way the SAFE wedge (targetRange) actually points, clamped to
+// a range that never collides with the HUD above or the answer
+// box/hint text below. This is what makes the door only make sense to
+// reach by heading toward the safe wedge -- not a fixed prop the
+// escape path detours around, but a real consequence of which wedge
+// this puzzle's answer actually opened up. Parallel-type puzzles (no
+// single vertex/wedge) keep the plain historical fixed spot.
+var DOOR_Y_BASE = 160;
+var DOOR_Y_SWING = 78; // how far the door can lean up/down from center
+var DOOR_Y_MIN = 100;  // clears the skill-name banner above
+var DOOR_Y_MAX = 232;  // clears the answer box/hint text below
+function computeDoorPositionForPuzzle(puzzle) {
+  var geo = getPuzzleWedgeGeometry(puzzle);
+  if (!geo) { return { x: SPY_END_X + 10, y: DOOR_Y_BASE }; }
+  var targetBisector = normalizeAngleDeg((geo.targetRange[0] + geo.targetRange[1]) / 2);
+  var lean = Math.sin(targetBisector * Math.PI / 180) * DOOR_Y_SWING;
+  return { x: SPY_END_X + 10, y: clampNum(DOOR_Y_BASE + lean, DOOR_Y_MIN, DOOR_Y_MAX) };
+}
+
 // The journey a correct answer plays out: starting from wherever the
-// robber was already standing (not a teleport to the vertex), a real
-// (not approximate) sneak around the camera's cone into the safe
-// wedge, a walk through the now-open room to the door, then holding
-// at the door itself while drawHeistScene shrinks the sprite away --
-// the "disappearing into it" beat lives there, not in this function.
+// robber was already standing (not a teleport to the vertex), one
+// smooth snake -- curving in past the camera's cone while easing
+// toward the safe wedge's own direction, then peeling away along that
+// exact line out to the door -- rather than a stiff orbit-dip-retreat
+// sequence that reads as backtracking. Ends holding at the door while
+// drawHeistScene shrinks the sprite away ("disappearing into it").
 //
-// The cone-avoidance is geometric, not a heuristic curve bowed away
-// from it: the illuminated cone only ever extends out to geo.radius
-// from the vertex, so as long as the robber's distance from the
-// vertex stays above that (plus a margin) while it repositions
-// angularly, it is OUTSIDE the cone's actual reach regardless of
-// which way it swings around -- then, once lined up with the SAFE
-// wedge's own bisector angle, it can move straight inward at that
-// fixed angle without ever crossing into the watched wedge's
-// angular range at any radius (they're different angular slices of
-// the same point, by definition of target != known).
+// Still geometrically safe, not just a heuristic: for the whole first
+// leg, distance from the vertex only ever DECREASES from the robber's
+// real starting distance down to innerRadius (never below it), and
+// innerRadius already clears the cone's own reach -- so regardless of
+// how the angle changes at the same time, the cone is never entered.
+// The second leg holds the angle fixed at the safe wedge's bisector
+// the whole way out, which by definition is a different angular slice
+// than the watched wedge at every radius.
 function computeEscapePoint(puzzle, progress) {
   var startPt = { x: SPY_START_X, y: 160 + 14 };
-  var doorPt = { x: SPY_END_X + 10, y: 160 };
+  var doorPt = computeDoorPositionForPuzzle(puzzle);
   var geo = getPuzzleWedgeGeometry(puzzle);
 
   if (!geo) {
@@ -3012,7 +3031,6 @@ function computeEscapePoint(puzzle, progress) {
   }
 
   var targetBisector = normalizeAngleDeg((geo.targetRange[0] + geo.targetRange[1]) / 2);
-  var safeDist = geo.radius * 0.65;
 
   var startDx = startPt.x - geo.cx, startDy = startPt.y - geo.cy;
   var startDist = Math.sqrt(startDx * startDx + startDy * startDy);
@@ -3020,50 +3038,23 @@ function computeEscapePoint(puzzle, progress) {
 
   var doorDx = doorPt.x - geo.cx, doorDy = doorPt.y - geo.cy;
   var doorDist = Math.sqrt(doorDx * doorDx + doorDy * doorDy);
-  var doorAngle = normalizeAngleDeg(Math.atan2(doorDy, doorDx) * 180 / Math.PI);
 
-  // One shared "safe orbit" radius, comfortably past the cone's own
-  // reach, that both the start point and the door sit at (or just
-  // outside of) -- so the ENTIRE journey, not just the approach into
-  // the safe wedge, can be built from arcs held at this radius plus a
-  // single radial dip into the wedge, never a free straight line that
-  // could cut back across the vertex at an unsafe angle.
   var margin = 18;
-  var orbitRadius = Math.max(startDist, doorDist, geo.radius + margin);
-  var orbitAtStartAngle = pointAtAngleDist(geo.cx, geo.cy, startAngle, orbitRadius);
-  var orbitAtDoorAngle = pointAtAngleDist(geo.cx, geo.cy, doorAngle, orbitRadius);
+  var innerRadius = Math.min(geo.radius + margin, startDist); // never ASKS the spiral to grow past where it already started
 
-  // Every leg below is safe by construction: the four "orbit" legs
-  // never dip inside orbitRadius (already past the cone regardless of
-  // angle), the two straight hops (start->orbit, orbit->door) run
-  // along a single constant angle each so they can't drift into a
-  // different wedge, and the dip in/out of the safe wedge only ever
-  // happens at targetBisector -- a different angular slice than the
-  // watched wedge by definition.
-  if (progress < 0.05) {
-    return { x: lerp(startPt.x, orbitAtStartAngle.x, progress / 0.05), y: lerp(startPt.y, orbitAtStartAngle.y, progress / 0.05) };
+  function ease(t) { return t * t * (3 - 2 * t); }
+
+  if (progress < 0.55) {
+    var t1 = ease(progress / 0.55);
+    var diff = ((targetBisector - startAngle + 540) % 360) - 180;
+    var ang = startAngle + diff * t1;
+    var rad = lerp(startDist, innerRadius, t1);
+    return pointAtAngleDist(geo.cx, geo.cy, ang, rad);
   }
-  if (progress < 0.25) {
-    var arcT1 = (progress - 0.05) / 0.20;
-    var diff1 = ((targetBisector - startAngle + 540) % 360) - 180;
-    return pointAtAngleDist(geo.cx, geo.cy, startAngle + diff1 * arcT1, orbitRadius);
-  }
-  if (progress < 0.35) {
-    var inT = (progress - 0.25) / 0.10;
-    return pointAtAngleDist(geo.cx, geo.cy, targetBisector, lerp(orbitRadius, safeDist, inT));
-  }
-  if (progress < 0.45) {
-    var outT = (progress - 0.35) / 0.10;
-    return pointAtAngleDist(geo.cx, geo.cy, targetBisector, lerp(safeDist, orbitRadius, outT));
-  }
-  if (progress < 0.65) {
-    var arcT2 = (progress - 0.45) / 0.20;
-    var diff2 = ((doorAngle - targetBisector + 540) % 360) - 180;
-    return pointAtAngleDist(geo.cx, geo.cy, targetBisector + diff2 * arcT2, orbitRadius);
-  }
-  if (progress < 0.70) {
-    var doorT = (progress - 0.65) / 0.05;
-    return { x: lerp(orbitAtDoorAngle.x, doorPt.x, doorT), y: lerp(orbitAtDoorAngle.y, doorPt.y, doorT) };
+  if (progress < 0.82) {
+    var t2 = ease((progress - 0.55) / 0.27);
+    var rad2 = lerp(innerRadius, doorDist, t2);
+    return pointAtAngleDist(geo.cx, geo.cy, targetBisector, rad2);
   }
   return doorPt;
 }
@@ -3121,10 +3112,12 @@ function computeCaughtScenePositions(puzzle, totalProgress) {
 var ESCAPE_DOOR_ENTER_START = 0.82;
 
 function drawHeistScene(sceneY, puzzle) {
+  var doorPt = computeDoorPositionForPuzzle(puzzle);
+
   if (puzzlePhase === PUZZLE_PHASE_ESCAPING) {
     var escProgress = clampNum(1 - (escapeTimer / ESCAPE_DURATION), 0, 1);
     var doorActive = escProgress > ESCAPE_DOOR_ENTER_START * 0.7;
-    drawExitDoor(SPY_END_X + 10, sceneY, doorActive);
+    drawExitDoor(doorPt.x, doorPt.y, doorActive);
 
     var escPt = computeEscapePoint(puzzle, escProgress);
     // Shrinks smoothly to nothing over the final leg -- "disappearing
@@ -3137,7 +3130,7 @@ function drawHeistScene(sceneY, puzzle) {
     return;
   }
 
-  drawExitDoor(SPY_END_X + 10, sceneY, false);
+  drawExitDoor(doorPt.x, doorPt.y, false);
 
   if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
     var totalProgress = clampNum(1 - (phaseTimer / CAUGHT_DURATION), 0, 1);
