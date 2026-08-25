@@ -89,6 +89,11 @@ var COLOR_HEDGE_DARK     = [10, 20, 12];
 // actually moving.
 var COLOR_CAMERA_BEAM    = [90, 210, 255];
 
+// A calmer, more "informational aside" cyan than the gold rule hint
+// -- distinct enough that a returning player can tell at a glance
+// "this is the real-world tie-in line, not a rule I need to act on."
+var COLOR_FIELD_NOTE     = [140, 195, 230];
+
 // The hiding-spot bushes -- a shade lighter/greener than the hedge
 // walls so they read as a distinct, inviting patch of foliage rather
 // than just more wall.
@@ -244,6 +249,18 @@ var PUZZLE_HINTS = {
   complementary: "Complementary angles add up to 90 degrees.",
   vertical: "Vertical angles (directly across from each other) are equal.",
   parallel: "Matching-position angles are equal; angles on the same side between the lines add up to 180 degrees."
+};
+
+// A one-line real-world tie-in shown on every puzzle after the first
+// of its type (which gets PUZZLE_HINTS's rule reminder instead -- see
+// drawPuzzleContextLine) -- the heist framing is fun, but naming the
+// actual profession that uses this exact math is what makes "why does
+// this matter" a real answer instead of implied.
+var PUZZLE_FIELD_NOTES = {
+  supplementary: "Field Note: security techs aim two cameras this way to cover a straight hallway with zero blind spot.",
+  complementary: "Field Note: carpenters use this to cut corner trim that meets flush at a perfect right angle.",
+  vertical: "Field Note: surveyors and pilots fix a position using two crossing sightlines like this.",
+  parallel: "Field Note: civil engineers use this exact math for streets that cut diagonally across a city grid."
 };
 
 var currentScore   = 0;
@@ -3791,15 +3808,22 @@ function drawSkillNameBanner(puzzle, y) {
 // relationship type this session (see markPuzzleFirstOfTypeIfNew) --
 // paired with the slower timer from applyTimerForCurrentPuzzle, so
 // there's actually time to read it before the clock matters.
-function drawFirstOfTypeHint(puzzle, y) {
-  if (!puzzle || !puzzle.isFirstOfType) { return; }
-  var hint = PUZZLE_HINTS[puzzle.type];
-  if (!hint) { return; }
+// The very first puzzle of a type gets the rule reminder (paired with
+// the slower timer from applyTimerForCurrentPuzzle, so there's
+// actually time to read it) -- every puzzle after that gets a
+// real-world Field Note instead, so the "why does this matter"
+// answer isn't a one-time thing you see once and never again.
+function drawPuzzleContextLine(puzzle, y) {
+  if (!puzzle) { return; }
+  var isFirst = puzzle.isFirstOfType;
+  var line = isFirst ? PUZZLE_HINTS[puzzle.type] : PUZZLE_FIELD_NOTES[puzzle.type];
+  if (!line) { return; }
+  var color = isFirst ? COLOR_LASER_GOLD : COLOR_FIELD_NOTE;
   noStroke();
-  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  fill(color[0], color[1], color[2]);
   textAlign(CENTER, CENTER);
   textSize(11);
-  text(hint, CANVAS_W / 2, y, CANVAS_W - 40);
+  text(line, CANVAS_W / 2, y, CANVAS_W - 40);
 }
 
 function drawLivesIcons(rightX, y) {
@@ -4364,7 +4388,7 @@ function drawPlayingScreen(dt) {
   } else if (!isEscaping) {
     if (currentPuzzle) {
       drawSkillNameBanner(currentPuzzle, 58);
-      drawFirstOfTypeHint(currentPuzzle, 283);
+      drawPuzzleContextLine(currentPuzzle, 283);
     }
     drawAnswerBox(CANVAS_W / 2, 325);
     if (isAiming) {
