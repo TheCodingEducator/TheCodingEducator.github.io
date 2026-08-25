@@ -2917,43 +2917,98 @@ function quadBezierPoint(p0, c, p1, t) {
   };
 }
 
-// The three-leg journey a correct answer plays out: starting from
-// wherever the robber was already standing (not a teleport to the
-// vertex), a curved sneak past the camera into the safe wedge, a
-// straight walk through the now-open room to the door, then holding
+function normalizeAngleDeg(a) { return ((a % 360) + 360) % 360; }
+
+function pointAtAngleDist(cx, cy, angleDeg, dist) {
+  var rad = angleDeg * Math.PI / 180;
+  return { x: cx + Math.cos(rad) * dist, y: cy + Math.sin(rad) * dist };
+}
+
+// The journey a correct answer plays out: starting from wherever the
+// robber was already standing (not a teleport to the vertex), a real
+// (not approximate) sneak around the camera's cone into the safe
+// wedge, a walk through the now-open room to the door, then holding
 // at the door itself while drawHeistScene shrinks the sprite away --
 // the "disappearing into it" beat lives there, not in this function.
+//
+// The cone-avoidance is geometric, not a heuristic curve bowed away
+// from it: the illuminated cone only ever extends out to geo.radius
+// from the vertex, so as long as the robber's distance from the
+// vertex stays above that (plus a margin) while it repositions
+// angularly, it is OUTSIDE the cone's actual reach regardless of
+// which way it swings around -- then, once lined up with the SAFE
+// wedge's own bisector angle, it can move straight inward at that
+// fixed angle without ever crossing into the watched wedge's
+// angular range at any radius (they're different angular slices of
+// the same point, by definition of target != known).
 function computeEscapePoint(puzzle, progress) {
   var startPt = { x: SPY_START_X, y: 160 + 14 };
   var doorPt = { x: SPY_END_X + 10, y: 160 };
   var geo = getPuzzleWedgeGeometry(puzzle);
 
-  var safePt, controlPt;
-  if (geo) {
-    var targetBisector = (geo.targetRange[0] + geo.targetRange[1]) / 2 * Math.PI / 180;
-    var outDist = geo.radius * 0.65;
-    safePt = { x: geo.cx + Math.cos(targetBisector) * outDist, y: geo.cy + Math.sin(targetBisector) * outDist };
-
-    // Bow the curve away from the WATCHED wedge's own direction, so
-    // it visibly swings clear of the camera rather than cutting
-    // straight past it, whichever way that wedge happens to face.
-    var dangerBisector = (geo.knownRange[0] + geo.knownRange[1]) / 2 * Math.PI / 180;
-    var dangerDirX = Math.cos(dangerBisector), dangerDirY = Math.sin(dangerBisector);
-    var midX = (startPt.x + safePt.x) / 2, midY = (startPt.y + safePt.y) / 2;
-    var bowDist = 42;
-    controlPt = { x: midX - dangerDirX * bowDist, y: midY - dangerDirY * bowDist };
-  } else {
-    // Parallel-type puzzles have no single vertex/wedge -- just a
+  if (!geo) {
+    // Parallel-type puzzles have no single vertex/cone -- just a
     // gentle, fairly direct arc toward the door.
-    safePt = { x: (startPt.x + doorPt.x) / 2, y: 160 - 30 };
-    controlPt = { x: startPt.x + (safePt.x - startPt.x) * 0.5, y: startPt.y - 20 };
+    var mid0 = { x: (startPt.x + doorPt.x) / 2, y: 160 - 30 };
+    var ctrl0 = { x: startPt.x + (mid0.x - startPt.x) * 0.5, y: startPt.y - 20 };
+    if (progress < 0.45) { return quadBezierPoint(startPt, ctrl0, mid0, progress / 0.45); }
+    if (progress < 0.82) { return { x: lerp(mid0.x, doorPt.x, (progress - 0.45) / 0.37), y: lerp(mid0.y, doorPt.y, (progress - 0.45) / 0.37) }; }
+    return doorPt;
   }
 
-  if (progress < 0.45) {
-    return quadBezierPoint(startPt, controlPt, safePt, progress / 0.45);
+  var targetBisector = normalizeAngleDeg((geo.targetRange[0] + geo.targetRange[1]) / 2);
+  var safeDist = geo.radius * 0.65;
+
+  var startDx = startPt.x - geo.cx, startDy = startPt.y - geo.cy;
+  var startDist = Math.sqrt(startDx * startDx + startDy * startDy);
+  var startAngle = normalizeAngleDeg(Math.atan2(startDy, startDx) * 180 / Math.PI);
+
+  var doorDx = doorPt.x - geo.cx, doorDy = doorPt.y - geo.cy;
+  var doorDist = Math.sqrt(doorDx * doorDx + doorDy * doorDy);
+  var doorAngle = normalizeAngleDeg(Math.atan2(doorDy, doorDx) * 180 / Math.PI);
+
+  // One shared "safe orbit" radius, comfortably past the cone's own
+  // reach, that both the start point and the door sit at (or just
+  // outside of) -- so the ENTIRE journey, not just the approach into
+  // the safe wedge, can be built from arcs held at this radius plus a
+  // single radial dip into the wedge, never a free straight line that
+  // could cut back across the vertex at an unsafe angle.
+  var margin = 18;
+  var orbitRadius = Math.max(startDist, doorDist, geo.radius + margin);
+  var orbitAtStartAngle = pointAtAngleDist(geo.cx, geo.cy, startAngle, orbitRadius);
+  var orbitAtDoorAngle = pointAtAngleDist(geo.cx, geo.cy, doorAngle, orbitRadius);
+
+  // Every leg below is safe by construction: the four "orbit" legs
+  // never dip inside orbitRadius (already past the cone regardless of
+  // angle), the two straight hops (start->orbit, orbit->door) run
+  // along a single constant angle each so they can't drift into a
+  // different wedge, and the dip in/out of the safe wedge only ever
+  // happens at targetBisector -- a different angular slice than the
+  // watched wedge by definition.
+  if (progress < 0.05) {
+    return { x: lerp(startPt.x, orbitAtStartAngle.x, progress / 0.05), y: lerp(startPt.y, orbitAtStartAngle.y, progress / 0.05) };
   }
-  if (progress < 0.82) {
-    return { x: lerp(safePt.x, doorPt.x, (progress - 0.45) / 0.37), y: lerp(safePt.y, doorPt.y, (progress - 0.45) / 0.37) };
+  if (progress < 0.25) {
+    var arcT1 = (progress - 0.05) / 0.20;
+    var diff1 = ((targetBisector - startAngle + 540) % 360) - 180;
+    return pointAtAngleDist(geo.cx, geo.cy, startAngle + diff1 * arcT1, orbitRadius);
+  }
+  if (progress < 0.35) {
+    var inT = (progress - 0.25) / 0.10;
+    return pointAtAngleDist(geo.cx, geo.cy, targetBisector, lerp(orbitRadius, safeDist, inT));
+  }
+  if (progress < 0.45) {
+    var outT = (progress - 0.35) / 0.10;
+    return pointAtAngleDist(geo.cx, geo.cy, targetBisector, lerp(safeDist, orbitRadius, outT));
+  }
+  if (progress < 0.65) {
+    var arcT2 = (progress - 0.45) / 0.20;
+    var diff2 = ((doorAngle - targetBisector + 540) % 360) - 180;
+    return pointAtAngleDist(geo.cx, geo.cy, targetBisector + diff2 * arcT2, orbitRadius);
+  }
+  if (progress < 0.70) {
+    var doorT = (progress - 0.65) / 0.05;
+    return { x: lerp(orbitAtDoorAngle.x, doorPt.x, doorT), y: lerp(orbitAtDoorAngle.y, doorPt.y, doorT) };
   }
   return doorPt;
 }
