@@ -65,6 +65,7 @@ function _glSoundFile(url) {
 }
 
 function playSound(url, loop) {
+  if (url.indexOf('synth://') === 0) { _glPlaySynth(url.slice('synth://'.length)); return; }
   try {
     var audio = _glSoundCache[url];
     if (!audio) { audio = new Audio(_glSoundFile(url)); _glSoundCache[url] = audio; }
@@ -78,4 +79,42 @@ function playSound(url, loop) {
 function stopSound(url) {
   var audio = _glSoundCache[url];
   if (audio) { audio.pause(); audio.currentTime = 0; }
+}
+
+// ---- Synthesized cues ----
+// A couple of cues (the sneaking-phase near-miss "tension" blip) are
+// generated directly with the Web Audio API instead of a library
+// file (see SOUND_URLS.tension in laser-heist-game.js) -- it needs to
+// repeat rapidly and never wear out its welcome, which is easier to
+// get right by tuning an oscillator envelope than by hunting the
+// sound library for the closest available file.
+var _glAudioCtx = null;
+function _glGetAudioCtx() {
+  if (!_glAudioCtx) {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    _glAudioCtx = new Ctx();
+  }
+  return _glAudioCtx;
+}
+
+function _glPlaySynth(name) {
+  try {
+    var ctx = _glGetAudioCtx();
+    if (ctx.state === 'suspended') { ctx.resume(); }
+    if (name === 'tension_blip') {
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(640, now + 0.09);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    }
+  } catch (e) {}
 }

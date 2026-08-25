@@ -85,6 +85,18 @@ var COLOR_MAZE_PATH      = [40, 44, 52];
 var COLOR_MAZE_SHADOW    = [10, 11, 15];
 var COLOR_HEDGE_DARK     = [10, 20, 12];
 
+// A stationary camera's cone reads as cold electronic light -- cyan,
+// not the guards' warm gold -- so the two hazard types are
+// distinguishable at a glance even before you notice which one is
+// actually moving.
+var COLOR_CAMERA_BEAM    = [90, 210, 255];
+
+// The hiding-spot bushes -- a shade lighter/greener than the hedge
+// walls so they read as a distinct, inviting patch of foliage rather
+// than just more wall.
+var COLOR_BUSH           = [34, 70, 36];
+var COLOR_BUSH_HIGHLIGHT = [52, 100, 52];
+
 // Unlockable laser color skins, unlocked at score thresholds.
 var LASER_SKINS = [
   { name: "Ruby Red",     unlockScore: 0,    color: [255, 45, 60] },
@@ -316,7 +328,13 @@ var SOUND_URLS = {
   wrong:    "sound://category_alerts/cartoon_negative_bling.mp3",
   gameover: "sound://category_music/game_over_2.mp3",
   levelup:  "sound://category_achievements/melodic_win_1.mp3",
-  alarm:    "sound://category_alerts/vibrant_game_rigning_alert_1.mp3"
+  alarm:    "sound://category_alerts/vibrant_game_rigning_alert_1.mp3",
+  // A short synthesized blip rather than a library file (see
+  // laser-heist-shim.js's playSound) -- it needs to repeat every
+  // fraction of a second while a near-miss lasts without ever
+  // getting grating, which a generated tone can be tuned for far
+  // more precisely than picking through a library for the closest fit.
+  tension:  "synth://tension_blip"
 };
 
 function playSfx(name) {
@@ -1422,7 +1440,7 @@ var SNEAK_CHASE_DURATION = 1.4; // seconds -- a bit longer since everyone moves 
 var sneakChaseTimer = 0;
 var sneakFleeDirX = 0, sneakFleeDirY = 0;
 
-var PATROL_GUARD_COUNT = 4; // back up from 3 - with the maze less wide-open than it briefly was (see the 0.38 connector fraction below) there's room for one more real obstacle without crowding every route
+var PATROL_GUARD_COUNT = 5; // up from 4 -- now that stationary cameras (below) add a genuinely different kind of hazard, and bushes give the player a real tool to duck into, there's room to push the roaming threat further too
 var patrolGuards = [];
 
 // The current room's corridor graph (see buildRoomGraph), kept
@@ -1435,6 +1453,43 @@ var sneakRoomAdj = null;
 // A small proximity ring around every patrol guard -- step inside
 // it and they notice you regardless of which way they're looking.
 var GUARD_ALERT_RADIUS = 20;
+
+// ---- Stationary cameras ----
+// Fixed position, fixed facing, permanent cone -- unlike a guard's
+// cone (which sweeps clear again and again, so waiting it out always
+// eventually works), a camera's coverage never lets up. See
+// setupStationaryCameras/ensureCameraFreePath: placement always
+// leaves a genuine camera-free route to the door, so a camera is
+// never something you have to out-wait -- only something you have to
+// route around, or duck past through a bush (see SAFE_ZONE_COUNT).
+var STATIONARY_CAMERA_COUNT = 2;
+var CAMERA_CONE_RADIUS = 62;
+var CAMERA_CONE_WIDTH = 62;
+var stationaryCameras = [];
+
+// ---- Safe zones (hiding bushes) ----
+// A handful of room cells dressed as dark foliage patches where the
+// robber is immune to every hazard's cone -- see isRobberInSafeZone,
+// checked first thing in checkForSpotting. Purely a bonus tool for
+// the player, not something maze generation depends on for
+// solvability (see ensureCameraFreePath) -- a real shortcut through
+// danger you can choose to use, not a puzzle piece you're forced to.
+var SAFE_ZONE_COUNT = 3;
+var SAFE_ZONE_RADIUS = 16; // pixels -- roughly half a room cell, so you're covered once your sprite is actually standing in the bush, not the instant a step toward it begins
+var safeZoneCells = [];
+
+// ---- Near-miss tension feedback ----
+// A guard/camera cone that comes close without actually catching you
+// pulses the screen edge and blips a soft tone -- see
+// computeTensionActive/isNearMissWithHazard (padding the real catch
+// radius/angle by these margins) and updateSneakingPhase, which
+// drives the repeat timer. Makes a close call FEEL close, instead of
+// the only signal being either total safety or getting caught.
+var TENSION_RADIUS_MARGIN = 22;
+var TENSION_ANGLE_MARGIN = 16;
+var TENSION_BLIP_INTERVAL = 0.5; // seconds between blips while a near-miss lasts
+var tensionActive = false;
+var tensionBlipTimer = 0;
 
 // ---- Pac-Man-style maze ----
 // The room is divided into a grid using the classic "odd cells are
@@ -1738,8 +1793,10 @@ function angularDistance(a, b) {
   return d > 180 ? 360 - d : d;
 }
 
-// Picks a random border room cell for the exit door -- no camera to
-// route around anymore, so any border cell is as good as any other.
+// Picks a random border room cell for the exit door -- cameras and
+// guards are placed afterward, always steering clear of wherever this
+// lands (see setupStationaryCameras/setupPatrolGuards), so any border
+// cell is as good as any other here.
 function pickDoorCell() {
   var cells = collectBorderRoomCells();
   var pick = cells[randomInt(0, cells.length - 1)];
@@ -1751,11 +1808,11 @@ function pickDoorCell() {
 
 // Picks a border room cell for the start point, well away (angularly)
 // from the door, so the crossing is a real one and not a hop next
-// door -- and never the same cell as the door.
-// Spread relative to the room's center, not the camera -- this is
-// just about putting real distance between the start point and the
-// door, regardless of where the camera happens to be. avoidCell
-// keeps it off the camera's own cell too.
+// door -- and never the same cell as the door. Spread relative to
+// the room's center -- this is just about putting real distance
+// between the start point and the door. avoidCell lets a caller keep
+// it off some other specific cell too, though startSneakingPhase
+// doesn't currently use that (it passes null).
 function pickStartCell(doorCell, avoidCell) {
   var cells = collectBorderRoomCells();
   var i;
@@ -1920,6 +1977,79 @@ function ensureTwoDistinctPaths(edges, adj, startCell, doorCell, excludedIdx) {
   return { edges: edges, adj: adj };
 }
 
+// Every open corridor whose midpoint currently falls inside any
+// stationary camera's cone -- same {edgeIndex: true} shape the
+// two-path repair and guard placement already use, so a camera
+// blocks a corridor for pathfinding purposes exactly like a closed
+// wall would, without actually closing it (the corridor's still
+// walkable -- it's just watched, the whole time, by something that
+// never looks away).
+function computeCameraBlockedIdx(edges, cameras) {
+  var blocked = {};
+  for (var i = 0; i < edges.length; i++) {
+    var mid = edgeMidCell(edges[i]);
+    var p = superGridToPixel(mid.gr, mid.gc);
+    for (var c = 0; c < cameras.length; c++) {
+      var cam = cameras[c];
+      var dx = p.x - cam.x, dy = p.y - cam.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist >= cam.coneRadius) { continue; }
+      var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+      var half = cam.coneWidth / 2;
+      if (isAngleInWedge(ang, cam.facing - half, cam.facing + half) && hasLineOfSight(cam.x, cam.y, p.x, p.y)) {
+        blocked[i] = true;
+        break;
+      }
+    }
+  }
+  return blocked;
+}
+
+// Same repair idea as ensureTwoDistinctPaths (open more walls, never
+// close any, until a real route exists) but proving a camera-free
+// route specifically. Recomputes which edges the cameras cover FRESH
+// every attempt from the live geometry, rather than reusing a static
+// index map -- collectOpenEdges() rebuilds its list from scratch on
+// every repair, which can shift every edge's index, so a map
+// computed before a repair would silently point at the wrong
+// corridors after one happens. This is also what makes the cameras
+// "always avoidable outright": however they land, there's always a
+// genuinely independent way to the door that never enters either
+// one's cone.
+function ensureCameraFreePath(edges, adj, startCell, doorCell, cameras) {
+  var blockedIdx = computeCameraBlockedIdx(edges, cameras);
+  if (cameras.length > 0) {
+    var maxRepairs = 30;
+    for (var attempt = 0; attempt < maxRepairs; attempt++) {
+      if (hasTwoDistinctPaths(adj, startCell, doorCell, blockedIdx)) { break; }
+
+      // Pick uniformly among genuinely CLOSED connector cells, not any
+      // random (row,col) in the grid -- most cells are pillars or
+      // already-open rooms where flipping mazeWalls does nothing, so a
+      // plain random pick burns through the repair budget on no-ops
+      // (the same bug generateMaze's own extra-loop-opening code had,
+      // fixed there by filtering to real connectors first).
+      var closedConnectors = [];
+      for (var cr = 1; cr < mazeGridRows - 1; cr++) {
+        for (var cc = 1; cc < mazeGridCols - 1; cc++) {
+          if (!mazeWalls[cr][cc]) { continue; }
+          var crOdd = (cr % 2 === 1), ccOdd = (cc % 2 === 1);
+          if (crOdd !== ccOdd) { closedConnectors.push({ r: cr, c: cc }); }
+        }
+      }
+      if (closedConnectors.length === 0) { break; } // nothing left to open
+
+      var pick = closedConnectors[randomInt(0, closedConnectors.length - 1)];
+      mazeWalls[pick.r][pick.c] = false;
+      edges = collectOpenEdges();
+      adj = buildRoomGraph(edges);
+      blockedIdx = computeCameraBlockedIdx(edges, cameras);
+    }
+    rebuildMazeWallCache();
+  }
+  return { edges: edges, adj: adj, blockedIdx: blockedIdx };
+}
+
 // Fisher-Yates shuffle, used to try candidate corridors in random
 // order without repeats.
 function shuffledIndexes(count) {
@@ -1954,6 +2084,111 @@ function edgeMidCell(edge) {
 function gridCellDistance(a, b) {
   var dr = a.gr - b.gr, dc = a.gc - b.gc;
   return Math.sqrt(dr * dr + dc * dc);
+}
+
+// Places STATIONARY_CAMERA_COUNT fixed cameras, each sitting in the
+// middle of one open corridor (edgeMidCell -- the doorway between the
+// two rooms it connects) and facing into whichever of those two rooms
+// gets picked, so its cone washes over that room and the doorway
+// itself. Spread apart the same greedy-ish way as guards (skipping a
+// candidate too close to one already chosen, unless candidates are
+// running out) and kept off avoidCells and the spawn's own wide
+// berth, same rules as guard placement. Only sets stationaryCameras
+// and computes each cone's cached point list (see computeConePoints)
+// -- the actual solvability guarantee is ensureCameraFreePath, called
+// separately once cameras are placed.
+function setupStationaryCameras(edges, avoidCells) {
+  stationaryCameras = [];
+  if (edges.length === 0) { return; }
+
+  var candidateIdx = [];
+  for (var ci = 0; ci < edges.length; ci++) {
+    var edge = edges[ci];
+    if (isTooCloseToSpawn(edge.aR, edge.aC) || isTooCloseToSpawn(edge.bR, edge.bC)) { continue; }
+    var blockedByAvoid = false;
+    for (var ai = 0; ai < avoidCells.length; ai++) {
+      var ac = avoidCells[ai];
+      if (isCellNear(edge.aR, edge.aC, ac.gr, ac.gc) || isCellNear(edge.bR, edge.bC, ac.gr, ac.gc)) {
+        blockedByAvoid = true;
+        break;
+      }
+    }
+    if (!blockedByAvoid) { candidateIdx.push(ci); }
+  }
+  if (candidateIdx.length === 0) { return; }
+
+  var shuffled = shuffleArrayCopy(candidateIdx);
+  var chosenCells = [];
+  for (var si = 0; si < shuffled.length && stationaryCameras.length < STATIONARY_CAMERA_COUNT; si++) {
+    var e = edges[shuffled[si]];
+    var mid = edgeMidCell(e);
+    var tooClose = false;
+    for (var k = 0; k < chosenCells.length; k++) {
+      if (gridCellDistance(mid, chosenCells[k]) < 3) { tooClose = true; break; }
+    }
+    var remainingSlots = STATIONARY_CAMERA_COUNT - stationaryCameras.length;
+    var remainingCandidates = shuffled.length - si;
+    if (tooClose && remainingCandidates > remainingSlots) { continue; }
+
+    var pMid = superGridToPixel(mid.gr, mid.gc);
+    var pa = superGridToPixel(e.aR, e.aC);
+    var pb = superGridToPixel(e.bR, e.bC);
+    var target = randomInt(0, 1) === 0 ? pa : pb;
+    var facing = Math.atan2(target.y - pMid.y, target.x - pMid.x) * 180 / Math.PI;
+
+    var camera = {
+      x: pMid.x, y: pMid.y,
+      facing: facing,
+      coneWidth: CAMERA_CONE_WIDTH,
+      coneRadius: CAMERA_CONE_RADIUS
+    };
+    camera.conePoints = computeConePoints(camera.x, camera.y, camera.coneRadius, camera.facing - camera.coneWidth / 2, camera.facing + camera.coneWidth / 2, 10);
+    stationaryCameras.push(camera);
+    chosenCells.push(mid);
+  }
+}
+
+// Picks SAFE_ZONE_COUNT room cells to dress as hiding bushes, well
+// clear of avoidCells (start/door) -- see isRobberInSafeZone for the
+// actual immunity check. Random rather than targeted at any specific
+// hazard's coverage on purpose: solvability never depends on a bush
+// being in any particular spot (see ensureCameraFreePath), so this
+// can just scatter them for variety instead of needing to reason
+// about which corridors happen to need rescuing.
+function setupSafeZones(avoidCells) {
+  safeZoneCells = [];
+  var allRoomCells = [];
+  for (var r = 0; r < MAZE_ROWS; r++) {
+    for (var c = 0; c < MAZE_COLS; c++) {
+      allRoomCells.push({ gr: r * 2 + 1, gc: c * 2 + 1 });
+    }
+  }
+  var shuffled = shuffleArrayCopy(allRoomCells);
+  for (var i = 0; i < shuffled.length && safeZoneCells.length < SAFE_ZONE_COUNT; i++) {
+    var cell = shuffled[i];
+    var blocked = false;
+    for (var ai = 0; ai < avoidCells.length; ai++) {
+      if (isCellNear(cell.gr, cell.gc, avoidCells[ai].gr, avoidCells[ai].gc)) { blocked = true; break; }
+    }
+    if (blocked) { continue; }
+    var p = superGridToPixel(cell.gr, cell.gc);
+    safeZoneCells.push({ gr: cell.gr, gc: cell.gc, px: p.x, py: p.y });
+  }
+}
+
+// True once the robber's actual sprite position (not just the cell
+// it's stepping toward) is physically inside a bush -- see
+// SAFE_ZONE_RADIUS. Checked first thing in checkForSpotting and
+// again in computeTensionActive, so hiding suppresses both an actual
+// catch and the near-miss warning that would otherwise fire right
+// next to one.
+function isRobberInSafeZone() {
+  for (var i = 0; i < safeZoneCells.length; i++) {
+    var dx = robberX - safeZoneCells[i].px;
+    var dy = robberY - safeZoneCells[i].py;
+    if (Math.sqrt(dx * dx + dy * dy) < SAFE_ZONE_RADIUS) { return true; }
+  }
+  return false;
 }
 
 // Several roaming guards, Pac-Man-ghost style, each patrolling back
@@ -2205,6 +2440,8 @@ function isAngleInWedge(angleDeg, startDeg, endDeg) {
 // WHO caught them (position), not just whether -- the chase
 // animation needs somewhere for the guard to lurch from.
 function checkForSpotting() {
+  if (isRobberInSafeZone()) { return { caught: false, x: 0, y: 0 }; }
+
   for (var i = 0; i < patrolGuards.length; i++) {
     var g = patrolGuards[i];
     var gdx = robberX - g.x;
@@ -2227,7 +2464,56 @@ function checkForSpotting() {
       }
     }
   }
+
+  // Cameras have no personal-space alert (they're not "aware" the
+  // way a guard is) -- just the cone itself, same angle/radius/
+  // line-of-sight test as a guard's.
+  for (var c = 0; c < stationaryCameras.length; c++) {
+    var cam = stationaryCameras[c];
+    var cdx = robberX - cam.x;
+    var cdy = robberY - cam.y;
+    var cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+    if (cdist < cam.coneRadius) {
+      var cang = Math.atan2(cdy, cdx) * 180 / Math.PI;
+      var chalf = cam.coneWidth / 2;
+      if (isAngleInWedge(cang, cam.facing - chalf, cam.facing + chalf) &&
+          hasLineOfSight(cam.x, cam.y, robberX, robberY)) {
+        return { caught: true, x: cam.x, y: cam.y };
+      }
+    }
+  }
+
   return { caught: false, x: 0, y: 0 };
+}
+
+// True when the robber is close enough to a hazard's cone to feel
+// the danger -- padded past the real catch radius/angle by
+// TENSION_RADIUS_MARGIN/TENSION_ANGLE_MARGIN -- without the hazard
+// having actually caught them. Shared by both guards and cameras
+// since it only reads x/y/facing/coneRadius/coneWidth, which both
+// hazard objects have.
+function isNearMissWithHazard(hz) {
+  var dx = robberX - hz.x, dy = robberY - hz.y;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist >= hz.coneRadius + TENSION_RADIUS_MARGIN) { return false; }
+  var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+  var half = hz.coneWidth / 2 + TENSION_ANGLE_MARGIN;
+  return isAngleInWedge(ang, hz.facing - half, hz.facing + half) && hasLineOfSight(hz.x, hz.y, robberX, robberY);
+}
+
+// Whether the near-miss pulse/blip should be active right now --
+// false while hidden in a bush (see isRobberInSafeZone), since
+// there's nothing to warn about there.
+function computeTensionActive() {
+  if (isRobberInSafeZone()) { return false; }
+  var i;
+  for (i = 0; i < patrolGuards.length; i++) {
+    if (isNearMissWithHazard(patrolGuards[i])) { return true; }
+  }
+  for (i = 0; i < stationaryCameras.length; i++) {
+    if (isNearMissWithHazard(stationaryCameras[i])) { return true; }
+  }
+  return false;
 }
 
 // A filled, glowing wedge -- the guard/camera/laser's actual cast
@@ -2373,16 +2659,18 @@ function drawHeistScene(sceneY) {
 // Kicks off the Pac-Man-style sneak minigame right after a correct
 // answer. Generates a fresh maze, always guaranteed fully connected;
 // the door lands on a random border room cell; the start point lands
-// on a different, far-away border cell each time; and patrol guards
-// start roaming real corridors as extra obstacles. There's no
-// stationary camera anymore -- guards are the only hazard, and
-// setupPatrolGuards/updatePatrolGuards keep them away from the spawn
-// point specifically (see isTooCloseToSpawn).
+// on a different, far-away border cell each time; a few room cells
+// become hiding bushes (setupSafeZones); and both roaming patrol
+// guards and fixed security cameras go up as hazards, all kept away
+// from the spawn point specifically (see isTooCloseToSpawn).
 //
 // ensureTwoDistinctPaths opens a few more walls if needed so there's
 // always a genuinely second, independent route from the spawn point
 // to the door, never just one fragile corridor the whole crossing
-// depends on.
+// depends on. ensureCameraFreePath does the same thing again
+// afterward specifically for the cameras just placed, since (unlike
+// a guard) a camera's coverage never lets up -- see its own comment
+// for why that needs a completely separate check.
 function startSneakingPhase() {
   generateMaze();
   var allEdges = collectOpenEdges();
@@ -2410,6 +2698,11 @@ function startSneakingPhase() {
   sneakStartCellGr = startCell.gr;
   sneakStartCellGc = startCell.gc;
 
+  var avoidCells = [
+    { gr: startCell.gr, gc: startCell.gc },
+    { gr: doorCell.gr, gc: doorCell.gc }
+  ];
+
   // The maze's spanning tree already guarantees full connectivity, so
   // there's always at least one route -- this opens a few more walls
   // (never closes any) until a genuinely SECOND, independent route
@@ -2418,18 +2711,32 @@ function startSneakingPhase() {
   allEdges = repaired.edges;
   adj = repaired.adj;
 
+  setupSafeZones(avoidCells);
+
+  // Cameras go up onto the already-two-path maze, then get their own
+  // repair pass -- see ensureCameraFreePath -- so there's always a
+  // route that never enters either one's cone, on top of the
+  // baseline guarantee above.
+  setupStationaryCameras(allEdges, avoidCells);
+  var camRepaired = ensureCameraFreePath(allEdges, adj, startCell, doorCell, stationaryCameras);
+  allEdges = camRepaired.edges;
+  adj = camRepaired.adj;
+
   // Kept around so a guard's random wander (see updatePatrolGuards)
   // can look up real neighbors of whatever cell it just arrived at.
   sneakRoomAdj = adj;
 
-  setupPatrolGuards(allEdges, adj, [
-    { gr: startCell.gr, gc: startCell.gc },
-    { gr: doorCell.gr, gc: doorCell.gc }
-  ], startCell, doorCell, {});
+  // camRepaired.blockedIdx marks every corridor a camera already
+  // covers, computed fresh against this final edge list -- guards
+  // never get posted to double up on ground a camera's watching for
+  // free (see setupPatrolGuards's own comment).
+  setupPatrolGuards(allEdges, adj, avoidCells, startCell, doorCell, camRepaired.blockedIdx);
 
   sneakGraceTimer = SNEAK_GRACE_PERIOD;
   sneakChaseTimer = 0;
   sneakWasSpotted = false;
+  tensionActive = false;
+  tensionBlipTimer = 0;
   puzzlePhase = PUZZLE_PHASE_SNEAKING;
 }
 
@@ -2542,11 +2849,29 @@ function updateSneakingPhase(dt) {
 
   if (sneakGraceTimer > 0) {
     sneakGraceTimer -= dt;
+    tensionActive = false;
+    tensionBlipTimer = 0;
   } else {
     var spot = checkForSpotting();
     if (spot.caught) {
+      tensionActive = false;
       startChaseSequence(spot.x, spot.y);
       return;
+    }
+
+    // A near miss pulses the screen and blips a tone on a short
+    // repeat timer -- see TENSION_BLIP_INTERVAL -- rather than every
+    // frame, which would just be a constant tone the whole time a
+    // cone stays close.
+    tensionActive = computeTensionActive();
+    if (tensionActive) {
+      tensionBlipTimer -= dt;
+      if (tensionBlipTimer <= 0) {
+        playSfx("tension");
+        tensionBlipTimer = TENSION_BLIP_INTERVAL;
+      }
+    } else {
+      tensionBlipTimer = 0;
     }
   }
 
@@ -2680,14 +3005,24 @@ function drawSneakingScene() {
   rect(ROOM_LEFT, ROOM_TOP, ROOM_RIGHT - ROOM_LEFT, ROOM_BOTTOM - ROOM_TOP, 6);
 
   drawMazeWalls();
+  drawSafeZones();
   drawDoorMarker(sneakDoorX, sneakDoorY);
 
-  // The roaming patrol guards -- the only hazard in the room now --
-  // each radiating a small red alert aura -- get inside it and they
-  // notice you no matter which way they're looking, on top of
-  // whatever their wall-clipped cone already covers. A guard's
-  // position and facing change every frame, so its cone gets
-  // re-cast fresh each time (see castRayDistance).
+  // Cameras never move, so their cone's point list was already cast
+  // once at placement time (see setupStationaryCameras) -- this just
+  // redraws the cached points, no fresh ray-marching per frame.
+  for (var c = 0; c < stationaryCameras.length; c++) {
+    var cam = stationaryCameras[c];
+    drawConePoints(cam.x, cam.y, cam.conePoints, COLOR_CAMERA_BEAM);
+    drawCameraIcon(cam.x, cam.y, cam.facing);
+  }
+
+  // The roaming patrol guards -- each radiating a small red alert
+  // aura -- get inside it and they notice you no matter which way
+  // they're looking, on top of whatever their wall-clipped cone
+  // already covers. A guard's position and facing change every
+  // frame, so its cone gets re-cast fresh each time (see
+  // castRayDistance).
   for (var i = 0; i < patrolGuards.length; i++) {
     var g = patrolGuards[i];
     var half = g.coneWidth / 2;
@@ -2702,6 +3037,57 @@ function drawSneakingScene() {
   } else {
     drawGroundShadow(robberX, robberY, 8);
     drawSpySprite(robberX, robberY, false, SPRITE_MAZE_SCALE);
+    if (isRobberInSafeZone()) {
+      // A soft foliage-tinted veil over the sprite -- the visible
+      // tell that you're actually concealed right now, not just
+      // standing near a bush.
+      noStroke();
+      fill(COLOR_BUSH[0], COLOR_BUSH[1], COLOR_BUSH[2], 150);
+      ellipse(robberX, robberY, 26, 22);
+    }
+  }
+
+  drawTensionPulse();
+}
+
+// A small cluster of dark, overlapping foliage blobs -- a hiding
+// spot the robber can duck into (see isRobberInSafeZone) to become
+// immune to every hazard's cone. Drawn right on the path, after the
+// walls but before any hazard cone, so cones/sprites still render on
+// top of it -- this is a gameplay rule, not a rendering occluder.
+function drawBushIcon(x, y) {
+  noStroke();
+  fill(COLOR_BUSH[0], COLOR_BUSH[1], COLOR_BUSH[2]);
+  ellipse(x - 6, y + 2, 16, 12);
+  ellipse(x + 6, y + 2, 16, 12);
+  ellipse(x, y - 3, 18, 14);
+  fill(COLOR_BUSH_HIGHLIGHT[0], COLOR_BUSH_HIGHLIGHT[1], COLOR_BUSH_HIGHLIGHT[2]);
+  ellipse(x - 4, y - 2, 8, 6);
+  ellipse(x + 5, y, 7, 5);
+}
+
+function drawSafeZones() {
+  for (var i = 0; i < safeZoneCells.length; i++) {
+    drawBushIcon(safeZoneCells[i].px, safeZoneCells[i].py);
+  }
+}
+
+// A pulsing red glow around the room's border while a near-miss is
+// active (see computeTensionActive) -- confined to the maze rect
+// itself so it never bleeds into the HUD above it.
+function drawTensionPulse() {
+  if (!tensionActive) { return; }
+  var t = (typeof millis === "function") ? millis() : 0;
+  var pulse = 0.5 + 0.5 * Math.sin(t * 0.012);
+  var baseAlpha = 40 + pulse * 55;
+  var w = ROOM_RIGHT - ROOM_LEFT, h = ROOM_BOTTOM - ROOM_TOP;
+  var layers = 5;
+  noFill();
+  for (var i = 0; i < layers; i++) {
+    var inset = i * 3;
+    stroke(255, 30, 40, baseAlpha * (1 - i / layers));
+    strokeWeight(3);
+    rect(ROOM_LEFT + inset, ROOM_TOP + inset, w - inset * 2, h - inset * 2, 6);
   }
 }
 
