@@ -31,8 +31,8 @@
 // short chase plays out (the robber fleeing off screen with every
 // guard on their tail) and then the crew moves straight on to the
 // next puzzle -- one catch ends the run at this room.
-// Get the ANSWER wrong and the alarm meter climbs instead. Fill the
-// alarm meter or run out of lives and the heist is over.
+// Get the ANSWER wrong and it costs a life too -- run out and the
+// heist is over.
 //
 // COMPATIBILITY NOTES (read this if something doesn't run):
 //  - Assumes angleMode(DEGREES) is supported (standard in Game Lab's
@@ -72,8 +72,6 @@ var COLOR_TEXT_MAIN     = [230, 235, 250];
 var COLOR_TEXT_DIM      = [140, 150, 175];
 var COLOR_TEXT_WARN     = [255, 90, 90];
 var COLOR_TEXT_GOOD     = [90, 255, 150];
-var COLOR_ALARM_FULL    = [255, 40, 40];
-var COLOR_ALARM_EMPTY   = [40, 200, 90];
 var COLOR_BUTTON        = [30, 38, 66];
 var COLOR_BUTTON_HOVER  = [46, 58, 96];
 var COLOR_BUTTON_BORDER = [90, 110, 170];
@@ -218,8 +216,8 @@ var LEVELS = [
     introText: [
       "Guards, lasers, cameras, and duct crawls --",
       "every system, randomized. This is the final lock",
-      "on the vault. Stay sharp -- one mistake fills the",
-      "alarm fast."
+      "on the vault. Stay sharp -- lives are limited",
+      "and every mistake costs one."
     ]
   }
 ];
@@ -257,10 +255,6 @@ var maxLives = 3;
 
 var streak        = 0;
 var scoreMultiplier = 1;
-
-var alarmMeter    = 0;     // 0 to 100
-var alarmMaxValue = 100;
-var alarmDecayPerFrame = 0.05; // slowly cools down over time
 
 var timerValue = 0;   // seconds remaining on current puzzle
 var timerMax   = 15;
@@ -379,7 +373,6 @@ var SOUND_URLS = {
   wrong:    "sound://category_alerts/cartoon_negative_bling.mp3",
   gameover: "sound://category_music/game_over_2.mp3",
   levelup:  "sound://category_achievements/melodic_win_1.mp3",
-  alarm:    "sound://category_alerts/vibrant_game_rigning_alert_1.mp3",
   // A short synthesized blip rather than a library file (see
   // laser-heist-shim.js's playSound) -- it needs to repeat every
   // fraction of a second while a near-miss lasts without ever
@@ -1264,7 +1257,6 @@ function applyWrongAnswerPenalty() {
   streak = 0;
   scoreMultiplier = 1;
   lives -= 1;
-  alarmMeter = clampNum(alarmMeter + 30, 0, alarmMaxValue);
   triggerShake(6, 14);
   playSfx("wrong");
 }
@@ -1276,8 +1268,6 @@ function applyWrongAnswerPenalty() {
 function startLevel(levelIndex) {
   currentLevelIndex = levelIndex;
   puzzlesSolvedInLevel = 0;
-  alarmMeter = 0;
-  alarmAlertPlayed = false;
   gameState = STATE_LEVEL_INTRO;
 }
 
@@ -1341,7 +1331,6 @@ function handleCorrectAnswer() {
   var gained = addScoreForCorrectAnswer();
   streak += 1;
   if (streak > bestStreakEver) { bestStreakEver = streak; }
-  alarmMeter = clampNum(alarmMeter - 15, 0, alarmMaxValue);
   showFeedback("+" + gained + "  STREAK x" + scoreMultiplier, COLOR_TEXT_GOOD, 40);
   playSfx("correct");
   puzzlesSolvedInLevel += 1;
@@ -1382,7 +1371,7 @@ function handleWrongAnswer() {
   answerInput = "";
   hasFailedThisPuzzle = true;
 
-  if (lives <= 0 || alarmMeter >= alarmMaxValue) {
+  if (lives <= 0) {
     // The heist is over either way, so it's fine to reveal the
     // answer here -- there's no more retry to spoil.
     showFeedback("Correct answer: " + currentPuzzle.correctAnswer + "°", COLOR_TEXT_WARN, 50);
@@ -1454,8 +1443,6 @@ function resetFullGame() {
   lives = maxLives;
   streak = 0;
   scoreMultiplier = 1;
-  alarmMeter = 0;
-  alarmAlertPlayed = false;
   isChallengeMode = false;
   challengeDifficulty = 1;
   challengePuzzlesSolved = 0;
@@ -1478,8 +1465,8 @@ function startChallengeMode() {
 // ----------------------------------------------------------------
 function updatePuzzleTimer(dt) {
   // Once you've gotten this puzzle wrong at least once, the clock
-  // stops -- retrying costs you another life/alarm hit if you're
-  // wrong again, but never any more time.
+  // stops -- retrying costs you another life if you're wrong again,
+  // but never any more time.
   if (hasFailedThisPuzzle) { return; }
   timerValue -= dt;
   if (timerValue <= 0) {
@@ -1487,29 +1474,6 @@ function updatePuzzleTimer(dt) {
     handleWrongAnswer();
   }
 }
-
-function updateAlarmDecay() {
-  if (alarmMeter > 0) {
-    alarmMeter = clampNum(alarmMeter - alarmDecayPerFrame, 0, alarmMaxValue);
-  }
-  updateAlarmAlertSound();
-}
-
-// Plays the alert siren once when the alarm meter crosses into the
-// critical zone, not every single frame while it stays there.
-var alarmAlertPlayed = false;
-var ALARM_CRITICAL_RATIO = 0.75;
-
-function updateAlarmAlertSound() {
-  var ratio = alarmMeter / alarmMaxValue;
-  if (ratio >= ALARM_CRITICAL_RATIO && !alarmAlertPlayed) {
-    playSfx("alarm");
-    alarmAlertPlayed = true;
-  } else if (ratio < ALARM_CRITICAL_RATIO) {
-    alarmAlertPlayed = false;
-  }
-}
-
 
 // ----------------------------------------------------------------
 // SECTION 21B: HEIST SCENE (the sneak-past-the-guards minigame)
@@ -3775,13 +3739,10 @@ function drawHUD() {
   drawLivesIcons(CANVAS_W - 8, 13);
   drawStreakBadge(CANVAS_W - 8, 27);
 
-  // Once a wrong answer freezes the clock for the retry, the alarm
-  // meter (which keeps decaying every frame on its own timer,
-  // regardless of puzzlePhase) reads as a second bar still visibly
-  // moving right next to one that says it's frozen -- confusing, not
-  // informative. Replace both meters with just the message during
-  // that retry window instead of showing a frozen bar and a
-  // still-live one side by side.
+  // No per-puzzle timer while sneaking -- nothing to show in this row
+  // at all then, same as a frozen retry.
+  if (puzzlePhase === PUZZLE_PHASE_SNEAKING) { return; }
+
   if (hasFailedThisPuzzle && puzzlePhase === PUZZLE_PHASE_AIMING) {
     noStroke();
     fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
@@ -3791,18 +3752,9 @@ function drawHUD() {
     return;
   }
 
-  // No per-puzzle timer while sneaking -- ALARM gets the full width
-  // to itself instead of leaving a labeled-but-empty TIME half.
-  var showTimer = puzzlePhase !== PUZZLE_PHASE_SNEAKING;
-  var halfW = (CANVAS_W - 16 - 8) / 2; // two meters with an 8px gap between them
-  var alarmW = showTimer ? halfW : (CANVAS_W - 16);
-  var alarmCritical = (alarmMeter / alarmMaxValue) > 0.75;
-  drawLabeledMeter(alarmCritical ? "ALARM!" : "ALARM", 8, 45, alarmW, alarmMeter / alarmMaxValue, computeAlarmBarColor(), alarmCritical);
-  if (showTimer) {
-    var timerRatio = clampNum(timerValue / timerMax, 0, 1);
-    var timerColor = timerRatio < 0.25 ? COLOR_TEXT_WARN : COLOR_LASER_GREEN;
-    drawLabeledMeter("TIME", 8 + halfW + 8, 45, halfW, timerRatio, timerColor, false);
-  }
+  var timerRatio = clampNum(timerValue / timerMax, 0, 1);
+  var timerColor = timerRatio < 0.25 ? COLOR_TEXT_WARN : COLOR_LASER_GREEN;
+  drawLabeledMeter("TIME", 8, 45, CANVAS_W - 16, timerRatio, timerColor, false);
 }
 
 // A small caption immediately to the left of its own mini-bar,
@@ -3824,15 +3776,6 @@ function drawLabeledMeter(label, x, y, w, ratio, barColorArr, isCritical) {
   rect(barX, y - 3.5, barW, 7);
   fill(barColorArr[0], barColorArr[1], barColorArr[2]);
   rect(barX, y - 3.5, barW * clampNum(ratio, 0, 1), 7);
-}
-
-function computeAlarmBarColor() {
-  var ratio = alarmMeter / alarmMaxValue;
-  return [
-    COLOR_ALARM_EMPTY[0] + (COLOR_ALARM_FULL[0] - COLOR_ALARM_EMPTY[0]) * ratio,
-    COLOR_ALARM_EMPTY[1] + (COLOR_ALARM_FULL[1] - COLOR_ALARM_EMPTY[1]) * ratio,
-    COLOR_ALARM_EMPTY[2] + (COLOR_ALARM_FULL[2] - COLOR_ALARM_EMPTY[2]) * ratio
-  ];
 }
 
 function drawSkillNameBanner(puzzle, y) {
@@ -4261,9 +4204,9 @@ var INSTRUCTIONS_SECTIONS = [
     "guards to reach the exit. Get spotted, lose a life."
   ]},
   { header: "MISTAKES", lines: [
-    "A wrong answer costs a life and raises the alarm meter",
-    "-- fill it and the heist ends. You'll retry the SAME",
-    "puzzle, clock frozen, after your first miss on it."
+    "A wrong answer costs a life -- run out and the heist",
+    "ends. You'll retry the SAME puzzle, clock frozen,",
+    "after your first miss on it."
   ]},
   { header: "TIP", lines: [
     "Watch for the red aura around each guard -- get that",
@@ -4372,7 +4315,6 @@ function drawChallengeIntroScreen() {
 // SECTION 29: SCREEN -- PLAYING (core gameplay)
 // ----------------------------------------------------------------
 function drawPlayingScreen(dt) {
-  updateAlarmDecay();
   updateShake();
 
   // The countdown and the answer box only respond while you're
