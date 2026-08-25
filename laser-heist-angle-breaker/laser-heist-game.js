@@ -210,6 +210,22 @@ var currentLevelIndex   = 0;
 var puzzlesSolvedInLevel = 0;
 var currentPuzzle        = null;
 
+// Tracks which relationship types this play session has already seen
+// at least one puzzle of -- the very first one of each type gets a
+// slower timer and an on-screen rule reminder (see
+// FIRST_OF_TYPE_TIME_MULTIPLIER/PUZZLE_HINTS and
+// markPuzzleFirstOfTypeIfNew), never reset mid-session, so replaying
+// a sector or revisiting a type in Challenge/mixed play doesn't keep
+// re-triggering it once you've actually seen it once.
+var seenPuzzleTypes = {};
+var FIRST_OF_TYPE_TIME_MULTIPLIER = 1.5;
+var PUZZLE_HINTS = {
+  supplementary: "Supplementary angles add up to 180 degrees.",
+  complementary: "Complementary angles add up to 90 degrees.",
+  vertical: "Vertical angles (directly across from each other) are equal.",
+  parallel: "Matching-position angles are equal; angles on the same side between the lines add up to 180 degrees."
+};
+
 var currentScore   = 0;
 var sessionHighScore = 0;
 var bestStreakEver  = 0;
@@ -1228,12 +1244,32 @@ function beginPlayingCurrentLevel() {
   loadNextPuzzle();
 }
 
+// Flags puzzle.isFirstOfType the first time this session a given
+// relationship type comes up, so both the timer (see
+// applyTimerForCurrentPuzzle) and the on-screen hint (see
+// drawSkillNameBanner) know to slow down and explain the rule.
+function markPuzzleFirstOfTypeIfNew(puzzle) {
+  puzzle.isFirstOfType = !seenPuzzleTypes[puzzle.type];
+  seenPuzzleTypes[puzzle.type] = true;
+}
+
+// Sets timerMax/timerValue from a base per-puzzle time limit,
+// stretched by FIRST_OF_TYPE_TIME_MULTIPLIER when currentPuzzle is
+// the first of its relationship type this session -- extra room to
+// actually read the hint (see PUZZLE_HINTS) instead of racing the
+// clock on a rule you're seeing for the first time.
+function applyTimerForCurrentPuzzle(baseTimeLimit) {
+  var limit = currentPuzzle.isFirstOfType ? baseTimeLimit * FIRST_OF_TYPE_TIME_MULTIPLIER : baseTimeLimit;
+  timerMax = limit;
+  timerValue = limit;
+}
+
 function loadNextPuzzle() {
   var level = LEVELS[currentLevelIndex];
   currentPuzzle = generatePuzzleForLevel(level.type);
+  markPuzzleFirstOfTypeIfNew(currentPuzzle);
   answerInput = "";
-  timerMax = level.timeLimit;
-  timerValue = level.timeLimit;
+  applyTimerForCurrentPuzzle(level.timeLimit);
   hasFailedThisPuzzle = false;
   puzzlePhase = PUZZLE_PHASE_AIMING;
   phaseTimer = 0;
@@ -1350,8 +1386,7 @@ function resolvePendingAdvance() {
 
   loadNextPuzzle();
   if (isChallengeMode) {
-    timerMax = Math.max(6, 15 - challengeDifficulty);
-    timerValue = timerMax;
+    applyTimerForCurrentPuzzle(Math.max(6, 15 - challengeDifficulty));
   }
 }
 
@@ -1390,10 +1425,9 @@ function startChallengeMode() {
   isChallengeMode = true;
   challengeDifficulty = 1;
   challengePuzzlesSolved = 0;
-  timerMax = 15;
-  timerValue = 15;
   gameState = STATE_PLAYING;
   loadNextPuzzle();
+  applyTimerForCurrentPuzzle(Math.max(6, 15 - challengeDifficulty));
 }
 
 
@@ -2873,23 +2907,55 @@ function getPuzzleWedgeGeometry(puzzle) {
 // just correctly worked out), then curving over to the exit door.
 // Falls back to a fairly direct line toward the door for puzzle types
 // with no single-vertex wedge geometry (parallel).
-function computeEscapePoint(puzzle, progress) {
-  var doorX = SPY_END_X + 10, doorY = 160;
-  var geo = getPuzzleWedgeGeometry(puzzle);
-  if (!geo) {
-    return { x: SPY_START_X + (doorX - SPY_START_X) * progress, y: 160 };
-  }
-  var bisector = (geo.targetRange[0] + geo.targetRange[1]) / 2 * Math.PI / 180;
-  var outDist = geo.radius * 0.65;
-  var outX = geo.cx + Math.cos(bisector) * outDist;
-  var outY = geo.cy + Math.sin(bisector) * outDist;
+function lerp(a, b, t) { return a + (b - a) * t; }
 
-  if (progress < 0.5) {
-    var p1 = progress / 0.5;
-    return { x: geo.cx + (outX - geo.cx) * p1, y: geo.cy + (outY - geo.cy) * p1 };
+function quadBezierPoint(p0, c, p1, t) {
+  var mt = 1 - t;
+  return {
+    x: mt * mt * p0.x + 2 * mt * t * c.x + t * t * p1.x,
+    y: mt * mt * p0.y + 2 * mt * t * c.y + t * t * p1.y
+  };
+}
+
+// The three-leg journey a correct answer plays out: starting from
+// wherever the robber was already standing (not a teleport to the
+// vertex), a curved sneak past the camera into the safe wedge, a
+// straight walk through the now-open room to the door, then holding
+// at the door itself while drawHeistScene shrinks the sprite away --
+// the "disappearing into it" beat lives there, not in this function.
+function computeEscapePoint(puzzle, progress) {
+  var startPt = { x: SPY_START_X, y: 160 + 14 };
+  var doorPt = { x: SPY_END_X + 10, y: 160 };
+  var geo = getPuzzleWedgeGeometry(puzzle);
+
+  var safePt, controlPt;
+  if (geo) {
+    var targetBisector = (geo.targetRange[0] + geo.targetRange[1]) / 2 * Math.PI / 180;
+    var outDist = geo.radius * 0.65;
+    safePt = { x: geo.cx + Math.cos(targetBisector) * outDist, y: geo.cy + Math.sin(targetBisector) * outDist };
+
+    // Bow the curve away from the WATCHED wedge's own direction, so
+    // it visibly swings clear of the camera rather than cutting
+    // straight past it, whichever way that wedge happens to face.
+    var dangerBisector = (geo.knownRange[0] + geo.knownRange[1]) / 2 * Math.PI / 180;
+    var dangerDirX = Math.cos(dangerBisector), dangerDirY = Math.sin(dangerBisector);
+    var midX = (startPt.x + safePt.x) / 2, midY = (startPt.y + safePt.y) / 2;
+    var bowDist = 42;
+    controlPt = { x: midX - dangerDirX * bowDist, y: midY - dangerDirY * bowDist };
+  } else {
+    // Parallel-type puzzles have no single vertex/wedge -- just a
+    // gentle, fairly direct arc toward the door.
+    safePt = { x: (startPt.x + doorPt.x) / 2, y: 160 - 30 };
+    controlPt = { x: startPt.x + (safePt.x - startPt.x) * 0.5, y: startPt.y - 20 };
   }
-  var p2 = (progress - 0.5) / 0.5;
-  return { x: outX + (doorX - outX) * p2, y: outY + (doorY - outY) * p2 };
+
+  if (progress < 0.45) {
+    return quadBezierPoint(startPt, controlPt, safePt, progress / 0.45);
+  }
+  if (progress < 0.82) {
+    return { x: lerp(safePt.x, doorPt.x, (progress - 0.45) / 0.37), y: lerp(safePt.y, doorPt.y, (progress - 0.45) / 0.37) };
+  }
+  return doorPt;
 }
 
 // Mirror image of computeEscapePoint for the first beat of a wrong
@@ -2939,15 +3005,29 @@ function computeCaughtScenePositions(puzzle, totalProgress) {
   };
 }
 
-function drawHeistScene(sceneY, puzzle) {
-  drawExitDoor(SPY_END_X + 10, sceneY, false);
+// How much of the escape reaction is spent holding at the door while
+// the sprite shrinks away into it -- matches computeEscapePoint's own
+// final leg, which starts holding position at exactly this point too.
+var ESCAPE_DOOR_ENTER_START = 0.82;
 
+function drawHeistScene(sceneY, puzzle) {
   if (puzzlePhase === PUZZLE_PHASE_ESCAPING) {
     var escProgress = clampNum(1 - (escapeTimer / ESCAPE_DURATION), 0, 1);
+    var doorActive = escProgress > ESCAPE_DOOR_ENTER_START * 0.7;
+    drawExitDoor(SPY_END_X + 10, sceneY, doorActive);
+
     var escPt = computeEscapePoint(puzzle, escProgress);
-    drawSpySprite(escPt.x, escPt.y, false, SPY_REACT_SCALE);
+    // Shrinks smoothly to nothing over the final leg -- "disappearing
+    // into it" rather than just stopping in front of the door.
+    var enterT = clampNum((escProgress - ESCAPE_DOOR_ENTER_START) / (1 - ESCAPE_DOOR_ENTER_START), 0, 1);
+    var shrink = 1 - enterT;
+    if (shrink > 0.02) {
+      drawSpySprite(escPt.x, escPt.y, false, SPY_REACT_SCALE * shrink);
+    }
     return;
   }
+
+  drawExitDoor(SPY_END_X + 10, sceneY, false);
 
   if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
     var totalProgress = clampNum(1 - (phaseTimer / CAUGHT_DURATION), 0, 1);
@@ -3513,8 +3593,24 @@ function drawHUD() {
 
   drawLivesIcons(CANVAS_W - 8, 12);
   drawStreakBadge(CANVAS_W - 8, 30);
-  drawAlarmMeter(8, 40, CANVAS_W - 16, 5);
-  drawTimerBar(8, 50, CANVAS_W - 16, 6);
+
+  // Once a wrong answer freezes the clock for the retry, the alarm
+  // meter (which keeps decaying every frame on its own timer,
+  // regardless of puzzlePhase) reads as a second bar still visibly
+  // moving right next to one that says it's frozen -- confusing, not
+  // informative. Replace both bars with just the message during that
+  // retry window instead of showing a frozen bar and a still-live one
+  // side by side.
+  if (hasFailedThisPuzzle && puzzlePhase === PUZZLE_PHASE_AIMING) {
+    noStroke();
+    fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
+    textAlign(CENTER, CENTER);
+    textSize(10);
+    text("TIME FROZEN -- RETRY!", CANVAS_W / 2, 43);
+  } else {
+    drawAlarmMeter(8, 40, CANVAS_W - 16, 5);
+    drawTimerBar(8, 50, CANVAS_W - 16, 6);
+  }
 }
 
 function drawSkillNameBanner(puzzle, y) {
@@ -3524,6 +3620,21 @@ function drawSkillNameBanner(puzzle, y) {
   textAlign(CENTER, CENTER);
   textSize(11);
   text(puzzle.relationshipName, CANVAS_W / 2, y);
+}
+
+// The rule reminder shown only on the very first puzzle of a
+// relationship type this session (see markPuzzleFirstOfTypeIfNew) --
+// paired with the slower timer from applyTimerForCurrentPuzzle, so
+// there's actually time to read it before the clock matters.
+function drawFirstOfTypeHint(puzzle, y) {
+  if (!puzzle || !puzzle.isFirstOfType) { return; }
+  var hint = PUZZLE_HINTS[puzzle.type];
+  if (!hint) { return; }
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
+  textAlign(CENTER, CENTER);
+  textSize(11);
+  text(hint, CANVAS_W / 2, y, CANVAS_W - 40);
 }
 
 function drawLivesIcons(rightX, y) {
@@ -4097,6 +4208,7 @@ function drawPlayingScreen(dt) {
   } else if (!isEscaping) {
     if (currentPuzzle) {
       drawSkillNameBanner(currentPuzzle, 58);
+      drawFirstOfTypeHint(currentPuzzle, 283);
     }
     drawAnswerBox(CANVAS_W / 2, 325);
     if (isAiming) {
