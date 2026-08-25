@@ -45,18 +45,23 @@
   #game-canvas-slot canvas {
     display: block;
     box-shadow: 0 0 24px rgba(0,0,0,0.6);
-    max-width: 100vw;
-    max-height: 100vh;
-  }
-  @media (min-width: 900px) {
-    #game-canvas-slot canvas {
-      /* p5 sets an inline width/height style on the canvas by default,
-         which otherwise beats these rules regardless of specificity */
-      width: min(78vh, 700px) !important;
-      height: min(78vh, 700px) !important;
-      max-width: none;
-      max-height: none;
-    }
+    /* Always a perfect square, sized to whichever of viewport width or
+       height is tighter (with headroom for .play-area's own padding),
+       at every viewport size -- not just above some breakpoint. The
+       previous version only forced a square above 900px width; below
+       that it fell back to independent max-width/max-height, which let
+       the canvas render non-square (e.g. width capped by a narrow
+       window while height stayed tall) any time the browser window
+       itself was narrower than 900px, not just on phones -- visually
+       compressing every game-drawn element along whichever axis got
+       squeezed harder, even though nothing was actually outside the
+       canvas's own logical drawing bounds. p5 sets an inline
+       width/height style on the canvas by default, which otherwise
+       beats this rule regardless of specificity, hence !important. */
+    width: min(88vw, 82vh, 700px) !important;
+    height: min(88vw, 82vh, 700px) !important;
+    max-width: none;
+    max-height: none;
   }
   .standards-panel {
     background: var(--panel);
