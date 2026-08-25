@@ -959,7 +959,16 @@ function classifyParallelRelationship(posKnown, intKnown, posTarget, intTarget) 
 }
 
 function generateParallelPuzzle() {
-  var theta = randomInt(4, 176); // anything above 3 degrees, perpendicular included
+  // Kept away from very shallow angles (near 0/180) on purpose -- not
+  // a math restriction (every theta strictly between 0 and 180 is a
+  // valid transversal), but a diagram-space one: the two duct runs
+  // are a fixed 100px apart, so a shallow crossing needs a much wider
+  // diagonal duct to actually reach both of them, and a fixed-size
+  // canvas can't grow to fit that. 30-150 keeps the two joints
+  // comfortably within the drawn duct runs at every value (see
+  // drawParallelDiagram) while still varying the wedge sizes a lot,
+  // including the perpendicular case at theta=90.
+  var theta = randomInt(30, 150);
   var positions = ["topLeft", "topRight", "bottomRight", "bottomLeft"];
   var intersections = ["A", "B"];
 
@@ -993,46 +1002,53 @@ function generateParallelPuzzle() {
 }
 
 function drawParallelDiagram(puzzle, cx, cy) {
-  var halfWidth = 110;
+  var halfWidth = 130;
   var lineAY = cy - 50;
   var lineBY = cy + 50;
 
   // Two parallel ventilation duct runs, vents included.
   drawDuctRun(cx - halfWidth, cx + halfWidth, lineAY, 6);
   drawDuctRun(cx - halfWidth, cx + halfWidth, lineBY, 6);
-  var grateOffsets = [-75, 0, 75];
+  var grateOffsets = [-90, 0, 90];
   for (var g = 0; g < grateOffsets.length; g++) {
     drawVentGrateIcon(cx + grateOffsets[g], lineAY);
     drawVentGrateIcon(cx + grateOffsets[g], lineBY);
   }
 
-  // The transversal is the single diagonal connector duct linking
-  // the two runs -- the crew crawls through it to cross from one to
-  // the other -- long enough to reach both runs within the canvas.
+  // Where the connector duct actually meets each run, computed
+  // directly from the fixed 100px vertical gap and theta -- NOT by
+  // drawing some fixed-length segment centered on (cx,cy) and then
+  // asking where the infinite line through it crosses each run. That
+  // used to be how this worked, and for a shallow theta the segment
+  // itself never reached one or both runs at all, while the "meets
+  // here" point was still computed by extrapolating way past the
+  // segment's actual drawn ends -- the joint (and its "?"/angle
+  // label) would land nowhere near the visible duct. Computing the
+  // two ends directly instead means the drawn duct's ends and the
+  // joints are always the exact same points, by construction (theta
+  // is kept away from the very-shallow angles where "two runs 100px
+  // apart" would need an unreasonably wide duct regardless -- see
+  // generateParallelPuzzle).
   var thetaRad = puzzle.theta * Math.PI / 180;
   var dx = Math.cos(thetaRad);
-  var dy = Math.sin(thetaRad);
-  var transLen = 220;
-  var tx1 = cx - dx * transLen / 2;
-  var ty1 = cy - dy * transLen / 2;
-  var tx2 = cx + dx * transLen / 2;
-  var ty2 = cy + dy * transLen / 2;
-  drawDuctConnector(tx1, ty1, tx2, ty2);
+  var dy = Math.sin(thetaRad); // never near 0 given generateParallelPuzzle's theta range
+  var halfDrop = 50 / dy;
+  var intersectA = { x: cx - dx * halfDrop, y: lineAY };
+  var intersectB = { x: cx + dx * halfDrop, y: lineBY };
 
-  // Find where the connector duct meets each run.
-  var intersectA = lineIntersectHorizontal(tx1, ty1, tx2, ty2, lineAY);
-  var intersectB = lineIntersectHorizontal(tx1, ty1, tx2, ty2, lineBY);
+  // The drawn duct extends a little past each joint on both ends --
+  // reads as a real connector piece running INTO each vent run,
+  // rather than stopping dead exactly at the rivet.
+  var overhang = 26;
+  var p1 = { x: intersectA.x - dx * overhang, y: intersectA.y - dy * overhang };
+  var p2 = { x: intersectB.x + dx * overhang, y: intersectB.y + dy * overhang };
+  drawDuctConnector(p1.x, p1.y, p2.x, p2.y);
 
   drawParallelSlotLabels(puzzle, intersectA.x, intersectA.y, "A");
   drawParallelSlotLabels(puzzle, intersectB.x, intersectB.y, "B");
 
   drawDuctJoint(intersectA.x, intersectA.y);
   drawDuctJoint(intersectB.x, intersectB.y);
-}
-
-function lineIntersectHorizontal(x1, y1, x2, y2, yLevel) {
-  var t = (yLevel - y1) / (y2 - y1);
-  return { x: x1 + (x2 - x1) * t, y: yLevel };
 }
 
 // The horizontal duct (rays at 0 deg/right and 180 deg/left) and the
