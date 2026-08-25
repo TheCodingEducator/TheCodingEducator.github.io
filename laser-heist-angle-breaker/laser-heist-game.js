@@ -4489,7 +4489,7 @@ function drawVictoryScreen() {
     gameState = STATE_TITLE;
   }
 
-  drawVaultDoor(CANVAS_W / 2, 350, 30, 1);
+  drawVaultDoor(CANVAS_W / 2, 340, 30, 1);
 }
 
 
