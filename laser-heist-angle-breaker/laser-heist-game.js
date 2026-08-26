@@ -314,10 +314,11 @@ var shakeMagnitude = 0;
 // WATCHED wedge instead, gets spotted, and a guard chases them off
 // screen. This is what makes solving the angle feel like it actually
 // did something, instead of just scoring points in the background.
-var PUZZLE_PHASE_AIMING    = "AIMING";
-var PUZZLE_PHASE_ESCAPING  = "ESCAPING";
-var PUZZLE_PHASE_SNEAKING  = "SNEAKING";
-var PUZZLE_PHASE_CAUGHT    = "CAUGHT";
+var PUZZLE_PHASE_AIMING      = "AIMING";
+var PUZZLE_PHASE_ESCAPING    = "ESCAPING";
+var PUZZLE_PHASE_MAZE_REVEAL = "MAZE_REVEAL";
+var PUZZLE_PHASE_SNEAKING    = "SNEAKING";
+var PUZZLE_PHASE_CAUGHT      = "CAUGHT";
 var puzzlePhase   = PUZZLE_PHASE_AIMING;
 var phaseTimer    = 0;
 var CAUGHT_DURATION = 100; // frames the "spotted, then chased off" reaction takes -- long enough for both beats (see computeCaughtScenePositions)
@@ -1582,6 +1583,18 @@ var spawnPulseTimer = 0;
 // to the next room.
 var LINKED_CAMERA_CALLOUT_DURATION = 1.6; // seconds
 var linkedCameraCalloutTimer = 0;
+
+// PUZZLE_PHASE_MAZE_REVEAL: a brief cinematic between ESCAPING and
+// real SNEAKING control -- instead of the maze just replacing the
+// puzzle diagram outright, the view opens zoomed in tight on the
+// linked camera (see setupStationaryCameras) and eases out to the
+// normal full-room framing, so the very first thing the player sees
+// in the new room is the exact hazard their answer just set, not
+// something they stumble onto three corridors later. See
+// startSneakingPhase/updateMazeRevealPhase/drawMazeRevealScene.
+var MAZE_REVEAL_DURATION = 1.1; // seconds
+var mazeRevealTimer = 0;
+var MAZE_REVEAL_ZOOM_START = 2.4; // how tight the opening framing is; 1.0 is the normal, unzoomed view
 
 // Getting spotted costs a life and plays a short chase animation --
 // the caught robber flees off screen with every guard on their
@@ -3285,14 +3298,32 @@ function startSneakingPhase() {
   // free (see setupPatrolGuards's own comment).
   setupPatrolGuards(allEdges, adj, avoidCells, startCell, doorCell, camRepaired.blockedIdx);
 
-  sneakGraceTimer = SNEAK_GRACE_PERIOD;
+  // sneakGraceTimer deliberately isn't started here -- it starts once
+  // MAZE_REVEAL hands off to real SNEAKING (see updateMazeRevealPhase),
+  // so the cinematic below doesn't eat into the player's actual
+  // invulnerability window.
   sneakChaseTimer = 0;
   sneakWasSpotted = false;
   tensionActive = false;
   tensionBlipTimer = 0;
   spawnPulseTimer = SPAWN_PULSE_DURATION;
   linkedCameraCalloutTimer = linkedPickB !== null ? LINKED_CAMERA_CALLOUT_DURATION : 0;
-  puzzlePhase = PUZZLE_PHASE_SNEAKING;
+
+  // Skip straight to normal SNEAKING if there's no linked camera to
+  // reveal (currentPuzzle missing a numeric answer -- shouldn't
+  // happen in real play, but degrades gracefully instead of running
+  // a zoom-out cinematic toward nothing).
+  var linkedCam = null;
+  for (var lc = 0; lc < stationaryCameras.length; lc++) {
+    if (stationaryCameras[lc].isPlayerLinked) { linkedCam = stationaryCameras[lc]; break; }
+  }
+  if (linkedCam) {
+    mazeRevealTimer = MAZE_REVEAL_DURATION;
+    puzzlePhase = PUZZLE_PHASE_MAZE_REVEAL;
+  } else {
+    sneakGraceTimer = SNEAK_GRACE_PERIOD;
+    puzzlePhase = PUZZLE_PHASE_SNEAKING;
+  }
 }
 
 // Attempts to begin exactly one grid step from whatever direction is
@@ -3344,6 +3375,23 @@ function tryStartRobberStep() {
   robberStepToY = stepTarget.y;
   robberStepT = 0;
   return true;
+}
+
+// Ticks the brief zoom-out cinematic (see PUZZLE_PHASE_MAZE_REVEAL's
+// own comment) -- no player input, no guard/spotting logic runs yet,
+// just the same fade timers the real sneaking phase also ticks
+// (spawn pulse, the linked-camera callout) so both finish naturally
+// whether or not their duration outlasts the cinematic itself. Hands
+// off to real SNEAKING, starting the invulnerability grace period
+// fresh, once the reveal finishes.
+function updateMazeRevealPhase(dt) {
+  if (spawnPulseTimer > 0) { spawnPulseTimer -= dt; }
+  if (linkedCameraCalloutTimer > 0) { linkedCameraCalloutTimer -= dt; }
+  mazeRevealTimer -= dt;
+  if (mazeRevealTimer <= 0) {
+    sneakGraceTimer = SNEAK_GRACE_PERIOD;
+    puzzlePhase = PUZZLE_PHASE_SNEAKING;
+  }
 }
 
 function updateSneakingPhase(dt) {
@@ -3660,6 +3708,41 @@ function drawMazeWalls() {
   }
 }
 
+// The MAZE_REVEAL cinematic: the same drawSneakingScene() the real
+// sneaking phase uses, just wrapped in a zoom/pan transform that
+// starts tight on the linked camera and eases out to the normal,
+// unzoomed framing. Built as a "zoom to point" transform anchored at
+// the room's own center (ROOM_LEFT/RIGHT/TOP/BOTTOM's midpoint) --
+// at progress 1 the focus point equals that anchor and the zoom
+// equals 1, which makes the whole transform a mathematical identity
+// (net translate of zero, scale of one), so the final frame here is
+// pixel-identical to how the room renders once real SNEAKING takes
+// over -- no visible seam at the handoff.
+function drawMazeRevealScene() {
+  var progress = 1 - clampNum(mazeRevealTimer / MAZE_REVEAL_DURATION, 0, 1);
+  var eased = progress * progress * (3 - 2 * progress);
+
+  var linkedCam = null;
+  for (var i = 0; i < stationaryCameras.length; i++) {
+    if (stationaryCameras[i].isPlayerLinked) { linkedCam = stationaryCameras[i]; break; }
+  }
+  var anchorX = (ROOM_LEFT + ROOM_RIGHT) / 2;
+  var anchorY = (ROOM_TOP + ROOM_BOTTOM) / 2;
+  var startFocusX = linkedCam ? linkedCam.x : anchorX;
+  var startFocusY = linkedCam ? linkedCam.y : anchorY;
+
+  var zoom = MAZE_REVEAL_ZOOM_START + (1 - MAZE_REVEAL_ZOOM_START) * eased;
+  var focusX = startFocusX + (anchorX - startFocusX) * eased;
+  var focusY = startFocusY + (anchorY - startFocusY) * eased;
+
+  push();
+  translate(anchorX, anchorY);
+  scale(zoom);
+  translate(-focusX, -focusY);
+  drawSneakingScene();
+  pop();
+}
+
 function drawSneakingScene() {
   // The floor and outer border both follow currentRoomStyle too --
   // a gravel path inside a hedge perimeter, or a tiled floor inside a
@@ -3870,9 +3953,10 @@ function drawHUD() {
   drawLivesIcons(CANVAS_W - 8, 13);
   drawStreakBadge(CANVAS_W - 8, 27);
 
-  // No per-puzzle timer while sneaking -- nothing to show in this row
-  // at all then, same as a frozen retry.
-  if (puzzlePhase === PUZZLE_PHASE_SNEAKING) { return; }
+  // No per-puzzle timer while sneaking (or during the reveal
+  // cinematic leading into it) -- nothing to show in this row at all
+  // then, same as a frozen retry.
+  if (puzzlePhase === PUZZLE_PHASE_SNEAKING || puzzlePhase === PUZZLE_PHASE_MAZE_REVEAL) { return; }
 
   if (hasFailedThisPuzzle && puzzlePhase === PUZZLE_PHASE_AIMING) {
     noStroke();
@@ -4472,12 +4556,15 @@ function drawPlayingScreen(dt) {
   var isAiming = (puzzlePhase === PUZZLE_PHASE_AIMING);
   var isSneaking = (puzzlePhase === PUZZLE_PHASE_SNEAKING);
   var isEscaping = (puzzlePhase === PUZZLE_PHASE_ESCAPING);
+  var isMazeReveal = (puzzlePhase === PUZZLE_PHASE_MAZE_REVEAL);
   if (isAiming) {
     updatePuzzleTimer(dt);
   } else if (isSneaking) {
     updateSneakingPhase(dt);
   } else if (isEscaping) {
     updateEscapingPhase(dt);
+  } else if (isMazeReveal) {
+    updateMazeRevealPhase(dt);
   } else if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
     updateCaughtPhase();
   }
@@ -4496,6 +4583,8 @@ function drawPlayingScreen(dt) {
     // underneath it; the plain dark background() clear underneath
     // the thin remaining margin reads fine on its own.
     drawSneakingScene();
+  } else if (isMazeReveal) {
+    drawMazeRevealScene();
   } else {
     drawBackgroundGrid();
     if (currentPuzzle) {
@@ -4506,7 +4595,7 @@ function drawPlayingScreen(dt) {
   pop();
 
   drawHUD();
-  if (isSneaking) {
+  if (isSneaking || isMazeReveal) {
     drawSneakPrompt(CANVAS_W / 2, 325);
   } else if (!isEscaping) {
     if (currentPuzzle) {
