@@ -1574,6 +1574,15 @@ var sneakGraceTimer = 0;
 var SPAWN_PULSE_DURATION = 1.0; // seconds
 var spawnPulseTimer = 0;
 
+// One camera per maze has its watched direction picked by the angle
+// the player just solved for, instead of at random (see
+// setupStationaryCameras) -- a brief gold callout points it out when
+// the maze first appears, same lifespan pattern as spawnPulseTimer,
+// so a correct answer visibly buys real information, not just a pass
+// to the next room.
+var LINKED_CAMERA_CALLOUT_DURATION = 1.6; // seconds
+var linkedCameraCalloutTimer = 0;
+
 // Getting spotted costs a life and plays a short chase animation --
 // the caught robber flees off screen with every guard on their
 // tail -- and one catch ends the run at this room; the crew moves
@@ -2279,7 +2288,15 @@ function gridCellDistance(a, b) {
 // and computes each cone's cached point list (see computeConePoints)
 // -- the actual solvability guarantee is ensureCameraFreePath, called
 // separately once cameras are placed.
-function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells) {
+//
+// linkedPickB (true/false/null): the FIRST camera placed reuses the
+// angle the player just solved for instead of a coin flip, so a
+// correct answer determines something real about the very next
+// hazard rather than just unlocking it -- see startSneakingPhase for
+// how this gets derived from currentPuzzle.correctAnswer. null means
+// no puzzle to link to (leaves every camera fully random, the
+// original behavior).
+function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, linkedPickB) {
   stationaryCameras = [];
   if (edges.length === 0) { return; }
 
@@ -2327,7 +2344,8 @@ function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells) {
     var pMid = superGridToPixel(mid.gr, mid.gc);
     var pa = superGridToPixel(e.aR, e.aC);
     var pb = superGridToPixel(e.bR, e.bC);
-    var target = randomInt(0, 1) === 0 ? pa : pb;
+    var isLinkedCamera = (stationaryCameras.length === 0 && linkedPickB !== null && linkedPickB !== undefined);
+    var target = isLinkedCamera ? (linkedPickB ? pb : pa) : (randomInt(0, 1) === 0 ? pa : pb);
     var facing = Math.atan2(target.y - pMid.y, target.x - pMid.x) * 180 / Math.PI;
 
     var camera = {
@@ -2335,6 +2353,7 @@ function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells) {
       facing: facing,
       coneWidth: CAMERA_CONE_WIDTH,
       coneRadius: CAMERA_CONE_RADIUS,
+      isPlayerLinked: isLinkedCamera,
       // Its own random point in the on/off cycle (see isCameraOn) so
       // cameras don't all blink in lockstep -- each one independently
       // goes dark for CAMERA_CYCLE_OFF_SECONDS out of every
@@ -3214,11 +3233,23 @@ function startSneakingPhase() {
 
   setupSafeZones(avoidCells);
 
+  // The just-solved puzzle's own answer decides which way the first
+  // camera below watches, instead of a coin flip -- split at the
+  // midpoint of whatever range that puzzle type's correctAnswer can
+  // actually land in, so the split is never degenerate (complementary
+  // answers only ever run 5-85, so 90 would never trip for that type
+  // at all; every other type's range straddles 90 already).
+  var linkedPickB = null;
+  if (currentPuzzle && typeof currentPuzzle.correctAnswer === "number") {
+    var linkedThreshold = currentPuzzle.type === "complementary" ? 45 : 90;
+    linkedPickB = currentPuzzle.correctAnswer >= linkedThreshold;
+  }
+
   // Cameras go up onto the already-two-path maze, then get their own
   // repair pass -- see ensureCameraFreePath -- so there's always a
   // route that never enters either one's cone, on top of the
   // baseline guarantee above.
-  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells);
+  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedPickB);
   var camRepaired = ensureCameraFreePath(allEdges, adj, startCell, doorCell, stationaryCameras);
   allEdges = camRepaired.edges;
   adj = camRepaired.adj;
@@ -3239,6 +3270,7 @@ function startSneakingPhase() {
   tensionActive = false;
   tensionBlipTimer = 0;
   spawnPulseTimer = SPAWN_PULSE_DURATION;
+  linkedCameraCalloutTimer = linkedPickB !== null ? LINKED_CAMERA_CALLOUT_DURATION : 0;
   puzzlePhase = PUZZLE_PHASE_SNEAKING;
 }
 
@@ -3295,6 +3327,7 @@ function tryStartRobberStep() {
 
 function updateSneakingPhase(dt) {
   if (spawnPulseTimer > 0) { spawnPulseTimer -= dt; }
+  if (linkedCameraCalloutTimer > 0) { linkedCameraCalloutTimer -= dt; }
 
   // A chase animation in progress overrides everything else -- no
   // player input, no exit check, until it plays out.
@@ -3518,6 +3551,34 @@ function drawSpawnPulse(x, y) {
   ellipse(x, y, 7, 7);
 }
 
+// A thin gold ring around the one camera the puzzle answer actually
+// controls (see setupStationaryCameras) -- drawn every frame for as
+// long as that camera exists, unlike the callout below, so the
+// player can still pick it out of the other cameras well after the
+// callout text has faded.
+function drawLinkedCameraRing(x, y) {
+  noFill();
+  stroke(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2], 170);
+  strokeWeight(2);
+  ellipse(x, y, 26, 26);
+}
+
+// "YOUR ANGLE" fades in over the linked camera the moment its maze
+// appears -- see linkedCameraCalloutTimer/LINKED_CAMERA_CALLOUT_DURATION,
+// set in startSneakingPhase and ticked down in updateSneakingPhase.
+// Clamped away from the top HUD edge since a camera can land in the
+// maze's very first room row.
+function drawLinkedCameraCallout(x, y) {
+  var progress = 1 - (linkedCameraCalloutTimer / LINKED_CAMERA_CALLOUT_DURATION);
+  var alpha = 255 * Math.min(1, (1 - progress) * 2.5);
+  var labelY = Math.max(y - 20, ROOM_TOP + 12);
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2], alpha);
+  textAlign(CENTER, CENTER);
+  textSize(9);
+  text("YOUR ANGLE", x, labelY);
+}
+
 // The maze walls themselves -- solid blocks the robber and the
 // patrol guards both have to go around, Pac-Man style. A flat dark
 // hedge-green fill, one rect per cell -- there can be well over a
@@ -3586,8 +3647,16 @@ function drawSneakingScene() {
   for (var c = 0; c < stationaryCameras.length; c++) {
     var cam = stationaryCameras[c];
     var camOn = isCameraOn(cam);
-    if (camOn) { drawConePoints(cam.x, cam.y, cam.conePoints, COLOR_CAMERA_BEAM); }
+    // The camera whose watched direction came from the puzzle answer
+    // (see setupStationaryCameras) gets the same gold used for that
+    // puzzle's own known-angle label, instead of the generic cyan --
+    // a lasting visual thread from "the number I solved for" to "the
+    // hazard it actually controls," not just a one-time callout.
+    var camConeColor = cam.isPlayerLinked ? COLOR_LASER_GOLD : COLOR_CAMERA_BEAM;
+    if (camOn) { drawConePoints(cam.x, cam.y, cam.conePoints, camConeColor); }
+    if (cam.isPlayerLinked) { drawLinkedCameraRing(cam.x, cam.y); }
     drawCameraIcon(cam.x, cam.y, cam.facing, camOn);
+    if (cam.isPlayerLinked && linkedCameraCalloutTimer > 0) { drawLinkedCameraCallout(cam.x, cam.y); }
   }
 
   // The roaming patrol guards -- each radiating a small red alert
