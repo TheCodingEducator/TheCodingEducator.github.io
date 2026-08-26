@@ -791,7 +791,18 @@ function drawSupplementaryDiagram(puzzle, cx, cy) {
   if (puzzle.knownValue === 90) { drawRightAngleMarker(cx, cy, knownRange[0], 15); }
   if (puzzle.correctAnswer === 90) { drawRightAngleMarker(cx, cy, targetRange[0], 15); }
 
-  drawCameraIcon(cx, cy, knownBisector);
+  // Two cameras share this vertex now, matching the sneak maze's own
+  // paired camera (see setupStationaryCameras's combinedPair) -- the
+  // known one lit and reading its degree, the target one shown dark/
+  // unread (isOn=false) since its exact width is what the player is
+  // solving for. Nudged apart from the vertex along their own
+  // bisectors, same reasoning as the maze's iconX/iconY offset, so
+  // the two housings don't render stacked on the same pixel.
+  var targetBisector = (targetRange[0] + targetRange[1]) / 2;
+  var knownIconPos = pointOnCircle(cx, cy, 14, knownBisector);
+  var targetIconPos = pointOnCircle(cx, cy, 14, targetBisector);
+  drawCameraIcon(knownIconPos.x, knownIconPos.y, knownBisector);
+  drawCameraIcon(targetIconPos.x, targetIconPos.y, targetBisector, false);
 
   var firstBisector = base + firstWedgeSize / 2;
   var secondBisector = splitAngle + (180 - firstWedgeSize) / 2;
@@ -855,10 +866,18 @@ function drawComplementaryDiagram(puzzle, cx, cy) {
   var p3 = pointOnCircle(cx, cy, radius, splitAngle);
   drawLaserLine(cx, cy, p3.x, p3.y, COLOR_LASER_BLUE, 3);
 
-  // The camera sits at the vertex, facing the middle of its own
-  // watched cone -- every diagram's vertex is a camera now, for
-  // consistency with the sneak minigame.
-  drawCameraIcon(cx, cy, knownBisector);
+  // Two cameras share this vertex now, matching the sneak maze's own
+  // paired camera (see setupStationaryCameras's combinedPair) -- the
+  // known one lit and reading its degree, the target one shown dark/
+  // unread (isOn=false) since its exact width is what the player is
+  // solving for. Nudged apart from the vertex along their own
+  // bisectors, same reasoning as the maze's iconX/iconY offset, so
+  // the two housings don't render stacked on the same pixel.
+  var targetBisector = (targetRange[0] + targetRange[1]) / 2;
+  var knownIconPos = pointOnCircle(cx, cy, 14, knownBisector);
+  var targetIconPos = pointOnCircle(cx, cy, 14, targetBisector);
+  drawCameraIcon(knownIconPos.x, knownIconPos.y, knownBisector);
+  drawCameraIcon(targetIconPos.x, targetIconPos.y, targetBisector, false);
 
   var firstBisector = base + firstWedgeSize / 2;
   var secondBisector = splitAngle + (90 - firstWedgeSize) / 2;
@@ -2335,32 +2354,34 @@ function gridCellDistance(a, b) {
 // -- the actual solvability guarantee is ensureCameraFreePath, called
 // separately once cameras are placed.
 //
-// linkedSpecs: an array of 0-2 {angle, pickB, role} objects -- the
-// FIRST N cameras placed (N = linkedSpecs.length) each reuse one real
-// number from the puzzle instead of random values, so the maze
-// reflects not just the answer but the whole relationship it came
-// from. See startSneakingPhase, which builds this from
-// currentPuzzle.knownValue (role "known") and .correctAnswer (role
-// "answer") -- since those two numbers are related BY CONSTRUCTION
-// (they sum to 90/180, or are equal, depending on the puzzle type),
-// giving each its own real camera means the two resulting cones
-// carry that exact same relationship into the room: complementary
-// puzzles produce two cones that literally sum to 90 degrees,
-// supplementary/linear-pair/co-interior ones to 180, and vertical's
-// equal-angle case produces two cones of the SAME width. Each spec's
-// pickB steers which of the two corridor-adjacent rooms that camera
-// watches (a camera can only ever face one of two directions here,
-// so the exact degree can't become the exact facing); angle becomes
-// the cone's actual angular width, UNCLAMPED -- the literal same
-// number reused as the same kind of measurement, not a discretized
-// or rescaled stand-in for it, so the on-screen cones really do add
-// up to the number the diagram taught, not an approximation of it.
-// An empty/missing array means no puzzle to link to (every camera
-// fully random, the original behavior).
-function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, linkedSpecs) {
+// linkedSpecs: an array of 0-2 {angle, pickB, role} objects -- built
+// by startSneakingPhase from currentPuzzle.knownValue (role "known")
+// and .correctAnswer (role "answer"), the two numbers every puzzle
+// relates BY CONSTRUCTION (they sum to 90/180, or are equal,
+// depending on the puzzle). angle becomes each camera's cone width,
+// UNCLAMPED -- the literal same number reused as the same kind of
+// measurement, not a discretized or rescaled stand-in for it.
+//
+// combinedPair (boolean): when true (see startSneakingPhase's
+// isSumRelationship -- only meaningful when the two specs' angles
+// genuinely sum to 90 or 180, never for the "equal angles" case),
+// both linked cameras are placed at the SAME shared vertex with their
+// cones edge-to-edge, so together they sweep one continuous 90/180-
+// degree arc split into two colored halves -- a direct visual echo of
+// the puzzle diagram's own adjacent known/target wedges, not just two
+// numerically-related cameras scattered independently around the
+// room. When false, each spec gets its own independently-chosen cell
+// (the older behavior), which is what the "equal angles" case still
+// uses, since there's no meaningful combined arc to draw when the two
+// values don't sum to anything in particular.
+//
+// An empty/missing specs array means no puzzle to link to (every
+// camera fully random, the original behavior).
+function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, linkedSpecs, combinedPair) {
   stationaryCameras = [];
   if (edges.length === 0) { return; }
   var specs = linkedSpecs || [];
+  var pairPlaced = false;
 
   var candidateIdx = [];
   for (var ci = 0; ci < edges.length; ci++) {
@@ -2399,34 +2420,73 @@ function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, lin
     for (var k = 0; k < chosenCells.length; k++) {
       if (gridCellDistance(mid, chosenCells[k]) < 3) { tooClose = true; break; }
     }
+    var isPairSlot = (!pairPlaced && combinedPair && specs.length === 2);
+    var slotsThisCell = isPairSlot ? 2 : 1;
     var remainingSlots = STATIONARY_CAMERA_COUNT - stationaryCameras.length;
     var remainingCandidates = shuffled.length - si;
     if (tooClose && remainingCandidates > remainingSlots) { continue; }
+    if (slotsThisCell > remainingSlots) { continue; } // the pair needs 2 slots at once; skip if only 1 is left
 
     var pMid = superGridToPixel(mid.gr, mid.gc);
     var pa = superGridToPixel(e.aR, e.aC);
     var pb = superGridToPixel(e.bR, e.bC);
-    var spec = stationaryCameras.length < specs.length ? specs[stationaryCameras.length] : null;
-    var target = spec ? (spec.pickB ? pb : pa) : (randomInt(0, 1) === 0 ? pa : pb);
-    var facing = Math.atan2(target.y - pMid.y, target.x - pMid.x) * 180 / Math.PI;
 
-    var linkedWidth = spec ? clampNum(spec.angle, LINKED_CAMERA_CONE_WIDTH_MIN, LINKED_CAMERA_CONE_WIDTH_MAX) : CAMERA_CONE_WIDTH;
+    if (isPairSlot) {
+      pairPlaced = true;
+      var pairTarget = specs[0].pickB ? pb : pa;
+      var centerFacing = Math.atan2(pairTarget.y - pMid.y, pairTarget.x - pMid.x) * 180 / Math.PI;
+      var totalSpan = specs[0].angle + specs[1].angle; // exactly 90 or 180 -- combinedPair is only ever passed true when this holds
+      var armBase = centerFacing - totalSpan / 2;
+      var wedgeStart = armBase;
+      for (var pi = 0; pi < 2; pi++) {
+        var pairSpec = specs[pi];
+        var wedgeWidth = clampNum(pairSpec.angle, LINKED_CAMERA_CONE_WIDTH_MIN, LINKED_CAMERA_CONE_WIDTH_MAX);
+        var pairFacing = wedgeStart + wedgeWidth / 2;
+        var iconRad = pairFacing * Math.PI / 180;
+        var pairCam = {
+          x: pMid.x, y: pMid.y,
+          facing: pairFacing,
+          coneWidth: wedgeWidth,
+          coneRadius: CAMERA_CONE_RADIUS,
+          isPlayerLinked: true,
+          linkRole: pairSpec.role,
+          // The cone math above stays anchored at the true shared
+          // vertex (x/y) so the two cones genuinely share an edge --
+          // only the drawn icon/ring/label nudge apart from each
+          // other along their own facing, purely so two camera
+          // housings don't render stacked on the exact same pixel.
+          iconX: pMid.x + Math.cos(iconRad) * 9,
+          iconY: pMid.y + Math.sin(iconRad) * 9,
+          cycleOffset: random(0, CAMERA_CYCLE_TOTAL_SECONDS)
+        };
+        pairCam.conePoints = computeConePoints(pairCam.x, pairCam.y, pairCam.coneRadius, pairCam.facing - pairCam.coneWidth / 2, pairCam.facing + pairCam.coneWidth / 2, 10);
+        stationaryCameras.push(pairCam);
+        wedgeStart += wedgeWidth;
+      }
+    } else {
+      var spec = (!combinedPair && stationaryCameras.length < specs.length) ? specs[stationaryCameras.length] : null;
+      var target = spec ? (spec.pickB ? pb : pa) : (randomInt(0, 1) === 0 ? pa : pb);
+      var facing = Math.atan2(target.y - pMid.y, target.x - pMid.x) * 180 / Math.PI;
+      var linkedWidth = spec ? clampNum(spec.angle, LINKED_CAMERA_CONE_WIDTH_MIN, LINKED_CAMERA_CONE_WIDTH_MAX) : CAMERA_CONE_WIDTH;
 
-    var camera = {
-      x: pMid.x, y: pMid.y,
-      facing: facing,
-      coneWidth: linkedWidth,
-      coneRadius: CAMERA_CONE_RADIUS,
-      isPlayerLinked: !!spec,
-      linkRole: spec ? spec.role : null,
-      // Its own random point in the on/off cycle (see isCameraOn) so
-      // cameras don't all blink in lockstep -- each one independently
-      // goes dark for CAMERA_CYCLE_OFF_SECONDS out of every
-      // CAMERA_CYCLE_TOTAL_SECONDS.
-      cycleOffset: random(0, CAMERA_CYCLE_TOTAL_SECONDS)
-    };
-    camera.conePoints = computeConePoints(camera.x, camera.y, camera.coneRadius, camera.facing - camera.coneWidth / 2, camera.facing + camera.coneWidth / 2, 10);
-    stationaryCameras.push(camera);
+      var camera = {
+        x: pMid.x, y: pMid.y,
+        facing: facing,
+        coneWidth: linkedWidth,
+        coneRadius: CAMERA_CONE_RADIUS,
+        isPlayerLinked: !!spec,
+        linkRole: spec ? spec.role : null,
+        iconX: pMid.x,
+        iconY: pMid.y,
+        // Its own random point in the on/off cycle (see isCameraOn) so
+        // cameras don't all blink in lockstep -- each one independently
+        // goes dark for CAMERA_CYCLE_OFF_SECONDS out of every
+        // CAMERA_CYCLE_TOTAL_SECONDS.
+        cycleOffset: random(0, CAMERA_CYCLE_TOTAL_SECONDS)
+      };
+      camera.conePoints = computeConePoints(camera.x, camera.y, camera.coneRadius, camera.facing - camera.coneWidth / 2, camera.facing + camera.coneWidth / 2, 10);
+      stationaryCameras.push(camera);
+    }
     chosenCells.push(mid);
   }
 }
@@ -3315,17 +3375,32 @@ function startSneakingPhase() {
   // values never reach 90 at all, so a flat 90 threshold would be
   // degenerate for that type specifically.
   var linkedSpecs = [];
+  var isSumRelationship = false;
   if (currentPuzzle && typeof currentPuzzle.correctAnswer === "number" && typeof currentPuzzle.knownValue === "number") {
     var linkedThreshold = currentPuzzle.type === "complementary" ? 45 : 90;
     linkedSpecs.push({ angle: currentPuzzle.knownValue, pickB: currentPuzzle.knownValue >= linkedThreshold, role: "known" });
     linkedSpecs.push({ angle: currentPuzzle.correctAnswer, pickB: currentPuzzle.correctAnswer >= linkedThreshold, role: "answer" });
+
+    // Every puzzle relates its two numbers one of exactly two ways --
+    // genuinely equal (vertical's true vertical-angle case, some
+    // parallel-lines pairings) or summing to exactly 90/180
+    // (complementary always, supplementary always, vertical's linear-
+    // pair case, parallel's supplementary-classified pairings) --
+    // checked directly against the arithmetic rather than the puzzle
+    // TYPE string, so this is correct for every generator without
+    // needing to special-case vertical/parallel's own dual nature.
+    // Only the sum case has a meaningful combined arc to draw (see
+    // setupStationaryCameras's combinedPair) -- "equal" cameras stay
+    // independently placed, same width, no forced adjacency.
+    var linkedSum = currentPuzzle.knownValue + currentPuzzle.correctAnswer;
+    isSumRelationship = (linkedSum === 90 || linkedSum === 180);
   }
 
   // Cameras go up onto the already-two-path maze, then get their own
   // repair pass -- see ensureCameraFreePath -- so there's always a
   // route that never enters either one's cone, on top of the
   // baseline guarantee above.
-  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedSpecs);
+  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedSpecs, isSumRelationship);
   var camRepaired = ensureCameraFreePath(allEdges, adj, startCell, doorCell, stationaryCameras);
   allEdges = camRepaired.edges;
   adj = camRepaired.adj;
@@ -3840,13 +3915,19 @@ function drawSneakingScene() {
     // not just a one-time callout.
     var roleInfo = cam.linkRole ? LINKED_CAMERA_ROLE_INFO[cam.linkRole] : null;
     var camConeColor = roleInfo ? roleInfo.color : COLOR_CAMERA_BEAM;
+    // Cone math stays anchored at the camera's TRUE vertex (cam.x/y)
+    // -- for a combined pair (see setupStationaryCameras) that's the
+    // shared point both cones actually emanate from, so their arcs
+    // genuinely meet edge-to-edge. Only the drawn icon/ring/label use
+    // the nudged-apart iconX/iconY, so two camera housings sharing a
+    // vertex don't render stacked on the same pixel.
     if (camOn) { drawConePoints(cam.x, cam.y, cam.conePoints, camConeColor); }
     if (roleInfo) {
-      drawLinkedCameraRing(cam.x, cam.y, roleInfo.color);
-      drawLinkedCameraDegreeLabel(cam.x, cam.y, cam.facing, cam.coneWidth, roleInfo.color);
+      drawLinkedCameraRing(cam.iconX, cam.iconY, roleInfo.color);
+      drawLinkedCameraDegreeLabel(cam.iconX, cam.iconY, cam.facing, cam.coneWidth, roleInfo.color);
     }
-    drawCameraIcon(cam.x, cam.y, cam.facing, camOn);
-    if (roleInfo && linkedCameraCalloutTimer > 0) { drawLinkedCameraCallout(cam.x, cam.y, cam.coneWidth, roleInfo.color, roleInfo.label); }
+    drawCameraIcon(cam.iconX, cam.iconY, cam.facing, camOn);
+    if (roleInfo && linkedCameraCalloutTimer > 0) { drawLinkedCameraCallout(cam.iconX, cam.iconY, cam.coneWidth, roleInfo.color, roleInfo.label); }
   }
 
   // The roaming patrol guards -- each radiating a small red alert
