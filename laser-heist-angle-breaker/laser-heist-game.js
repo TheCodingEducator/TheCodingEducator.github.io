@@ -1622,6 +1622,14 @@ var STATIONARY_CAMERA_COUNT = 3; // up from 2 -- with only 2, the spawn/door saf
 var CAMERA_CONE_RADIUS = 62;
 var CAMERA_CONE_WIDTH = 62;
 
+// The linked camera's cone width IS the puzzle answer in degrees --
+// not a proxy or a threshold pick, the literal same number the
+// student just calculated, clamped so it's never a sliver too thin
+// to see or wide enough to make the room unfair. See
+// setupStationaryCameras's linkedAngle handling.
+var LINKED_CAMERA_CONE_WIDTH_MIN = 24;
+var LINKED_CAMERA_CONE_WIDTH_MAX = 100;
+
 // Each camera is on for CAMERA_CYCLE_ON_SECONDS, then dark for
 // CAMERA_CYCLE_OFF_SECONDS, on a repeating loop -- driven by
 // millis(), so it needs no per-frame update of its own, just a random
@@ -2289,14 +2297,20 @@ function gridCellDistance(a, b) {
 // -- the actual solvability guarantee is ensureCameraFreePath, called
 // separately once cameras are placed.
 //
-// linkedPickB (true/false/null): the FIRST camera placed reuses the
-// angle the player just solved for instead of a coin flip, so a
-// correct answer determines something real about the very next
-// hazard rather than just unlocking it -- see startSneakingPhase for
-// how this gets derived from currentPuzzle.correctAnswer. null means
-// no puzzle to link to (leaves every camera fully random, the
-// original behavior).
-function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, linkedPickB) {
+// linkedPickB (true/false/null) + linkedAngle (number/null): the
+// FIRST camera placed reuses the angle the player just solved for
+// instead of random values, so a correct answer determines something
+// real about the very next hazard rather than just unlocking it --
+// see startSneakingPhase for how these get derived from
+// currentPuzzle.correctAnswer. linkedPickB steers which of the two
+// corridor-adjacent rooms it watches (a camera can only ever face
+// one of two directions here, so the exact degree can't become the
+// exact facing); linkedAngle becomes the cone's actual angular width
+// (clamped to LINKED_CAMERA_CONE_WIDTH_MIN/MAX) -- THIS is the literal
+// same number reused as the same kind of measurement, not a discretized
+// stand-in for it. null means no puzzle to link to (every camera fully
+// random, the original behavior).
+function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, linkedPickB, linkedAngle) {
   stationaryCameras = [];
   if (edges.length === 0) { return; }
 
@@ -2348,10 +2362,14 @@ function setupStationaryCameras(edges, adj, startCell, doorCell, avoidCells, lin
     var target = isLinkedCamera ? (linkedPickB ? pb : pa) : (randomInt(0, 1) === 0 ? pa : pb);
     var facing = Math.atan2(target.y - pMid.y, target.x - pMid.x) * 180 / Math.PI;
 
+    var linkedWidth = isLinkedCamera && typeof linkedAngle === "number"
+      ? clampNum(linkedAngle, LINKED_CAMERA_CONE_WIDTH_MIN, LINKED_CAMERA_CONE_WIDTH_MAX)
+      : CAMERA_CONE_WIDTH;
+
     var camera = {
       x: pMid.x, y: pMid.y,
       facing: facing,
-      coneWidth: CAMERA_CONE_WIDTH,
+      coneWidth: linkedWidth,
       coneRadius: CAMERA_CONE_RADIUS,
       isPlayerLinked: isLinkedCamera,
       // Its own random point in the on/off cycle (see isCameraOn) so
@@ -3233,23 +3251,26 @@ function startSneakingPhase() {
 
   setupSafeZones(avoidCells);
 
-  // The just-solved puzzle's own answer decides which way the first
-  // camera below watches, instead of a coin flip -- split at the
+  // The just-solved puzzle's own answer drives the first camera below
+  // two ways: which of its two directions it watches (split at the
   // midpoint of whatever range that puzzle type's correctAnswer can
-  // actually land in, so the split is never degenerate (complementary
-  // answers only ever run 5-85, so 90 would never trip for that type
-  // at all; every other type's range straddles 90 already).
-  var linkedPickB = null;
+  // actually land in, so the split is never degenerate -- complementary
+  // answers only ever run 5-85, so a flat 90 threshold would never
+  // trip for that type at all), and its cone's actual angular WIDTH
+  // (see setupStationaryCameras) -- the literal same degree value,
+  // not a proxy for it.
+  var linkedAngle = null, linkedPickB = null;
   if (currentPuzzle && typeof currentPuzzle.correctAnswer === "number") {
+    linkedAngle = currentPuzzle.correctAnswer;
     var linkedThreshold = currentPuzzle.type === "complementary" ? 45 : 90;
-    linkedPickB = currentPuzzle.correctAnswer >= linkedThreshold;
+    linkedPickB = linkedAngle >= linkedThreshold;
   }
 
   // Cameras go up onto the already-two-path maze, then get their own
   // repair pass -- see ensureCameraFreePath -- so there's always a
   // route that never enters either one's cone, on top of the
   // baseline guarantee above.
-  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedPickB);
+  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedPickB, linkedAngle);
   var camRepaired = ensureCameraFreePath(allEdges, adj, startCell, doorCell, stationaryCameras);
   allEdges = camRepaired.edges;
   adj = camRepaired.adj;
@@ -3563,12 +3584,33 @@ function drawLinkedCameraRing(x, y) {
   ellipse(x, y, 26, 26);
 }
 
-// "YOUR ANGLE" fades in over the linked camera the moment its maze
-// appears -- see linkedCameraCalloutTimer/LINKED_CAMERA_CALLOUT_DURATION,
+// A small persistent "62°" readout next to the linked camera's ring,
+// shown for as long as the camera exists (not just the brief callout
+// below) -- coneWidthDeg is always the camera's ACTUAL rendered cone
+// width (already clamped, see setupStationaryCameras), never the raw
+// unclamped puzzle answer, so the number on screen always matches the
+// cone actually drawn. Offset opposite the camera's own facing so it
+// never sits on top of the illuminated cone, then clamped to stay
+// clear of the room bounds for cameras placed near an edge.
+function drawLinkedCameraDegreeLabel(x, y, facingDeg, coneWidthDeg) {
+  var awayRad = (facingDeg + 180) * Math.PI / 180;
+  var lx = clampNum(x + Math.cos(awayRad) * 18, ROOM_LEFT + 16, ROOM_RIGHT - 16);
+  var ly = clampNum(y + Math.sin(awayRad) * 18, ROOM_TOP + 10, ROOM_BOTTOM - 10);
+  noStroke();
+  fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2], 220);
+  textAlign(CENTER, CENTER);
+  textSize(9);
+  text(Math.round(coneWidthDeg) + "°", lx, ly);
+}
+
+// "YOUR ANGLE: 62°" fades in over the linked camera the moment its
+// maze appears -- see linkedCameraCalloutTimer/LINKED_CAMERA_CALLOUT_DURATION,
 // set in startSneakingPhase and ticked down in updateSneakingPhase.
 // Clamped away from the top HUD edge since a camera can land in the
-// maze's very first room row.
-function drawLinkedCameraCallout(x, y) {
+// maze's very first room row. The persistent degree label above stays
+// on screen after this fades, so the connection isn't lost once the
+// callout's gone.
+function drawLinkedCameraCallout(x, y, coneWidthDeg) {
   var progress = 1 - (linkedCameraCalloutTimer / LINKED_CAMERA_CALLOUT_DURATION);
   var alpha = 255 * Math.min(1, (1 - progress) * 2.5);
   var labelY = Math.max(y - 20, ROOM_TOP + 12);
@@ -3576,7 +3618,7 @@ function drawLinkedCameraCallout(x, y) {
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2], alpha);
   textAlign(CENTER, CENTER);
   textSize(9);
-  text("YOUR ANGLE", x, labelY);
+  text("YOUR ANGLE: " + Math.round(coneWidthDeg) + "°", x, labelY);
 }
 
 // The maze walls themselves -- solid blocks the robber and the
@@ -3654,9 +3696,12 @@ function drawSneakingScene() {
     // hazard it actually controls," not just a one-time callout.
     var camConeColor = cam.isPlayerLinked ? COLOR_LASER_GOLD : COLOR_CAMERA_BEAM;
     if (camOn) { drawConePoints(cam.x, cam.y, cam.conePoints, camConeColor); }
-    if (cam.isPlayerLinked) { drawLinkedCameraRing(cam.x, cam.y); }
+    if (cam.isPlayerLinked) {
+      drawLinkedCameraRing(cam.x, cam.y);
+      drawLinkedCameraDegreeLabel(cam.x, cam.y, cam.facing, cam.coneWidth);
+    }
     drawCameraIcon(cam.x, cam.y, cam.facing, camOn);
-    if (cam.isPlayerLinked && linkedCameraCalloutTimer > 0) { drawLinkedCameraCallout(cam.x, cam.y); }
+    if (cam.isPlayerLinked && linkedCameraCalloutTimer > 0) { drawLinkedCameraCallout(cam.x, cam.y, cam.coneWidth); }
   }
 
   // The roaming patrol guards -- each radiating a small red alert
