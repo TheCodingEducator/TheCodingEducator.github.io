@@ -231,8 +231,22 @@ function easeOutQuad(x) { return 1 - (1 - x) * (1 - x); }
 function easeInQuad(x) { return x * x; }
 function smooth01(x) { return x * x * (3 - 2 * x); }
 
+// Club angle is measured from the shoulder pivot, 0deg = pointing right,
+// increasing = clockwise (p5's y-down screen space). The ball sits at
+// pivot-relative offset (16, 40) - see drawSwingingGolfer - which is
+// atan2(40,16) =~ 68deg from the pivot, so "impact" is set to that
+// same angle on purpose: the club must actually be pointing at the
+// ball's true position the instant it "strikes" it, not just somewhere
+// plausible-looking, or the contact reads as fake. Backswing lifts the
+// club up and back (counterclockwise, decreasing angle - swinging away
+// from the target on the right is legitimately the opposite rotational
+// sense). From backswing-top all the way through impact and into the
+// follow-through is then ONE continuous clockwise (increasing-angle)
+// sweep with no reversal right at the ball, so the strike visibly
+// pushes the ball toward the target on the right, never the left.
+var GOLF_BALL_ANGLE = 68;
 function golfClubAngle(t) {
-  var ready = -20, back = -150, impact = 12, follow = 135;
+  var ready = GOLF_BALL_ANGLE + 2, back = -130, impact = GOLF_BALL_ANGLE, follow = GOLF_BALL_ANGLE + 34;
   if (t < 0.20) return lerp(ready, back, easeOutQuad(t / 0.20));
   if (t < GOLF_IMPACT_T) return lerp(back, impact, easeInQuad((t - 0.20) / (GOLF_IMPACT_T - 0.20)));
   if (t < GOLF_FOLLOW_T) return lerp(impact, follow, easeOutQuad((t - GOLF_IMPACT_T) / (GOLF_FOLLOW_T - GOLF_IMPACT_T)));
@@ -285,14 +299,20 @@ function drawSwingingGolfer(gx, groundY, targetX, targetY) {
   var ang = golfClubAngle(t);
   var pivotY = groundY - 44;
 
+  // Legs both hinge from one hip point (not two disconnected anchors
+  // splayed out at torso height) with a slight knee bend, narrowing
+  // toward the hip and spreading only at the feet for a natural stance.
+  var hipX = gx, hipY = groundY - 30;
   stroke('#20241f');
   strokeWeight(6);
   strokeCap(ROUND);
-  line(gx - 7, groundY, gx - 13, groundY - 28);
-  line(gx + 6, groundY, gx + 9, groundY - 28);
+  line(hipX, hipY, hipX - 6, hipY + 15);
+  line(hipX - 6, hipY + 15, hipX - 9, groundY);
+  line(hipX, hipY, hipX + 5, hipY + 15);
+  line(hipX + 5, hipY + 15, hipX + 8, groundY);
   stroke('#3b6fd6');
   strokeWeight(10);
-  line(gx - 2, groundY - 28, gx, pivotY);
+  line(hipX, hipY, gx, pivotY);
   noStroke();
   fill('#f0c8a0');
   ellipse(gx + 2, pivotY - 13, 17, 17);
