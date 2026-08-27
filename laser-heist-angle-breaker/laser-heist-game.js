@@ -315,7 +315,6 @@ var shakeMagnitude = 0;
 // screen. This is what makes solving the angle feel like it actually
 // did something, instead of just scoring points in the background.
 var PUZZLE_PHASE_AIMING      = "AIMING";
-var PUZZLE_PHASE_ESCAPING    = "ESCAPING";
 var PUZZLE_PHASE_MAZE_REVEAL = "MAZE_REVEAL";
 var PUZZLE_PHASE_SNEAKING    = "SNEAKING";
 var PUZZLE_PHASE_CAUGHT      = "CAUGHT";
@@ -323,9 +322,6 @@ var puzzlePhase   = PUZZLE_PHASE_AIMING;
 var phaseTimer    = 0;
 var CAUGHT_DURATION = 100; // frames the "spotted, then chased off" reaction takes -- long enough for both beats (see computeCaughtScenePositions)
 var pendingAdvance  = null; // what to do once the current phase finishes
-
-var ESCAPE_DURATION = 1.1; // seconds -- the "slips through the safe wedge and out the door" reaction after a correct answer
-var escapeTimer = 0;
 
 // Which screen edge the chasing guard rushes in from on a wrong
 // answer -- rolled once per CAUGHT phase (see handleWrongAnswer) so
@@ -769,11 +765,15 @@ function drawSupplementaryDiagram(puzzle, cx, cy) {
   var targetRange = puzzle.knownIsFirst ? [splitAngle, base + 180] : [base, splitAngle];
   var knownBisector = (knownRange[0] + knownRange[1]) / 2;
 
-  // The camera sits at the vertex, its lens facing straight down
-  // the middle of its own watched cone -- the illuminated wedge is
-  // its actual sightline, not just a labeled arc. Every diagram's
-  // vertex is a camera now, for consistency with the sneak minigame.
+  // Both cameras' fields of view are shaded now, not just the known
+  // one -- the target camera's exact coverage was always drawn at its
+  // true boundary (targetRange IS the correct answer's real position,
+  // see the comment on getPuzzleWedgeGeometry), so filling it in gold
+  // instead of leaving it a bare outline reveals no new information,
+  // it just reads as "a real camera view" the same way the known
+  // wedge already does, matching the maze's own paired-camera look.
   drawIlluminatedCone(cx, cy, radius, knownRange[0], knownRange[1], COLOR_LASER_RED);
+  drawIlluminatedCone(cx, cy, radius, targetRange[0], targetRange[1], COLOR_LASER_GOLD);
   drawAngleArc(cx, cy, radius, targetRange[0], targetRange[1], COLOR_TEXT_GOOD);
 
   var p1 = pointOnCircle(cx, cy, radius, base + 180);
@@ -783,26 +783,29 @@ function drawSupplementaryDiagram(puzzle, cx, cy) {
   var p3 = pointOnCircle(cx, cy, radius, splitAngle);
   drawLaserLine(cx, cy, p3.x, p3.y, COLOR_LASER_RED, 3);
 
-  // Supplementary angles can land on an exact right angle (a 90/90
-  // split) unlike complementary or vertical, where the generated
-  // values can never actually hit 90 -- when they do, mark it with
-  // the same little square used to prove a right angle everywhere
-  // else, not just a number that happens to say "90".
-  if (puzzle.knownValue === 90) { drawRightAngleMarker(cx, cy, knownRange[0], 15); }
-  if (puzzle.correctAnswer === 90) { drawRightAngleMarker(cx, cy, targetRange[0], 15); }
-
   // Two cameras share this vertex now, matching the sneak maze's own
   // paired camera (see setupStationaryCameras's combinedPair) -- the
   // known one lit and reading its degree, the target one shown dark/
   // unread (isOn=false) since its exact width is what the player is
   // solving for. Nudged apart from the vertex along their own
-  // bisectors, same reasoning as the maze's iconX/iconY offset, so
-  // the two housings don't render stacked on the same pixel.
+  // bisectors (radius 24, clear of the right-angle marker's own
+  // footprint below, which reaches out to radius*sqrt(2) =~21) so
+  // neither the two housings nor the marker ever overlap.
   var targetBisector = (targetRange[0] + targetRange[1]) / 2;
-  var knownIconPos = pointOnCircle(cx, cy, 14, knownBisector);
-  var targetIconPos = pointOnCircle(cx, cy, 14, targetBisector);
+  var knownIconPos = pointOnCircle(cx, cy, 24, knownBisector);
+  var targetIconPos = pointOnCircle(cx, cy, 24, targetBisector);
   drawCameraIcon(knownIconPos.x, knownIconPos.y, knownBisector);
   drawCameraIcon(targetIconPos.x, targetIconPos.y, targetBisector, false);
+
+  // Supplementary angles can land on an exact right angle (a 90/90
+  // split) unlike complementary or vertical, where the generated
+  // values can never actually hit 90 -- when they do, mark it with
+  // the same little square used to prove a right angle everywhere
+  // else, not just a number that happens to say "90". Drawn LAST so
+  // it always renders on top of the cones/icons above, never
+  // obscured regardless of where the split happens to land.
+  if (puzzle.knownValue === 90) { drawRightAngleMarker(cx, cy, knownRange[0], 15); }
+  if (puzzle.correctAnswer === 90) { drawRightAngleMarker(cx, cy, targetRange[0], 15); }
 
   var firstBisector = base + firstWedgeSize / 2;
   var secondBisector = splitAngle + (180 - firstWedgeSize) / 2;
@@ -848,9 +851,15 @@ function drawComplementaryDiagram(puzzle, cx, cy) {
   var targetRange = puzzle.knownIsFirst ? [splitAngle, base + 90] : [base, splitAngle];
   var knownBisector = (knownRange[0] + knownRange[1]) / 2;
 
-  // The camera's lit field is the known wedge -- step in there and
-  // it sees you.
+  // Both cameras' fields of view are shaded now, not just the known
+  // one -- the target camera's exact coverage was always drawn at its
+  // true boundary (targetRange IS the correct answer's real position,
+  // see the comment on getPuzzleWedgeGeometry), so filling it in gold
+  // instead of leaving it a bare outline reveals no new information,
+  // it just reads as "a real camera view" the same way the known
+  // wedge already does, matching the maze's own paired-camera look.
   drawIlluminatedCone(cx, cy, radius, knownRange[0], knownRange[1], COLOR_LASER_RED);
+  drawIlluminatedCone(cx, cy, radius, targetRange[0], targetRange[1], COLOR_LASER_GOLD);
   drawAngleArc(cx, cy, radius, targetRange[0], targetRange[1], COLOR_TEXT_GOOD);
 
   // The incoming tripwire beam and the outer 90-degree reference
@@ -860,9 +869,6 @@ function drawComplementaryDiagram(puzzle, cx, cy) {
   drawLaserLine(cx, cy, armA.x, armA.y, COLOR_LASER_RED, 3);
   drawLaserLine(cx, cy, armB.x, armB.y, COLOR_TEXT_DIM, 1.5);
 
-  // Proof it's really 90 degrees, not just a claim.
-  drawRightAngleMarker(cx, cy, base, 15);
-
   var p3 = pointOnCircle(cx, cy, radius, splitAngle);
   drawLaserLine(cx, cy, p3.x, p3.y, COLOR_LASER_BLUE, 3);
 
@@ -871,13 +877,20 @@ function drawComplementaryDiagram(puzzle, cx, cy) {
   // known one lit and reading its degree, the target one shown dark/
   // unread (isOn=false) since its exact width is what the player is
   // solving for. Nudged apart from the vertex along their own
-  // bisectors, same reasoning as the maze's iconX/iconY offset, so
-  // the two housings don't render stacked on the same pixel.
+  // bisectors (radius 24, clear of the right-angle marker's own
+  // footprint below, which reaches out to radius*sqrt(2) =~21) so
+  // neither the two housings nor the marker ever overlap.
   var targetBisector = (targetRange[0] + targetRange[1]) / 2;
-  var knownIconPos = pointOnCircle(cx, cy, 14, knownBisector);
-  var targetIconPos = pointOnCircle(cx, cy, 14, targetBisector);
+  var knownIconPos = pointOnCircle(cx, cy, 24, knownBisector);
+  var targetIconPos = pointOnCircle(cx, cy, 24, targetBisector);
   drawCameraIcon(knownIconPos.x, knownIconPos.y, knownBisector);
   drawCameraIcon(targetIconPos.x, targetIconPos.y, targetBisector, false);
+
+  // Proof it's really 90 degrees, not just a claim -- drawn LAST so
+  // it always renders on top of the cones/icons above, never
+  // obscured regardless of where the known/target split happens to
+  // land relative to it.
+  drawRightAngleMarker(cx, cy, base, 15);
 
   var firstBisector = base + firstWedgeSize / 2;
   var secondBisector = splitAngle + (90 - firstWedgeSize) / 2;
@@ -1372,12 +1385,13 @@ function handleCorrectAnswer() {
   playSfx("correct");
   puzzlesSolvedInLevel += 1;
 
-  // The score updates immediately, but advancing to the next room
-  // waits for a brief "slips through the safe wedge" reaction (see
-  // updateEscapingPhase) and then actually sneaking the robber past
-  // the guard -- see startSneakingPhase. That's what makes the
-  // correct angle feel like it actually opened a path, not just
-  // added points.
+  // The score updates immediately, and the maze itself begins right
+  // away -- see startSneakingPhase, which now opens straight into
+  // PUZZLE_PHASE_MAZE_REVEAL's own slow zoom-out from wherever the
+  // robber is standing. That replaces what used to be a separate
+  // scripted "slips through the safe wedge" animation on this screen
+  // before the maze even appeared -- one continuous reveal now,
+  // instead of two back-to-back animated beats.
   if (isChallengeMode) {
     challengePuzzlesSolved += 1;
     if (challengePuzzlesSolved % 5 === 0) {
@@ -1389,18 +1403,7 @@ function handleCorrectAnswer() {
     pendingAdvance = (puzzlesSolvedInLevel >= level.puzzlesToClear) ? "COMPLETE_LEVEL" : "NEXT_PUZZLE";
   }
 
-  puzzlePhase = PUZZLE_PHASE_ESCAPING;
-  escapeTimer = ESCAPE_DURATION;
-}
-
-// Runs every frame during the post-correct-answer reaction -- see
-// drawHeistScene's PUZZLE_PHASE_ESCAPING branch for what's actually
-// drawn. Once it finishes, the sneak minigame begins for real.
-function updateEscapingPhase(dt) {
-  escapeTimer -= dt;
-  if (escapeTimer <= 0) {
-    startSneakingPhase();
-  }
+  startSneakingPhase();
 }
 
 function handleWrongAnswer() {
@@ -1603,15 +1606,16 @@ var spawnPulseTimer = 0;
 var LINKED_CAMERA_CALLOUT_DURATION = 1.6; // seconds
 var linkedCameraCalloutTimer = 0;
 
-// PUZZLE_PHASE_MAZE_REVEAL: a brief cinematic between ESCAPING and
-// real SNEAKING control -- instead of the maze just replacing the
-// puzzle diagram outright, the view opens zoomed in tight on the
-// linked camera (see setupStationaryCameras) and eases out to the
-// normal full-room framing, so the very first thing the player sees
-// in the new room is the exact hazard their answer just set, not
-// something they stumble onto three corridors later. See
+// PUZZLE_PHASE_MAZE_REVEAL: a slow cinematic that opens the instant a
+// correct answer is submitted (no separate scripted "sneaks through
+// the wedge" animation beforehand anymore -- see handleCorrectAnswer)
+// -- the view opens zoomed in tight on wherever the robber is
+// actually standing and eases out to the normal full-room framing, so
+// the player gets a real establishing shot of the whole maze -- where
+// they are, the exit, every guard and camera including the two
+// linked ones -- before having to move. See
 // startSneakingPhase/updateMazeRevealPhase/drawMazeRevealScene.
-var MAZE_REVEAL_DURATION = 1.1; // seconds
+var MAZE_REVEAL_DURATION = 2.2; // seconds
 var mazeRevealTimer = 0;
 var MAZE_REVEAL_ZOOM_START = 2.4; // how tight the opening framing is; 1.0 is the normal, unzoomed view
 
@@ -2363,17 +2367,18 @@ function gridCellDistance(a, b) {
 // measurement, not a discretized or rescaled stand-in for it.
 //
 // combinedPair (boolean): when true (see startSneakingPhase's
-// isSumRelationship -- only meaningful when the two specs' angles
-// genuinely sum to 90 or 180, never for the "equal angles" case),
-// both linked cameras are placed at the SAME shared vertex with their
-// cones edge-to-edge, so together they sweep one continuous 90/180-
-// degree arc split into two colored halves -- a direct visual echo of
-// the puzzle diagram's own adjacent known/target wedges, not just two
-// numerically-related cameras scattered independently around the
-// room. When false, each spec gets its own independently-chosen cell
-// (the older behavior), which is what the "equal angles" case still
-// uses, since there's no meaningful combined arc to draw when the two
-// values don't sum to anything in particular.
+// showCombinedAngle -- only ever passed true for complementary/
+// supplementary puzzles, the two types whose known+answer ALWAYS sums
+// to exactly 90/180 with no exceptions), both linked cameras are
+// placed at the SAME shared vertex with their cones edge-to-edge, so
+// together they sweep one continuous 90/180-degree arc split into two
+// colored halves -- a direct visual echo of the puzzle diagram's own
+// adjacent known/target wedges, not just two numerically-related
+// cameras scattered independently around the room. When false, each
+// spec gets its own independently-chosen cell (the older behavior) --
+// used for vertical/parallel, whose two values are only sometimes a
+// sum relationship (see startSneakingPhase's own comment for why that
+// makes shared-vertex placement the wrong call for those types).
 //
 // An empty/missing specs array means no puzzle to link to (every
 // camera fully random, the original behavior).
@@ -3094,28 +3099,7 @@ function getPuzzleWedgeGeometry(puzzle) {
   return null;
 }
 
-// Where the robber sprite sits at a given 0..1 progress through the
-// post-correct-answer reaction: out from the vertex along the middle
-// of the SAFE wedge (targetRange -- the one whose angle the player
-// just correctly worked out), then curving over to the exit door.
-// Falls back to a fairly direct line toward the door for puzzle types
-// with no single-vertex wedge geometry (parallel).
-function lerp(a, b, t) { return a + (b - a) * t; }
-
-function quadBezierPoint(p0, c, p1, t) {
-  var mt = 1 - t;
-  return {
-    x: mt * mt * p0.x + 2 * mt * t * c.x + t * t * p1.x,
-    y: mt * mt * p0.y + 2 * mt * t * c.y + t * t * p1.y
-  };
-}
-
 function normalizeAngleDeg(a) { return ((a % 360) + 360) % 360; }
-
-function pointAtAngleDist(cx, cy, angleDeg, dist) {
-  var rad = angleDeg * Math.PI / 180;
-  return { x: cx + Math.cos(rad) * dist, y: cy + Math.sin(rad) * dist };
-}
 
 // Where the exit door itself sits -- X is always the same fixed spot
 // near the right edge (matching the established "enter left, exit
@@ -3139,69 +3123,9 @@ function computeDoorPositionForPuzzle(puzzle) {
   return { x: SPY_END_X + 10, y: clampNum(DOOR_Y_BASE + lean, DOOR_Y_MIN, DOOR_Y_MAX) };
 }
 
-// The journey a correct answer plays out: starting from wherever the
-// robber was already standing (not a teleport to the vertex), one
-// smooth snake -- curving in past the camera's cone while easing
-// toward the safe wedge's own direction, then peeling away along that
-// exact line out to the door -- rather than a stiff orbit-dip-retreat
-// sequence that reads as backtracking. Ends holding at the door while
-// drawHeistScene shrinks the sprite away ("disappearing into it").
-//
-// Still geometrically safe, not just a heuristic: for the whole first
-// leg, distance from the vertex only ever DECREASES from the robber's
-// real starting distance down to innerRadius (never below it), and
-// innerRadius already clears the cone's own reach -- so regardless of
-// how the angle changes at the same time, the cone is never entered.
-// The second leg holds the angle fixed at the safe wedge's bisector
-// the whole way out, which by definition is a different angular slice
-// than the watched wedge at every radius.
-function computeEscapePoint(puzzle, progress) {
-  var startPt = { x: SPY_START_X, y: 160 + 14 };
-  var doorPt = computeDoorPositionForPuzzle(puzzle);
-  var geo = getPuzzleWedgeGeometry(puzzle);
-
-  if (!geo) {
-    // Parallel-type puzzles have no single vertex/cone -- just a
-    // gentle, fairly direct arc toward the door.
-    var mid0 = { x: (startPt.x + doorPt.x) / 2, y: 160 - 30 };
-    var ctrl0 = { x: startPt.x + (mid0.x - startPt.x) * 0.5, y: startPt.y - 20 };
-    if (progress < 0.45) { return quadBezierPoint(startPt, ctrl0, mid0, progress / 0.45); }
-    if (progress < 0.82) { return { x: lerp(mid0.x, doorPt.x, (progress - 0.45) / 0.37), y: lerp(mid0.y, doorPt.y, (progress - 0.45) / 0.37) }; }
-    return doorPt;
-  }
-
-  var targetBisector = normalizeAngleDeg((geo.targetRange[0] + geo.targetRange[1]) / 2);
-
-  var startDx = startPt.x - geo.cx, startDy = startPt.y - geo.cy;
-  var startDist = Math.sqrt(startDx * startDx + startDy * startDy);
-  var startAngle = normalizeAngleDeg(Math.atan2(startDy, startDx) * 180 / Math.PI);
-
-  var doorDx = doorPt.x - geo.cx, doorDy = doorPt.y - geo.cy;
-  var doorDist = Math.sqrt(doorDx * doorDx + doorDy * doorDy);
-
-  var margin = 18;
-  var innerRadius = Math.min(geo.radius + margin, startDist); // never ASKS the spiral to grow past where it already started
-
-  function ease(t) { return t * t * (3 - 2 * t); }
-
-  if (progress < 0.55) {
-    var t1 = ease(progress / 0.55);
-    var diff = ((targetBisector - startAngle + 540) % 360) - 180;
-    var ang = startAngle + diff * t1;
-    var rad = lerp(startDist, innerRadius, t1);
-    return pointAtAngleDist(geo.cx, geo.cy, ang, rad);
-  }
-  if (progress < 0.82) {
-    var t2 = ease((progress - 0.55) / 0.27);
-    var rad2 = lerp(innerRadius, doorDist, t2);
-    return pointAtAngleDist(geo.cx, geo.cy, targetBisector, rad2);
-  }
-  return doorPt;
-}
-
-// Mirror image of computeEscapePoint for the first beat of a wrong
-// answer: from the vertex, into the WATCHED wedge (knownRange) --
-// where the player misjudged the danger, hence getting caught.
+// From the vertex, into the WATCHED wedge (knownRange) -- where the
+// player misjudged the danger, hence getting caught. First beat of
+// the CAUGHT-phase reaction (see computeCaughtScenePositions below).
 function computeCaughtApproachPoint(puzzle, progress) {
   var geo = getPuzzleWedgeGeometry(puzzle);
   if (!geo) {
@@ -3246,30 +3170,8 @@ function computeCaughtScenePositions(puzzle, totalProgress) {
   };
 }
 
-// How much of the escape reaction is spent holding at the door while
-// the sprite shrinks away into it -- matches computeEscapePoint's own
-// final leg, which starts holding position at exactly this point too.
-var ESCAPE_DOOR_ENTER_START = 0.82;
-
 function drawHeistScene(sceneY, puzzle) {
   var doorPt = computeDoorPositionForPuzzle(puzzle);
-
-  if (puzzlePhase === PUZZLE_PHASE_ESCAPING) {
-    var escProgress = clampNum(1 - (escapeTimer / ESCAPE_DURATION), 0, 1);
-    var doorActive = escProgress > ESCAPE_DOOR_ENTER_START * 0.7;
-    drawExitDoor(doorPt.x, doorPt.y, doorActive);
-
-    var escPt = computeEscapePoint(puzzle, escProgress);
-    // Shrinks smoothly to nothing over the final leg -- "disappearing
-    // into it" rather than just stopping in front of the door.
-    var enterT = clampNum((escProgress - ESCAPE_DOOR_ENTER_START) / (1 - ESCAPE_DOOR_ENTER_START), 0, 1);
-    var shrink = 1 - enterT;
-    if (shrink > 0.02) {
-      drawSpySprite(escPt.x, escPt.y, false, SPY_REACT_SCALE * shrink);
-    }
-    return;
-  }
-
   drawExitDoor(doorPt.x, doorPt.y, false);
 
   if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
@@ -3375,32 +3277,37 @@ function startSneakingPhase() {
   // values never reach 90 at all, so a flat 90 threshold would be
   // degenerate for that type specifically.
   var linkedSpecs = [];
-  var isSumRelationship = false;
+  // Only complementary/supplementary puzzles get the combined shared-
+  // vertex placement (see setupStationaryCameras's combinedPair) --
+  // for those two types EVERY generated puzzle's known+answer sums to
+  // exactly 90/180, no exceptions, so "the two cameras always form a
+  // real right/straight angle" is a guarantee that actually always
+  // holds, not one with a caveat. An earlier version of this also
+  // combined vertical/parallel puzzles whenever their pairing happened
+  // to be arithmetically supplementary too -- correct on its own
+  // terms, but those types are EQUAL-angle puzzles roughly half the
+  // time (vertical's true vertical-angle case, some parallel
+  // pairings), where summing the two values means nothing, so the
+  // maze's two cameras stayed independently placed with no combined
+  // arc that time -- reading, from the player's side, as "sometimes
+  // the cameras don't align," even though each individual maze was
+  // internally correct. Scoping to complementary/supplementary only
+  // removes that inconsistency entirely: vertical/parallel keep their
+  // two cameras independently placed (still each linked to a real
+  // puzzle value, just not forced into a shared-vertex arc that isn't
+  // always a clean 90/180 for those types).
+  var showCombinedAngle = (currentPuzzle && (currentPuzzle.type === "complementary" || currentPuzzle.type === "supplementary"));
   if (currentPuzzle && typeof currentPuzzle.correctAnswer === "number" && typeof currentPuzzle.knownValue === "number") {
     var linkedThreshold = currentPuzzle.type === "complementary" ? 45 : 90;
     linkedSpecs.push({ angle: currentPuzzle.knownValue, pickB: currentPuzzle.knownValue >= linkedThreshold, role: "known" });
     linkedSpecs.push({ angle: currentPuzzle.correctAnswer, pickB: currentPuzzle.correctAnswer >= linkedThreshold, role: "answer" });
-
-    // Every puzzle relates its two numbers one of exactly two ways --
-    // genuinely equal (vertical's true vertical-angle case, some
-    // parallel-lines pairings) or summing to exactly 90/180
-    // (complementary always, supplementary always, vertical's linear-
-    // pair case, parallel's supplementary-classified pairings) --
-    // checked directly against the arithmetic rather than the puzzle
-    // TYPE string, so this is correct for every generator without
-    // needing to special-case vertical/parallel's own dual nature.
-    // Only the sum case has a meaningful combined arc to draw (see
-    // setupStationaryCameras's combinedPair) -- "equal" cameras stay
-    // independently placed, same width, no forced adjacency.
-    var linkedSum = currentPuzzle.knownValue + currentPuzzle.correctAnswer;
-    isSumRelationship = (linkedSum === 90 || linkedSum === 180);
   }
 
   // Cameras go up onto the already-two-path maze, then get their own
   // repair pass -- see ensureCameraFreePath -- so there's always a
   // route that never enters either one's cone, on top of the
   // baseline guarantee above.
-  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedSpecs, isSumRelationship);
+  setupStationaryCameras(allEdges, adj, startCell, doorCell, avoidCells, linkedSpecs, showCombinedAngle);
   var camRepaired = ensureCameraFreePath(allEdges, adj, startCell, doorCell, stationaryCameras);
   allEdges = camRepaired.edges;
   adj = camRepaired.adj;
@@ -3426,18 +3333,12 @@ function startSneakingPhase() {
   spawnPulseTimer = SPAWN_PULSE_DURATION;
   linkedCameraCalloutTimer = linkedSpecs.length > 0 ? LINKED_CAMERA_CALLOUT_DURATION : 0;
 
-  // Skip straight to normal SNEAKING if there are no linked cameras to
-  // reveal (currentPuzzle missing knownValue/correctAnswer -- shouldn't
-  // happen in real play, but degrades gracefully instead of running a
-  // zoom-out cinematic toward nothing).
-  var linkedCams = stationaryCameras.filter(function (c) { return c.isPlayerLinked; });
-  if (linkedCams.length > 0) {
-    mazeRevealTimer = MAZE_REVEAL_DURATION;
-    puzzlePhase = PUZZLE_PHASE_MAZE_REVEAL;
-  } else {
-    sneakGraceTimer = SNEAK_GRACE_PERIOD;
-    puzzlePhase = PUZZLE_PHASE_SNEAKING;
-  }
+  // Every maze opens with the reveal cinematic now (see
+  // drawMazeRevealScene) -- it's a general "see where you are, then
+  // see the whole room" establishing shot, not conditional on whether
+  // this particular puzzle happened to link a camera.
+  mazeRevealTimer = MAZE_REVEAL_DURATION;
+  puzzlePhase = PUZZLE_PHASE_MAZE_REVEAL;
 }
 
 // Attempts to begin exactly one grid step from whatever direction is
@@ -3790,6 +3691,35 @@ function drawLinkedCameraCallout(x, y, coneWidthDeg, colorArr, labelPrefix) {
   text(labelPrefix + ": " + Math.round(coneWidthDeg) + "°", x, labelY);
 }
 
+// The same visual proof language the puzzle diagram already uses for
+// its own known/target split, reproduced at the maze's shared-vertex
+// camera pair (see setupStationaryCameras's combinedPair, only ever
+// used for complementary/supplementary puzzles -- see
+// startSneakingPhase's showCombinedAngle) so the "these two cameras
+// form a real right/straight angle" claim is something a player can
+// actually SEE, not just trust: a bright seam line at the exact
+// boundary between the two cones (matching the diagram's own split-
+// line color), plus the standard right-angle square when the combined
+// span is exactly 90, or the full straight reference line when it's
+// exactly 180 (matching the diagram's own outer boundary line).
+function drawCombinedAngleProof(vx, vy, knownCam, answerCam) {
+  var armBase = knownCam.facing - knownCam.coneWidth / 2;
+  var boundary = knownCam.facing + knownCam.coneWidth / 2;
+  var armEnd = answerCam.facing + answerCam.coneWidth / 2;
+  var totalSpan = knownCam.coneWidth + answerCam.coneWidth;
+
+  var boundaryPt = pointOnCircle(vx, vy, CAMERA_CONE_RADIUS, boundary);
+  drawLaserLine(vx, vy, boundaryPt.x, boundaryPt.y, COLOR_LASER_BLUE, 2);
+
+  if (totalSpan === 90) {
+    drawRightAngleMarker(vx, vy, armBase, 14);
+  } else if (totalSpan === 180) {
+    var p1 = pointOnCircle(vx, vy, CAMERA_CONE_RADIUS, armBase);
+    var p2 = pointOnCircle(vx, vy, CAMERA_CONE_RADIUS, armEnd);
+    drawLaserLine(p1.x, p1.y, p2.x, p2.y, COLOR_TEXT_DIM, 1.5);
+  }
+}
+
 // The maze walls themselves -- solid blocks the robber and the
 // patrol guards both have to go around, Pac-Man style. A flat dark
 // hedge-green fill, one rect per cell -- there can be well over a
@@ -3846,26 +3776,11 @@ function drawMazeRevealScene() {
   var anchorX = (ROOM_LEFT + ROOM_RIGHT) / 2;
   var anchorY = (ROOM_TOP + ROOM_BOTTOM) / 2;
 
-  var linkedCams = stationaryCameras.filter(function (c) { return c.isPlayerLinked; });
-  var startFocusX = anchorX, startFocusY = anchorY, startZoom = 1;
-  if (linkedCams.length > 0) {
-    // Two linked cameras (known + answer, see startSneakingPhase)
-    // usually sit at different points in the room -- frame the
-    // midpoint of BOTH instead of just one, and pick a starting zoom
-    // that's tight enough to feel like a reveal but never so tight it
-    // clips either camera out of frame, whichever way they happen to
-    // land relative to each other.
-    var xs = linkedCams.map(function (c) { return c.x; });
-    var ys = linkedCams.map(function (c) { return c.y; });
-    var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
-    var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-    startFocusX = (minX + maxX) / 2;
-    startFocusY = (minY + maxY) / 2;
-    var boxMargin = 90; // room for each camera's cone/ring/degree label, not just its center point
-    var fitZoomX = (ROOM_RIGHT - ROOM_LEFT) / (maxX - minX + boxMargin);
-    var fitZoomY = (ROOM_BOTTOM - ROOM_TOP) / (maxY - minY + boxMargin);
-    startZoom = clampNum(Math.min(fitZoomX, fitZoomY, MAZE_REVEAL_ZOOM_START), 1.3, MAZE_REVEAL_ZOOM_START);
-  }
+  // Opens on the robber's own spawn point, then eases out to the
+  // anchor (the room's own center) at zoom 1 -- an establishing shot
+  // of the whole maze from where the player actually is, not a
+  // targeted reveal of any one hazard.
+  var startFocusX = sneakStartX, startFocusY = sneakStartY, startZoom = MAZE_REVEAL_ZOOM_START;
 
   var zoom = startZoom + (1 - startZoom) * eased;
   var focusX = startFocusX + (anchorX - startFocusX) * eased;
@@ -3928,6 +3843,19 @@ function drawSneakingScene() {
     }
     drawCameraIcon(cam.iconX, cam.iconY, cam.facing, camOn);
     if (roleInfo && linkedCameraCalloutTimer > 0) { drawLinkedCameraCallout(cam.iconX, cam.iconY, cam.coneWidth, roleInfo.color, roleInfo.label); }
+  }
+
+  // If this maze has the combined-vertex camera pair (complementary/
+  // supplementary only, see startSneakingPhase's showCombinedAngle),
+  // draw the seam/right-angle proof LAST so it always renders on top
+  // of every cone/icon above, never obscured.
+  var knownCam = null, answerCam = null;
+  for (var lc = 0; lc < stationaryCameras.length; lc++) {
+    if (stationaryCameras[lc].linkRole === "known") { knownCam = stationaryCameras[lc]; }
+    else if (stationaryCameras[lc].linkRole === "answer") { answerCam = stationaryCameras[lc]; }
+  }
+  if (knownCam && answerCam && knownCam.x === answerCam.x && knownCam.y === answerCam.y) {
+    drawCombinedAngleProof(knownCam.x, knownCam.y, knownCam, answerCam);
   }
 
   // The roaming patrol guards -- each radiating a small red alert
@@ -4698,14 +4626,11 @@ function drawPlayingScreen(dt) {
   // that phase until the next room loads.
   var isAiming = (puzzlePhase === PUZZLE_PHASE_AIMING);
   var isSneaking = (puzzlePhase === PUZZLE_PHASE_SNEAKING);
-  var isEscaping = (puzzlePhase === PUZZLE_PHASE_ESCAPING);
   var isMazeReveal = (puzzlePhase === PUZZLE_PHASE_MAZE_REVEAL);
   if (isAiming) {
     updatePuzzleTimer(dt);
   } else if (isSneaking) {
     updateSneakingPhase(dt);
-  } else if (isEscaping) {
-    updateEscapingPhase(dt);
   } else if (isMazeReveal) {
     updateMazeRevealPhase(dt);
   } else if (puzzlePhase === PUZZLE_PHASE_CAUGHT) {
@@ -4740,7 +4665,7 @@ function drawPlayingScreen(dt) {
   drawHUD();
   if (isSneaking || isMazeReveal) {
     drawSneakPrompt(CANVAS_W / 2, 325);
-  } else if (!isEscaping) {
+  } else {
     if (currentPuzzle) {
       drawSkillNameBanner(currentPuzzle, 58);
       drawPuzzleContextLine(currentPuzzle, 283);
