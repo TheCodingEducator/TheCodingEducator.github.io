@@ -16,18 +16,27 @@
 
   var style = document.createElement('style');
   style.textContent =
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 150px; z-index: 1000; pointer-events: none; }' +
-    '#mc-joy-base { position: absolute; left: 24px; bottom: 24px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; }' +
-    '#mc-joy-stick { position: absolute; left: 30px; top: 30px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
-    '#mc-action { position: absolute; right: 28px; bottom: 28px; width: 76px; height: 76px; border-radius: 50%; background: rgba(91,140,255,0.55); border: 2px solid rgba(255,255,255,0.5); color: #fff; font: bold 18px -apple-system, sans-serif; touch-action: none; pointer-events: auto; }' +
+    // pointer-events:auto on the WRAPPER itself (not just the joystick/
+    // button) -- this whole 190px-tall bar swallows every touch that
+    // lands in it, not only the ones that land exactly on the joystick
+    // or button. Without this, a touch in the gaps around them passed
+    // straight through to whatever real page content happened to be
+    // positioned underneath (the standards panel, teaching notes),
+    // which could trigger the browser's native text-selection/callout
+    // mid-drag -- see each HTML file's own layout comment for the other
+    // half of this fix.
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 190px; z-index: 1000; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mc-joy-base { position: absolute; left: 20px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; }' +
+    '#mc-joy-stick { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
+    '#mc-action { position: absolute; right: 24px; bottom: 24px; width: 100px; height: 100px; border-radius: 50%; background: rgba(91,140,255,0.55); border: 2px solid rgba(255,255,255,0.5); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; pointer-events: auto; }' +
     '#mc-action:active { background: rgba(91,140,255,0.85); }';
   document.head.appendChild(style);
 
   // ---- Joystick ----
   var base = document.getElementById('mc-joy-base');
   var stick = document.getElementById('mc-joy-stick');
-  var baseRadius = 50;
-  var maxStickOffset = 35;
+  var baseRadius = 65;
+  var maxStickOffset = 46;
   var activeDirs = { up: false, down: false, left: false, right: false };
   var joyPointerId = null;
 

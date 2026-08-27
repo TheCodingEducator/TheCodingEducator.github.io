@@ -58,6 +58,26 @@
       max-height: none;
     }
   }
+  /* Keeps the standards panel (and everything after it) below the
+     first screenful on a touch device, so it never renders under the
+     fixed on-screen joystick/action button (see exponent-hoops-
+     mobile-controls.js's #mobile-controls) at the default scroll
+     position. .play-area's own flex-wrap already stacks the canvas
+     slot and the panel as separate rows on a narrow screen -- the
+     min-height has to go on the CANVAS SLOT specifically (the first
+     row), not .play-area itself: giving the whole wrapping container a
+     min-height is a no-op once its rows' own combined natural height
+     already exceeds that minimum (which it does here, since the panel
+     alone is taller than a typical phone viewport), so the container
+     just grows to fit everything and the constraint never engages.
+     Sizing the first row's own box is what actually pushes row two
+     down. touch-action:none on #mobile-controls (see the JS file) is
+     the second, load-bearing half of this fix -- it stops a touch from
+     reaching the panel at all even in a layout this doesn't fully
+     clear, so accidental text-selection can't happen either way. */
+  @media (hover: none) and (pointer: coarse) {
+    #game-canvas-slot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  }
   .standards-panel {
     background: var(--panel);
     border: 1px solid rgba(255,255,255,0.08);

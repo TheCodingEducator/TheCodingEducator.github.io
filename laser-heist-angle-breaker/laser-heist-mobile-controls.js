@@ -38,13 +38,27 @@
 
   var style = document.createElement('style');
   style.textContent =
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; pointer-events: none; }' +
-    '#mc-joy-base { position: absolute; left: 24px; bottom: 24px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; display: none; }' +
-    '#mc-joy-stick { position: absolute; left: 30px; top: 30px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
-    '#mc-numpad { display: none; grid-template-columns: repeat(3, 64px); grid-auto-rows: 44px; gap: 6px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; pointer-events: auto; }' +
+    // The numpad is this game's tallest control surface (4 rows x 56px
+    // + 3 gaps x 8px + bottom 16px =~ 264px), so the wrapper gets an
+    // explicit 280px height to cover it -- its children are all
+    // position:absolute (needed so the joystick and numpad can occupy
+    // the same footprint and swap via display:none), which otherwise
+    // contribute nothing to an auto-height parent, collapsing it to
+    // 0px. pointer-events:auto on the wrapper itself (not just the
+    // joystick/numpad) means this whole bar swallows every touch that
+    // lands in it, not only the ones that land exactly on a control --
+    // without that, a touch in the gaps passed straight through to
+    // whatever real page content was underneath (the standards panel,
+    // teaching notes), which could trigger the browser's native text-
+    // selection/callout mid-drag -- see laser-heist-angle-breaker.html's
+    // own layout comment for the other half of this fix.
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 1000; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mc-joy-base { position: absolute; left: 20px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; display: none; }' +
+    '#mc-joy-stick { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
+    '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
     '#mc-numpad.mc-visible { display: grid; }' +
     '#mc-joy-base.mc-visible { display: block; }' +
-    '.mc-num { border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,24,44,0.85); color: #fff; font: bold 18px -apple-system, sans-serif; touch-action: none; }' +
+    '.mc-num { border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,24,44,0.85); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; }' +
     '.mc-num:active { background: rgba(91,140,255,0.7); }' +
     '#mc-enter { background: rgba(60,255,140,0.35); }' +
     '#mc-enter:active { background: rgba(60,255,140,0.6); }' +
@@ -55,8 +69,8 @@
   // ---- Joystick (sneak phase movement) ----
   var base = document.getElementById('mc-joy-base');
   var stick = document.getElementById('mc-joy-stick');
-  var baseRadius = 50;
-  var maxStickOffset = 35;
+  var baseRadius = 65;
+  var maxStickOffset = 46;
   var activeDirs = { up: false, down: false, left: false, right: false };
   var joyPointerId = null;
 
