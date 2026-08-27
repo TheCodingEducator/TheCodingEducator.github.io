@@ -587,18 +587,25 @@ function checkClicks() {
 
     if (mouseIsOver(penny) && allowedCoins.indexOf("penny") !== -1) {
       currentTotal += 1; clickHistory.push(1); spawnAnimation("penny", penny.x, penny.y, "+1¢");
-      playSound(coinClickSound);
     }
     if (mouseIsOver(nickel) && allowedCoins.indexOf("nickel") !== -1) {
       currentTotal += 5; clickHistory.push(5); spawnAnimation("nickel", nickel.x, nickel.y, "+5¢");
-      playSound(coinClickSound);
     }
     if (mouseIsOver(dime) && allowedCoins.indexOf("dime") !== -1) {
       currentTotal += 10; clickHistory.push(10); spawnAnimation("dime", dime.x, dime.y, "+10¢");
-      playSound(coinClickSound);
     }
     if (mouseIsOver(quarter) && allowedCoins.indexOf("quarter") !== -1) {
       currentTotal += 25; clickHistory.push(25); spawnAnimation("quarter", quarter.x, quarter.y, "+25¢");
+    }
+
+    // Only the moment a coin click lands the total exactly on target --
+    // the same instant the piggy bank itself turns green (see
+    // getPigColor's currentTotal === targetAmount check) -- not on
+    // every coin click like before. Gated on the total actually
+    // CHANGING this click, so it doesn't replay on an unrelated click
+    // (Undo, a miss) while the bank happens to already be sitting on
+    // target from an earlier click.
+    if (currentTotal !== previousTotal && currentTotal === targetAmount) {
       playSound(coinClickSound);
     }
 
