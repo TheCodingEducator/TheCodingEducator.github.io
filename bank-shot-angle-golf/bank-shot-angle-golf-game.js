@@ -180,78 +180,224 @@ function gameDraw() {
 // ---------------------------------------------------------------
 // Menu
 // ---------------------------------------------------------------
+var MENU_HERO = { x: 56, y: 106, w: 588, h: 176 };
+var MENU_CARD_W = 300, MENU_CARD_H = 248, MENU_CARD_Y = 306;
+
 function drawMenu() {
-  var g1 = color(20, 60, 30), g2 = color(10, 30, 16);
+  drawMenuBackground();
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  fill(255);
+  textStyle(BOLD);
+  textSize(38);
+  text('⛳ Bank Shot: Angle Golf', width / 2, 54);
+  textStyle(NORMAL);
+  textSize(14.5);
+  fill(180, 200, 180);
+  text('Solve the angle. Line up the shot. Sink the putt.', width / 2, 84);
+
+  drawGolfHeroScene(MENU_HERO.x, MENU_HERO.y, MENU_HERO.w, MENU_HERO.h);
+
+  drawModeCard(width / 2 - 12 - MENU_CARD_W, MENU_CARD_Y, 'Golf Gamer', 'EASY', '⛳',
+    ['Angles ease in - 10s, then 5s,', 'then anything by hole 7.'], 'No clock. Take your time.', '#3ea158');
+  drawModeCard(width / 2 + 12, MENU_CARD_Y, 'Hole-In-One Hero', 'HARD', '🔥',
+    ['Any angle from hole 1 -', 'algebra by the back nine.'], '10s clock from hole 4. Miss it, ball goes wild.', '#e0562f');
+
+  textAlign(CENTER, CENTER);
+  textSize(12.5);
+  fill(140, 155, 140);
+  text('9 holes per round · a new random themed course every time you play', width / 2, MENU_CARD_Y + MENU_CARD_H + 26);
+}
+
+function drawMenuBackground() {
+  var g1 = color(18, 46, 28), g2 = color(9, 22, 14);
   for (var y = 0; y < height; y++) {
     stroke(lerpColor(g1, g2, y / height));
     line(0, y, width, y);
   }
   noStroke();
-  fill(255);
-  textAlign(CENTER, CENTER);
-  textSize(42);
-  textStyle(BOLD);
-  fill(255, 255, 255);
-  text('⛳ Bank Shot: Angle Golf', width / 2, 130);
-  textStyle(NORMAL);
-  textSize(16);
-  fill(210, 225, 210);
-  text('Solve the bank-shot angle, then drag from the ball to aim and strike.', width / 2, 172);
-
-  drawModeCard(MODE_EASY, width / 2 - 190, 230, 'Golf Gamer', 'Easy',
-    ['Angles ease in: multiples of 10, then 5, then any number.', 'No time pressure - work it out.'], '#3ea158');
-  drawModeCard(MODE_HARD, width / 2 + 190, 230, 'Hole-In-One Hero', 'Hard',
-    ['Any angle from hole 1, algebra by the back nine.', '10-second clock kicks in from hole 4 - miss it and the ball goes wild.'], '#c0392b');
-
-  textSize(13);
-  fill(160, 175, 160);
-  text('9 holes per round · one random themed course each time you play', width / 2, 590);
+  fill(255, 255, 255, 10);
+  ellipse(width / 2, -60, 640, 320);
 }
 
-function drawModeCard(mode, cx, cy, title, sub, lines, accent) {
-  var w = 320, h = 300, x = cx - w / 2, y = cy;
-  var hovered = mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+// ---- Animated hero scene: a golfer looping through a swing while the
+// ball arcs toward a flag, purely a function of millis() % cycle so it
+// never needs persistent per-frame state to keep looping cleanly. ----
+var GOLF_CYCLE_MS = 2200;
+var GOLF_IMPACT_T = 0.38, GOLF_FOLLOW_T = 0.58, GOLF_LAND_T = 0.9;
+
+function easeOutQuad(x) { return 1 - (1 - x) * (1 - x); }
+function easeInQuad(x) { return x * x; }
+function smooth01(x) { return x * x * (3 - 2 * x); }
+
+function golfClubAngle(t) {
+  var ready = -20, back = -150, impact = 12, follow = 135;
+  if (t < 0.20) return lerp(ready, back, easeOutQuad(t / 0.20));
+  if (t < GOLF_IMPACT_T) return lerp(back, impact, easeInQuad((t - 0.20) / (GOLF_IMPACT_T - 0.20)));
+  if (t < GOLF_FOLLOW_T) return lerp(impact, follow, easeOutQuad((t - GOLF_IMPACT_T) / (GOLF_FOLLOW_T - GOLF_IMPACT_T)));
+  if (t < 0.85) return follow;
+  return lerp(follow, ready, smooth01((t - 0.85) / (1 - 0.85)));
+}
+
+function drawGolfHeroScene(px, py, pw, ph) {
+  push();
+  translate(px, py);
+  drawingContext.save();
+  drawingContext.beginPath();
+  if (drawingContext.roundRect) drawingContext.roundRect(0, 0, pw, ph, 16);
+  else drawingContext.rect(0, 0, pw, ph);
+  drawingContext.clip();
+
+  var g = drawingContext.createLinearGradient(0, 0, 0, ph);
+  g.addColorStop(0, '#123a24');
+  g.addColorStop(1, '#1d5a34');
+  drawingContext.fillStyle = g;
+  drawingContext.fillRect(0, 0, pw, ph);
+
+  var groundY = ph * 0.74;
   noStroke();
-  fill(20, 26, 20, 235);
+  fill('#2f8a42');
+  rect(0, groundY, pw, ph - groundY);
+  fill(255, 255, 255, 14);
+  for (var i = -20; i < pw; i += 30) rect(i, groundY, 15, ph - groundY);
+
+  // flag + hole
+  var holeX = pw * 0.88, holeY = groundY;
+  fill(10, 10, 10);
+  ellipse(holeX, holeY, 14, 5);
+  stroke(230);
+  strokeWeight(2);
+  line(holeX, holeY, holeX, holeY - 44);
+  noStroke();
+  var wave = sin(millis() / 140) * 3;
+  fill('#e63946');
+  triangle(holeX, holeY - 44, holeX + 17 + wave, holeY - 38, holeX, holeY - 32);
+
+  drawSwingingGolfer(pw * 0.17, groundY, holeX - 10, holeY - 4);
+
+  drawingContext.restore();
+  pop();
+}
+
+function drawSwingingGolfer(gx, groundY, targetX, targetY) {
+  var t = (millis() % GOLF_CYCLE_MS) / GOLF_CYCLE_MS;
+  var ang = golfClubAngle(t);
+  var pivotY = groundY - 44;
+
+  stroke('#20241f');
+  strokeWeight(6);
+  strokeCap(ROUND);
+  line(gx - 7, groundY, gx - 13, groundY - 28);
+  line(gx + 6, groundY, gx + 9, groundY - 28);
+  stroke('#3b6fd6');
+  strokeWeight(10);
+  line(gx - 2, groundY - 28, gx, pivotY);
+  noStroke();
+  fill('#f0c8a0');
+  ellipse(gx + 2, pivotY - 13, 17, 17);
+  fill('#e63946');
+  arc(gx + 2, pivotY - 15, 19, 15, 180, 360);
+
+  push();
+  translate(gx, pivotY);
+  rotate(ang);
+  stroke('#f0c8a0');
+  strokeWeight(6);
+  strokeCap(ROUND);
+  line(0, 0, 28, 5);
+  stroke('#cfcfcf');
+  strokeWeight(3);
+  line(28, 5, 62, 9);
+  noStroke();
+  fill('#efefef');
+  ellipse(62, 9, 11, 7);
+  pop();
+
+  if (t > GOLF_IMPACT_T - 0.015 && t < GOLF_IMPACT_T + 0.06) {
+    noStroke();
+    fill(255, 255, 255, map(t, GOLF_IMPACT_T - 0.015, GOLF_IMPACT_T + 0.06, 210, 0));
+    ellipse(gx + 16, groundY - 4, 18, 18);
+  }
+
+  var teeX = gx + 16, teeY = groundY - 4;
+  var bx = teeX, by = teeY;
+  if (t >= GOLF_IMPACT_T) {
+    var bt = constrain((t - GOLF_IMPACT_T) / (GOLF_LAND_T - GOLF_IMPACT_T), 0, 1);
+    bx = lerp(teeX, targetX, bt);
+    by = lerp(teeY, targetY, bt) - sin(PI * bt) * 42;
+  }
+  fill(0, 0, 0, 60);
+  ellipse(bx, groundY - 2, 8, 3);
+  fill(255);
+  ellipse(bx, by, 9, 9);
+}
+
+function drawModeCard(x, y, title, badge, icon, lines, tagline, accent) {
+  var w = MENU_CARD_W, h = MENU_CARD_H;
+  var cx = x + w / 2;
+  var hovered = mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+  var lift = hovered ? 4 : 0;
+  var pulse = hovered ? 150 + 90 * sin(millis() / 180) : 255;
+
+  push();
+  translate(0, -lift);
+  noStroke();
+  fill(0, 0, 0, hovered ? 90 : 60);
+  rect(x + 3, y + 6, w, h, 18);
+  fill(19, 25, 19, 245);
   rect(x, y, w, h, 18);
-  stroke(hovered ? accent : 'rgba(255,255,255,0.15)');
-  strokeWeight(hovered ? 3 : 1.5);
+  var ac = color(accent);
+  stroke(red(ac), green(ac), blue(ac), hovered ? 255 : 90);
+  strokeWeight(hovered ? 2.5 : 1.25);
   noFill();
   rect(x, y, w, h, 18);
+
   noStroke();
   fill(accent);
+  ellipse(cx, y + 40, 46, 46);
   textAlign(CENTER, CENTER);
-  textSize(15);
-  text(sub.toUpperCase(), cx, y + 34);
-  fill(255);
-  textSize(24);
+  textSize(20);
+  text(icon, cx, y + 41);
+
+  fill(red(color(accent)), green(color(accent)), blue(color(accent)), pulse);
+  textSize(12.5);
   textStyle(BOLD);
-  text(title, cx, y + 68);
+  text(badge, cx, y + 76);
+
+  fill(255);
+  textSize(21);
+  text(title, cx, y + 100);
   textStyle(NORMAL);
-  textSize(13.5);
-  fill(205, 215, 205);
-  var ty = y + 112;
-  for (var i = 0; i < lines.length; i++) {
-    text(lines[i], cx, ty, w - 40);
-    ty += 46;
-  }
+
+  fill(200, 212, 200);
+  textSize(12.5);
+  text(lines[0], cx, y + 128);
+  text(lines[1], cx, y + 146);
+
   fill(accent);
-  rect(cx - 70, y + h - 56, 140, 40, 10);
-  fill(255);
-  textSize(16);
+  textSize(11.5);
   textStyle(BOLD);
-  text('Play', cx, y + h - 36);
+  text(tagline, cx - (w - 44) / 2, y + 172, w - 44);
   textStyle(NORMAL);
+
+  fill(accent);
+  rect(cx - 66, y + h - 46, 132, 34, 9);
+  fill(255);
+  textSize(14.5);
+  textStyle(BOLD);
+  text('Play', cx, y + h - 29);
+  textStyle(NORMAL);
+  pop();
 }
 
 function menuHit(mx, my) {
   var cards = [
-    { mode: MODE_EASY, cx: width / 2 - 190 },
-    { mode: MODE_HARD, cx: width / 2 + 190 }
+    { mode: MODE_EASY, x: width / 2 - 12 - MENU_CARD_W },
+    { mode: MODE_HARD, x: width / 2 + 12 }
   ];
   for (var i = 0; i < cards.length; i++) {
-    var x = cards[i].cx - 160, y = 230, w = 320, h = 300;
-    if (mx > x && mx < x + w && my > y && my < y + h) return cards[i].mode;
+    if (mx > cards[i].x && mx < cards[i].x + MENU_CARD_W && my > MENU_CARD_Y && my < MENU_CARD_Y + MENU_CARD_H) return cards[i].mode;
   }
   return null;
 }
