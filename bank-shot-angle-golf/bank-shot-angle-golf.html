@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bank Shot: Angle Golf</title>
+<meta name="description" content="Putt your way through a 9-hole mini golf course by solving complementary and supplementary bank-shot angles, then aiming and firing. A free, COPPA-compliant browser game for students.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Bank Shot: Angle Golf">
+<meta property="og:description" content="Solve complementary and supplementary bank-shot angles to putt your way around a 9-hole mini golf course.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thecodingeducator.github.io/bank-shot-angle-golf/bank-shot-angle-golf.html">
+<meta name="twitter:card" content="summary">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+     crossorigin="anonymous"></script>
+<style>
+  :root {
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #0c1410;
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  #game-canvas-slot canvas {
+    display: block;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    touch-action: none;
+    width: min(88vw, 82vh, 700px) !important;
+    height: min(88vw, 82vh, 700px) !important;
+    max-width: none;
+    max-height: none;
+  }
+  /* See laser-heist-angle-breaker.html for the full reasoning behind
+     this rule: min-height has to go on the canvas slot (the first
+     flex-wrap row) specifically, not .play-area, or the constraint
+     never engages once the panel below it already exceeds 100vh. This
+     game's only touch control is the numpad (240px, see
+     bank-shot-angle-golf-mobile-controls.js). */
+  @media (hover: none) and (pointer: coarse) {
+    #game-canvas-slot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #0c1410; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #0c1410; width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen canvas, #game-canvas-slot:-webkit-full-screen canvas {
+    width: min(100vw, 100vh) !important;
+    height: min(100vw, 100vh) !important;
+    max-width: none;
+    max-height: none;
+  }
+</style>
+<script src="bank-shot-angle-golf-p5.min.js"></script>
+</head>
+<body>
+<a class="back-link" href="../index.html">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
+<h1 class="sr-only">Bank Shot: Angle Golf</h1>
+<p class="sr-only">A mini golf game where every hole opens with a bank-shot angle problem: the wall's known angle is shown, you solve for its complementary or supplementary partner angle, then drag from the ball to aim and set power. A correct answer sends the ball exactly where you aimed; a wrong answer deflects the shot by your own error. Real physics - hills, water currents, bushes, wall bounces - carries every shot after that. Play Golf Gamer (easy) or Hole-In-One Hero (hard) mode across a random 9-hole themed course.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot"></div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.7.G.B.5</span>
+      <p>Use facts about supplementary, complementary, vertical, and adjacent angles in a multi-step problem to write and solve simple equations for an unknown angle.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.6.EE.A.2.C</span>
+      <p>Evaluate expressions at specific values of their variables.</p>
+      <p class="applies">Applies to: Hole-In-One Hero mode, holes 7-9 (the wall's angle is given algebraically).</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Bank Shot: Angle Golf ties complementary and supplementary angle pairs to the one shot every mini golf hole is built around: banking the ball off a wall. Every hole opens with the wall's known angle marked in a small diagram - students solve for the angle that completes the 90&deg; or 180&deg; pair, then physically aim and strike the ball themselves.</p>
+  <ul>
+    <li><strong>The math has a real, visible consequence.</strong> A correct answer sends the ball exactly where the student aimed it; an incorrect one deflects the shot by the size of their own error - a small mistake is a small miss, a big one sends the ball wildly off course. Right and wrong aren't just checkmarks, they're the difference between sinking the putt and chasing the ball into the rough.</li>
+    <li><strong>Two full 9-hole modes.</strong> Golf Gamer (easy) eases from multiples of 10 into multiples of 5 and finally any angle by the back nine. Hole-In-One Hero (hard) starts with arbitrary angles immediately and adds a 10-second clock from hole 4 on - miss the buzzer and the ball goes for a wild, entertaining ride that lands it only a little worse off than where it started, not a run-ending penalty.</li>
+    <li><strong>Algebra folded into the back nine.</strong> Hole-In-One Hero's final three holes give the wall's angle as an expression like (2x + 10)&deg; with x provided, so students evaluate the expression before they can even start the angle-pair math.</li>
+    <li><strong>A real physics course, not just a diagram.</strong> Hills roll the ball, water currents push it, bushes block it, and every wall - not just the puzzle wall - reflects it realistically, so the angle concept lives inside an actual playable golf hole instead of a static picture.</li>
+    <li><strong>A new random course every round.</strong> Each playthrough randomly selects one of the game's themed 9-hole courses, keeping repeat play visually fresh without changing the underlying math.</li>
+    <li><strong>Low-stakes.</strong> No accounts, no permanent record of a bad round - just line up the next shot.</li>
+  </ul>
+</section>
+
+<script src="bank-shot-angle-golf-shim.js"></script>
+<script src="bank-shot-angle-golf-game.js"></script>
+<script src="bank-shot-angle-golf-mobile-controls.js"></script>
+
+<script>
+  function toggleFullscreen() {
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isFs) {
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req) req.call(el);
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }
+  function updateFullscreenBtn() {
+    var btn = document.getElementById('fullscreen-btn');
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+</script>
+</body>
+</html>
