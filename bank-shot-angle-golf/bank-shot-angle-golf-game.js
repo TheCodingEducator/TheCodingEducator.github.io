@@ -44,64 +44,114 @@ var THEMES = {
 };
 
 // ---------------------------------------------------------------
+// Vector helpers + corridor builder
+// ---------------------------------------------------------------
+function vSub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
+function vAdd(a, b) { return { x: a.x + b.x, y: a.y + b.y }; }
+function vScale(a, s) { return { x: a.x * s, y: a.y * s }; }
+function vLen(a) { return Math.sqrt(a.x * a.x + a.y * a.y); }
+function vNorm(a) { var l = vLen(a) || 1; return { x: a.x / l, y: a.y / l }; }
+function vDot(a, b) { return a.x * b.x + a.y * b.y; }
+function vPerp(a) { return { x: -a.y, y: a.x }; } // +90deg, clockwise in y-down screen space
+
+// Builds an enclosed fairway corridor from a centerline polyline (tee
+// to cup), like a real mini-golf hole's rail-bordered track instead of
+// a few free-floating walls inside one big open rectangle. `widths` is
+// either one half-width for the whole corridor or a per-vertex array
+// (a bigger value near the cup reads as the rounded "green" real holes
+// widen into). Returns real wall segments for both rails plus short
+// end caps so the whole hole is a single closed shape, and the raw
+// left/right rail point lists for filling the fairway polygon.
+function buildCorridor(points, widths) {
+  var n = points.length;
+  var w = Array.isArray(widths) ? widths : points.map(function () { return widths; });
+  var normals = [];
+  for (var i = 0; i < n; i++) {
+    var dirs = [];
+    if (i > 0) dirs.push(vNorm(vSub(points[i], points[i - 1])));
+    if (i < n - 1) dirs.push(vNorm(vSub(points[i + 1], points[i])));
+    var avg = { x: 0, y: 0 };
+    for (var k = 0; k < dirs.length; k++) avg = vAdd(avg, dirs[k]);
+    normals.push(vPerp(vNorm(avg)));
+  }
+  var left = [], right = [];
+  for (i = 0; i < n; i++) {
+    left.push(vAdd(points[i], vScale(normals[i], w[i])));
+    right.push(vAdd(points[i], vScale(normals[i], -w[i])));
+  }
+  var walls = [];
+  for (i = 0; i < n - 1; i++) {
+    walls.push({ x1: left[i].x, y1: left[i].y, x2: left[i + 1].x, y2: left[i + 1].y });
+    walls.push({ x1: right[i].x, y1: right[i].y, x2: right[i + 1].x, y2: right[i + 1].y });
+  }
+  walls.push({ x1: left[0].x, y1: left[0].y, x2: right[0].x, y2: right[0].y });
+  walls.push({ x1: left[n - 1].x, y1: left[n - 1].y, x2: right[n - 1].x, y2: right[n - 1].y });
+  return { walls: walls, left: left, right: right };
+}
+
+function makeHole(par, points, widths, bushes, zones) {
+  var corridor = buildCorridor(points, widths);
+  return {
+    par: par,
+    tee: { x: points[0].x, y: points[0].y },
+    cup: { x: points[points.length - 1].x, y: points[points.length - 1].y },
+    walls: corridor.walls,
+    fairwayLeft: corridor.left, fairwayRight: corridor.right,
+    bushes: bushes || [], zones: zones || []
+  };
+}
+
+// ---------------------------------------------------------------
 // Course data - Course 1: Classic Green (9 holes)
-// Each hole plays inside the shared BOUND rectangle. `puzzleWall` is
-// the wall shown in the bank-shot diagram; it is also a real physical
-// wall like any other, drawn highlighted.
+// Each hole is an enclosed fairway corridor (tee to cup), not an open
+// field - see buildCorridor above. No hole authors a fixed "puzzle
+// wall" or complementary/supplementary type any more: every shot is
+// classified live from the player's own aim (see classifyAndBuildShot)
+// - if it's heading for a rail, that's a complementary bank-shot
+// question at the real contact point; if it's headed into open green,
+// that's a supplementary straight-line question at the real spot it
+// would come to rest.
 // ---------------------------------------------------------------
 function buildClassicGreenCourse() {
   return {
     key: 'classicGreen', theme: THEMES.classicGreen,
     holes: [
-      { par: 3, tee: { x: 120, y: 580 }, cup: { x: 580, y: 160 },
-        walls: [{ x1: 330, y1: 130, x2: 480, y2: 320 }],
-        puzzleWallIndex: 0, relationship: 'complementary', bushes: [], zones: [] },
+      makeHole(3, [{ x: 110, y: 600 }, { x: 110, y: 270 }, { x: 560, y: 270 }], [52, 52, 70],
+        [], []),
 
-      { par: 3, tee: { x: 580, y: 580 }, cup: { x: 130, y: 160 },
-        walls: [{ x1: 240, y1: 230, x2: 410, y2: 160 }],
-        puzzleWallIndex: 0, relationship: 'supplementary',
-        bushes: [{ x: 400, y: 400, r: 26 }], zones: [] },
+      makeHole(3, [{ x: 130, y: 610 }, { x: 130, y: 430 }, { x: 340, y: 430 }, { x: 340, y: 230 }, { x: 570, y: 230 }], 48,
+        [{ x: 250, y: 430, r: 22 }], []),
 
-      { par: 4, tee: { x: 120, y: 600 }, cup: { x: 600, y: 150 },
-        walls: [{ x1: 260, y1: 460, x2: 410, y2: 390 }],
-        puzzleWallIndex: 0, relationship: 'complementary',
-        bushes: [], zones: [{ type: 'hill', x: 320, y: 260, w: 160, h: 140, dirDeg: 55, strength: 0.045 }] },
+      makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
+        [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 20, strength: 0.04 }]),
 
-      { par: 4, tee: { x: 600, y: 600 }, cup: { x: 110, y: 150 },
-        walls: [{ x1: 470, y1: 300, x2: 560, y2: 420 }],
-        puzzleWallIndex: 0, relationship: 'supplementary',
-        bushes: [{ x: 440, y: 500, r: 28 }],
-        zones: [{ type: 'water', x: 230, y: 240, w: 200, h: 120, dirDeg: 200, strength: 0.032 }] },
+      makeHole(4, [{ x: 590, y: 620 }, { x: 590, y: 390 }, { x: 300, y: 390 }, { x: 300, y: 160 }], 50,
+        [{ x: 440, y: 500, r: 26 }],
+        [{ type: 'water', x: 340, y: 320, w: 130, h: 100, dirDeg: 210, strength: 0.03 }]),
 
-      { par: 4, tee: { x: 120, y: 610 }, cup: { x: 600, y: 610 },
-        walls: [{ x1: 320, y1: 280, x2: 320, y2: 470 }],
-        puzzleWallIndex: 0, relationship: 'complementary',
-        bushes: [{ x: 420, y: 430, r: 24 }, { x: 470, y: 480, r: 20 }], zones: [] },
+      makeHole(4, [{ x: 120, y: 620 }, { x: 120, y: 480 }, { x: 300, y: 480 }, { x: 300, y: 340 }, { x: 480, y: 340 }, { x: 480, y: 160 }], 46,
+        [{ x: 300, y: 250, r: 22 }], []),
 
-      { par: 4, tee: { x: 150, y: 150 }, cup: { x: 600, y: 600 },
-        walls: [{ x1: 350, y1: 150, x2: 350, y2: 350 }, { x1: 350, y1: 350, x2: 590, y2: 350 }],
-        puzzleWallIndex: 0, relationship: 'supplementary',
-        bushes: [], zones: [{ type: 'hill', x: 480, y: 470, w: 130, h: 130, dirDeg: 230, strength: 0.04 }] },
+      makeHole(4, [{ x: 150, y: 610 }, { x: 400, y: 610 }, { x: 400, y: 340 }, { x: 400, y: 170 }], [50, 50, 50, 85],
+        [{ x: 350, y: 175, r: 24 }, { x: 450, y: 175, r: 24 }],
+        [{ type: 'hill', x: 340, y: 470, w: 120, h: 110, dirDeg: 250, strength: 0.035 }]),
 
-      { par: 5, tee: { x: 100, y: 610 }, cup: { x: 600, y: 150 },
-        walls: [{ x1: 250, y1: 170, x2: 420, y2: 120 }],
-        puzzleWallIndex: 0, relationship: 'complementary',
-        bushes: [{ x: 300, y: 250, r: 24 }, { x: 470, y: 440, r: 25 }],
-        zones: [{ type: 'water', x: 150, y: 360, w: 470, h: 70, dirDeg: 90, strength: 0.028 }] },
+      makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 400 }, { x: 350, y: 400 }, { x: 350, y: 170 }, { x: 580, y: 170 }], 50,
+        [{ x: 470, y: 170, r: 22 }],
+        [
+          { type: 'hill', x: 60, y: 260, w: 90, h: 110, dirDeg: 40, strength: 0.035 },
+          { type: 'water', x: 180, y: 360, w: 220, h: 60, dirDeg: 90, strength: 0.026 }
+        ]),
 
-      { par: 5, tee: { x: 600, y: 150 }, cup: { x: 100, y: 610 },
-        walls: [{ x1: 450, y1: 240, x2: 560, y2: 390 }, { x1: 190, y1: 450, x2: 320, y2: 450 }, { x1: 190, y1: 540, x2: 320, y2: 540 }],
-        puzzleWallIndex: 0, relationship: 'supplementary',
-        bushes: [{ x: 300, y: 300, r: 22 }, { x: 340, y: 340, r: 20 }, { x: 280, y: 360, r: 18 }], zones: [] },
+      makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 450 }, { x: 370, y: 450 }, { x: 370, y: 270 }, { x: 550, y: 270 }, { x: 550, y: 150 }], 42,
+        [{ x: 400, y: 350, r: 20 }, { x: 440, y: 380, r: 18 }, { x: 380, y: 400, r: 16 }], []),
 
-      { par: 5, tee: { x: 120, y: 150 }, cup: { x: 600, y: 610 },
-        walls: [{ x1: 280, y1: 270, x2: 420, y2: 210 }, { x1: 480, y1: 480, x2: 600, y2: 420 }],
-        puzzleWallIndex: 0, relationship: 'complementary',
-        bushes: [{ x: 550, y: 340, r: 25 }],
-        zones: [
-          { type: 'hill', x: 200, y: 390, w: 150, h: 120, dirDeg: 140, strength: 0.038 },
-          { type: 'water', x: 400, y: 190, w: 150, h: 100, dirDeg: 190, strength: 0.03 }
-        ] }
+      makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
+        [{ x: 560, y: 300, r: 24 }],
+        [
+          { type: 'hill', x: 200, y: 400, w: 120, h: 110, dirDeg: 130, strength: 0.035 },
+          { type: 'water', x: 380, y: 400, w: 130, h: 90, dirDeg: 190, strength: 0.028 }
+        ])
     ]
   };
 }
@@ -112,7 +162,7 @@ var COURSES = [buildClassicGreenCourse()];
 // State
 // ---------------------------------------------------------------
 var gameState = 'MENU';        // MENU | COURSE_INTRO | PLAYING | HOLE_COMPLETE | COURSE_COMPLETE
-var holePhase = 'SOLVE';       // SOLVE | AIMING | ROLLING | SUNK | CHAOS
+var holePhase = 'AIMING';      // AIMING | QUESTION | ROLLING | SUNK
 var gameMode = MODE_EASY;
 var course = null;
 var holeIndex = 0;             // 0-based
@@ -122,11 +172,15 @@ var ball = { x: 0, y: 0, vx: 0, vy: 0 };
 var strokeCount = 0;
 var scorecard = [];            // strokes per hole this round
 
-var question = null;           // { knownDisplay, knownValue, correctAnswer, relationship, algebra }
+// The live shot being classified/resolved - built the instant the
+// player releases their aim (see classifyAndBuildShot), answered while
+// the ball sits frozen at its real on-course contact/bend point, then
+// consumed by updatePhysics() the moment the ball actually reaches
+// that point during ROLLING. See the big comment above
+// classifyAndBuildShot for the full field list.
+var pendingShot = null;
 var answerText = '';
-var answerLocked = false;      // once submitted, drag/aim is enabled
-var answerWasCorrect = false;
-var timerActive = false;
+var answerLocked = false;
 var timerStart = 0;
 
 var dragging = false;
@@ -165,6 +219,7 @@ function gameDraw() {
   updatePhysics();
   drawBall();
   drawAimPreview();
+  drawLiveAngleDiagram();
   pop();
 
   if (holePhase === 'SUNK' && sinkAnim >= 1 && gameState === 'PLAYING') {
@@ -172,7 +227,7 @@ function gameDraw() {
   }
 
   drawHUD();
-  if (holePhase === 'SOLVE') drawSolvePanel();
+  if (holePhase === 'QUESTION') drawQuestionOverlay();
   drawFeedbackToast();
   if (gameState === 'HOLE_COMPLETE') drawHoleCompleteOverlay();
 }
@@ -480,39 +535,116 @@ function startHole(idx) {
   strokeCount = 0;
   sinkAnim = 0;
   gameState = 'PLAYING';
-  holePhase = 'SOLVE';
+  holePhase = 'AIMING';
+  pendingShot = null;
   answerText = '';
   answerLocked = false;
-  question = generateQuestion(hole, gameMode, idx + 1);
-  timerActive = question.timerOn;
-  timerStart = millis();
 }
 
-function generateQuestion(h, mode, holeNum) {
-  var relationship = h.relationship;
-  var known, algebra = null;
+// Snaps a known angle to this hole's difficulty tier (round numbers
+// ease in for Golf Gamer; Hole-In-One Hero is arbitrary from the start
+// and wraps the value in an algebraic expression on the back three) -
+// same progression as before, just now applied to a value that's
+// either measured live off the player's own aim (the wall case) or
+// generated fresh when there's no wall to measure (the straight case),
+// via `rawKnown` being a real degrees value or null respectively.
+function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
+  var known;
+  var algebra = null;
   var timerOn = false;
 
   if (mode === MODE_EASY) {
-    if (holeNum <= 3) known = 10 * floor(random(1, 8.999));
-    else if (holeNum <= 6) { do { known = 5 * floor(random(1, 17.999)); } while (known % 10 === 0); }
-    else known = floor(random(1, 89.999));
+    if (rawKnown !== null) {
+      var snap = holeNum <= 3 ? 10 : (holeNum <= 6 ? 5 : 1);
+      known = round(rawKnown / snap) * snap;
+    } else if (holeNum <= 3) known = 10 * floor(random(1, maxVal / 10 - 0.001));
+    else if (holeNum <= 6) { do { known = 5 * floor(random(1, maxVal / 5 - 0.001)); } while (known % 10 === 0); }
+    else known = floor(random(1, maxVal - 0.001));
   } else {
     timerOn = holeNum >= 4;
-    if (holeNum <= 6) known = floor(random(1, 89.999));
-    else {
+    if (rawKnown !== null) known = round(rawKnown);
+    else known = floor(random(1, maxVal - 0.001));
+    if (holeNum >= 7) {
       var x = floor(random(2, 9.999));
       var a = floor(random(2, 5.999));
-      var b = floor(random(1, 20.999));
-      var val = a * x + b;
-      while (val < 5 || val > 89) { b = floor(random(1, 20.999)); val = a * x + b; }
-      known = val;
+      var b = known - a * x;
+      if (b < 1 || a * x + b > maxVal - 1) b = floor(random(1, 6.999));
+      known = a * x + b;
       algebra = { a: a, b: b, x: x };
     }
   }
+  known = constrain(known, 1, maxVal - 1);
+  return { known: known, algebra: algebra, timerOn: timerOn };
+}
 
-  var correct = relationship === 'complementary' ? (90 - known) : (180 - known);
-  return { known: known, relationship: relationship, correctAnswer: correct, algebra: algebra, timerOn: timerOn };
+// ---------------------------------------------------------------
+// Shot classification - the heart of the redesign. Fired the instant
+// the player releases their aim: raycasts the aimed direction against
+// every rail in the hole, out to how far the shot would naturally
+// travel before friction stops it (a plain geometric-series distance,
+// v0/(1-FRICTION) - hills/water aren't factored in here, just the
+// aim+power call the player actually made). A rail in the way makes
+// this a bank shot (complementary, right-angle question live at the
+// real contact point); nothing in the way makes it a straight shot
+// (supplementary, straight-angle question at the real spot it would
+// stop). Either way the question is answered before the ball moves,
+// then consumed by updatePhysics() the instant the ball actually
+// reaches that real point during ROLLING.
+// ---------------------------------------------------------------
+function stoppingDistance(power) { return power / (1 - FRICTION); }
+
+function raycastWalls(origin, dir, maxDist, walls) {
+  var best = null;
+  for (var i = 0; i < walls.length; i++) {
+    var w = walls[i];
+    var hit = raySegmentIntersect(origin, dir, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 });
+    if (hit && hit.t > 6 && hit.t < maxDist && (!best || hit.t < best.t)) {
+      best = { point: { x: origin.x + dir.x * hit.t, y: origin.y + dir.y * hit.t }, t: hit.t, wall: w };
+    }
+  }
+  return best;
+}
+
+// Ray p = origin + t*dir (t>0) vs segment a-b. Standard 2D line-vs-line
+// solve, rejected outside the ray's forward half or outside the segment.
+function raySegmentIntersect(origin, dir, a, b) {
+  var seg = vSub(b, a);
+  var denom = dir.x * seg.y - dir.y * seg.x;
+  if (Math.abs(denom) < 1e-9) return null;
+  var diff = vSub(a, origin);
+  var t = (diff.x * seg.y - diff.y * seg.x) / denom;
+  var u = (diff.x * dir.y - diff.y * dir.x) / denom;
+  if (t > 0 && u >= 0 && u <= 1) return { t: t, u: u };
+  return null;
+}
+
+function classifyAndBuildShot(aimDir, power, holeNum) {
+  var origin = { x: ball.x, y: ball.y };
+  var maxDist = stoppingDistance(power);
+  var hit = raycastWalls(origin, aimDir, maxDist, hole.walls);
+
+  if (hit) {
+    var w = hit.wall;
+    var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
+    var Wd = vDot(wallVec, aimDir) >= 0 ? wallVec : vScale(wallVec, -1);
+    var perp = vPerp(Wd);
+    var N = vDot(perp, aimDir) < 0 ? perp : vScale(perp, -1);
+    var rawKnown = degrees(Math.acos(constrain(vDot(aimDir, Wd), -1, 1)));
+    var tier = applyDifficultyTier(rawKnown, gameMode, holeNum, 89);
+    return {
+      type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: tier.timerOn,
+      correctAnswer: 90 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
+      aimDir: aimDir, power: power, applied: false
+    };
+  }
+
+  var stopPoint = { x: origin.x + aimDir.x * maxDist, y: origin.y + aimDir.y * maxDist };
+  var tier2 = applyDifficultyTier(null, gameMode, holeNum, 179);
+  return {
+    type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: tier2.timerOn,
+    correctAnswer: 180 - tier2.known, point: stopPoint,
+    triggerDist: maxDist * 0.6, aimDir: aimDir, power: power, applied: false
+  };
 }
 
 function nextStroke() {
@@ -547,29 +679,42 @@ function advanceAfterHole() {
 // ---------------------------------------------------------------
 // Rendering: hole world
 // ---------------------------------------------------------------
+// Fills ONLY the enclosed fairway corridor (the real playable shape),
+// not the whole canvas - the surrounding "rough" reads as clearly
+// outside the course, and the corridor's own rail walls (drawn after
+// this) become a real, visible course boundary instead of a couple of
+// free-floating lines inside an open field.
 function drawHoleBackground() {
   var th = course.theme;
   noStroke();
   fill(th.rough);
   rect(0, 0, width, height);
-  // fairway with mow stripes
+
+  var left = hole.fairwayLeft, right = hole.fairwayRight;
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.moveTo(left[0].x, left[0].y);
+  for (var i = 1; i < left.length; i++) drawingContext.lineTo(left[i].x, left[i].y);
+  for (i = right.length - 1; i >= 0; i--) drawingContext.lineTo(right[i].x, right[i].y);
+  drawingContext.closePath();
+  drawingContext.clip();
+
+  fill(th.fairwayB);
+  rect(0, 0, width, height);
   var stripeW = 34;
-  for (var i = -1; i * stripeW < BOUND.w + BOUND.h; i++) {
-    fill(i % 2 === 0 ? th.fairwayA : th.fairwayB);
-    push();
-    beginShape();
-    var x0 = BOUND.x + i * stripeW;
-    vertex(constrain(x0, BOUND.x, BOUND.x + BOUND.w), BOUND.y);
-    vertex(constrain(x0 + stripeW, BOUND.x, BOUND.x + BOUND.w), BOUND.y);
-    vertex(constrain(x0 + stripeW + BOUND.h, BOUND.x, BOUND.x + BOUND.w), BOUND.y + BOUND.h);
-    vertex(constrain(x0 + BOUND.h, BOUND.x, BOUND.x + BOUND.w), BOUND.y + BOUND.h);
-    endShape(CLOSE);
-    pop();
+  fill(th.fairwayA);
+  for (i = -2; i * stripeW < width + height; i++) {
+    if (i % 2 !== 0) continue;
+    var x0 = i * stripeW;
+    quad(x0, 0, x0 + stripeW, 0, x0 + stripeW + height, height, x0 + height, height);
   }
-  noFill();
-  stroke(255, 255, 255, 40);
-  strokeWeight(2);
-  rect(BOUND.x, BOUND.y, BOUND.w, BOUND.h, 6);
+
+  // cup green: a lighter circular patch under the hole for a real
+  // mini-golf "putting green" look
+  fill(255, 255, 255, 22);
+  ellipse(hole.cup.x, hole.cup.y, 130, 130);
+
+  drawingContext.restore();
 }
 
 function drawZones() {
@@ -623,16 +768,19 @@ function drawWalls() {
   var th = course.theme;
   for (var i = 0; i < hole.walls.length; i++) {
     var w = hole.walls[i];
-    var isPuzzle = i === hole.puzzleWallIndex;
+    // While a bank-shot question is live, the rail the ball is actually
+    // headed for lights up gold so the diagram's wall is unmistakably
+    // the same one sitting right there on the course.
+    var isLit = holePhase === 'QUESTION' && pendingShot && pendingShot.type === 'WALL' && pendingShot.wallRef === w;
     push();
     strokeCap(ROUND);
     stroke(0, 0, 0, 90);
     strokeWeight(13);
     line(w.x1, w.y1 + 4, w.x2, w.y2 + 4);
-    stroke(isPuzzle ? '#e0a030' : th.wall);
+    stroke(isLit ? '#e0a030' : th.wall);
     strokeWeight(11);
     line(w.x1, w.y1, w.x2, w.y2);
-    stroke(isPuzzle ? '#ffce6b' : th.wallHi);
+    stroke(isLit ? '#ffce6b' : th.wallHi);
     strokeWeight(4);
     line(w.x1, w.y1 - 1.5, w.x2, w.y2 - 1.5);
     pop();
@@ -725,11 +873,13 @@ function updatePhysics() {
     ball.vx = 0; ball.vy = 0;
     if (holePhase === 'ROLLING') {
       holePhase = 'AIMING';
+      pendingShot = null;
     }
     return;
   }
 
-  // zone forces
+  // zone forces (once per frame - a gentle continuous field, no need
+  // to apply per substep)
   for (var i = 0; i < hole.zones.length; i++) {
     var z = hole.zones[i];
     if (ball.x > z.x && ball.x < z.x + z.w && ball.y > z.y && ball.y < z.y + z.h) {
@@ -738,24 +888,59 @@ function updatePhysics() {
     }
   }
 
-  ball.x += ball.vx;
-  ball.y += ball.vy;
+  // Move in substeps no bigger than roughly one ball radius. A single
+  // big step (fast ball, shallow-angle wall) can have its one sampled
+  // position land just past collision range on both sides of a thin
+  // rail without ever coming within BALL_R of it mid-flight - classic
+  // tunneling. Splitting the frame's movement into smaller hops and
+  // resolving collisions after each one closes that gap.
+  var steps = max(1, ceil(mag(ball.vx, ball.vy) / (BALL_R * 0.8)));
+  for (var s = 0; s < steps; s++) {
+    ball.x += ball.vx / steps;
+    ball.y += ball.vy / steps;
+
+    // Consume a pending STRAIGHT-shot resolution once the ball actually
+    // reaches the real point the diagram was drawn at - a wrong answer
+    // bends the path there by the player's own numeric error, same
+    // "natural, logical consequence" rule as the wall case.
+    if (pendingShot && pendingShot.type === 'STRAIGHT' && !pendingShot.applied && pendingShot.launchFrom) {
+      var traveled = dist(ball.x, ball.y, pendingShot.launchFrom.x, pendingShot.launchFrom.y);
+      if (traveled >= pendingShot.triggerDist) {
+        pendingShot.applied = true;
+        if (!pendingShot.correct) {
+          var curSpeed = mag(ball.vx, ball.vy);
+          var newAng = atan2(ball.vy, ball.vx) + pendingShot.bendDeg;
+          ball.vx = cos(newAng) * curSpeed;
+          ball.vy = sin(newAng) * curSpeed;
+        }
+      }
+    }
+
+    collideWalls();
+    collideBushes();
+  }
+
   ball.vx *= FRICTION;
   ball.vy *= FRICTION;
-
-  collideWalls();
-  collideBushes();
   checkHoleComplete();
 }
 
-function allWalls() {
-  var w = hole.walls.slice();
-  w.push({ x1: BOUND.x, y1: BOUND.y, x2: BOUND.x + BOUND.w, y2: BOUND.y });
-  w.push({ x1: BOUND.x, y1: BOUND.y + BOUND.h, x2: BOUND.x + BOUND.w, y2: BOUND.y + BOUND.h });
-  w.push({ x1: BOUND.x, y1: BOUND.y, x2: BOUND.x, y2: BOUND.y + BOUND.h });
-  w.push({ x1: BOUND.x + BOUND.w, y1: BOUND.y, x2: BOUND.x + BOUND.w, y2: BOUND.y + BOUND.h });
-  return w;
-}
+// The corridor's own rails should always contain the ball, but a
+// sharp interior corner (like where the tee's end-cap meets a side
+// rail) can occasionally let a couple of substeps' worth of sequential
+// per-wall correction drift the ball further than a single clean
+// bounce would - a hard backstop just inside the canvas edges (well
+// outside any real corridor) guarantees the ball can never actually
+// leave the visible course, regardless of any corner-case physics
+// imperfection elsewhere.
+var SAFETY_BOUNDS = [
+  { x1: 6, y1: 80, x2: 694, y2: 80 },
+  { x1: 6, y1: 694, x2: 694, y2: 694 },
+  { x1: 6, y1: 80, x2: 6, y2: 694 },
+  { x1: 694, y1: 80, x2: 694, y2: 694 }
+];
+
+function allWalls() { return hole.walls.concat(SAFETY_BOUNDS); }
 
 function collideWalls() {
   var walls = allWalls();
@@ -770,8 +955,21 @@ function collideWalls() {
       ball.y = closest.y + ny * BALL_R;
       var vn = ball.vx * nx + ball.vy * ny;
       if (vn < 0) {
-        ball.vx -= (1 + WALL_REST) * vn * nx;
-        ball.vy -= (1 + WALL_REST) * vn * ny;
+        var speedNow = mag(ball.vx, ball.vy);
+        // Consume a pending WALL-shot resolution on the first real
+        // contact against the SAME wall the diagram was drawn on - a
+        // correct answer leaves at the true complementary angle, a
+        // wrong one leaves at whatever angle the player actually typed.
+        if (pendingShot && pendingShot.type === 'WALL' && !pendingShot.applied && pendingShot.wallRef === w) {
+          var outDir = vNorm(vAdd(vScale(pendingShot.Wd, cos(pendingShot.resolvedAngle)), vScale(pendingShot.N, sin(pendingShot.resolvedAngle))));
+          var newSpeed = speedNow * WALL_REST;
+          ball.vx = outDir.x * newSpeed;
+          ball.vy = outDir.y * newSpeed;
+          pendingShot.applied = true;
+        } else {
+          ball.vx -= (1 + WALL_REST) * vn * nx;
+          ball.vy -= (1 + WALL_REST) * vn * ny;
+        }
         if (mag(ball.vx, ball.vy) > 1.5) playSound('bounce');
       }
     }
@@ -806,14 +1004,79 @@ function closestPointOnSegment(px, py, x1, y1, x2, y2) {
 }
 
 // ---------------------------------------------------------------
-// Solve panel (bank-shot question)
+// Live question: the geometry diagram is drawn AT THE REAL POINT on
+// the course (called from inside the world-space block in gameDraw,
+// so it pans/shakes with everything else); the text/input/timer stay
+// in a fixed screen-space bar underneath, same as before, since that's
+// where a mobile keypad and a consistent tap target need to live.
 // ---------------------------------------------------------------
-function drawSolvePanel() {
-  var w = 560, h = 190, x = width / 2 - w / 2, y = height - h - 14;
+function drawLiveAngleDiagram() {
+  if (!pendingShot || holePhase !== 'QUESTION') return;
+  var p = pendingShot;
+  var dir0, sweepDir, totalDeg, knownVal;
+  if (p.type === 'WALL') {
+    dir0 = p.Wd; sweepDir = p.N; totalDeg = 90;
+  } else {
+    dir0 = vScale(p.aimDir, -1); sweepDir = vPerp(dir0); totalDeg = 180;
+  }
+  knownVal = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
+
+  var baseAngle = atan2(dir0.y, dir0.x);
+  var sweepSign = vDot(sweepDir, vPerp(dir0)) >= 0 ? 1 : -1;
+  var r = 50;
+
+  // dotted line from the ball to the real point this diagram lives at
+  push();
+  drawingContext.setLineDash([6, 8]);
+  stroke(255, 255, 255, 190);
+  strokeWeight(2.5);
+  line(ball.x, ball.y, p.point.x, p.point.y);
+  drawingContext.setLineDash([]);
+  pop();
+
+  push();
+  translate(p.point.x, p.point.y);
+  rotate(baseAngle);
+  noFill();
+  stroke(255, 255, 255, 150);
+  strokeWeight(2);
+  line(p.type === 'WALL' ? -14 : -r * 1.35, 0, r * 1.35, 0);
+
+  var knownEnd = sweepSign * knownVal;
+  var totalEnd = sweepSign * totalDeg;
+  stroke('#e0a030');
+  strokeWeight(3);
+  arc(0, 0, r * 1.1, r * 1.1, min(0, knownEnd), max(0, knownEnd));
+  stroke('#5b8cff');
+  arc(0, 0, r * 1.55, r * 1.55, min(knownEnd, totalEnd), max(knownEnd, totalEnd));
+
+  if (totalDeg === 90) {
+    noStroke();
+    fill(255, 255, 255, 70);
+    beginShape();
+    vertex(0, 0); vertex(15, 0); vertex(15, 15 * sweepSign); vertex(0, 15 * sweepSign);
+    endShape(CLOSE);
+  }
+
+  noStroke();
+  fill('#e0a030');
+  textAlign(CENTER, CENTER);
+  textSize(13);
+  var kMid = knownEnd / 2;
+  text(knownVal + '°', cos(kMid) * r * 0.7, sin(kMid) * r * 0.7);
+  fill('#8fb4ff');
+  var uMid = (knownEnd + totalEnd) / 2;
+  text('?', cos(uMid) * r * 0.98, sin(uMid) * r * 0.98);
+  pop();
+}
+
+function drawQuestionOverlay() {
+  if (!pendingShot) return;
+  var w = 560, h = 132, x = width / 2 - w / 2, y = height - h - 14;
   noStroke();
   fill(15, 20, 15, 235);
   rect(x, y, w, h, 16);
-  stroke(question.timerOn ? '#e63946' : '#3ea158');
+  stroke(pendingShot.timerOn ? '#e63946' : '#3ea158');
   strokeWeight(2);
   noFill();
   rect(x, y, w, h, 16);
@@ -822,47 +1085,44 @@ function drawSolvePanel() {
   textAlign(LEFT, TOP);
   textSize(15);
   textStyle(BOLD);
-  var rel = question.relationship === 'complementary' ? 'Complementary (sum to 90°)' : 'Supplementary (sum to 180°)';
-  text('Bank Shot Challenge — ' + rel, x + 24, y + 16);
+  var isWall = pendingShot.type === 'WALL';
+  text(isWall ? 'Bank Shot — Complementary (sum to 90°)' : 'Straight Shot — Supplementary (sum to 180°)', x + 24, y + 14);
   textStyle(NORMAL);
-  textSize(14);
+  textSize(13.5);
   fill(210, 220, 210);
-  if (question.algebra) {
-    var alg = question.algebra;
-    text('The wall meets the green at (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x + '.', x + 24, y + 44);
-    text('First find that angle, then find its ' + question.relationship + ' partner.', x + 24, y + 64);
+  var relWord = isWall ? 'complementary' : 'supplementary';
+  if (pendingShot.algebra) {
+    var alg = pendingShot.algebra;
+    text('The marked angle is (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x + '.', x + 24, y + 40);
+    text('Find that angle, then find its ' + relWord + ' partner.', x + 24, y + 58);
   } else {
-    text('The wall meets the green at ' + question.known + '°.', x + 24, y + 44);
-    text('What angle completes the ' + question.relationship + ' pair?', x + 24, y + 64);
+    text('The marked angle is ' + pendingShot.known + '°.', x + 24, y + 40);
+    text('What angle completes the ' + relWord + ' pair?', x + 24, y + 58);
   }
 
-  // mini diagram
-  drawAngleDiagram(x + w - 150, y + 100, 66, question);
-
-  // answer box
   fill(0, 0, 0, 160);
-  rect(x + 24, y + h - 54, 160, 40, 8);
+  rect(x + 24, y + h - 46, 160, 36, 8);
   fill(255);
-  textSize(20);
+  textSize(18);
   textAlign(LEFT, CENTER);
-  text((answerText.length ? answerText : '_') + '°', x + 36, y + h - 34);
+  text((answerText.length ? answerText : '_') + '°', x + 36, y + h - 28);
 
   fill(answerText.length ? '#3ea158' : '#365a3d');
-  rect(x + 196, y + h - 54, 90, 40, 8);
+  rect(x + 196, y + h - 46, 90, 36, 8);
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(15);
+  textSize(14);
   textStyle(BOLD);
-  text('Submit', x + 241, y + h - 34);
+  text('Submit', x + 241, y + h - 28);
   textStyle(NORMAL);
 
-  if (question.timerOn) {
+  if (pendingShot.timerOn) {
     var remain = max(0, HERO_TIMER_SECONDS - (millis() - timerStart) / 1000);
     fill(remain < 3 ? '#e63946' : 255);
     textAlign(RIGHT, TOP);
-    textSize(22);
+    textSize(20);
     textStyle(BOLD);
-    text(ceil(remain) + 's', x + w - 24, y + 16);
+    text(ceil(remain) + 's', x + w - 24, y + 14);
     textStyle(NORMAL);
     if (remain <= 0 && !answerLocked) {
       triggerTimeoutChaos();
@@ -871,55 +1131,41 @@ function drawSolvePanel() {
   textAlign(LEFT, BASELINE);
 }
 
-function drawAngleDiagram(cx, cy, r, q) {
-  push();
-  translate(cx, cy);
-  noFill();
-  stroke(255, 255, 255, 90);
-  strokeWeight(1.5);
-  line(-r - 10, 0, r + 10, 0);
-  var totalDeg = q.relationship === 'complementary' ? 90 : 180;
-  var knownVal = q.algebra ? (q.algebra.a * q.algebra.x + q.algebra.b) : q.known;
-  var knownEndAngle = -(knownVal);
-  noFill();
-  stroke('#e0a030');
-  strokeWeight(3);
-  arc(0, 0, r * 1.1, r * 1.1, knownEndAngle, 0);
-  stroke('#5b8cff');
-  arc(0, 0, r * 1.4, r * 1.4, -(totalDeg), knownEndAngle);
-  if (totalDeg === 90) {
-    noStroke();
-    fill(255, 255, 255, 60);
-    rect(-14, -14, 14, 14);
-  }
-  var kx = cos(-knownVal / 2) * (r * 0.65), ky = sin(-knownVal / 2) * (r * 0.65);
-  noStroke();
-  fill('#e0a030');
-  textAlign(CENTER, CENTER);
-  textSize(12);
-  text(knownVal + '°', kx, ky);
-  var midUnknown = -(knownVal + totalDeg) / 2;
-  var ux = cos(midUnknown) * (r * 0.85), uy = sin(midUnknown) * (r * 0.85);
-  fill('#8fb4ff');
-  text('?', ux, uy);
-  pop();
-}
-
 function handleAnswerKey(k) {
-  if (holePhase !== 'SOLVE' || answerLocked) return;
+  if (holePhase !== 'QUESTION' || answerLocked) return;
   if (k === 'backspace') { answerText = answerText.slice(0, -1); return; }
   if (k === 'enter') { submitAnswer(); return; }
   if (answerText.length < 3) answerText += k;
 }
 
+// Resolving the answer is also the moment the shot actually launches -
+// the ball has been frozen at the aim/power the player already chose
+// while the question was live. Correct: leaves at the true angle
+// (complementary/supplementary as shown). Wrong: leaves at whatever
+// the player actually typed instead - a direct, logical consequence
+// of their own number, not a generic penalty.
 function submitAnswer() {
-  if (holePhase !== 'SOLVE' || answerLocked || answerText.length === 0) return;
+  if (holePhase !== 'QUESTION' || answerLocked || answerText.length === 0 || !pendingShot) return;
   var typed = parseInt(answerText, 10);
-  answerWasCorrect = typed === question.correctAnswer;
-  question.typed = typed;
+  var correct = typed === pendingShot.correctAnswer;
+  pendingShot.typed = typed;
+  pendingShot.launchFrom = { x: ball.x, y: ball.y };
+
+  if (pendingShot.type === 'WALL') {
+    pendingShot.resolvedAngle = correct ? pendingShot.correctAnswer : constrain(typed, 1, 179);
+    showToast(correct ? 'Correct! That bank lines right up.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the bounce goes wide!', correct ? '#3ea158' : '#e63946');
+  } else {
+    pendingShot.correct = correct;
+    if (!correct) pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
+    showToast(correct ? 'Correct! Straight down the fairway.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the shot drifts off line!', correct ? '#3ea158' : '#e63946');
+  }
+
   answerLocked = true;
-  holePhase = 'AIMING';
-  playSound('click');
+  ball.vx = pendingShot.aimDir.x * pendingShot.power;
+  ball.vy = pendingShot.aimDir.y * pendingShot.power;
+  holePhase = 'ROLLING';
+  nextStroke();
+  playSound('hit');
 }
 
 // ---------------------------------------------------------------
@@ -944,10 +1190,10 @@ function mousePressed() {
     if (scorecardHit(mouseX, mouseY)) { gameState = 'MENU'; playSound('click'); }
     return;
   }
-  if (gameState === 'PLAYING' && holePhase === 'SOLVE') {
-    if (mouseY > height - 240) {
-      var w = 560, h = 190, x = width / 2 - w / 2, y = height - h - 14;
-      if (mouseX > x + 196 && mouseX < x + 286 && mouseY > y + h - 54 && mouseY < y + h - 14) submitAnswer();
+  if (gameState === 'PLAYING' && holePhase === 'QUESTION') {
+    if (mouseY > height - 160) {
+      var w = 560, h = 132, x = width / 2 - w / 2, y = height - h - 14;
+      if (mouseX > x + 196 && mouseX < x + 286 && mouseY > y + h - 46 && mouseY < y + h - 10) submitAnswer();
     }
     return;
   }
@@ -983,13 +1229,19 @@ function touchEnded() { mouseReleased(); return false; }
 // uses the on-screen keypad in bank-shot-angle-golf-mobile-controls.js,
 // which calls handleAnswerKey() directly.
 function keyPressed() {
-  if (holePhase !== 'SOLVE') return false;
+  if (holePhase !== 'QUESTION') return false;
   if (key >= '0' && key <= '9') { handleAnswerKey(key); return false; }
   if (keyCode === BACKSPACE) { handleAnswerKey('backspace'); return false; }
   if (keyCode === ENTER || keyCode === RETURN) { handleAnswerKey('enter'); return false; }
   return true;
 }
 
+// Releasing the drag no longer fires the shot - it freezes the ball
+// right where it is and classifies what this exact aim+power would do
+// (see classifyAndBuildShot): head for a rail, or travel straight into
+// open green. The question that pops up live on the course is built
+// from that real classification, and answering it is what actually
+// launches the ball (see submitAnswer).
 function mouseReleased() {
   if (!dragging) return;
   dragging = false;
@@ -997,26 +1249,14 @@ function mouseReleased() {
   var d = min(mag(dx, dy), MAX_DRAG);
   if (d < 8) return; // too short, not a real shot
   var aimAngle = atan2(dy, dx); // already in degrees - angleMode(DEGREES) is set
+  var aimDir = { x: cos(aimAngle), y: sin(aimAngle) };
   var power = (d / MAX_DRAG) * MAX_LAUNCH_SPEED;
 
-  preShotPos.x = ball.x; preShotPos.y = ball.y;
-  var launchAngle = aimAngle;
-
-  if (strokeCount === 0 && question) {
-    if (answerWasCorrect) {
-      showToast('Correct! Banking exactly where you aimed.', '#3ea158');
-    } else {
-      var error = constrain(question.typed - question.correctAnswer, -75, 75);
-      launchAngle = aimAngle + error;
-      showToast('Off by ' + abs(question.typed - question.correctAnswer) + '° — the shot banks wide!', '#e63946');
-    }
-  }
-
-  ball.vx = cos(launchAngle) * power;
-  ball.vy = sin(launchAngle) * power;
-  holePhase = 'ROLLING';
-  nextStroke();
-  playSound('hit');
+  pendingShot = classifyAndBuildShot(aimDir, power, holeIndex + 1);
+  answerText = '';
+  answerLocked = false;
+  timerStart = millis();
+  holePhase = 'QUESTION';
 }
 
 function showToast(text, col) {
@@ -1046,6 +1286,7 @@ function drawFeedbackToast() {
 // ---------------------------------------------------------------
 function triggerTimeoutChaos() {
   answerLocked = true;
+  pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
   preShotPos.x = ball.x; preShotPos.y = ball.y;
   var toCup = atan2(hole.cup.y - ball.y, hole.cup.x - ball.x);

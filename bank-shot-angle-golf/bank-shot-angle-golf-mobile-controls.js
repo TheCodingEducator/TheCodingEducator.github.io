@@ -2,7 +2,7 @@
 // This game's only touch-unfriendly input is typing the bank-shot
 // angle - aiming/power is a natural drag gesture on the canvas itself
 // and needs no on-screen control. Shown only while holePhase is
-// SOLVE (see bank-shot-angle-golf-game.js), matching the same
+// QUESTION (see bank-shot-angle-golf-game.js), matching the same
 // swap-by-game-state pattern every other mobile-controls.js on this
 // site uses.
 (function () {
@@ -48,7 +48,7 @@
 
   function refreshVisibility() {
     var show = typeof gameState !== 'undefined' && gameState === 'PLAYING' &&
-      typeof holePhase !== 'undefined' && holePhase === 'SOLVE';
+      typeof holePhase !== 'undefined' && holePhase === 'QUESTION';
     numpadEl.classList.toggle('mc-visible', show);
   }
 
