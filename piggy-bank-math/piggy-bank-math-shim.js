@@ -5,7 +5,21 @@
 // ---- Canvas bootstrap (Code.org injects this behind the scenes) ----
 function setup() {
   createCanvas(400, 400).parent('game-canvas-slot');
-  pixelDensity(4); // renders into a 1600x1600 backing buffer instead of 400x400 so the canvas stays sharp when CSS stretches it up to 700px (desktop) or fullscreen - all game coordinates stay in the same 0-400 logical space either way
+  // 4x keeps the canvas sharp when CSS stretches it up to 700px on
+  // desktop (unchanged, confirmed fine there) - but forcing that same
+  // 1600x1600 backing buffer on a touch device asks a typically much
+  // weaker mobile GPU to fill far more pixels than the screen can even
+  // show: measured this page's own canvas rendering into a 375x400 CSS
+  // box on a 2x-density phone emulation - a >4x overdraw ratio (a real
+  // ~2.56 million backing pixels painted every frame for a display
+  // that only needed ~600K) for zero visible sharpness benefit, since
+  // nothing on a phone displays this canvas anywhere near 700px wide.
+  // Capped lower on touch devices, and never higher than the device's
+  // own actual pixel ratio either way, so it's never asked to render
+  // more pixels than the screen can display.
+  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
+    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  pixelDensity(isTouch ? Math.min(2, displayDensity()) : 4);
   frameRate(30); // Game Lab's default frame rate; the game's own timing is wall-clock (millis()) based, not frame-based, so this only paces animation smoothness
   // Deliberately NOT calling angleMode(DEGREES) here, unlike every other
   // port in this site. This game always wraps its own degree-scale values
