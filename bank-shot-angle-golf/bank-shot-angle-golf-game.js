@@ -226,6 +226,11 @@ var dragging = false;
 var dragStart = { x: 0, y: 0 };
 var dragNow = { x: 0, y: 0 };
 
+// Confirm-before-exit dialog (see EXIT_BTN) - freezes physics and the
+// hero-mode timer while it's open, so backing out never costs progress
+// mid-question or lets the ball keep rolling unseen.
+var confirmExitOpen = false;
+
 var feedbackToast = null;      // { text, color, until }
 var chaosUntil = 0;
 var chaosShakeMag = 0;
@@ -285,7 +290,7 @@ function gameDraw() {
   drawWalls();
   drawBushes();
   drawCup();
-  updatePhysics();
+  if (!confirmExitOpen) updatePhysics();
   drawIntendedPath();
   drawTrail();
   drawBall();
@@ -298,10 +303,12 @@ function gameDraw() {
   }
 
   drawHUD();
+  if (gameState === 'PLAYING') drawExitButton();
   if (holePhase === 'QUESTION') drawQuestionOverlay();
   drawFeedbackToast();
   drawScreenFlash();
   if (gameState === 'HOLE_COMPLETE') drawHoleCompleteOverlay();
+  if (confirmExitOpen) drawExitConfirm();
 }
 
 // ---------------------------------------------------------------
@@ -1552,7 +1559,7 @@ function drawQuestionOverlay() {
     textStyle(BOLD);
     text(ceil(remain) + 's', width / 2, pendingShot.algebra ? 168 : 146);
     textStyle(NORMAL);
-    if (remain <= 0 && !answerLocked) {
+    if (remain <= 0 && !answerLocked && !confirmExitOpen) {
       triggerTimeoutChaos();
     }
   }
@@ -1645,6 +1652,17 @@ function drawScreenFlash() {
 // Aiming input
 // ---------------------------------------------------------------
 function mousePressed() {
+  if (confirmExitOpen) {
+    var choice = exitConfirmHit(mouseX, mouseY);
+    if (choice === 'exit') { confirmExitOpen = false; dragging = false; gameState = 'MENU'; playSound('click'); }
+    else if (choice === 'cancel') { confirmExitOpen = false; playSound('click'); }
+    return;
+  }
+  if (gameState === 'PLAYING' && exitButtonHit(mouseX, mouseY)) {
+    confirmExitOpen = true;
+    playSound('click');
+    return;
+  }
   if (gameState === 'MENU') {
     if (practiceButtonHit(mouseX, mouseY)) { startPractice(); playSound('click'); return; }
     var m = menuHit(mouseX, mouseY);
@@ -1663,14 +1681,6 @@ function mousePressed() {
   if (gameState === 'COURSE_COMPLETE') {
     if (scorecardHit(mouseX, mouseY)) { gameState = 'MENU'; playSound('click'); }
     return;
-  }
-  if (gameState === 'PLAYING' && gameMode === MODE_PRACTICE) {
-    var mb = PRACTICE_MENU_BTN;
-    if (mouseX > mb.x && mouseX < mb.x + mb.w && mouseY > mb.y && mouseY < mb.y + mb.h) {
-      gameState = 'MENU';
-      playSound('click');
-      return;
-    }
   }
   if (gameState === 'PLAYING' && holePhase === 'QUESTION') {
     var iw = 100, ih = 42, sw = 90, gap = 8;
@@ -1800,8 +1810,6 @@ function triggerTimeoutChaos() {
 // ---------------------------------------------------------------
 // HUD / overlays
 // ---------------------------------------------------------------
-var PRACTICE_MENU_BTN = { x: 20, y: 86, w: 100, h: 32 };
-
 function drawHUD() {
   noStroke();
   fill(10, 14, 10, 220);
@@ -1831,19 +1839,86 @@ function drawHUD() {
   var modeLabel = gameMode === MODE_EASY ? 'Golf Gamer' : (gameMode === MODE_HARD ? 'Hole-In-One Hero' : 'Putting Green');
   text(modeLabel, width - 20, 48);
   textAlign(LEFT, BASELINE);
+}
 
-  if (gameMode === MODE_PRACTICE) {
-    var b = PRACTICE_MENU_BTN;
-    fill(0, 0, 0, 160);
-    rect(b.x, b.y, b.w, b.h, b.h / 2);
-    fill(255);
-    textAlign(CENTER, CENTER);
-    textSize(13);
-    textStyle(BOLD);
-    text('← Menu', b.x + b.w / 2, b.y + b.h / 2 + 1);
-    textStyle(NORMAL);
-    textAlign(LEFT, BASELINE);
-  }
+// Small exit button, always in the bottom-left corner during play
+// (any mode, any hole phase) - opens a confirm dialog rather than
+// leaving immediately, so an accidental tap can't dump mid-round
+// progress or a mid-question practice streak with no way back.
+var EXIT_BTN = { x: 16, y: 650, w: 90, h: 34 };
+
+function drawExitButton() {
+  var b = EXIT_BTN;
+  var hovered = mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h;
+  noStroke();
+  fill(0, 0, 0, hovered ? 190 : 150);
+  rect(b.x, b.y, b.w, b.h, b.h / 2);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(13);
+  textStyle(BOLD);
+  text('☰ Menu', b.x + b.w / 2, b.y + b.h / 2 + 1);
+  textStyle(NORMAL);
+  textAlign(LEFT, BASELINE);
+}
+
+function exitButtonHit(mx, my) {
+  var b = EXIT_BTN;
+  return mx > b.x && mx < b.x + b.w && my > b.y && my < b.y + b.h;
+}
+
+var EXIT_CONFIRM_YES = { w: 120, h: 44 };
+var EXIT_CONFIRM_NO = { w: 120, h: 44 };
+
+function drawExitConfirm() {
+  noStroke();
+  fill(0, 0, 0, 175);
+  rect(0, 0, width, height);
+
+  var w = 360, h = 190, x = width / 2 - w / 2, y = height / 2 - h / 2;
+  fill(19, 25, 19, 250);
+  rect(x, y, w, h, 16);
+  stroke(255, 255, 255, 40);
+  strokeWeight(1.5);
+  noFill();
+  rect(x, y, w, h, 16);
+
+  noStroke();
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(19);
+  textStyle(BOLD);
+  text('Exit to Main Menu?', width / 2, y + 46);
+  textStyle(NORMAL);
+  textSize(13.5);
+  fill(200, 212, 200);
+  text('This round will end and won’t be saved.', width / 2, y + 74);
+
+  var by = y + h - 60, gap = 14;
+  var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;
+  var yesX = width / 2 + gap / 2;
+
+  fill('rgba(60,80,60,0.9)');
+  rect(noX, by, EXIT_CONFIRM_NO.w, EXIT_CONFIRM_NO.h, 10);
+  fill('#c0392b');
+  rect(yesX, by, EXIT_CONFIRM_YES.w, EXIT_CONFIRM_YES.h, 10);
+
+  fill(255);
+  textSize(15);
+  textStyle(BOLD);
+  text('Cancel', noX + EXIT_CONFIRM_NO.w / 2, by + EXIT_CONFIRM_NO.h / 2 + 1);
+  text('Exit', yesX + EXIT_CONFIRM_YES.w / 2, by + EXIT_CONFIRM_YES.h / 2 + 1);
+  textStyle(NORMAL);
+}
+
+function exitConfirmHit(mx, my) {
+  var w = 360, h = 190, y = height / 2 - h / 2;
+  var by = y + h - 60, gap = 14;
+  var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;
+  var yesX = width / 2 + gap / 2;
+  if (mx > noX && mx < noX + EXIT_CONFIRM_NO.w && my > by && my < by + EXIT_CONFIRM_NO.h) return 'cancel';
+  if (mx > yesX && mx < yesX + EXIT_CONFIRM_YES.w && my > by && my < by + EXIT_CONFIRM_YES.h) return 'exit';
+  return null;
 }
 
 function drawHoleCompleteOverlay() {
