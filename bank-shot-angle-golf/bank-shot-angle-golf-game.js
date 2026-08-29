@@ -1015,7 +1015,11 @@ function computePreviewPath(aimDir, power) {
       var rawKnown = degrees(Math.acos(constrain(vDot(dir, Wd), -1, 1)));
       var tier = applyDifficultyTier(rawKnown, gameMode, holeIndex + 1, 89);
       var correctAnswer = 90 - tier.known;
-      dir = vNorm(vAdd(vScale(Wd, cos(correctAnswer)), vScale(N, sin(correctAnswer))));
+      // True mirror reflection (angle of incidence = angle of
+      // reflection, both measured from the wall's NORMAL) - see the
+      // long comment on resolveWallCollision for the full derivation of
+      // why sin/cos are swapped from what you'd expect here.
+      dir = vNorm(vAdd(vScale(Wd, sin(correctAnswer)), vScale(N, cos(correctAnswer))));
       firstBounce = false;
     } else {
       var nrm = vPerp(wallVec);
@@ -1285,7 +1289,25 @@ function resolveWallCollision(b, pending, w, silent) {
   if (vn < 0) {
     var speedNow = mag(b.vx, b.vy);
     if (pending && pending.type === 'WALL' && !pending.applied && pending.wallRef === w) {
-      var outDir = vNorm(vAdd(vScale(pending.Wd, cos(pending.resolvedAngle)), vScale(pending.N, sin(pending.resolvedAngle))));
+      // A real bank shot bounces by the actual law of reflection (angle
+      // of incidence = angle of reflection, both measured from the
+      // wall's NORMAL) rather than an arbitrary "always turns exactly
+      // 90 degrees" house rule - the physics is now the genuine thing,
+      // not a simplification of it. The complementary-angle question
+      // still comes along for free: `known` is the incidence angle
+      // measured from the WALL, and the wall and its own normal are
+      // always perpendicular by definition, so the angle from the
+      // SAME incoming ray to the normal is always exactly (90-known) -
+      // a real geometric fact, not a game rule. `resolvedAngle` is
+      // that normal-relative angle (correctAnswer on a right answer,
+      // literally whatever the player typed on a wrong one), and
+      // reconstructing the outgoing ray at that angle from the normal
+      // is provably the same as a true mirror bounce when the typed
+      // value is correct: cos(known)*Wd + sin(known)*N (the standard
+      // reflection formula, derived from v-2(v.n)n) equals
+      // sin(90-known)*Wd + cos(90-known)*N, i.e. sin(resolvedAngle)*Wd
+      // + cos(resolvedAngle)*N - the swapped sin/cos below, not a typo.
+      var outDir = vNorm(vAdd(vScale(pending.Wd, sin(pending.resolvedAngle)), vScale(pending.N, cos(pending.resolvedAngle))));
       var newSpeed = speedNow * WALL_REST;
       b.vx = outDir.x * newSpeed;
       b.vy = outDir.y * newSpeed;
