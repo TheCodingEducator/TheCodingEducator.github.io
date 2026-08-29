@@ -1502,19 +1502,34 @@ function drawLiveAngleDiagram() {
     endShape();
   }
 
+  // Local-space positions for the two labels, computed here (still inside
+  // the rotated frame) but drawn AFTER pop() below - text drawn while the
+  // canvas is rotated gets rotated too (upside-down/mirrored digits, "?"
+  // turns into "¿"), so we place it in unrotated world space instead.
+  var kMid = knownEnd / 2;
+  var kLocal = { x: cos(kMid) * r * 0.6, y: sin(kMid) * r * 0.6 };
+  var uMid = (knownEnd + totalEnd) / 2;
+  var uLocal = { x: cos(uMid) * r * 0.65, y: sin(uMid) * r * 0.65 };
+  pop();
+
+  var kWorld = rotatePoint(kLocal, baseAngle);
+  var uWorld = rotatePoint(uLocal, baseAngle);
+
   noStroke();
   fill('#ffce6b');
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   textSize(22);
-  var kMid = knownEnd / 2;
-  text(knownVal + '°', cos(kMid) * r * 0.6, sin(kMid) * r * 0.6);
+  text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
   fill('#bcd4ff');
   textSize(28);
-  var uMid = (knownEnd + totalEnd) / 2;
-  text('?', cos(uMid) * r * 0.65, sin(uMid) * r * 0.65);
+  text('?', p.point.x + uWorld.x, p.point.y + uWorld.y);
   textStyle(NORMAL);
-  pop();
+}
+
+function rotatePoint(pt, deg) {
+  var c = cos(deg), s = sin(deg);
+  return { x: pt.x * c - pt.y * s, y: pt.x * s + pt.y * c };
 }
 
 // No background panel any more - just a bold title floating near the
