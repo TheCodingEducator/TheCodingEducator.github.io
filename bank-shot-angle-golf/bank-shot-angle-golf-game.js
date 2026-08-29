@@ -572,6 +572,7 @@ function startHole(idx) {
   sinkAnim = 0;
   gameState = 'PLAYING';
   holePhase = 'AIMING';
+  rollAlgebraSeed();
   pendingShot = null;
   answerText = '';
   answerLocked = false;
@@ -587,6 +588,22 @@ function startHole(idx) {
 // either measured live off the player's own aim (the wall case) or
 // generated fresh when there's no wall to measure (the straight case),
 // via `rawKnown` being a real degrees value or null respectively.
+// Hero mode's algebra holes (7-9) need an (a, x) pair - fixed once per
+// stroke (rolled whenever a fresh aim begins, see rollAlgebraSeed) so
+// applyDifficultyTier is otherwise fully deterministic given rawKnown.
+// That determinism is what lets the drag preview (computePreviewPath,
+// called every frame while aiming) compute the EXACT SAME known/
+// correctAnswer classifyAndBuildShot will produce on release, instead
+// of an approximation - re-rolling a and x every frame would make the
+// preview's predicted bounce angle flicker independent of the player's
+// actual aim; deriving b from the current known value each time does not,
+// since it's arithmetic, not a fresh random draw.
+var algebraSeedA = 3, algebraSeedX = 5;
+function rollAlgebraSeed() {
+  algebraSeedA = floor(random(2, 5.999));
+  algebraSeedX = floor(random(2, 9.999));
+}
+
 function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
   var known;
   var algebra = null;
@@ -604,10 +621,8 @@ function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
     if (rawKnown !== null) known = round(rawKnown);
     else known = floor(random(1, maxVal - 0.001));
     if (holeNum >= 7) {
-      var x = floor(random(2, 9.999));
-      var a = floor(random(2, 5.999));
-      var b = known - a * x;
-      if (b < 1 || a * x + b > maxVal - 1) b = floor(random(1, 6.999));
+      var x = algebraSeedX, a = algebraSeedA;
+      var b = constrain(known - a * x, 1, maxVal - 1 - a * x);
       known = a * x + b;
       algebra = { a: a, b: b, x: x };
     }
@@ -632,12 +647,19 @@ function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
 // ---------------------------------------------------------------
 function stoppingDistance(power) { return power / (1 - FRICTION); }
 
-function raycastWalls(origin, dir, maxDist, walls) {
+// `excludeWall`, when given, skips only that exact wall (the one just
+// bounced off) rather than using a blanket minimum distance - a flat
+// "ignore anything within N px" cutoff would also skip a genuinely
+// different wall that happens to sit close to a sharp corner right
+// after a bounce, letting a ray (real or previewed) slip through a gap
+// that isn't actually there.
+function raycastWalls(origin, dir, maxDist, walls, excludeWall) {
   var best = null;
   for (var i = 0; i < walls.length; i++) {
     var w = walls[i];
+    if (w === excludeWall) continue;
     var hit = raySegmentIntersect(origin, dir, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 });
-    if (hit && hit.t > 6 && hit.t < maxDist && (!best || hit.t < best.t)) {
+    if (hit && hit.t > 0.5 && hit.t < maxDist && (!best || hit.t < best.t)) {
       best = { point: { x: origin.x + dir.x * hit.t, y: origin.y + dir.y * hit.t }, t: hit.t, wall: w };
     }
   }
@@ -916,22 +938,25 @@ function drawBall() {
 // wall it would reach - not just the incoming leg. Every bounce after
 // that first one uses a true mirror reflection (matching
 // collideWalls()'s own normal-physics branch, since only the very
-// first contact of a stroke is ever question-governed). Deliberately
-// uses the RAW geometric correct angle (90 - the true incidence angle)
-// rather than running it through applyDifficultyTier's snapping/
-// algebra - the real question (built fresh on release) may round that
-// by a few degrees, but recomputing the tier live every single drag
-// frame would re-roll its random algebra values continuously and make
-// the preview flicker; the raw angle is always within a few degrees
-// of whatever the real one turns out to be.
+// first contact of a stroke is ever question-governed).
+//
+// Runs the exact same applyDifficultyTier() math classifyAndBuildShot
+// will use on release - not an approximation - so a correct answer is
+// guaranteed to send the ball exactly where this line just showed.
+// That's safe to call every drag frame (unlike classifyAndBuildShot's
+// own random draws) only because applyDifficultyTier is now fully
+// deterministic given rawKnown: the one place it used to roll fresh
+// randomness independent of the aim (the algebra holes' a/x pair) is
+// seeded once per stroke by rollAlgebraSeed(), not re-rolled here.
 function computePreviewPath(aimDir, power) {
   var points = [{ x: ball.x, y: ball.y }];
   var pos = { x: ball.x, y: ball.y };
   var dir = aimDir;
   var remaining = stoppingDistance(power);
+  var excludeWall = null;
   var firstBounce = true;
   for (var bounce = 0; bounce < 6 && remaining > 4; bounce++) {
-    var hit = raycastWalls(pos, dir, remaining, hole.walls);
+    var hit = raycastWalls(pos, dir, remaining, hole.walls, excludeWall);
     if (!hit) {
       points.push({ x: pos.x + dir.x * remaining, y: pos.y + dir.y * remaining });
       break;
@@ -944,16 +969,22 @@ function computePreviewPath(aimDir, power) {
       var Wd = vDot(wallVec, dir) >= 0 ? wallVec : vScale(wallVec, -1);
       var perp = vPerp(Wd);
       var N = vDot(perp, dir) < 0 ? perp : vScale(perp, -1);
-      var rawKnown = constrain(degrees(Math.acos(constrain(vDot(dir, Wd), -1, 1))), 1, 89);
-      var correctAnswer = 90 - rawKnown;
+      var rawKnown = degrees(Math.acos(constrain(vDot(dir, Wd), -1, 1)));
+      var tier = applyDifficultyTier(rawKnown, gameMode, holeIndex + 1, 89);
+      var correctAnswer = 90 - tier.known;
       dir = vNorm(vAdd(vScale(Wd, cos(correctAnswer)), vScale(N, sin(correctAnswer))));
       firstBounce = false;
     } else {
       var nrm = vPerp(wallVec);
       if (vDot(nrm, dir) > 0) nrm = vScale(nrm, -1);
-      dir = vNorm(vSub(dir, vScale(nrm, 2 * vDot(dir, nrm))));
+      // Matches collideWalls()'s real velocity update exactly, not a
+      // pure mirror: WALL_REST<1 shrinks the normal component more
+      // than a true reflection would, which changes the resulting
+      // DIRECTION, not just the speed - factor (1+WALL_REST), not 2.
+      dir = vNorm(vSub(dir, vScale(nrm, (1 + WALL_REST) * vDot(dir, nrm))));
     }
     pos = hit.point;
+    excludeWall = w;
   }
   return points;
 }
@@ -977,8 +1008,9 @@ function computeIntendedPath(shot) {
   var remaining = (stoppingDistance(shot.power) - traveled) * WALL_REST;
   var pos = shot.point;
   var dir = vNorm(vAdd(vScale(shot.Wd, cos(shot.correctAnswer)), vScale(shot.N, sin(shot.correctAnswer))));
+  var excludeWall = shot.wallRef;
   for (var bounce = 0; bounce < 5 && remaining > 4; bounce++) {
-    var hit = raycastWalls(pos, dir, remaining, hole.walls);
+    var hit = raycastWalls(pos, dir, remaining, hole.walls, excludeWall);
     if (!hit) {
       points.push({ x: pos.x + dir.x * remaining, y: pos.y + dir.y * remaining });
       break;
@@ -989,8 +1021,9 @@ function computeIntendedPath(shot) {
     var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
     var nrm = vPerp(wallVec);
     if (vDot(nrm, dir) > 0) nrm = vScale(nrm, -1);
-    dir = vNorm(vSub(dir, vScale(nrm, 2 * vDot(dir, nrm))));
+    dir = vNorm(vSub(dir, vScale(nrm, (1 + WALL_REST) * vDot(dir, nrm))));
     pos = hit.point;
+    excludeWall = w;
   }
   return points;
 }
@@ -1070,6 +1103,7 @@ function updatePhysics() {
     ball.vx = 0; ball.vy = 0;
     if (holePhase === 'ROLLING') {
       holePhase = 'AIMING';
+      rollAlgebraSeed();
       pendingShot = null;
       trail = [];
       trailRightAngle = null;
@@ -1540,6 +1574,7 @@ function triggerTimeoutChaos() {
     ball.y = preShotPos.y + sin(away) * dist2;
     ball.vx = 0; ball.vy = 0;
     holePhase = 'AIMING';
+    rollAlgebraSeed();
   }, 1400);
 }
 
