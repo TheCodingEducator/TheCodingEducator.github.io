@@ -26,6 +26,7 @@ var CHAOS_SPEED_MULT = 2.3;
 
 var MODE_EASY = 'EASY';
 var MODE_HARD = 'HARD';
+var MODE_PRACTICE = 'PRACTICE';
 
 // ---------------------------------------------------------------
 // Theme palettes (more themes get appended here as courses are added)
@@ -110,6 +111,32 @@ function makeHole(par, points, widths, bushes, zones) {
     walls: corridor.walls,
     fairwayLeft: corridor.left, fairwayRight: corridor.right,
     bushes: bushes || [], zones: zones || []
+  };
+}
+
+// Putting Green: a plain open square with no cup and no obstacles -
+// an infinite practice arena. Every shot still gets a real bank/
+// straight question off the same live classification every course
+// hole uses, there's just nothing to win; the ball simply returns to
+// AIMING once it stops, forever, until the player backs out to the menu.
+function buildPracticeArena() {
+  var b = { x: 70, y: 130, w: 560, h: 540 };
+  var corners = [
+    { x: b.x, y: b.y }, { x: b.x + b.w, y: b.y },
+    { x: b.x + b.w, y: b.y + b.h }, { x: b.x, y: b.y + b.h }
+  ];
+  var walls = [];
+  for (var i = 0; i < 4; i++) {
+    var a = corners[i], c = corners[(i + 1) % 4];
+    walls.push({ x1: a.x, y1: a.y, x2: c.x, y2: c.y });
+  }
+  return {
+    par: null,
+    tee: { x: b.x + b.w / 2, y: b.y + b.h / 2 },
+    cup: null,
+    walls: walls,
+    fairwayPoly: corners,
+    bushes: [], zones: []
   };
 }
 
@@ -304,10 +331,41 @@ function drawMenu() {
   drawModeCard(width / 2 + 12, MENU_CARD_Y, 'Hole-In-One Hero', 'HARD', '🔥',
     ['Any angle from hole 1 -', 'algebra by the back nine.'], '10s clock from hole 4. Miss it, ball goes wild.', '#e0562f');
 
+  drawPracticeButton();
+
   textAlign(CENTER, CENTER);
   textSize(12.5);
   fill(140, 155, 140);
-  text('9 holes per round · a new random themed course every time you play', width / 2, MENU_CARD_Y + MENU_CARD_H + 26);
+  text('9 holes per round · a new random themed course every time you play', width / 2, PRACTICE_BTN.y + PRACTICE_BTN.h + 22);
+}
+
+var PRACTICE_BTN = { w: 300, h: 42, y: 564 };
+
+function drawPracticeButton() {
+  var b = PRACTICE_BTN, x = width / 2 - b.w / 2;
+  var hovered = mouseX > x && mouseX < x + b.w && mouseY > b.y && mouseY < b.y + b.h;
+  noStroke();
+  fill(0, 0, 0, hovered ? 90 : 60);
+  rect(x + 2, b.y + 3, b.w, b.h, b.h / 2);
+  fill(19, 25, 19, 245);
+  rect(x, b.y, b.w, b.h, b.h / 2);
+  var ac = color('#2f8ac7');
+  stroke(red(ac), green(ac), blue(ac), hovered ? 255 : 110);
+  strokeWeight(hovered ? 2.5 : 1.25);
+  noFill();
+  rect(x, b.y, b.w, b.h, b.h / 2);
+  noStroke();
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  textStyle(BOLD);
+  text('🎯 Putting Green — Free Practice', width / 2, b.y + b.h / 2 + 1);
+  textStyle(NORMAL);
+}
+
+function practiceButtonHit(mx, my) {
+  var b = PRACTICE_BTN, x = width / 2 - b.w / 2;
+  return mx > x && mx < x + b.w && my > b.y && my < b.y + b.h;
 }
 
 function drawMenuBackground() {
@@ -585,6 +643,30 @@ function startCourse() {
   gameState = 'COURSE_INTRO';
 }
 
+// Putting Green skips COURSE_INTRO entirely (there's nothing to reveal
+// - it's always the same square) and goes straight into PLAYING on a
+// single practice "hole" that's never left until the player backs out
+// to the menu themselves.
+function startPractice() {
+  gameMode = MODE_PRACTICE;
+  var practiceTheme = {};
+  for (var k in THEMES.classicGreen) practiceTheme[k] = THEMES.classicGreen[k];
+  practiceTheme.icon = '🎯';
+  practiceTheme.label = 'Putting Green';
+  course = { key: 'practice', theme: practiceTheme, holes: [buildPracticeArena()] };
+  holeIndex = 0;
+  scorecard = [];
+  startHole(0);
+}
+
+// Course holes ease difficulty in by hole number; Putting Green has no
+// holes to count, so it eases in by shots taken instead (capped at the
+// same tier ceiling), then stays there - keeps using the exact same
+// applyDifficultyTier() progression either way.
+function currentHoleNum() {
+  return gameMode === MODE_PRACTICE ? min(strokeCount + 1, 9) : holeIndex + 1;
+}
+
 function startHole(idx) {
   holeIndex = idx;
   hole = course.holes[idx];
@@ -629,7 +711,7 @@ function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
   var algebra = null;
   var timerOn = false;
 
-  if (mode === MODE_EASY) {
+  if (mode === MODE_EASY || mode === MODE_PRACTICE) {
     if (rawKnown !== null) {
       var snap = holeNum <= 3 ? 10 : (holeNum <= 6 ? 5 : 1);
       known = round(rawKnown / snap) * snap;
@@ -754,6 +836,7 @@ function nextStroke() {
 }
 
 function checkHoleComplete() {
+  if (!hole.cup) return; // Putting Green practice arena has no cup to sink
   var d = dist(ball.x, ball.y, hole.cup.x, hole.cup.y);
   var speed = mag(ball.vx, ball.vy);
   if (d < CUP_R - 2 && speed < CUP_CAPTURE_SPEED && holePhase === 'ROLLING') {
@@ -792,12 +875,20 @@ function drawHoleBackground() {
   fill(th.rough);
   rect(0, 0, width, height);
 
-  var left = hole.fairwayLeft, right = hole.fairwayRight;
   drawingContext.save();
   drawingContext.beginPath();
-  drawingContext.moveTo(left[0].x, left[0].y);
-  for (var i = 1; i < left.length; i++) drawingContext.lineTo(left[i].x, left[i].y);
-  for (i = right.length - 1; i >= 0; i--) drawingContext.lineTo(right[i].x, right[i].y);
+  if (hole.fairwayPoly) {
+    // A plain closed polygon (the Putting Green practice arena's
+    // square) instead of a corridor's offset left/right rail lists.
+    var poly = hole.fairwayPoly;
+    drawingContext.moveTo(poly[0].x, poly[0].y);
+    for (var pi = 1; pi < poly.length; pi++) drawingContext.lineTo(poly[pi].x, poly[pi].y);
+  } else {
+    var left = hole.fairwayLeft, right = hole.fairwayRight;
+    drawingContext.moveTo(left[0].x, left[0].y);
+    for (var i = 1; i < left.length; i++) drawingContext.lineTo(left[i].x, left[i].y);
+    for (i = right.length - 1; i >= 0; i--) drawingContext.lineTo(right[i].x, right[i].y);
+  }
   drawingContext.closePath();
   drawingContext.clip();
 
@@ -812,9 +903,11 @@ function drawHoleBackground() {
   }
 
   // cup green: a lighter circular patch under the hole for a real
-  // mini-golf "putting green" look
-  fill(255, 255, 255, 22);
-  ellipse(hole.cup.x, hole.cup.y, 130, 130);
+  // mini-golf "putting green" look - practice arena has no cup at all
+  if (hole.cup) {
+    fill(255, 255, 255, 22);
+    ellipse(hole.cup.x, hole.cup.y, 130, 130);
+  }
 
   drawingContext.restore();
 }
@@ -904,6 +997,7 @@ function drawBushes() {
 }
 
 function drawCup() {
+  if (!hole.cup) return;
   var h = hole.cup;
   noStroke();
   fill(0, 0, 0, 120);
@@ -993,7 +1087,7 @@ function computePreviewPath(aimDir, power) {
       var perp = vPerp(Wd);
       var N = vDot(perp, dir) < 0 ? perp : vScale(perp, -1);
       var rawKnown = degrees(Math.acos(constrain(vDot(dir, Wd), -1, 1)));
-      var tier = applyDifficultyTier(rawKnown, gameMode, holeIndex + 1, 89);
+      var tier = applyDifficultyTier(rawKnown, gameMode, currentHoleNum(), 89);
       var correctAnswer = 90 - tier.known;
       // True mirror reflection (angle of incidence = angle of
       // reflection, both measured from the wall's NORMAL) - see the
@@ -1552,6 +1646,7 @@ function drawScreenFlash() {
 // ---------------------------------------------------------------
 function mousePressed() {
   if (gameState === 'MENU') {
+    if (practiceButtonHit(mouseX, mouseY)) { startPractice(); playSound('click'); return; }
     var m = menuHit(mouseX, mouseY);
     if (m) { gameMode = m; startCourse(); playSound('click'); }
     return;
@@ -1568,6 +1663,14 @@ function mousePressed() {
   if (gameState === 'COURSE_COMPLETE') {
     if (scorecardHit(mouseX, mouseY)) { gameState = 'MENU'; playSound('click'); }
     return;
+  }
+  if (gameState === 'PLAYING' && gameMode === MODE_PRACTICE) {
+    var mb = PRACTICE_MENU_BTN;
+    if (mouseX > mb.x && mouseX < mb.x + mb.w && mouseY > mb.y && mouseY < mb.y + mb.h) {
+      gameState = 'MENU';
+      playSound('click');
+      return;
+    }
   }
   if (gameState === 'PLAYING' && holePhase === 'QUESTION') {
     var iw = 100, ih = 42, sw = 90, gap = 8;
@@ -1632,7 +1735,7 @@ function mouseReleased() {
   var aimDir = { x: cos(aimAngle), y: sin(aimAngle) };
   var power = (d / MAX_DRAG) * MAX_LAUNCH_SPEED;
 
-  pendingShot = classifyAndBuildShot(aimDir, power, holeIndex + 1);
+  pendingShot = classifyAndBuildShot(aimDir, power, currentHoleNum());
   answerText = '';
   answerLocked = false;
   timerStart = millis();
@@ -1697,6 +1800,8 @@ function triggerTimeoutChaos() {
 // ---------------------------------------------------------------
 // HUD / overlays
 // ---------------------------------------------------------------
+var PRACTICE_MENU_BTN = { x: 20, y: 86, w: 100, h: 32 };
+
 function drawHUD() {
   noStroke();
   fill(10, 14, 10, 220);
@@ -1709,18 +1814,36 @@ function drawHUD() {
   textStyle(NORMAL);
   textSize(13);
   fill(180, 195, 180);
-  text('Hole ' + (holeIndex + 1) + ' / 9 · Par ' + hole.par, 20, 48);
+  if (gameMode === MODE_PRACTICE) {
+    text('Free practice · no par, no limit', 20, 48);
+  } else {
+    text('Hole ' + (holeIndex + 1) + ' / 9 · Par ' + hole.par, 20, 48);
+  }
 
   textAlign(RIGHT, CENTER);
   fill(255);
   textSize(16);
   textStyle(BOLD);
-  text('Strokes: ' + strokeCount, width - 20, 24);
+  text((gameMode === MODE_PRACTICE ? 'Shots: ' : 'Strokes: ') + strokeCount, width - 20, 24);
   textStyle(NORMAL);
   textSize(13);
   fill(180, 195, 180);
-  text(gameMode === MODE_EASY ? 'Golf Gamer' : 'Hole-In-One Hero', width - 20, 48);
+  var modeLabel = gameMode === MODE_EASY ? 'Golf Gamer' : (gameMode === MODE_HARD ? 'Hole-In-One Hero' : 'Putting Green');
+  text(modeLabel, width - 20, 48);
   textAlign(LEFT, BASELINE);
+
+  if (gameMode === MODE_PRACTICE) {
+    var b = PRACTICE_MENU_BTN;
+    fill(0, 0, 0, 160);
+    rect(b.x, b.y, b.w, b.h, b.h / 2);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(13);
+    textStyle(BOLD);
+    text('← Menu', b.x + b.w / 2, b.y + b.h / 2 + 1);
+    textStyle(NORMAL);
+    textAlign(LEFT, BASELINE);
+  }
 }
 
 function drawHoleCompleteOverlay() {
