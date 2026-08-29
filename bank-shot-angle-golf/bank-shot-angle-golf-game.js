@@ -89,12 +89,24 @@ function buildCorridor(points, widths) {
   return { walls: walls, left: left, right: right };
 }
 
+// The corridor's end-cap walls pass directly through points[0] and
+// points[last] (see buildCorridor) - placing the tee/cup exactly there
+// means the cup sits ON the end-cap wall with zero clearance. Insetting
+// both markers along the centerline keeps them genuinely inside the
+// enclosed shape instead of touching its boundary.
+var HOLE_END_INSET = 40;
+
 function makeHole(par, points, widths, bushes, zones) {
   var corridor = buildCorridor(points, widths);
+  var n = points.length;
+  var teeDir = vNorm(vSub(points[1], points[0]));
+  var cupDir = vNorm(vSub(points[n - 1], points[n - 2]));
+  var teePos = vAdd(points[0], vScale(teeDir, HOLE_END_INSET));
+  var cupPos = vSub(points[n - 1], vScale(cupDir, HOLE_END_INSET));
   return {
     par: par,
-    tee: { x: points[0].x, y: points[0].y },
-    cup: { x: points[points.length - 1].x, y: points[points.length - 1].y },
+    tee: { x: teePos.x, y: teePos.y },
+    cup: { x: cupPos.x, y: cupPos.y },
     walls: corridor.walls,
     fairwayLeft: corridor.left, fairwayRight: corridor.right,
     bushes: bushes || [], zones: zones || []
@@ -120,7 +132,7 @@ function buildClassicGreenCourse() {
         [], []),
 
       makeHole(3, [{ x: 130, y: 610 }, { x: 130, y: 430 }, { x: 340, y: 430 }, { x: 340, y: 230 }, { x: 570, y: 230 }], 48,
-        [{ x: 250, y: 430, r: 22 }], []),
+        [{ x: 130, y: 520, r: 18 }], []),
 
       makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
         [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 20, strength: 0.04 }]),
@@ -133,21 +145,21 @@ function buildClassicGreenCourse() {
         [{ x: 300, y: 250, r: 22 }], []),
 
       makeHole(4, [{ x: 150, y: 610 }, { x: 400, y: 610 }, { x: 400, y: 340 }, { x: 400, y: 170 }], [50, 50, 50, 85],
-        [{ x: 350, y: 175, r: 24 }, { x: 450, y: 175, r: 24 }],
+        [{ x: 350, y: 230, r: 16 }, { x: 450, y: 230, r: 16 }],
         [{ type: 'hill', x: 340, y: 470, w: 120, h: 110, dirDeg: 250, strength: 0.035 }]),
 
       makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 400 }, { x: 350, y: 400 }, { x: 350, y: 170 }, { x: 580, y: 170 }], 50,
-        [{ x: 470, y: 170, r: 22 }],
+        [{ x: 470, y: 170, r: 14 }],
         [
           { type: 'hill', x: 60, y: 260, w: 90, h: 110, dirDeg: 40, strength: 0.035 },
           { type: 'water', x: 180, y: 360, w: 220, h: 60, dirDeg: 90, strength: 0.026 }
         ]),
 
       makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 450 }, { x: 370, y: 450 }, { x: 370, y: 270 }, { x: 550, y: 270 }, { x: 550, y: 150 }], 42,
-        [{ x: 400, y: 350, r: 20 }, { x: 440, y: 380, r: 18 }, { x: 380, y: 400, r: 16 }], []),
+        [{ x: 290, y: 290, r: 18 }, { x: 350, y: 350, r: 16 }, { x: 400, y: 405, r: 12 }], []),
 
       makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
-        [{ x: 560, y: 300, r: 24 }],
+        [{ x: 520, y: 340, r: 20 }],
         [
           { type: 'hill', x: 200, y: 400, w: 120, h: 110, dirDeg: 130, strength: 0.035 },
           { type: 'water', x: 380, y: 400, w: 130, h: 90, dirDeg: 190, strength: 0.028 }
@@ -193,6 +205,14 @@ var chaosShakeMag = 0;
 var preShotPos = { x: 0, y: 0 };
 var sinkAnim = 0;              // 0..1
 
+// Yellow trail tracing the ball's whole route for the current stroke,
+// so the geometry the player just solved stays visible as it plays
+// out, not just as a diagram that vanishes the instant the ball moves.
+// Cleared at the start of every new stroke (see submitAnswer/
+// triggerTimeoutChaos) and kept until the ball comes to rest.
+var trail = [];
+var trailRightAngle = null;    // { point, Wd, N } - marks the real bank-shot corner, once resolved
+
 // ---------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------
@@ -217,6 +237,7 @@ function gameDraw() {
   drawBushes();
   drawCup();
   updatePhysics();
+  drawTrail();
   drawBall();
   drawAimPreview();
   drawLiveAngleDiagram();
@@ -229,6 +250,7 @@ function gameDraw() {
   drawHUD();
   if (holePhase === 'QUESTION') drawQuestionOverlay();
   drawFeedbackToast();
+  drawScreenFlash();
   if (gameState === 'HOLE_COMPLETE') drawHoleCompleteOverlay();
 }
 
@@ -301,9 +323,21 @@ function smooth01(x) { return x * x * (3 - 2 * x); }
 // pushes the ball toward the target on the right, never the left.
 var GOLF_BALL_ANGLE = 68;
 function golfClubAngle(t) {
-  var ready = GOLF_BALL_ANGLE + 2, back = -130, impact = GOLF_BALL_ANGLE, follow = GOLF_BALL_ANGLE + 34;
-  if (t < 0.20) return lerp(ready, back, easeOutQuad(t / 0.20));
-  if (t < GOLF_IMPACT_T) return lerp(back, impact, easeInQuad((t - 0.20) / (GOLF_IMPACT_T - 0.20)));
+  var ready = GOLF_BALL_ANGLE + 2, impact = GOLF_BALL_ANGLE, follow = GOLF_BALL_ANGLE - 34;
+  // backLift and backSwing are the SAME visual position (exactly 180deg
+  // behind impact, a raised up-and-back top-of-backswing) but written
+  // as two different numeric values 360deg apart on purpose: lerp()
+  // interpolates the literal numbers, not the shortest visual arc, so
+  // using -112 for the lift keeps that leg a clean decreasing sweep
+  // (through "right, then up" - no dip through straight-down), while
+  // using +248 for the swing-through keeps THAT leg decreasing too
+  // (248 -> 68), i.e. counterclockwise all the way from the top of the
+  // backswing, through impact, into the follow-through - contact and
+  // everything after it happens in one continuous counterclockwise
+  // motion, never reversing direction right at the ball.
+  var backLift = GOLF_BALL_ANGLE - 180, backSwing = GOLF_BALL_ANGLE + 180;
+  if (t < 0.20) return lerp(ready, backLift, easeOutQuad(t / 0.20));
+  if (t < GOLF_IMPACT_T) return lerp(backSwing, impact, easeInQuad((t - 0.20) / (GOLF_IMPACT_T - 0.20)));
   if (t < GOLF_FOLLOW_T) return lerp(impact, follow, easeOutQuad((t - GOLF_IMPACT_T) / (GOLF_FOLLOW_T - GOLF_IMPACT_T)));
   if (t < 0.85) return follow;
   return lerp(follow, ready, smooth01((t - 0.85) / (1 - 0.85)));
@@ -539,6 +573,8 @@ function startHole(idx) {
   pendingShot = null;
   answerText = '';
   answerLocked = false;
+  trail = [];
+  trailRightAngle = null;
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -820,6 +856,43 @@ function drawCup() {
   triangle(h.x, h.y - 70, h.x + 26 + wave, h.y - 62, h.x, h.y - 54);
 }
 
+// Traces the ball's whole route for the shot in progress, so the
+// bank/straight geometry the player just solved stays visible as it
+// actually plays out rather than vanishing the moment the ball moves.
+function drawTrail() {
+  if (trail.length >= 2) {
+    push();
+    noFill();
+    stroke('#ffd93d');
+    strokeWeight(4);
+    strokeCap(ROUND);
+    strokeJoin(ROUND);
+    beginShape();
+    for (var i = 0; i < trail.length; i++) vertex(trail[i].x, trail[i].y);
+    vertex(ball.x, ball.y);
+    endShape();
+    pop();
+  }
+  if (trailRightAngle) drawRightAngleMarker(trailRightAngle.point, trailRightAngle.Wd, trailRightAngle.N);
+}
+
+// A small persistent right-angle square at the real bank-shot corner,
+// oriented to the actual wall (Wd) and outward normal (N) so it sits
+// in the correct quadrant regardless of which way the ball approached.
+function drawRightAngleMarker(p, Wd, N) {
+  push();
+  translate(p.x, p.y);
+  rotate(atan2(Wd.y, Wd.x));
+  var sign = vDot(N, vPerp(Wd)) >= 0 ? 1 : -1;
+  noFill();
+  stroke(255, 255, 255, 235);
+  strokeWeight(2.5);
+  beginShape();
+  vertex(16, 0); vertex(16, 16 * sign); vertex(0, 16 * sign);
+  endShape();
+  pop();
+}
+
 function drawBall() {
   if (holePhase === 'SUNK') {
     sinkAnim = min(1, sinkAnim + 0.06);
@@ -874,8 +947,14 @@ function updatePhysics() {
     if (holePhase === 'ROLLING') {
       holePhase = 'AIMING';
       pendingShot = null;
+      trail = [];
+      trailRightAngle = null;
     }
     return;
+  }
+
+  if (trail.length === 0 || dist(ball.x, ball.y, trail[trail.length - 1].x, trail[trail.length - 1].y) > 4) {
+    trail.push({ x: ball.x, y: ball.y });
   }
 
   // zone forces (once per frame - a gentle continuous field, no need
@@ -1159,6 +1238,7 @@ function submitAnswer() {
     if (!correct) pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
     showToast(correct ? 'Correct! Straight down the fairway.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the shot drifts off line!', correct ? '#3ea158' : '#e63946');
   }
+  triggerScreenFlash(correct ? '#3ea158' : '#e63946');
 
   answerLocked = true;
   ball.vx = pendingShot.aimDir.x * pendingShot.power;
@@ -1166,6 +1246,29 @@ function submitAnswer() {
   holePhase = 'ROLLING';
   nextStroke();
   playSound('hit');
+  trail = [{ x: ball.x, y: ball.y }];
+  trailRightAngle = pendingShot.type === 'WALL' ? { point: pendingShot.point, Wd: pendingShot.Wd, N: pendingShot.N } : null;
+}
+
+// ---------------------------------------------------------------
+// Correct/incorrect screen flash
+// ---------------------------------------------------------------
+var screenFlash = null; // { col, start, duration }
+
+function triggerScreenFlash(col) {
+  screenFlash = { col: col, start: millis(), duration: 380 };
+}
+
+function drawScreenFlash() {
+  if (!screenFlash) return;
+  var elapsed = millis() - screenFlash.start;
+  if (elapsed > screenFlash.duration) { screenFlash = null; return; }
+  var t = elapsed / screenFlash.duration;
+  var alpha = (1 - t) * (1 - t) * 130;
+  var c = color(screenFlash.col);
+  noStroke();
+  fill(red(c), green(c), blue(c), alpha);
+  rect(0, 0, width, height);
 }
 
 // ---------------------------------------------------------------
@@ -1298,6 +1401,9 @@ function triggerTimeoutChaos() {
   nextStroke();
   playSound('chaos');
   showToast('Time’s up! That one got away from you...', '#e63946');
+  triggerScreenFlash('#e63946');
+  trail = [{ x: ball.x, y: ball.y }];
+  trailRightAngle = null;
 
   setTimeout(function () {
     chaosShakeMag = 0;
