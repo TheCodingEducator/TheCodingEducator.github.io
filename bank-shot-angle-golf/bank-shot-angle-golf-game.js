@@ -212,6 +212,7 @@ var sinkAnim = 0;              // 0..1
 // triggerTimeoutChaos) and kept until the ball comes to rest.
 var trail = [];
 var trailRightAngle = null;    // { point, Wd, N } - marks the real bank-shot corner, once resolved
+var intendedPath = null;       // ghost route the correct answer would have taken, shown alongside the real one
 
 // ---------------------------------------------------------------
 // Setup
@@ -237,6 +238,7 @@ function gameDraw() {
   drawBushes();
   drawCup();
   updatePhysics();
+  drawIntendedPath();
   drawTrail();
   drawBall();
   drawAimPreview();
@@ -575,6 +577,7 @@ function startHole(idx) {
   answerLocked = false;
   trail = [];
   trailRightAngle = null;
+  intendedPath = null;
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -955,6 +958,62 @@ function computePreviewPath(aimDir, power) {
   return points;
 }
 
+// Builds the real "supposed to go" ghost route right after an answer
+// resolves - unlike computePreviewPath (an approximation shown while
+// still dragging), this uses the EXACT correctAnswer/Wd/N/contact point
+// already locked into pendingShot, so it's precise, not a guess. Shown
+// alongside the real yellow trail for the rest of the stroke: when the
+// player was right the two lines sit exactly on top of each other:
+// when wrong, they visibly diverge - the actual (incorrect) route the
+// ball takes and the intended (correct) one, side by side.
+function computeIntendedPath(shot) {
+  var points = [{ x: shot.launchFrom.x, y: shot.launchFrom.y }];
+  if (shot.type === 'STRAIGHT') {
+    points.push(shot.point);
+    return points;
+  }
+  points.push(shot.point);
+  var traveled = dist(shot.launchFrom.x, shot.launchFrom.y, shot.point.x, shot.point.y);
+  var remaining = (stoppingDistance(shot.power) - traveled) * WALL_REST;
+  var pos = shot.point;
+  var dir = vNorm(vAdd(vScale(shot.Wd, cos(shot.correctAnswer)), vScale(shot.N, sin(shot.correctAnswer))));
+  for (var bounce = 0; bounce < 5 && remaining > 4; bounce++) {
+    var hit = raycastWalls(pos, dir, remaining, hole.walls);
+    if (!hit) {
+      points.push({ x: pos.x + dir.x * remaining, y: pos.y + dir.y * remaining });
+      break;
+    }
+    points.push(hit.point);
+    remaining = (remaining - hit.t) * WALL_REST;
+    var w = hit.wall;
+    var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
+    var nrm = vPerp(wallVec);
+    if (vDot(nrm, dir) > 0) nrm = vScale(nrm, -1);
+    dir = vNorm(vSub(dir, vScale(nrm, 2 * vDot(dir, nrm))));
+    pos = hit.point;
+  }
+  return points;
+}
+
+function drawIntendedPath() {
+  if (!intendedPath || intendedPath.length < 2) return;
+  push();
+  drawingContext.setLineDash([3, 6]);
+  strokeCap(ROUND);
+  noFill();
+  stroke(255, 255, 255, 200);
+  strokeWeight(2.5);
+  beginShape();
+  for (var i = 0; i < intendedPath.length; i++) vertex(intendedPath[i].x, intendedPath[i].y);
+  endShape();
+  drawingContext.setLineDash([]);
+  pop();
+  noStroke();
+  fill(255, 255, 255, 200);
+  var last = intendedPath[intendedPath.length - 1];
+  ellipse(last.x, last.y, 8, 8);
+}
+
 function drawAimPreview() {
   if (!dragging || holePhase !== 'AIMING') return;
   var dx = dragStart.x - dragNow.x, dy = dragStart.y - dragNow.y;
@@ -1014,6 +1073,7 @@ function updatePhysics() {
       pendingShot = null;
       trail = [];
       trailRightAngle = null;
+      intendedPath = null;
     }
     return;
   }
@@ -1313,6 +1373,7 @@ function submitAnswer() {
   playSound('hit');
   trail = [{ x: ball.x, y: ball.y }];
   trailRightAngle = pendingShot.type === 'WALL' ? { point: pendingShot.point, Wd: pendingShot.Wd, N: pendingShot.N } : null;
+  intendedPath = computeIntendedPath(pendingShot);
 }
 
 // ---------------------------------------------------------------
@@ -1469,6 +1530,7 @@ function triggerTimeoutChaos() {
   triggerScreenFlash('#e63946');
   trail = [{ x: ball.x, y: ball.y }];
   trailRightAngle = null;
+  intendedPath = null;
 
   setTimeout(function () {
     chaosShakeMag = 0;
