@@ -292,6 +292,7 @@ function gameDraw() {
   drawCup();
   if (!confirmExitOpen) updatePhysics();
   drawIntendedPath();
+  drawWrongAnswerLabel();
   drawTrail();
   drawBall();
   drawAimPreview();
@@ -1177,6 +1178,25 @@ function drawIntendedPath() {
   ellipse(last.x, last.y, 8, 8);
 }
 
+// Shown from the moment a wrong answer launches the ball until the
+// stroke resets (updatePhysics clears pendingShot once the ball stops),
+// so the player can see the actual number they typed right where the
+// angle was measured from, alongside the true/intended dotted path.
+function drawWrongAnswerLabel() {
+  if (!pendingShot || pendingShot.correct !== false) return;
+  var offset = pendingShot.type === 'WALL' ? vScale(pendingShot.N, 30) : { x: 0, y: -30 };
+  var lx = pendingShot.point.x + offset.x, ly = pendingShot.point.y + offset.y;
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(22);
+  fill(0, 0, 0, 150);
+  text(pendingShot.typed + '°', lx + 1.5, ly + 1.5);
+  fill('#ffe066');
+  text(pendingShot.typed + '°', lx, ly);
+  textStyle(NORMAL);
+}
+
 function drawAimPreview() {
   if (!dragging || holePhase !== 'AIMING') return;
   var dx = dragStart.x - dragNow.x, dy = dragStart.y - dragNow.y;
@@ -1619,13 +1639,13 @@ function submitAnswer() {
   var typed = parseInt(answerText, 10);
   var correct = typed === pendingShot.correctAnswer;
   pendingShot.typed = typed;
+  pendingShot.correct = correct;
   pendingShot.launchFrom = { x: ball.x, y: ball.y };
 
   if (pendingShot.type === 'WALL') {
     pendingShot.resolvedAngle = correct ? pendingShot.correctAnswer : constrain(typed, 1, 179);
     showToast(correct ? 'Correct! That bank lines right up.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the bounce goes wide!', correct ? '#3ea158' : '#e63946');
   } else {
-    pendingShot.correct = correct;
     if (!correct) pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
     showToast(correct ? 'Correct! Straight down the fairway.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the shot drifts off line!', correct ? '#3ea158' : '#e63946');
   }
