@@ -158,8 +158,8 @@ function buildClassicGreenCourse() {
       makeHole(3, [{ x: 110, y: 600 }, { x: 110, y: 270 }, { x: 560, y: 270 }], [52, 52, 70],
         [], []),
 
-      makeHole(3, [{ x: 130, y: 610 }, { x: 130, y: 430 }, { x: 340, y: 430 }, { x: 340, y: 230 }, { x: 570, y: 230 }], 48,
-        [{ x: 130, y: 520, r: 18 }], []),
+      makeHole(3, [{ x: 130, y: 610 }, { x: 130, y: 430 }, { x: 340, y: 430 }, { x: 340, y: 230 }, { x: 570, y: 230 }], 58,
+        [{ x: 130, y: 520, r: 12 }], []),
 
       makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
         [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 20, strength: 0.04 }]),
@@ -176,17 +176,17 @@ function buildClassicGreenCourse() {
         [{ type: 'hill', x: 340, y: 470, w: 120, h: 110, dirDeg: 250, strength: 0.035 }]),
 
       makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 400 }, { x: 350, y: 400 }, { x: 350, y: 170 }, { x: 580, y: 170 }], 50,
-        [{ x: 470, y: 170, r: 14 }],
+        [{ x: 470, y: 170, r: 8 }],
         [
           { type: 'hill', x: 60, y: 260, w: 90, h: 110, dirDeg: 40, strength: 0.035 },
           { type: 'water', x: 180, y: 360, w: 220, h: 60, dirDeg: 90, strength: 0.026 }
         ]),
 
       makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 450 }, { x: 370, y: 450 }, { x: 370, y: 270 }, { x: 550, y: 270 }, { x: 550, y: 150 }], 42,
-        [{ x: 290, y: 290, r: 18 }, { x: 350, y: 350, r: 16 }, { x: 400, y: 405, r: 12 }], []),
+        [{ x: 290, y: 290, r: 11 }, { x: 350, y: 350, r: 10 }, { x: 400, y: 405, r: 7 }], []),
 
       makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
-        [{ x: 520, y: 340, r: 20 }],
+        [{ x: 520, y: 340, r: 14 }],
         [
           { type: 'hill', x: 200, y: 400, w: 120, h: 110, dirDeg: 130, strength: 0.035 },
           { type: 'water', x: 380, y: 400, w: 130, h: 90, dirDeg: 190, strength: 0.028 }
@@ -259,7 +259,12 @@ var QUESTION_ZOOM = 2.4;
 // Setup
 // ---------------------------------------------------------------
 function gameSetup() {
-  textFont('-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif');
+  // p5's textFont() takes a single font name, not a CSS comma-separated
+  // fallback stack - passing the whole stack silently fails to apply
+  // (ctx.font stays stuck at the browser's tiny default, no matter what
+  // textSize() is called afterward). 'system-ui' is the one CSS keyword
+  // that alone resolves to the platform's native UI font everywhere.
+  textFont('system-ui');
 }
 
 function gameDraw() {
@@ -316,7 +321,7 @@ function gameDraw() {
 // Menu
 // ---------------------------------------------------------------
 var MENU_HERO = { x: 56, y: 106, w: 588, h: 176 };
-var MENU_CARD_W = 300, MENU_CARD_H = 248, MENU_CARD_Y = 306;
+var MENU_CARD_W = 320, MENU_CARD_H = 288, MENU_CARD_Y = 306;
 
 function drawMenu() {
   drawMenuBackground();
@@ -325,12 +330,12 @@ function drawMenu() {
   textAlign(CENTER, CENTER);
   fill(255);
   textStyle(BOLD);
-  textSize(38);
-  text('⛳ Bank Shot: Angle Golf', width / 2, 54);
+  textSize(46);
+  text('⛳ Bank Shot: Angle Golf', width / 2, 56);
   textStyle(NORMAL);
-  textSize(14.5);
+  textSize(18);
   fill(180, 200, 180);
-  text('Solve the angle. Line up the shot. Sink the putt.', width / 2, 84);
+  text('Solve the angle. Line up the shot. Sink the putt.', width / 2, 90);
 
   drawGolfHeroScene(MENU_HERO.x, MENU_HERO.y, MENU_HERO.w, MENU_HERO.h);
 
@@ -342,12 +347,12 @@ function drawMenu() {
   drawPracticeButton();
 
   textAlign(CENTER, CENTER);
-  textSize(12.5);
+  textSize(15);
   fill(140, 155, 140);
-  text('9 holes per round · a new random themed course every time you play', width / 2, PRACTICE_BTN.y + PRACTICE_BTN.h + 22);
+  text('9 holes per round · a new random themed course every time you play', width / 2, PRACTICE_BTN.y + PRACTICE_BTN.h + 24);
 }
 
-var PRACTICE_BTN = { w: 300, h: 42, y: 564 };
+var PRACTICE_BTN = { w: 340, h: 50, y: 608 };
 
 function drawPracticeButton() {
   var b = PRACTICE_BTN, x = width / 2 - b.w / 2;
@@ -365,7 +370,7 @@ function drawPracticeButton() {
   noStroke();
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(16);
+  textSize(19);
   textStyle(BOLD);
   text('🎯 Putting Green — Free Practice', width / 2, b.y + b.h / 2 + 1);
   textStyle(NORMAL);
@@ -553,38 +558,38 @@ function drawModeCard(x, y, title, badge, icon, lines, tagline, accent) {
 
   noStroke();
   fill(accent);
-  ellipse(cx, y + 40, 46, 46);
+  ellipse(cx, y + 44, 54, 54);
   textAlign(CENTER, CENTER);
-  textSize(20);
-  text(icon, cx, y + 41);
+  textSize(25);
+  text(icon, cx, y + 45);
 
   fill(red(color(accent)), green(color(accent)), blue(color(accent)), pulse);
-  textSize(12.5);
+  textSize(15);
   textStyle(BOLD);
-  text(badge, cx, y + 76);
+  text(badge, cx, y + 84);
 
   fill(255);
-  textSize(21);
-  text(title, cx, y + 100);
+  textSize(26);
+  text(title, cx, y + 111);
   textStyle(NORMAL);
 
   fill(200, 212, 200);
-  textSize(12.5);
-  text(lines[0], cx, y + 128);
-  text(lines[1], cx, y + 146);
+  textSize(15.5);
+  text(lines[0], cx, y + 142);
+  text(lines[1], cx, y + 165);
 
   fill(accent);
-  textSize(11.5);
+  textSize(14);
   textStyle(BOLD);
-  text(tagline, cx - (w - 44) / 2, y + 172, w - 44);
+  text(tagline, cx - (w - 44) / 2, y + 194, w - 44);
   textStyle(NORMAL);
 
   fill(accent);
-  rect(cx - 66, y + h - 46, 132, 34, 9);
+  rect(cx - 76, y + h - 58, 152, 40, 10);
   fill(255);
-  textSize(14.5);
+  textSize(18);
   textStyle(BOLD);
-  text('Play', cx, y + h - 29);
+  text('Play', cx, y + h - 37);
   textStyle(NORMAL);
   pop();
 }
@@ -609,24 +614,24 @@ function drawCourseIntro() {
   noStroke();
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(18);
+  textSize(21);
   fill(150, 200, 160);
   text((gameMode === MODE_EASY ? 'GOLF GAMER' : 'HOLE-IN-ONE HERO') + ' · TODAY’S COURSE', width / 2, height / 2 - 90);
-  textSize(48);
+  textSize(56);
   fill(255);
   textStyle(BOLD);
   text(course.theme.icon + ' ' + course.theme.label, width / 2, height / 2 - 30);
   textStyle(NORMAL);
-  textSize(15);
+  textSize(18);
   fill(200, 210, 200);
-  text('9 holes · par ' + totalPar(), width / 2, height / 2 + 20);
+  text('9 holes · par ' + totalPar(), width / 2, height / 2 + 24);
 
   fill('#3ea158');
-  rect(width / 2 - 90, height / 2 + 60, 180, 48, 12);
+  rect(width / 2 - 100, height / 2 + 64, 200, 54, 14);
   fill(255);
-  textSize(18);
+  textSize(21);
   textStyle(BOLD);
-  text('Tee Off', width / 2, height / 2 + 84);
+  text('Tee Off', width / 2, height / 2 + 91);
   textStyle(NORMAL);
 }
 
@@ -637,7 +642,7 @@ function totalPar() {
 }
 
 function introHit(mx, my) {
-  var x = width / 2 - 90, y = height / 2 + 60, w = 180, h = 48;
+  var x = width / 2 - 100, y = height / 2 + 64, w = 200, h = 54;
   return mx > x && mx < x + w && my > y && my < y + h;
 }
 
@@ -1189,7 +1194,7 @@ function drawWrongAnswerLabel() {
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(22);
+  textSize(26);
   fill(0, 0, 0, 150);
   text(pendingShot.typed + '°', lx + 1.5, ly + 1.5);
   fill('#ffe066');
@@ -1539,10 +1544,10 @@ function drawLiveAngleDiagram() {
   fill('#ffce6b');
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(22);
+  textSize(25);
   text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
   fill('#bcd4ff');
-  textSize(28);
+  textSize(31);
   text('?', p.point.x + uWorld.x, p.point.y + uWorld.y);
   textStyle(NORMAL);
 }
@@ -1565,34 +1570,34 @@ function drawQuestionOverlay() {
   noStroke();
   textAlign(CENTER, TOP);
   textStyle(BOLD);
-  textSize(32);
+  textSize(38);
   fill(0, 0, 0, 130);
-  text(title, width / 2 + 2, 84);
+  text(title, width / 2 + 2, 96);
   fill(255);
-  text(title, width / 2, 82);
+  text(title, width / 2, 94);
   textStyle(NORMAL);
 
-  textSize(14.5);
+  textSize(18);
   fill(0, 0, 0, 130);
-  text('These two angles ' + relWord, width / 2 + 1, 123);
+  text('These two angles ' + relWord, width / 2 + 1, 151);
   fill(216, 226, 216);
-  text('These two angles ' + relWord, width / 2, 122);
+  text('These two angles ' + relWord, width / 2, 150);
 
   if (pendingShot.algebra) {
     var alg = pendingShot.algebra;
     fill(0, 0, 0, 130);
-    text('Known angle = (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x, width / 2 + 1, 145);
+    text('Known angle = (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x, width / 2 + 1, 179);
     fill('#ffce6b');
-    text('Known angle = (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x, width / 2, 144);
+    text('Known angle = (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x, width / 2, 178);
   }
 
   if (pendingShot.timerOn) {
     var remain = max(0, HERO_TIMER_SECONDS - (millis() - timerStart) / 1000);
     fill(remain < 3 ? '#e63946' : 255);
     textAlign(CENTER, TOP);
-    textSize(22);
+    textSize(26);
     textStyle(BOLD);
-    text(ceil(remain) + 's', width / 2, pendingShot.algebra ? 168 : 146);
+    text(ceil(remain) + 's', width / 2, pendingShot.algebra ? 208 : 178);
     textStyle(NORMAL);
     if (remain <= 0 && !answerLocked && !confirmExitOpen) {
       triggerTimeoutChaos();
@@ -1600,13 +1605,13 @@ function drawQuestionOverlay() {
   }
 
   // bottom input pill
-  var iw = 100, ih = 42, sw = 90, gap = 8;
+  var iw = 124, ih = 50, sw = 112, gap = 10;
   var totalW = iw + gap + sw;
-  var ix = width / 2 - totalW / 2, iy = height - ih - 22;
+  var ix = width / 2 - totalW / 2, iy = height - ih - 24;
   fill(0, 0, 0, 190);
   rect(ix, iy, iw, ih, ih / 2);
   fill(255);
-  textSize(19);
+  textSize(23);
   textAlign(CENTER, CENTER);
   text((answerText.length ? answerText : '_') + '°', ix + iw / 2, iy + ih / 2 + 1);
 
@@ -1614,7 +1619,7 @@ function drawQuestionOverlay() {
   fill(answerText.length ? '#3ea158' : 'rgba(60,80,60,0.85)');
   rect(sx, iy, sw, ih, ih / 2);
   fill(255);
-  textSize(15);
+  textSize(18);
   textStyle(BOLD);
   text('Submit', sx + sw / 2, iy + ih / 2 + 1);
   textStyle(NORMAL);
@@ -1799,13 +1804,13 @@ function drawFeedbackToast() {
   noStroke();
   fill(red(color(feedbackToast.color)), green(color(feedbackToast.color)), blue(color(feedbackToast.color)), alpha * 0.25);
   rectMode(CENTER);
-  rect(width / 2, 66, 460, 40, 10);
+  rect(width / 2, 70, 560, 48, 12);
   rectMode(CORNER);
   fill(255, 255, 255, alpha);
   textAlign(CENTER, CENTER);
-  textSize(15);
+  textSize(18);
   textStyle(BOLD);
-  text(feedbackToast.text, width / 2, 66);
+  text(feedbackToast.text, width / 2, 70);
   textStyle(NORMAL);
 }
 
@@ -1848,31 +1853,31 @@ function triggerTimeoutChaos() {
 function drawHUD() {
   noStroke();
   fill(10, 14, 10, 220);
-  rect(0, 0, width, 74);
+  rect(0, 0, width, 82);
   fill(255);
   textAlign(LEFT, CENTER);
-  textSize(16);
+  textSize(19);
   textStyle(BOLD);
-  text(course.theme.icon + ' ' + course.theme.label, 20, 24);
+  text(course.theme.icon + ' ' + course.theme.label, 20, 26);
   textStyle(NORMAL);
-  textSize(13);
+  textSize(15.5);
   fill(180, 195, 180);
   if (gameMode === MODE_PRACTICE) {
-    text('Free practice · no par, no limit', 20, 48);
+    text('Free practice · no par, no limit', 20, 54);
   } else {
-    text('Hole ' + (holeIndex + 1) + ' / 9 · Par ' + hole.par, 20, 48);
+    text('Hole ' + (holeIndex + 1) + ' / 9 · Par ' + hole.par, 20, 54);
   }
 
   textAlign(RIGHT, CENTER);
   fill(255);
-  textSize(16);
+  textSize(19);
   textStyle(BOLD);
-  text((gameMode === MODE_PRACTICE ? 'Shots: ' : 'Strokes: ') + strokeCount, width - 20, 24);
+  text((gameMode === MODE_PRACTICE ? 'Shots: ' : 'Strokes: ') + strokeCount, width - 20, 26);
   textStyle(NORMAL);
-  textSize(13);
+  textSize(15.5);
   fill(180, 195, 180);
   var modeLabel = gameMode === MODE_EASY ? 'Golf Gamer' : (gameMode === MODE_HARD ? 'Hole-In-One Hero' : 'Putting Green');
-  text(modeLabel, width - 20, 48);
+  text(modeLabel, width - 20, 54);
   textAlign(LEFT, BASELINE);
 }
 
@@ -1880,7 +1885,7 @@ function drawHUD() {
 // (any mode, any hole phase) - opens a confirm dialog rather than
 // leaving immediately, so an accidental tap can't dump mid-round
 // progress or a mid-question practice streak with no way back.
-var EXIT_BTN = { x: 16, y: 650, w: 90, h: 34 };
+var EXIT_BTN = { x: 16, y: 640, w: 112, h: 42 };
 
 function drawExitButton() {
   var b = EXIT_BTN;
@@ -1890,7 +1895,7 @@ function drawExitButton() {
   rect(b.x, b.y, b.w, b.h, b.h / 2);
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(13);
+  textSize(16);
   textStyle(BOLD);
   text('☰ Menu', b.x + b.w / 2, b.y + b.h / 2 + 1);
   textStyle(NORMAL);
@@ -1902,15 +1907,16 @@ function exitButtonHit(mx, my) {
   return mx > b.x && mx < b.x + b.w && my > b.y && my < b.y + b.h;
 }
 
-var EXIT_CONFIRM_YES = { w: 120, h: 44 };
-var EXIT_CONFIRM_NO = { w: 120, h: 44 };
+var EXIT_CONFIRM_BOX = { w: 420, h: 224 };
+var EXIT_CONFIRM_YES = { w: 140, h: 50 };
+var EXIT_CONFIRM_NO = { w: 140, h: 50 };
 
 function drawExitConfirm() {
   noStroke();
   fill(0, 0, 0, 175);
   rect(0, 0, width, height);
 
-  var w = 360, h = 190, x = width / 2 - w / 2, y = height / 2 - h / 2;
+  var w = EXIT_CONFIRM_BOX.w, h = EXIT_CONFIRM_BOX.h, x = width / 2 - w / 2, y = height / 2 - h / 2;
   fill(19, 25, 19, 250);
   rect(x, y, w, h, 16);
   stroke(255, 255, 255, 40);
@@ -1921,15 +1927,15 @@ function drawExitConfirm() {
   noStroke();
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(19);
+  textSize(23);
   textStyle(BOLD);
-  text('Exit to Main Menu?', width / 2, y + 46);
+  text('Exit to Main Menu?', width / 2, y + 52);
   textStyle(NORMAL);
-  textSize(13.5);
+  textSize(16);
   fill(200, 212, 200);
-  text('This round will end and won’t be saved.', width / 2, y + 74);
+  text('This round will end and won’t be saved.', width / 2, y + 84);
 
-  var by = y + h - 60, gap = 14;
+  var by = y + h - 70, gap = 16;
   var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;
   var yesX = width / 2 + gap / 2;
 
@@ -1939,7 +1945,7 @@ function drawExitConfirm() {
   rect(yesX, by, EXIT_CONFIRM_YES.w, EXIT_CONFIRM_YES.h, 10);
 
   fill(255);
-  textSize(15);
+  textSize(18);
   textStyle(BOLD);
   text('Cancel', noX + EXIT_CONFIRM_NO.w / 2, by + EXIT_CONFIRM_NO.h / 2 + 1);
   text('Exit', yesX + EXIT_CONFIRM_YES.w / 2, by + EXIT_CONFIRM_YES.h / 2 + 1);
@@ -1947,8 +1953,8 @@ function drawExitConfirm() {
 }
 
 function exitConfirmHit(mx, my) {
-  var w = 360, h = 190, y = height / 2 - h / 2;
-  var by = y + h - 60, gap = 14;
+  var w = EXIT_CONFIRM_BOX.w, h = EXIT_CONFIRM_BOX.h, y = height / 2 - h / 2;
+  var by = y + h - 70, gap = 16;
   var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;
   var yesX = width / 2 + gap / 2;
   if (mx > noX && mx < noX + EXIT_CONFIRM_NO.w && my > by && my < by + EXIT_CONFIRM_NO.h) return 'cancel';
@@ -1961,24 +1967,24 @@ function drawHoleCompleteOverlay() {
   fill(0, 0, 0, 150);
   rect(0, 0, width, height);
   fill(15, 20, 15, 235);
-  rect(width / 2 - 200, height / 2 - 110, 400, 220, 16);
+  rect(width / 2 - 230, height / 2 - 122, 460, 244, 16);
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(24);
+  textSize(29);
   textStyle(BOLD);
   var rel = strokeCount - hole.par;
   var label = rel === 0 ? 'Par' : (rel < 0 ? (rel === -1 ? 'Birdie' : 'Eagle') : (rel === 1 ? 'Bogey' : 'Double Bogey+'));
-  text('Hole ' + (holeIndex + 1) + ' complete!', width / 2, height / 2 - 60);
+  text('Hole ' + (holeIndex + 1) + ' complete!', width / 2, height / 2 - 66);
   textStyle(NORMAL);
-  textSize(16);
+  textSize(19);
   fill(200, 215, 200);
-  text('Strokes: ' + strokeCount + ' (Par ' + hole.par + ') — ' + label, width / 2, height / 2 - 20);
+  text('Strokes: ' + strokeCount + ' (Par ' + hole.par + ') — ' + label, width / 2, height / 2 - 22);
   fill('#3ea158');
-  rect(width / 2 - 90, height / 2 + 20, 180, 46, 10);
+  rect(width / 2 - 100, height / 2 + 22, 200, 52, 12);
   fill(255);
-  textSize(16);
+  textSize(19);
   textStyle(BOLD);
-  text(holeIndex + 1 < 9 ? 'Next Hole' : 'See Scorecard', width / 2, height / 2 + 43);
+  text(holeIndex + 1 < 9 ? 'Next Hole' : 'See Scorecard', width / 2, height / 2 + 48);
   textStyle(NORMAL);
 }
 
@@ -1987,51 +1993,51 @@ function drawScorecard() {
   noStroke();
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(30);
+  textSize(36);
   textStyle(BOLD);
-  text('Round Complete!', width / 2, 70);
+  text('Round Complete!', width / 2, 72);
   textStyle(NORMAL);
-  textSize(14);
+  textSize(17);
   fill(180, 195, 180);
-  text(course.theme.icon + ' ' + course.theme.label + ' · ' + (gameMode === MODE_EASY ? 'Golf Gamer' : 'Hole-In-One Hero'), width / 2, 100);
+  text(course.theme.icon + ' ' + course.theme.label + ' · ' + (gameMode === MODE_EASY ? 'Golf Gamer' : 'Hole-In-One Hero'), width / 2, 106);
 
   var totalStrokes = 0, par = 0;
-  var startX = width / 2 - 270, y = 150, colW = 60;
+  var startX = width / 2 - 306, y = 150, colW = 68;
   textAlign(CENTER, CENTER);
   for (var i = 0; i < 9; i++) {
     fill(20, 26, 20);
-    rect(startX + i * colW, y, colW - 6, 90, 6);
+    rect(startX + i * colW, y, colW - 6, 104, 6);
     fill(160, 175, 160);
-    textSize(12);
-    text('Hole ' + (i + 1), startX + i * colW + (colW - 6) / 2, y + 16);
+    textSize(14.5);
+    text('Hole ' + (i + 1), startX + i * colW + (colW - 6) / 2, y + 18);
     fill(255);
-    textSize(20);
+    textSize(25);
     textStyle(BOLD);
-    text(scorecard[i], startX + i * colW + (colW - 6) / 2, y + 44);
+    text(scorecard[i], startX + i * colW + (colW - 6) / 2, y + 52);
     textStyle(NORMAL);
-    textSize(11);
+    textSize(13.5);
     fill(140, 155, 140);
-    text('par ' + course.holes[i].par, startX + i * colW + (colW - 6) / 2, y + 66);
+    text('par ' + course.holes[i].par, startX + i * colW + (colW - 6) / 2, y + 78);
     totalStrokes += scorecard[i];
     par += course.holes[i].par;
   }
 
-  textSize(20);
+  textSize(24);
   fill(255);
   textStyle(BOLD);
   var rel = totalStrokes - par;
-  text('Total: ' + totalStrokes + ' strokes (' + (rel <= 0 ? rel : '+' + rel) + ' to par)', width / 2, 280);
+  text('Total: ' + totalStrokes + ' strokes (' + (rel <= 0 ? rel : '+' + rel) + ' to par)', width / 2, 300);
   textStyle(NORMAL);
 
   fill('#3ea158');
-  rect(width / 2 - 100, 330, 200, 48, 12);
+  rect(width / 2 - 110, 344, 220, 54, 12);
   fill(255);
-  textSize(17);
+  textSize(20);
   textStyle(BOLD);
-  text('Play Again', width / 2, 354);
+  text('Play Again', width / 2, 371);
   textStyle(NORMAL);
 }
 
 function scorecardHit(mx, my) {
-  return mx > width / 2 - 100 && mx < width / 2 + 100 && my > 330 && my < 378;
+  return mx > width / 2 - 110 && mx < width / 2 + 110 && my > 344 && my < 398;
 }
