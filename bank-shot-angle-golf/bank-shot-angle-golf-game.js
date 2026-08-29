@@ -214,6 +214,16 @@ var trail = [];
 var trailRightAngle = null;    // { point, Wd, N } - marks the real bank-shot corner, once resolved
 var intendedPath = null;       // ghost route the correct answer would have taken, shown alongside the real one
 
+// Camera zoom: eases toward the live question's real point while a
+// question is up (making the small angle diagram big and legible),
+// and back out to a full-course view otherwise. Plain exponential
+// smoothing toward a moving target, recomputed every frame - simpler
+// than tracking start times, and self-corrects if the target changes
+// (e.g. the moment a question resolves) without a jump cut.
+var cameraZoom = 1;
+var cameraFocus = { x: 350, y: 350 };
+var QUESTION_ZOOM = 2.4;
+
 // ---------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------
@@ -227,8 +237,20 @@ function gameDraw() {
   if (gameState === 'COURSE_INTRO') { drawCourseIntro(); return; }
   if (gameState === 'COURSE_COMPLETE') { drawScorecard(); return; }
 
+  // Ease the camera toward the live question's real point (making the
+  // angle diagram big and legible) or back out to the full course view.
+  var wantZoomIn = holePhase === 'QUESTION' && pendingShot;
+  var targetZoom = wantZoomIn ? QUESTION_ZOOM : 1;
+  var targetFocus = wantZoomIn ? pendingShot.point : { x: 350, y: 350 };
+  cameraZoom = lerp(cameraZoom, targetZoom, 0.12);
+  cameraFocus.x = lerp(cameraFocus.x, targetFocus.x, 0.12);
+  cameraFocus.y = lerp(cameraFocus.y, targetFocus.y, 0.12);
+
   // PLAYING / HOLE_COMPLETE both render the hole underneath
   push();
+  translate(width / 2, height / 2);
+  scale(cameraZoom);
+  translate(-cameraFocus.x, -cameraFocus.y);
   if (millis() < chaosUntil) {
     translate(random(-chaosShakeMag, chaosShakeMag), random(-chaosShakeMag, chaosShakeMag));
   }
@@ -1311,6 +1333,12 @@ function closestPointOnSegment(px, py, x1, y1, x2, y2) {
 // in a fixed screen-space bar underneath, same as before, since that's
 // where a mobile keypad and a consistent tap target need to live.
 // ---------------------------------------------------------------
+// Redesigned for legibility once the camera is zoomed in on this exact
+// point: both angle regions are filled wedges (not just thin arc
+// outlines), so the shape of "the angle that is formed" is obvious at
+// a glance, not something you have to trace with your eyes. Known
+// angle in solid gold with its degree value large and centered in its
+// own wedge; the unknown angle in blue with a big "?" the same way.
 function drawLiveAngleDiagram() {
   if (!pendingShot || holePhase !== 'QUESTION') return;
   var p = pendingShot;
@@ -1324,7 +1352,7 @@ function drawLiveAngleDiagram() {
 
   var baseAngle = atan2(dir0.y, dir0.x);
   var sweepSign = vDot(sweepDir, vPerp(dir0)) >= 0 ? 1 : -1;
-  var r = 50;
+  var r = 62;
 
   // dotted line from the ball to the real point this diagram lives at
   push();
@@ -1338,97 +1366,121 @@ function drawLiveAngleDiagram() {
   push();
   translate(p.point.x, p.point.y);
   rotate(baseAngle);
-  noFill();
-  stroke(255, 255, 255, 150);
-  strokeWeight(2);
-  line(p.type === 'WALL' ? -14 : -r * 1.35, 0, r * 1.35, 0);
 
   var knownEnd = sweepSign * knownVal;
   var totalEnd = sweepSign * totalDeg;
+  var kLo = min(0, knownEnd), kHi = max(0, knownEnd);
+  var uLo = min(knownEnd, totalEnd), uHi = max(knownEnd, totalEnd);
+
+  // filled wedges first, so the shared baseline/marker draw crisply on top
+  noStroke();
+  fill(224, 160, 48, 95);
+  arc(0, 0, r * 2, r * 2, kLo, kHi, PIE);
+  fill(91, 140, 255, 95);
+  arc(0, 0, r * 2, r * 2, uLo, uHi, PIE);
+
+  noFill();
+  stroke(255, 255, 255, 200);
+  strokeWeight(2.5);
+  line(p.type === 'WALL' ? -18 : -r * 1.15, 0, r * 1.15, 0);
+
+  strokeWeight(4);
   stroke('#e0a030');
-  strokeWeight(3);
-  arc(0, 0, r * 1.1, r * 1.1, min(0, knownEnd), max(0, knownEnd));
+  arc(0, 0, r * 2, r * 2, kLo, kHi);
   stroke('#5b8cff');
-  arc(0, 0, r * 1.55, r * 1.55, min(knownEnd, totalEnd), max(knownEnd, totalEnd));
+  arc(0, 0, r * 2, r * 2, uLo, uHi);
 
   if (totalDeg === 90) {
-    noStroke();
-    fill(255, 255, 255, 70);
+    noFill();
+    stroke(255, 255, 255, 230);
+    strokeWeight(2.5);
+    var m = 20;
     beginShape();
-    vertex(0, 0); vertex(15, 0); vertex(15, 15 * sweepSign); vertex(0, 15 * sweepSign);
-    endShape(CLOSE);
+    vertex(m, 0); vertex(m, m * sweepSign); vertex(0, m * sweepSign);
+    endShape();
   }
 
   noStroke();
-  fill('#e0a030');
+  fill('#ffce6b');
   textAlign(CENTER, CENTER);
-  textSize(13);
+  textStyle(BOLD);
+  textSize(22);
   var kMid = knownEnd / 2;
-  text(knownVal + '°', cos(kMid) * r * 0.7, sin(kMid) * r * 0.7);
-  fill('#8fb4ff');
+  text(knownVal + '°', cos(kMid) * r * 0.6, sin(kMid) * r * 0.6);
+  fill('#bcd4ff');
+  textSize(28);
   var uMid = (knownEnd + totalEnd) / 2;
-  text('?', cos(uMid) * r * 0.98, sin(uMid) * r * 0.98);
+  text('?', cos(uMid) * r * 0.65, sin(uMid) * r * 0.65);
+  textStyle(NORMAL);
   pop();
 }
 
+// No background panel any more - just a bold title floating near the
+// top (with a soft drop-shadow pass for legibility over the course
+// art) once the camera has zoomed in, and a small pill-shaped input
+// at the bottom instead of one big black box.
 function drawQuestionOverlay() {
   if (!pendingShot) return;
-  var w = 560, h = 132, x = width / 2 - w / 2, y = height - h - 14;
-  noStroke();
-  fill(15, 20, 15, 235);
-  rect(x, y, w, h, 16);
-  stroke(pendingShot.timerOn ? '#e63946' : '#3ea158');
-  strokeWeight(2);
-  noFill();
-  rect(x, y, w, h, 16);
-  noStroke();
-  fill(255);
-  textAlign(LEFT, TOP);
-  textSize(15);
-  textStyle(BOLD);
   var isWall = pendingShot.type === 'WALL';
-  text(isWall ? 'Bank Shot — Complementary (sum to 90°)' : 'Straight Shot — Supplementary (sum to 180°)', x + 24, y + 14);
+  var title = isWall ? 'Complementary Angles' : 'Supplementary Angles';
+  var relWord = isWall ? 'sum to 90°' : 'sum to 180°';
+
+  noStroke();
+  textAlign(CENTER, TOP);
+  textStyle(BOLD);
+  textSize(32);
+  fill(0, 0, 0, 130);
+  text(title, width / 2 + 2, 84);
+  fill(255);
+  text(title, width / 2, 82);
   textStyle(NORMAL);
-  textSize(13.5);
-  fill(210, 220, 210);
-  var relWord = isWall ? 'complementary' : 'supplementary';
+
+  textSize(14.5);
+  fill(0, 0, 0, 130);
+  text('These two angles ' + relWord, width / 2 + 1, 123);
+  fill(216, 226, 216);
+  text('These two angles ' + relWord, width / 2, 122);
+
   if (pendingShot.algebra) {
     var alg = pendingShot.algebra;
-    text('The marked angle is (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x + '.', x + 24, y + 40);
-    text('Find that angle, then find its ' + relWord + ' partner.', x + 24, y + 58);
-  } else {
-    text('The marked angle is ' + pendingShot.known + '°.', x + 24, y + 40);
-    text('What angle completes the ' + relWord + ' pair?', x + 24, y + 58);
+    fill(0, 0, 0, 130);
+    text('Known angle = (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x, width / 2 + 1, 145);
+    fill('#ffce6b');
+    text('Known angle = (' + alg.a + 'x + ' + alg.b + ')°, and x = ' + alg.x, width / 2, 144);
   }
-
-  fill(0, 0, 0, 160);
-  rect(x + 24, y + h - 46, 160, 36, 8);
-  fill(255);
-  textSize(18);
-  textAlign(LEFT, CENTER);
-  text((answerText.length ? answerText : '_') + '°', x + 36, y + h - 28);
-
-  fill(answerText.length ? '#3ea158' : '#365a3d');
-  rect(x + 196, y + h - 46, 90, 36, 8);
-  fill(255);
-  textAlign(CENTER, CENTER);
-  textSize(14);
-  textStyle(BOLD);
-  text('Submit', x + 241, y + h - 28);
-  textStyle(NORMAL);
 
   if (pendingShot.timerOn) {
     var remain = max(0, HERO_TIMER_SECONDS - (millis() - timerStart) / 1000);
     fill(remain < 3 ? '#e63946' : 255);
-    textAlign(RIGHT, TOP);
-    textSize(20);
+    textAlign(CENTER, TOP);
+    textSize(22);
     textStyle(BOLD);
-    text(ceil(remain) + 's', x + w - 24, y + 14);
+    text(ceil(remain) + 's', width / 2, pendingShot.algebra ? 168 : 146);
     textStyle(NORMAL);
     if (remain <= 0 && !answerLocked) {
       triggerTimeoutChaos();
     }
   }
+
+  // bottom input pill
+  var iw = 100, ih = 42, sw = 90, gap = 8;
+  var totalW = iw + gap + sw;
+  var ix = width / 2 - totalW / 2, iy = height - ih - 22;
+  fill(0, 0, 0, 190);
+  rect(ix, iy, iw, ih, ih / 2);
+  fill(255);
+  textSize(19);
+  textAlign(CENTER, CENTER);
+  text((answerText.length ? answerText : '_') + '°', ix + iw / 2, iy + ih / 2 + 1);
+
+  var sx = ix + iw + gap;
+  fill(answerText.length ? '#3ea158' : 'rgba(60,80,60,0.85)');
+  rect(sx, iy, sw, ih, ih / 2);
+  fill(255);
+  textSize(15);
+  textStyle(BOLD);
+  text('Submit', sx + sw / 2, iy + ih / 2 + 1);
+  textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
 }
 
@@ -1518,10 +1570,11 @@ function mousePressed() {
     return;
   }
   if (gameState === 'PLAYING' && holePhase === 'QUESTION') {
-    if (mouseY > height - 160) {
-      var w = 560, h = 132, x = width / 2 - w / 2, y = height - h - 14;
-      if (mouseX > x + 196 && mouseX < x + 286 && mouseY > y + h - 46 && mouseY < y + h - 10) submitAnswer();
-    }
+    var iw = 100, ih = 42, sw = 90, gap = 8;
+    var totalW = iw + gap + sw;
+    var ix = width / 2 - totalW / 2, iy = height - ih - 22;
+    var sx = ix + iw + gap;
+    if (mouseX > sx && mouseX < sx + sw && mouseY > iy && mouseY < iy + ih) submitAnswer();
     return;
   }
   if (gameState === 'PLAYING' && holePhase === 'AIMING') {
