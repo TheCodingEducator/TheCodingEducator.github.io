@@ -653,6 +653,16 @@ function stoppingDistance(power) { return power / (1 - FRICTION); }
 // different wall that happens to sit close to a sharp corner right
 // after a bounce, letting a ray (real or previewed) slip through a gap
 // that isn't actually there.
+// Traces against the wall's exact mathematical line, then backs the
+// returned point off by BALL_R along the ray - a point ball reaching
+// the true line would have its CENTER exactly on the wall (half the
+// real ball poking through to the other side); collideWalls() already
+// stops/bounces the real ball's center BALL_R short of the surface
+// (`closest + normal*BALL_R`), so every consumer of this function
+// (the drag preview, the intended-path ghost line, and the shot
+// classification itself) needs the same offset or their line would
+// visibly run into/through the wall instead of stopping at the ball's
+// actual edge.
 function raycastWalls(origin, dir, maxDist, walls, excludeWall) {
   var best = null;
   for (var i = 0; i < walls.length; i++) {
@@ -660,10 +670,12 @@ function raycastWalls(origin, dir, maxDist, walls, excludeWall) {
     if (w === excludeWall) continue;
     var hit = raySegmentIntersect(origin, dir, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 });
     if (hit && hit.t > 0.5 && hit.t < maxDist && (!best || hit.t < best.t)) {
-      best = { point: { x: origin.x + dir.x * hit.t, y: origin.y + dir.y * hit.t }, t: hit.t, wall: w };
+      best = { t: hit.t, wall: w };
     }
   }
-  return best;
+  if (!best) return null;
+  var stopT = max(0, best.t - BALL_R);
+  return { point: { x: origin.x + dir.x * stopT, y: origin.y + dir.y * stopT }, t: stopT, wall: best.wall };
 }
 
 // Ray p = origin + t*dir (t>0) vs segment a-b. Standard 2D line-vs-line
@@ -1405,6 +1417,7 @@ function submitAnswer() {
   holePhase = 'ROLLING';
   nextStroke();
   playSound('hit');
+  playSound(correct ? 'correct' : 'wrong');
   trail = [{ x: ball.x, y: ball.y }];
   trailRightAngle = pendingShot.type === 'WALL' ? { point: pendingShot.point, Wd: pendingShot.Wd, N: pendingShot.N } : null;
   intendedPath = computeIntendedPath(pendingShot);
