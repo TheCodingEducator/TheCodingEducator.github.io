@@ -653,29 +653,38 @@ function stoppingDistance(power) { return power / (1 - FRICTION); }
 // different wall that happens to sit close to a sharp corner right
 // after a bounce, letting a ray (real or previewed) slip through a gap
 // that isn't actually there.
-// Traces against the wall's exact mathematical line, then backs the
-// returned point off by BALL_R along the ray - a point ball reaching
-// the true line would have its CENTER exactly on the wall (half the
-// real ball poking through to the other side); collideWalls() already
-// stops/bounces the real ball's center BALL_R short of the surface
-// (`closest + normal*BALL_R`), so every consumer of this function
-// (the drag preview, the intended-path ghost line, and the shot
-// classification itself) needs the same offset or their line would
-// visibly run into/through the wall instead of stopping at the ball's
-// actual edge.
+// A point ball reaching a wall's exact mathematical line would have
+// its CENTER exactly on the wall (half the real ball poking through to
+// the other side) - collideWalls() actually stops/bounces the real
+// ball's center BALL_R away, measured perpendicular to the wall
+// (`closest + normal*BALL_R`). The correct way to reproduce that with
+// a simple ray cast is to offset the WALL's line outward by BALL_R
+// (along its own normal, toward whichever side the ball is
+// approaching from) and intersect the ray against THAT shifted line -
+// not to just shorten the ray by BALL_R along its own direction, which
+// only agrees with the real perpendicular offset when the ball happens
+// to hit the wall dead-on; at the oblique bank-shot angles this game
+// is entirely built around, that approximation was still landing the
+// traced point visibly off from where collideWalls() really stops the
+// ball. Every consumer (the drag preview, the intended-path ghost
+// line, and the shot classification itself) shares this function, so
+// all three now agree with real physics at once.
 function raycastWalls(origin, dir, maxDist, walls, excludeWall) {
   var best = null;
   for (var i = 0; i < walls.length; i++) {
     var w = walls[i];
     if (w === excludeWall) continue;
-    var hit = raySegmentIntersect(origin, dir, { x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 });
+    var a = { x: w.x1, y: w.y1 }, b = { x: w.x2, y: w.y2 };
+    var normal = vPerp(vNorm(vSub(b, a)));
+    if (vDot(normal, vSub(origin, a)) < 0) normal = vScale(normal, -1);
+    var offset = vScale(normal, BALL_R);
+    var hit = raySegmentIntersect(origin, dir, vAdd(a, offset), vAdd(b, offset));
     if (hit && hit.t > 0.5 && hit.t < maxDist && (!best || hit.t < best.t)) {
       best = { t: hit.t, wall: w };
     }
   }
   if (!best) return null;
-  var stopT = max(0, best.t - BALL_R);
-  return { point: { x: origin.x + dir.x * stopT, y: origin.y + dir.y * stopT }, t: stopT, wall: best.wall };
+  return { point: { x: origin.x + dir.x * best.t, y: origin.y + dir.y * best.t }, t: best.t, wall: best.wall };
 }
 
 // Ray p = origin + t*dir (t>0) vs segment a-b. Standard 2D line-vs-line
@@ -1146,6 +1155,7 @@ function updatePhysics() {
   // resolving collisions after each one closes that gap.
   var steps = max(1, ceil(mag(ball.vx, ball.vy) / (BALL_R * 0.8)));
   for (var s = 0; s < steps; s++) {
+    var wasApplied = !pendingShot || pendingShot.applied;
     ball.x += ball.vx / steps;
     ball.y += ball.vy / steps;
 
@@ -1168,6 +1178,16 @@ function updatePhysics() {
 
     collideWalls();
     collideBushes();
+
+    // A pendingShot resolving (wall bounce or straight-line bend) is
+    // the exact instant the trail/intended-path comparison matters
+    // most - stop this frame's remaining substeps right there instead
+    // of quietly continuing on the NEW direction for the rest of the
+    // frame's travel budget, or the ball's rendered/sampled position
+    // would already be several px past the real corner by the time
+    // anything draws it, making the yellow trail look rounded off from
+    // the dashed line's sharp bend instead of tracking it exactly.
+    if (pendingShot && pendingShot.applied && !wasApplied) break;
   }
 
   ball.vx *= FRICTION;
