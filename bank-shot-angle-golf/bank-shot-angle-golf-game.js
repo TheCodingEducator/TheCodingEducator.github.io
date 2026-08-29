@@ -211,7 +211,6 @@ var sinkAnim = 0;              // 0..1
 // Cleared at the start of every new stroke (see submitAnswer/
 // triggerTimeoutChaos) and kept until the ball comes to rest.
 var trail = [];
-var trailRightAngle = null;    // { point, Wd, N } - marks the real bank-shot corner, once resolved
 var intendedPath = null;       // ghost route the correct answer would have taken, shown alongside the real one
 
 // Camera zoom: eases toward the live question's real point while a
@@ -599,7 +598,6 @@ function startHole(idx) {
   answerText = '';
   answerLocked = false;
   trail = [];
-  trailRightAngle = null;
   intendedPath = null;
 }
 
@@ -941,24 +939,6 @@ function drawTrail() {
     endShape();
     pop();
   }
-  if (trailRightAngle) drawRightAngleMarker(trailRightAngle.point, trailRightAngle.Wd, trailRightAngle.N);
-}
-
-// A small persistent right-angle square at the real bank-shot corner,
-// oriented to the actual wall (Wd) and outward normal (N) so it sits
-// in the correct quadrant regardless of which way the ball approached.
-function drawRightAngleMarker(p, Wd, N) {
-  push();
-  translate(p.x, p.y);
-  rotate(atan2(Wd.y, Wd.x));
-  var sign = vDot(N, vPerp(Wd)) >= 0 ? 1 : -1;
-  noFill();
-  stroke(255, 255, 255, 235);
-  strokeWeight(2.5);
-  beginShape();
-  vertex(16, 0); vertex(16, 16 * sign); vertex(0, 16 * sign);
-  endShape();
-  pop();
 }
 
 function drawBall() {
@@ -1155,7 +1135,6 @@ function updatePhysics() {
       rollAlgebraSeed();
       pendingShot = null;
       trail = [];
-      trailRightAngle = null;
       intendedPath = null;
     }
     return;
@@ -1544,7 +1523,6 @@ function submitAnswer() {
   playSound('hit');
   playSound(correct ? 'correct' : 'wrong');
   trail = [{ x: ball.x, y: ball.y }];
-  trailRightAngle = pendingShot.type === 'WALL' ? { point: pendingShot.point, Wd: pendingShot.Wd, N: pendingShot.N } : null;
   intendedPath = simulateShotPath(pendingShot);
 }
 
@@ -1702,7 +1680,6 @@ function triggerTimeoutChaos() {
   showToast('Time’s up! That one got away from you...', '#e63946');
   triggerScreenFlash('#e63946');
   trail = [{ x: ball.x, y: ball.y }];
-  trailRightAngle = null;
   intendedPath = null;
 
   setTimeout(function () {
