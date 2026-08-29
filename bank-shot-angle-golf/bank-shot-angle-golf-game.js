@@ -908,31 +908,96 @@ function drawBall() {
   ellipse(ball.x - BALL_R * 0.35, ball.y - BALL_R * 0.35, BALL_R * 0.7 * scale, BALL_R * 0.7 * scale);
 }
 
+// Traces the ball's FULL predicted route for the exact aim+power
+// currently being dragged, assuming a correct answer at the first
+// wall it would reach - not just the incoming leg. Every bounce after
+// that first one uses a true mirror reflection (matching
+// collideWalls()'s own normal-physics branch, since only the very
+// first contact of a stroke is ever question-governed). Deliberately
+// uses the RAW geometric correct angle (90 - the true incidence angle)
+// rather than running it through applyDifficultyTier's snapping/
+// algebra - the real question (built fresh on release) may round that
+// by a few degrees, but recomputing the tier live every single drag
+// frame would re-roll its random algebra values continuously and make
+// the preview flicker; the raw angle is always within a few degrees
+// of whatever the real one turns out to be.
+function computePreviewPath(aimDir, power) {
+  var points = [{ x: ball.x, y: ball.y }];
+  var pos = { x: ball.x, y: ball.y };
+  var dir = aimDir;
+  var remaining = stoppingDistance(power);
+  var firstBounce = true;
+  for (var bounce = 0; bounce < 6 && remaining > 4; bounce++) {
+    var hit = raycastWalls(pos, dir, remaining, hole.walls);
+    if (!hit) {
+      points.push({ x: pos.x + dir.x * remaining, y: pos.y + dir.y * remaining });
+      break;
+    }
+    points.push(hit.point);
+    remaining = (remaining - hit.t) * WALL_REST;
+    var w = hit.wall;
+    var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
+    if (firstBounce) {
+      var Wd = vDot(wallVec, dir) >= 0 ? wallVec : vScale(wallVec, -1);
+      var perp = vPerp(Wd);
+      var N = vDot(perp, dir) < 0 ? perp : vScale(perp, -1);
+      var rawKnown = constrain(degrees(Math.acos(constrain(vDot(dir, Wd), -1, 1))), 1, 89);
+      var correctAnswer = 90 - rawKnown;
+      dir = vNorm(vAdd(vScale(Wd, cos(correctAnswer)), vScale(N, sin(correctAnswer))));
+      firstBounce = false;
+    } else {
+      var nrm = vPerp(wallVec);
+      if (vDot(nrm, dir) > 0) nrm = vScale(nrm, -1);
+      dir = vNorm(vSub(dir, vScale(nrm, 2 * vDot(dir, nrm))));
+    }
+    pos = hit.point;
+  }
+  return points;
+}
+
 function drawAimPreview() {
   if (!dragging || holePhase !== 'AIMING') return;
   var dx = dragStart.x - dragNow.x, dy = dragStart.y - dragNow.y;
   var d = min(mag(dx, dy), MAX_DRAG);
   var ang = atan2(dy, dx);
-  var ex = ball.x + cos(ang) * d * 1.6;
-  var ey = ball.y + sin(ang) * d * 1.6;
+  var powerNorm = d / MAX_DRAG;
+  var aimDir = { x: cos(ang), y: sin(ang) };
+  var path = computePreviewPath(aimDir, powerNorm * MAX_LAUNCH_SPEED);
+
   push();
-  drawingContext.setLineDash([6, 8]);
-  stroke(255, 255, 255, 200);
+  drawingContext.setLineDash([7, 7]);
+  strokeCap(ROUND);
+  strokeJoin(ROUND);
+  noFill();
+  stroke(255, 255, 255, 90);
+  strokeWeight(6);
+  beginShape();
+  for (var i = 0; i < path.length; i++) vertex(path[i].x, path[i].y);
+  endShape();
+  stroke('#ffd93d');
   strokeWeight(2.5);
-  line(ball.x, ball.y, ex, ey);
+  beginShape();
+  for (i = 0; i < path.length; i++) vertex(path[i].x, path[i].y);
+  endShape();
   drawingContext.setLineDash([]);
   pop();
-  var power = d / MAX_DRAG;
+
+  for (i = 1; i < path.length - 1; i++) {
+    noStroke();
+    fill(255, 255, 255, 220);
+    ellipse(path[i].x, path[i].y, 7, 7);
+  }
+  var last = path[path.length - 1];
   noStroke();
-  fill(lerpColor(color('#3ea158'), color('#e63946'), power));
-  ellipse(ex, ey, 10, 10);
+  fill(lerpColor(color('#3ea158'), color('#e63946'), powerNorm));
+  ellipse(last.x, last.y, 10, 10);
 
   // power meter
   var mx = BOUND.x + 10, my = BOUND.y - 26, mw = 160, mh = 10;
   fill(0, 0, 0, 150);
   rect(mx, my, mw, mh, 5);
-  fill(lerpColor(color('#3ea158'), color('#e63946'), power));
-  rect(mx, my, mw * power, mh, 5);
+  fill(lerpColor(color('#3ea158'), color('#e63946'), powerNorm));
+  rect(mx, my, mw * powerNorm, mh, 5);
 }
 
 // ---------------------------------------------------------------
