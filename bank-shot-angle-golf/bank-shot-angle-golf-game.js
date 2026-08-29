@@ -1011,46 +1011,44 @@ function computePreviewPath(aimDir, power) {
 }
 
 // Builds the real "supposed to go" ghost route right after an answer
-// resolves - unlike computePreviewPath (an approximation shown while
-// still dragging), this uses the EXACT correctAnswer/Wd/N/contact point
-// already locked into pendingShot, so it's precise, not a guess. Shown
-// alongside the real yellow trail for the rest of the stroke: when the
-// player was right the two lines sit exactly on top of each other:
-// when wrong, they visibly diverge - the actual (incorrect) route the
-// ball takes and the intended (correct) one, side by side.
-function computeIntendedPath(shot) {
-  var points = [{ x: shot.launchFrom.x, y: shot.launchFrom.y }];
-  if (shot.type === 'STRAIGHT') {
-    points.push(shot.point);
-    return points;
+// resolves, by actually RUNNING the shot with a correct answer on a
+// scratch ball through stepBallOneFrame() - the exact same physics
+// code real gameplay uses (see updatePhysics), not a geometric
+// approximation of it. A straight-line reflection model was tried
+// first and matched well for one bounce, but compounds real error
+// over a multi-bounce corridor and can't see hills/water/bushes at
+// all - after several bounces (common in this game's tighter zigzag
+// holes) it could diverge by dozens of pixels from where the ball
+// actually goes, or miss a "stuck in a corner" jitter entirely.
+// Running the identical simulation twice - once silently here, once
+// for real as the player watches - means the two are guaranteed to
+// agree by construction, for as many bounces as the shot actually
+// takes, not just the first one.
+function simulateShotPath(shot) {
+  var b = { x: shot.launchFrom.x, y: shot.launchFrom.y, vx: shot.aimDir.x * shot.power, vy: shot.aimDir.y * shot.power };
+  var pending = {
+    type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
+    resolvedAngle: shot.correctAnswer, correct: true, bendDeg: 0,
+    launchFrom: shot.launchFrom, triggerDist: shot.triggerDist, applied: false
+  };
+  var walls = allWalls();
+  var points = [{ x: b.x, y: b.y }];
+  var bouncePoints = [];
+  for (var frame = 0; frame < 2000; frame++) {
+    var speed = mag(b.vx, b.vy);
+    if (speed < MIN_STOP_SPEED) break;
+    var wasApplied = pending.applied;
+    stepBallOneFrame(b, pending, walls, hole.bushes, hole.zones, true);
+    if (pending.applied && !wasApplied) bouncePoints.push({ x: b.x, y: b.y });
+    var last = points[points.length - 1];
+    if (dist(b.x, b.y, last.x, last.y) > 3) points.push({ x: b.x, y: b.y });
   }
-  points.push(shot.point);
-  var traveled = dist(shot.launchFrom.x, shot.launchFrom.y, shot.point.x, shot.point.y);
-  var remaining = (stoppingDistance(shot.power) - traveled) * WALL_REST;
-  var pos = shot.point;
-  var dir = vNorm(vAdd(vScale(shot.Wd, cos(shot.correctAnswer)), vScale(shot.N, sin(shot.correctAnswer))));
-  var excludeWall = shot.wallRef;
-  for (var bounce = 0; bounce < 5 && remaining > 4; bounce++) {
-    var hit = raycastWalls(pos, dir, remaining, hole.walls, excludeWall);
-    if (!hit) {
-      points.push({ x: pos.x + dir.x * remaining, y: pos.y + dir.y * remaining });
-      break;
-    }
-    points.push(hit.point);
-    remaining = (remaining - hit.t) * WALL_REST;
-    var w = hit.wall;
-    var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
-    var nrm = vPerp(wallVec);
-    if (vDot(nrm, dir) > 0) nrm = vScale(nrm, -1);
-    dir = vNorm(vSub(dir, vScale(nrm, (1 + WALL_REST) * vDot(dir, nrm))));
-    pos = hit.point;
-    excludeWall = w;
-  }
-  return points;
+  points.push({ x: b.x, y: b.y });
+  return { points: points, bouncePoints: bouncePoints };
 }
 
 function drawIntendedPath() {
-  if (!intendedPath || intendedPath.length < 2) return;
+  if (!intendedPath || intendedPath.points.length < 2) return;
   push();
   drawingContext.setLineDash([3, 6]);
   strokeCap(ROUND);
@@ -1058,13 +1056,17 @@ function drawIntendedPath() {
   stroke(255, 255, 255, 200);
   strokeWeight(2.5);
   beginShape();
-  for (var i = 0; i < intendedPath.length; i++) vertex(intendedPath[i].x, intendedPath[i].y);
+  for (var i = 0; i < intendedPath.points.length; i++) vertex(intendedPath.points[i].x, intendedPath.points[i].y);
   endShape();
   drawingContext.setLineDash([]);
   pop();
   noStroke();
   fill(255, 255, 255, 200);
-  var last = intendedPath[intendedPath.length - 1];
+  for (i = 0; i < intendedPath.bouncePoints.length; i++) {
+    var p = intendedPath.bouncePoints[i];
+    ellipse(p.x, p.y, 7, 7);
+  }
+  var last = intendedPath.points[intendedPath.points.length - 1];
   ellipse(last.x, last.y, 8, 8);
 }
 
@@ -1137,13 +1139,23 @@ function updatePhysics() {
     trail.push({ x: ball.x, y: ball.y });
   }
 
-  // zone forces (once per frame - a gentle continuous field, no need
-  // to apply per substep)
-  for (var i = 0; i < hole.zones.length; i++) {
-    var z = hole.zones[i];
-    if (ball.x > z.x && ball.x < z.x + z.w && ball.y > z.y && ball.y < z.y + z.h) {
-      ball.vx += cos(z.dirDeg) * z.strength;
-      ball.vy += sin(z.dirDeg) * z.strength;
+  stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones);
+  checkHoleComplete();
+}
+
+// One frame's worth of ball motion: zone forces, then substepped
+// movement with collision resolution, then friction. Pulled out of
+// updatePhysics() so simulateShotPath() (see below) can run the exact
+// same code on a scratch ball/pendingShot to build the "intended path"
+// ghost line - not an approximation of the real physics, the same
+// deterministic math running twice, so the two are guaranteed to
+// match instead of just usually agreeing.
+function stepBallOneFrame(b, pending, walls, bushes, zones, silent) {
+  for (var i = 0; i < zones.length; i++) {
+    var z = zones[i];
+    if (b.x > z.x && b.x < z.x + z.w && b.y > z.y && b.y < z.y + z.h) {
+      b.vx += cos(z.dirDeg) * z.strength;
+      b.vy += sin(z.dirDeg) * z.strength;
     }
   }
 
@@ -1153,31 +1165,31 @@ function updatePhysics() {
   // rail without ever coming within BALL_R of it mid-flight - classic
   // tunneling. Splitting the frame's movement into smaller hops and
   // resolving collisions after each one closes that gap.
-  var steps = max(1, ceil(mag(ball.vx, ball.vy) / (BALL_R * 0.8)));
+  var steps = max(1, ceil(mag(b.vx, b.vy) / (BALL_R * 0.8)));
   for (var s = 0; s < steps; s++) {
-    var wasApplied = !pendingShot || pendingShot.applied;
-    ball.x += ball.vx / steps;
-    ball.y += ball.vy / steps;
+    var wasApplied = !pending || pending.applied;
+    b.x += b.vx / steps;
+    b.y += b.vy / steps;
 
     // Consume a pending STRAIGHT-shot resolution once the ball actually
     // reaches the real point the diagram was drawn at - a wrong answer
     // bends the path there by the player's own numeric error, same
     // "natural, logical consequence" rule as the wall case.
-    if (pendingShot && pendingShot.type === 'STRAIGHT' && !pendingShot.applied && pendingShot.launchFrom) {
-      var traveled = dist(ball.x, ball.y, pendingShot.launchFrom.x, pendingShot.launchFrom.y);
-      if (traveled >= pendingShot.triggerDist) {
-        pendingShot.applied = true;
-        if (!pendingShot.correct) {
-          var curSpeed = mag(ball.vx, ball.vy);
-          var newAng = atan2(ball.vy, ball.vx) + pendingShot.bendDeg;
-          ball.vx = cos(newAng) * curSpeed;
-          ball.vy = sin(newAng) * curSpeed;
+    if (pending && pending.type === 'STRAIGHT' && !pending.applied && pending.launchFrom) {
+      var traveled = dist(b.x, b.y, pending.launchFrom.x, pending.launchFrom.y);
+      if (traveled >= pending.triggerDist) {
+        pending.applied = true;
+        if (!pending.correct) {
+          var curSpeed = mag(b.vx, b.vy);
+          var newAng = atan2(b.vy, b.vx) + pending.bendDeg;
+          b.vx = cos(newAng) * curSpeed;
+          b.vy = sin(newAng) * curSpeed;
         }
       }
     }
 
-    collideWalls();
-    collideBushes();
+    collideWalls(b, pending, walls, silent);
+    collideBushes(b, bushes);
 
     // A pendingShot resolving (wall bounce or straight-line bend) is
     // the exact instant the trail/intended-path comparison matters
@@ -1187,12 +1199,11 @@ function updatePhysics() {
     // would already be several px past the real corner by the time
     // anything draws it, making the yellow trail look rounded off from
     // the dashed line's sharp bend instead of tracking it exactly.
-    if (pendingShot && pendingShot.applied && !wasApplied) break;
+    if (pending && pending.applied && !wasApplied) break;
   }
 
-  ball.vx *= FRICTION;
-  ball.vy *= FRICTION;
-  checkHoleComplete();
+  b.vx *= FRICTION;
+  b.vy *= FRICTION;
 }
 
 // The corridor's own rails should always contain the ball, but a
@@ -1212,54 +1223,74 @@ var SAFETY_BOUNDS = [
 
 function allWalls() { return hole.walls.concat(SAFETY_BOUNDS); }
 
-function collideWalls() {
-  var walls = allWalls();
+// A tight corner (like the one right where every hole's own puzzle
+// wall usually sits) can put the ball within BALL_R of TWO different
+// wall segments in the very same substep. The old version just looped
+// every wall in array order and corrected against each one it was
+// currently touching - if some other nearby rail happened to sit
+// earlier in the array, it got a normal reflection FIRST, moving the
+// ball and rewriting its velocity before the pending shot's own wall
+// was even checked, so the "correct answer" override could end up
+// applying on top of an already-corrupted direction (or missing the
+// wall entirely, once that first correction moved the ball out of
+// range). The pending shot's wall - the exact one the live question
+// diagram was drawn on - now always gets checked and resolved FIRST,
+// exclusively, before any other wall gets a chance to touch the ball's
+// velocity this substep.
+function collideWalls(b, pending, walls, silent) {
+  if (pending && pending.type === 'WALL' && !pending.applied) {
+    if (resolveWallCollision(b, pending, pending.wallRef, silent)) return;
+  }
   for (var i = 0; i < walls.length; i++) {
-    var w = walls[i];
-    var closest = closestPointOnSegment(ball.x, ball.y, w.x1, w.y1, w.x2, w.y2);
-    var dx = ball.x - closest.x, dy = ball.y - closest.y;
-    var d = mag(dx, dy);
-    if (d < BALL_R && d > 0.0001) {
-      var nx = dx / d, ny = dy / d;
-      ball.x = closest.x + nx * BALL_R;
-      ball.y = closest.y + ny * BALL_R;
-      var vn = ball.vx * nx + ball.vy * ny;
-      if (vn < 0) {
-        var speedNow = mag(ball.vx, ball.vy);
-        // Consume a pending WALL-shot resolution on the first real
-        // contact against the SAME wall the diagram was drawn on - a
-        // correct answer leaves at the true complementary angle, a
-        // wrong one leaves at whatever angle the player actually typed.
-        if (pendingShot && pendingShot.type === 'WALL' && !pendingShot.applied && pendingShot.wallRef === w) {
-          var outDir = vNorm(vAdd(vScale(pendingShot.Wd, cos(pendingShot.resolvedAngle)), vScale(pendingShot.N, sin(pendingShot.resolvedAngle))));
-          var newSpeed = speedNow * WALL_REST;
-          ball.vx = outDir.x * newSpeed;
-          ball.vy = outDir.y * newSpeed;
-          pendingShot.applied = true;
-        } else {
-          ball.vx -= (1 + WALL_REST) * vn * nx;
-          ball.vy -= (1 + WALL_REST) * vn * ny;
-        }
-        if (mag(ball.vx, ball.vy) > 1.5) playSound('bounce');
-      }
-    }
+    resolveWallCollision(b, pending, walls[i], silent);
   }
 }
 
-function collideBushes() {
-  for (var i = 0; i < hole.bushes.length; i++) {
-    var b = hole.bushes[i];
-    var dx = ball.x - b.x, dy = ball.y - b.y;
+// Returns true if the ball was actually touching this wall (and
+// resolves the bounce - either the pending shot's own override, once,
+// or a normal reflection) so collideWalls() can stop right there when
+// it matters. `silent` skips the bounce sound - set by
+// simulateShotPath()'s scratch run, which must never make noise.
+function resolveWallCollision(b, pending, w, silent) {
+  var closest = closestPointOnSegment(b.x, b.y, w.x1, w.y1, w.x2, w.y2);
+  var dx = b.x - closest.x, dy = b.y - closest.y;
+  var d = mag(dx, dy);
+  if (d >= BALL_R || d <= 0.0001) return false;
+  var nx = dx / d, ny = dy / d;
+  b.x = closest.x + nx * BALL_R;
+  b.y = closest.y + ny * BALL_R;
+  var vn = b.vx * nx + b.vy * ny;
+  if (vn < 0) {
+    var speedNow = mag(b.vx, b.vy);
+    if (pending && pending.type === 'WALL' && !pending.applied && pending.wallRef === w) {
+      var outDir = vNorm(vAdd(vScale(pending.Wd, cos(pending.resolvedAngle)), vScale(pending.N, sin(pending.resolvedAngle))));
+      var newSpeed = speedNow * WALL_REST;
+      b.vx = outDir.x * newSpeed;
+      b.vy = outDir.y * newSpeed;
+      pending.applied = true;
+    } else {
+      b.vx -= (1 + WALL_REST) * vn * nx;
+      b.vy -= (1 + WALL_REST) * vn * ny;
+    }
+    if (!silent && mag(b.vx, b.vy) > 1.5) playSound('bounce');
+  }
+  return true;
+}
+
+function collideBushes(b, bushes) {
+  for (var i = 0; i < bushes.length; i++) {
+    var bu = bushes[i];
+    var dx = b.x - bu.x, dy = b.y - bu.y;
     var d = mag(dx, dy);
-    var minD = b.r + BALL_R;
+    var minD = bu.r + BALL_R;
     if (d < minD && d > 0.0001) {
       var nx = dx / d, ny = dy / d;
-      ball.x = b.x + nx * minD;
-      ball.y = b.y + ny * minD;
-      var vn = ball.vx * nx + ball.vy * ny;
+      b.x = bu.x + nx * minD;
+      b.y = bu.y + ny * minD;
+      var vn = b.vx * nx + b.vy * ny;
       if (vn < 0) {
-        ball.vx -= (1 + BUSH_REST) * vn * nx;
-        ball.vy -= (1 + BUSH_REST) * vn * ny;
+        b.vx -= (1 + BUSH_REST) * vn * nx;
+        b.vy -= (1 + BUSH_REST) * vn * ny;
       }
     }
   }
@@ -1440,7 +1471,7 @@ function submitAnswer() {
   playSound(correct ? 'correct' : 'wrong');
   trail = [{ x: ball.x, y: ball.y }];
   trailRightAngle = pendingShot.type === 'WALL' ? { point: pendingShot.point, Wd: pendingShot.Wd, N: pendingShot.N } : null;
-  intendedPath = computeIntendedPath(pendingShot);
+  intendedPath = simulateShotPath(pendingShot);
 }
 
 // ---------------------------------------------------------------
