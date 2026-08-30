@@ -1340,13 +1340,6 @@ function drawAimPreview() {
   fill(col);
   triangle(0, 0, -22, -14, -22, 14);
   pop();
-
-  // power meter
-  var mx = BOUND.x + 10, my = BOUND.y - 26, mw = 160, mh = 10;
-  fill(0, 0, 0, 150);
-  rect(mx, my, mw, mh, 5);
-  fill(col);
-  rect(mx, my, mw * powerNorm, mh, 5);
 }
 
 // ---------------------------------------------------------------
