@@ -2115,8 +2115,8 @@ function drawExplainDiagram(cx, cy, r, info) {
   pop();
 }
 
-var EXPLAIN_BOX = { w: 580, h: 560 };
-var EXPLAIN_BTN = { w: 200, h: 50 };
+var EXPLAIN_BOX = { w: 600, h: 660 };
+var EXPLAIN_BTN = { w: 220, h: 56 };
 
 // Opened the instant a typed answer turns out wrong (see submitAnswer,
 // explainOpen). Rebuilds the exact question the player just faced as a
@@ -2147,46 +2147,47 @@ function drawExplainModal() {
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   fill('#e63946');
-  textSize(25);
-  text('✗ Let’s Break This Down', width / 2, by + 38);
+  textSize(26);
+  text('✗ Let’s Break This Down', width / 2, by + 44);
   textStyle(NORMAL);
 
-  textSize(15.5);
+  textSize(17);
   fill(206, 218, 206);
-  text('These two angles are ' + relWord + ' - together they always', width / 2, by + 70);
-  text('add up to ' + sum + '°.', width / 2, by + 90);
+  text('These two angles are ' + relWord + ' - together they always', width / 2, by + 82);
+  text('add up to ' + sum + '°.', width / 2, by + 106);
 
-  drawExplainDiagram(width / 2, by + 245, 128, resolvedInfo);
+  drawExplainDiagram(width / 2, by + 285, 155, resolvedInfo);
 
-  var eqY = by + 400;
+  var eqY = by + 480;
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   if (resolvedInfo.algebra) {
     var alg = resolvedInfo.algebra;
     fill('#ffce6b');
-    textSize(19);
+    textSize(21);
     text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, eqY);
     fill('#4dff4d');
-    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY + 30);
+    textSize(25);
+    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY + 36);
   } else {
     fill('#4dff4d');
-    textSize(24);
+    textSize(28);
     text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY);
   }
   textStyle(NORMAL);
 
   if (resolvedInfo.typed !== null) {
     fill(230, 130, 130);
-    textSize(13.5);
-    text('You answered ' + resolvedInfo.typed + '° instead.', width / 2, eqY + (resolvedInfo.algebra ? 56 : 32));
+    textSize(15);
+    text('You answered ' + resolvedInfo.typed + '° instead.', width / 2, eqY + (resolvedInfo.algebra ? 74 : 42));
   }
 
-  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 68;
+  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 84;
   fill('#3ea158');
   rect(btnX, btnY, btn.w, btn.h, 12);
   noStroke();
   fill(255);
-  textSize(18);
+  textSize(19);
   textStyle(BOLD);
   text('Got It', width / 2, btnY + btn.h / 2 + 1);
   textStyle(NORMAL);
@@ -2195,7 +2196,7 @@ function drawExplainModal() {
 function explainModalHit(mx, my) {
   var b = EXPLAIN_BOX;
   var bx = width / 2 - b.w / 2, by = height / 2 - b.h / 2;
-  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 68;
+  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 84;
   return mx > btnX && mx < btnX + btn.w && my > btnY && my < btnY + btn.h;
 }
 
