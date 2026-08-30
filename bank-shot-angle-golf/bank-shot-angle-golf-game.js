@@ -170,7 +170,7 @@ function buildClassicGreenCourse() {
         [{ x: 130, y: 520, r: 12 }], [{ type: 'hill', x: 200, y: 410, w: 50, h: 40, dirDeg: 0, strength: 0.028 }]),
 
       makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
-        [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 20, strength: 0.04 }]),
+        [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 0, strength: 0.04 }]),
 
       makeHole(4, [{ x: 590, y: 620 }, { x: 590, y: 390 }, { x: 300, y: 390 }, { x: 300, y: 160 }], 50,
         [{ x: 440, y: 500, r: 26 }],
@@ -181,12 +181,12 @@ function buildClassicGreenCourse() {
 
       makeHole(4, [{ x: 150, y: 610 }, { x: 400, y: 610 }, { x: 400, y: 340 }, { x: 400, y: 170 }], [50, 50, 50, 85],
         [{ x: 350, y: 230, r: 16 }, { x: 450, y: 230, r: 16 }],
-        [{ type: 'hill', x: 340, y: 470, w: 120, h: 110, dirDeg: 250, strength: 0.035 }]),
+        [{ type: 'hill', x: 340, y: 470, w: 120, h: 110, dirDeg: 270, strength: 0.035 }]),
 
       makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 400 }, { x: 350, y: 400 }, { x: 350, y: 170 }, { x: 580, y: 170 }], 50,
         [{ x: 470, y: 170, r: 8 }],
         [
-          { type: 'hill', x: 60, y: 260, w: 90, h: 110, dirDeg: 40, strength: 0.035 },
+          { type: 'hill', x: 60, y: 260, w: 90, h: 110, dirDeg: 0, strength: 0.035 },
           { type: 'water', x: 180, y: 360, w: 220, h: 60, dirDeg: 90, strength: 0.026 }
         ]),
 
@@ -197,7 +197,7 @@ function buildClassicGreenCourse() {
       makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
         [{ x: 520, y: 340, r: 14 }],
         [
-          { type: 'hill', x: 200, y: 400, w: 120, h: 110, dirDeg: 130, strength: 0.035 },
+          { type: 'hill', x: 200, y: 400, w: 120, h: 110, dirDeg: 90, strength: 0.035 },
           { type: 'water', x: 380, y: 400, w: 130, h: 90, dirDeg: 190, strength: 0.028 }
         ])
     ]
@@ -734,14 +734,8 @@ function startHole(idx) {
 // via `rawKnown` being a real degrees value or null respectively.
 // Hero mode's algebra holes (7-9) need an (a, x) pair - fixed once per
 // stroke (rolled whenever a fresh aim begins, see rollAlgebraSeed) so
-// applyDifficultyTier is otherwise fully deterministic given rawKnown.
-// That determinism is what lets the drag preview (computePreviewPath,
-// called every frame while aiming) compute the EXACT SAME known/
-// correctAnswer classifyAndBuildShot will produce on release, instead
-// of an approximation - re-rolling a and x every frame would make the
-// preview's predicted bounce angle flicker independent of the player's
-// actual aim; deriving b from the current known value each time does not,
-// since it's arithmetic, not a fresh random draw.
+// applyDifficultyTier is otherwise fully deterministic given rawKnown,
+// rather than re-rolling a fresh (a, x) on every call.
 var algebraSeedA = 3, algebraSeedX = 5;
 function rollAlgebraSeed() {
   algebraSeedA = floor(random(2, 5.999));
@@ -959,26 +953,22 @@ function drawZones() {
   for (var i = 0; i < hole.zones.length; i++) {
     var z = hole.zones[i];
     var cx = z.x + z.w / 2, cy = z.y + z.h / 2;
-    var dirX = cos(z.dirDeg), dirY = sin(z.dirDeg);
     noStroke();
     if (z.type === 'hill') {
-      // A warm highlight-to-shadow gradient running along the actual
-      // push direction (not a fixed corner) - the ball visually "rolls"
-      // from the bright/high end toward the dark/low end, so the slope
-      // reads correctly without needing a legend.
-      var half = (z.w + z.h) / 2 * 0.65;
-      var g = drawingContext.createLinearGradient(cx - dirX * half, cy - dirY * half, cx + dirX * half, cy + dirY * half);
-      g.addColorStop(0, 'rgba(255,235,190,0.42)');
-      g.addColorStop(0.55, 'rgba(90,65,35,0.08)');
-      g.addColorStop(1, 'rgba(30,18,8,0.46)');
-      drawingContext.fillStyle = g;
-      rect(z.x, z.y, z.w, z.h, 10);
+      // A flat, evenly-tinted block with a bold border instead of the
+      // old diagonal highlight/shadow gradient - hills only ever push
+      // straight left/right/up/down now (see buildClassicGreenCourse),
+      // so there's no diagonal slope to shade toward, and a uniform
+      // fill reads as a clean rectangular tile instead of a soft,
+      // blurred patch of terrain.
+      fill(70, 55, 35, 100);
+      rect(z.x, z.y, z.w, z.h, 5);
       noFill();
-      stroke(255, 235, 190, 100);
-      strokeWeight(2);
-      rect(z.x, z.y, z.w, z.h, 10);
+      stroke(255, 235, 190, 190);
+      strokeWeight(3.5);
+      rect(z.x, z.y, z.w, z.h, 5);
       noStroke();
-      drawFlowArrows(z, [255, 224, 150], 34);
+      drawFlowArrows(z, [60, 140, 255], 40, 1.6);
     } else {
       fill(red(color(th.water)), green(color(th.water)), blue(color(th.water)), 190);
       rect(z.x, z.y, z.w, z.h, 10);
@@ -1010,13 +1000,17 @@ function drawZones() {
 // crosses), so nothing pops in or out abruptly at the zone's border.
 // Sampled in the zone's own rotated flow/perpendicular axes rather than
 // a plain x/y grid - the only way to get a straight, evenly-spaced
-// stream running at an arbitrary angle like 20deg or 250deg.
-function drawFlowArrows(z, rgb, basePxPerSec) {
+// stream running at an arbitrary angle like 20deg or 250deg. `scale`
+// (default 1) sizes and spaces the chevrons up for zones - hills, at
+// 1.6 - that need to read clearly as a strong directional push, versus
+// water's smaller, denser default current arrows.
+function drawFlowArrows(z, rgb, basePxPerSec, scale) {
+  scale = scale || 1;
   var cx = z.x + z.w / 2, cy = z.y + z.h / 2;
   var dirX = cos(z.dirDeg), dirY = sin(z.dirDeg);
   var perpX = -dirY, perpY = dirX;
   var half = sqrt(z.w * z.w + z.h * z.h) / 2 + 20;
-  var spacing = 42, laneGap = 34;
+  var spacing = 42 * scale, laneGap = 34 * scale;
   var speedMult = constrain(map(z.strength, 0.02, 0.045, 0.7, 1.6), 0.6, 1.8);
   var slide = (millis() / 1000 * basePxPerSec * speedMult) % spacing;
   var numLanes = ceil((2 * half) / laneGap);
@@ -1035,10 +1029,10 @@ function drawFlowArrows(z, rgb, basePxPerSec) {
       push();
       translate(x, y);
       rotate(z.dirDeg);
-      fill(rgb[0], rgb[1], rgb[2], 90 * edgeFade);
-      triangle(-16, -4, -16, 4, -8, 0);
-      fill(rgb[0], rgb[1], rgb[2], 215 * edgeFade);
-      triangle(-7, -6, -7, 6, 8, 0);
+      fill(rgb[0], rgb[1], rgb[2], 110 * edgeFade);
+      triangle(-16 * scale, -4 * scale, -16 * scale, 4 * scale, -8 * scale, 0);
+      fill(rgb[0], rgb[1], rgb[2], 235 * edgeFade);
+      triangle(-7 * scale, -6 * scale, -7 * scale, 6 * scale, 8 * scale, 0);
       pop();
     }
   }
@@ -1142,66 +1136,6 @@ function drawBall() {
   ellipse(ball.x - BALL_R * 0.35, ball.y - BALL_R * 0.35, BALL_R * 0.7 * scale, BALL_R * 0.7 * scale);
 }
 
-// Traces the ball's FULL predicted route for the exact aim+power
-// currently being dragged, assuming a correct answer at the first
-// wall it would reach - not just the incoming leg. Every bounce after
-// that first one uses a true mirror reflection (matching
-// collideWalls()'s own normal-physics branch, since only the very
-// first contact of a stroke is ever question-governed).
-//
-// Runs the exact same applyDifficultyTier() math classifyAndBuildShot
-// will use on release - not an approximation - so a correct answer is
-// guaranteed to send the ball exactly where this line just showed.
-// That's safe to call every drag frame (unlike classifyAndBuildShot's
-// own random draws) only because applyDifficultyTier is now fully
-// deterministic given rawKnown: the one place it used to roll fresh
-// randomness independent of the aim (the algebra holes' a/x pair) is
-// seeded once per stroke by rollAlgebraSeed(), not re-rolled here.
-function computePreviewPath(aimDir, power) {
-  var points = [{ x: ball.x, y: ball.y }];
-  var pos = { x: ball.x, y: ball.y };
-  var dir = aimDir;
-  var remaining = stoppingDistance(power);
-  var excludeWall = null;
-  var firstBounce = true;
-  for (var bounce = 0; bounce < 6 && remaining > 4; bounce++) {
-    var hit = raycastWalls(pos, dir, remaining, hole.walls, excludeWall);
-    if (!hit) {
-      points.push({ x: pos.x + dir.x * remaining, y: pos.y + dir.y * remaining });
-      break;
-    }
-    points.push(hit.point);
-    remaining = (remaining - hit.t) * WALL_REST;
-    var w = hit.wall;
-    var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
-    if (firstBounce) {
-      var Wd = vDot(wallVec, dir) >= 0 ? wallVec : vScale(wallVec, -1);
-      var perp = vPerp(Wd);
-      var N = vDot(perp, dir) < 0 ? perp : vScale(perp, -1);
-      var rawKnown = degrees(Math.acos(constrain(vDot(dir, Wd), -1, 1)));
-      var tier = applyDifficultyTier(rawKnown, gameMode, currentHoleNum(), 89);
-      var correctAnswer = 90 - tier.known;
-      // True mirror reflection (angle of incidence = angle of
-      // reflection, both measured from the wall's NORMAL) - see the
-      // long comment on resolveWallCollision for the full derivation of
-      // why sin/cos are swapped from what you'd expect here.
-      dir = vNorm(vAdd(vScale(Wd, sin(correctAnswer)), vScale(N, cos(correctAnswer))));
-      firstBounce = false;
-    } else {
-      var nrm = vPerp(wallVec);
-      if (vDot(nrm, dir) > 0) nrm = vScale(nrm, -1);
-      // Matches collideWalls()'s real velocity update exactly, not a
-      // pure mirror: WALL_REST<1 shrinks the normal component more
-      // than a true reflection would, which changes the resulting
-      // DIRECTION, not just the speed - factor (1+WALL_REST), not 2.
-      dir = vNorm(vSub(dir, vScale(nrm, (1 + WALL_REST) * vDot(dir, nrm))));
-    }
-    pos = hit.point;
-    excludeWall = w;
-  }
-  return points;
-}
-
 // Builds the real "supposed to go" ghost route right after an answer
 // resolves, by actually RUNNING the shot with a correct answer on a
 // scratch ball through stepBallOneFrame() - the exact same physics
@@ -1303,6 +1237,13 @@ function drawResolvedAngleLabels() {
   textStyle(NORMAL);
 }
 
+// A single arrow pointing the direction the ball will actually travel,
+// growing with drag distance the same way MAX_DRAG/power already
+// worked - not the old full bounce-by-bounce forecast (computePreviewPath,
+// now unused/removed). The player aims and judges power from this one
+// clean line instead of reading a multi-segment predicted route; where
+// it actually ends up (including any bank) is what the bank-shot
+// question and the real roll are for.
 function drawAimPreview() {
   if (!dragging || holePhase !== 'AIMING') return;
   var dx = dragStart.x - dragNow.x, dy = dragStart.y - dragNow.y;
@@ -1310,41 +1251,36 @@ function drawAimPreview() {
   var ang = atan2(dy, dx);
   var powerNorm = d / MAX_DRAG;
   var aimDir = { x: cos(ang), y: sin(ang) };
-  var path = computePreviewPath(aimDir, powerNorm * MAX_LAUNCH_SPEED);
+  var col = lerpColor(color('#3ea158'), color('#e63946'), powerNorm);
+
+  var arrowLen = 46 + powerNorm * 150;
+  var tipX = ball.x + aimDir.x * arrowLen, tipY = ball.y + aimDir.y * arrowLen;
 
   push();
-  drawingContext.setLineDash([7, 7]);
   strokeCap(ROUND);
-  strokeJoin(ROUND);
-  noFill();
-  stroke(255, 255, 255, 90);
-  strokeWeight(6);
-  beginShape();
-  for (var i = 0; i < path.length; i++) vertex(path[i].x, path[i].y);
-  endShape();
-  stroke('#ffd93d');
-  strokeWeight(2.5);
-  beginShape();
-  for (i = 0; i < path.length; i++) vertex(path[i].x, path[i].y);
-  endShape();
-  drawingContext.setLineDash([]);
+  stroke(0, 0, 0, 130);
+  strokeWeight(11);
+  line(ball.x, ball.y, tipX, tipY);
+  stroke(col);
+  strokeWeight(7);
+  line(ball.x, ball.y, tipX, tipY);
   pop();
 
-  for (i = 1; i < path.length - 1; i++) {
-    noStroke();
-    fill(255, 255, 255, 220);
-    ellipse(path[i].x, path[i].y, 7, 7);
-  }
-  var last = path[path.length - 1];
+  push();
+  translate(tipX, tipY);
+  rotate(ang);
   noStroke();
-  fill(lerpColor(color('#3ea158'), color('#e63946'), powerNorm));
-  ellipse(last.x, last.y, 10, 10);
+  fill(0, 0, 0, 130);
+  triangle(2, 1, -20, -13, -20, 15);
+  fill(col);
+  triangle(0, 0, -22, -14, -22, 14);
+  pop();
 
   // power meter
   var mx = BOUND.x + 10, my = BOUND.y - 26, mw = 160, mh = 10;
   fill(0, 0, 0, 150);
   rect(mx, my, mw, mh, 5);
-  fill(lerpColor(color('#3ea158'), color('#e63946'), powerNorm));
+  fill(col);
   rect(mx, my, mw * powerNorm, mh, 5);
 }
 
