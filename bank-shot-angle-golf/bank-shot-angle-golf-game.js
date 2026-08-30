@@ -323,6 +323,7 @@ function gameDraw() {
   drawCup();
   if (!confirmExitOpen && !explainOpen) updatePhysics();
   drawIntendedPath();
+  drawVertexAngleMarker();
   drawResolvedAngleLabels();
   drawTrail();
   drawBall();
@@ -1227,6 +1228,42 @@ function drawIntendedPath() {
   ellipse(last.x, last.y, 8, 8);
 }
 
+// A small non-filled version of the live question diagram's arcs (see
+// drawLiveAngleDiagram), right at the real vertex on the course - the
+// text labels alone (drawResolvedAngleLabels) give the number, but
+// nothing tying it to an actual angle at a glance. Gold traces the
+// known angle, green the solved one - same colors those numbers
+// already use, just now with a real arc under them instead of two
+// bare numbers floating near a point. Kept small (r=22) and unfilled
+// so it reads as a little marker, not a second copy of the big
+// zoomed-in diagram.
+function drawVertexAngleMarker() {
+  if (!resolvedInfo) return;
+  var totalDeg = resolvedInfo.type === 'WALL' ? 90 : 180;
+  var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
+  var totalEnd = resolvedInfo.sweepSign * totalDeg;
+  var kLo = min(0, knownEnd), kHi = max(0, knownEnd);
+  var uLo = min(knownEnd, totalEnd), uHi = max(knownEnd, totalEnd);
+  var r = 22;
+
+  push();
+  translate(resolvedInfo.point.x, resolvedInfo.point.y);
+  rotate(resolvedInfo.baseAngle);
+
+  noFill();
+  strokeCap(ROUND);
+  stroke(255, 255, 255, 190);
+  strokeWeight(1.5);
+  line(resolvedInfo.type === 'WALL' ? -9 : -r * 1.15, 0, r * 1.15, 0);
+
+  strokeWeight(2.5);
+  stroke('#e0a030');
+  arc(0, 0, r * 2, r * 2, kLo, kHi);
+  stroke('#4dff4d');
+  arc(0, 0, r * 2, r * 2, uLo, uHi);
+  pop();
+}
+
 // Shown from the moment a shot launches until the stroke resets
 // (updatePhysics/startHole clear resolvedInfo once the ball stops), so
 // the player always sees what the correct angle actually was right
@@ -1699,6 +1736,19 @@ function handleAnswerKey(k) {
   if (answerText.length < 3) answerText += k;
 }
 
+// Shared by drawLiveAngleDiagram and resolvedInfo's own vertex-arc
+// marker (drawVertexAngleMarker) - both need the same "which direction
+// is the 0deg baseline, which way does the known angle sweep" derived
+// from a shot object, so this is the one place that math lives.
+function shotBaseAngleAndSweep(shot) {
+  var dir0 = shot.type === 'WALL' ? shot.Wd : vScale(shot.aimDir, -1);
+  var sweepDirVec = shot.type === 'WALL' ? shot.N : vPerp(dir0);
+  return {
+    baseAngle: atan2(dir0.y, dir0.x),
+    sweepSign: vDot(sweepDirVec, vPerp(dir0)) >= 0 ? 1 : -1
+  };
+}
+
 // Resolving the answer is also the moment the shot actually launches -
 // the ball has been frozen at the aim/power the player already chose
 // while the question was live. Correct: leaves at the true angle
@@ -1729,11 +1779,13 @@ function submitAnswer() {
   playSound(correct ? 'correct' : 'wrong');
   trail = [{ x: ball.x, y: ball.y }];
   intendedPath = simulateShotPath(pendingShot);
+  var baseSweep = shotBaseAngleAndSweep(pendingShot);
   resolvedInfo = {
     correctAnswer: pendingShot.correctAnswer, typed: typed, correct: correct,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
-    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra
+    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
+    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign
   };
   if (!correct) explainOpen = true;
 }
@@ -1895,11 +1947,13 @@ function triggerTimeoutChaos() {
   // Captured before pendingShot goes null just below - chaos never lets
   // the player answer, but they should still see what the correct angle
   // WAS, same as a normal wrong answer would show.
+  var baseSweep = shotBaseAngleAndSweep(pendingShot);
   resolvedInfo = {
     correctAnswer: pendingShot.correctAnswer, typed: null, correct: false,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
-    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra
+    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
+    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
