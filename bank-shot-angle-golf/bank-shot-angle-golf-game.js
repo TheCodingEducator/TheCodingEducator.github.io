@@ -170,24 +170,24 @@ function buildClassicGreenCourse() {
         [{ x: 130, y: 520, r: 12 }], [{ type: 'hill', x: 200, y: 410, w: 50, h: 40, dirDeg: 0, strength: 0.028 }]),
 
       makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
-        [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 0, strength: 0.04 }]),
+        [], [{ type: 'hill', x: 92, y: 345, w: 80, h: 120, dirDeg: 0, strength: 0.04 }]),
 
       makeHole(4, [{ x: 590, y: 620 }, { x: 590, y: 390 }, { x: 300, y: 390 }, { x: 300, y: 160 }], 50,
         [{ x: 440, y: 500, r: 26 }],
-        [{ type: 'water', x: 340, y: 320, w: 130, h: 100, dirDeg: 210, strength: 0.03 }]),
+        [{ type: 'water', x: 370, y: 365, w: 90, h: 45, dirDeg: 210, strength: 0.03 }]),
 
       makeHole(4, [{ x: 120, y: 620 }, { x: 120, y: 480 }, { x: 300, y: 480 }, { x: 300, y: 340 }, { x: 480, y: 340 }, { x: 480, y: 160 }], 46,
         [{ x: 300, y: 250, r: 22 }], [{ type: 'water', x: 180, y: 465, w: 40, h: 30, dirDeg: 0, strength: 0.026 }]),
 
       makeHole(4, [{ x: 150, y: 610 }, { x: 400, y: 610 }, { x: 400, y: 340 }, { x: 400, y: 170 }], [50, 50, 50, 85],
         [{ x: 350, y: 230, r: 16 }, { x: 450, y: 230, r: 16 }],
-        [{ type: 'hill', x: 340, y: 470, w: 120, h: 110, dirDeg: 270, strength: 0.035 }]),
+        [{ type: 'hill', x: 375, y: 480, w: 50, h: 80, dirDeg: 270, strength: 0.035 }]),
 
       makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 400 }, { x: 350, y: 400 }, { x: 350, y: 170 }, { x: 580, y: 170 }], 50,
         [{ x: 470, y: 170, r: 8 }],
         [
-          { type: 'hill', x: 60, y: 260, w: 90, h: 110, dirDeg: 0, strength: 0.035 },
-          { type: 'water', x: 180, y: 360, w: 220, h: 60, dirDeg: 90, strength: 0.026 }
+          { type: 'hill', x: 68, y: 465, w: 58, h: 80, dirDeg: 0, strength: 0.035 },
+          { type: 'water', x: 190, y: 375, w: 170, h: 45, dirDeg: 90, strength: 0.026 }
         ]),
 
       makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 450 }, { x: 370, y: 450 }, { x: 370, y: 270 }, { x: 550, y: 270 }, { x: 550, y: 150 }], 42,
@@ -197,8 +197,8 @@ function buildClassicGreenCourse() {
       makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
         [{ x: 520, y: 340, r: 14 }],
         [
-          { type: 'hill', x: 200, y: 400, w: 120, h: 110, dirDeg: 90, strength: 0.035 },
-          { type: 'water', x: 380, y: 400, w: 130, h: 90, dirDeg: 190, strength: 0.028 }
+          { type: 'hill', x: 275, y: 410, w: 50, h: 80, dirDeg: 90, strength: 0.035 },
+          { type: 'water', x: 468, y: 395, w: 44, h: 65, dirDeg: 190, strength: 0.028 }
         ])
     ]
   };
