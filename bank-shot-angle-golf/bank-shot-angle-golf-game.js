@@ -156,10 +156,10 @@ function buildClassicGreenCourse() {
     key: 'classicGreen', theme: THEMES.classicGreen,
     holes: [
       makeHole(3, [{ x: 110, y: 600 }, { x: 110, y: 270 }, { x: 560, y: 270 }], [52, 52, 70],
-        [], []),
+        [], [{ type: 'water', x: 280, y: 240, w: 110, h: 60, dirDeg: 0, strength: 0.02 }]),
 
       makeHole(3, [{ x: 130, y: 610 }, { x: 130, y: 430 }, { x: 340, y: 430 }, { x: 340, y: 230 }, { x: 570, y: 230 }], 58,
-        [{ x: 130, y: 520, r: 12 }], []),
+        [{ x: 130, y: 520, r: 12 }], [{ type: 'hill', x: 200, y: 410, w: 50, h: 40, dirDeg: 0, strength: 0.028 }]),
 
       makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
         [], [{ type: 'hill', x: 90, y: 340, w: 90, h: 130, dirDeg: 20, strength: 0.04 }]),
@@ -169,7 +169,7 @@ function buildClassicGreenCourse() {
         [{ type: 'water', x: 340, y: 320, w: 130, h: 100, dirDeg: 210, strength: 0.03 }]),
 
       makeHole(4, [{ x: 120, y: 620 }, { x: 120, y: 480 }, { x: 300, y: 480 }, { x: 300, y: 340 }, { x: 480, y: 340 }, { x: 480, y: 160 }], 46,
-        [{ x: 300, y: 250, r: 22 }], []),
+        [{ x: 300, y: 250, r: 22 }], [{ type: 'water', x: 180, y: 465, w: 40, h: 30, dirDeg: 0, strength: 0.026 }]),
 
       makeHole(4, [{ x: 150, y: 610 }, { x: 400, y: 610 }, { x: 400, y: 340 }, { x: 400, y: 170 }], [50, 50, 50, 85],
         [{ x: 350, y: 230, r: 16 }, { x: 450, y: 230, r: 16 }],
@@ -183,7 +183,8 @@ function buildClassicGreenCourse() {
         ]),
 
       makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 450 }, { x: 370, y: 450 }, { x: 370, y: 270 }, { x: 550, y: 270 }, { x: 550, y: 150 }], 42,
-        [{ x: 290, y: 290, r: 11 }, { x: 350, y: 350, r: 10 }, { x: 400, y: 405, r: 7 }], []),
+        [{ x: 290, y: 290, r: 11 }, { x: 350, y: 350, r: 10 }, { x: 400, y: 405, r: 7 }],
+        [{ type: 'hill', x: 535, y: 195, w: 30, h: 50, dirDeg: 90, strength: 0.03 }]),
 
       makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
         [{ x: 520, y: 340, r: 14 }],
