@@ -1256,6 +1256,11 @@ function drawVertexAngleMarker() {
   strokeWeight(1.5);
   line(resolvedInfo.type === 'WALL' ? -9 : -r * 1.15, 0, r * 1.15, 0);
 
+  // The one ray the two angles actually share - without it, the gold
+  // and green arcs just look like two separate curves near each other
+  // instead of two angles meeting edge-to-edge at the same line.
+  line(0, 0, cos(knownEnd) * r * 1.15, sin(knownEnd) * r * 1.15);
+
   strokeWeight(2.5);
   stroke('#e0a030');
   arc(0, 0, r * 2, r * 2, kLo, kHi);
