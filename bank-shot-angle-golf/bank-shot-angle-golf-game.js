@@ -1588,7 +1588,7 @@ function drawLiveAngleDiagram() {
   fill('#ffce6b');
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(19);
+  textSize(15);
   text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
   fill('#bcd4ff');
   textSize(23);
