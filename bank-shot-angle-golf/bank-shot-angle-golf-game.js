@@ -929,16 +929,33 @@ function drawZones() {
   var th = course.theme;
   for (var i = 0; i < hole.zones.length; i++) {
     var z = hole.zones[i];
+    var cx = z.x + z.w / 2, cy = z.y + z.h / 2;
+    var dirX = cos(z.dirDeg), dirY = sin(z.dirDeg);
     noStroke();
     if (z.type === 'hill') {
-      var g = drawingContext.createLinearGradient(z.x, z.y, z.x + z.w * cos(z.dirDeg), z.y + z.h * sin(z.dirDeg));
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(0,0,0,0.28)');
+      // A warm highlight-to-shadow gradient running along the actual
+      // push direction (not a fixed corner) - the ball visually "rolls"
+      // from the bright/high end toward the dark/low end, so the slope
+      // reads correctly without needing a legend.
+      var half = (z.w + z.h) / 2 * 0.65;
+      var g = drawingContext.createLinearGradient(cx - dirX * half, cy - dirY * half, cx + dirX * half, cy + dirY * half);
+      g.addColorStop(0, 'rgba(255,235,190,0.42)');
+      g.addColorStop(0.55, 'rgba(90,65,35,0.08)');
+      g.addColorStop(1, 'rgba(30,18,8,0.46)');
       drawingContext.fillStyle = g;
       rect(z.x, z.y, z.w, z.h, 10);
-      drawFlowArrows(z, 'rgba(255,255,255,0.55)');
+      noFill();
+      stroke(255, 235, 190, 100);
+      strokeWeight(2);
+      rect(z.x, z.y, z.w, z.h, 10);
+      noStroke();
+      drawFlowArrows(z, [255, 224, 150], 34);
     } else {
       fill(red(color(th.water)), green(color(th.water)), blue(color(th.water)), 190);
+      rect(z.x, z.y, z.w, z.h, 10);
+      noFill();
+      stroke(red(color(th.waterHi)), green(color(th.waterHi)), blue(color(th.waterHi)), 140);
+      strokeWeight(2);
       rect(z.x, z.y, z.w, z.h, 10);
       var t = millis() / 500;
       stroke(255, 255, 255, 90);
@@ -946,26 +963,53 @@ function drawZones() {
       noFill();
       for (var r = 0; r < 3; r++) {
         var rr = ((t + r * 12) % 36);
-        ellipse(z.x + z.w / 2, z.y + z.h / 2, rr * 3, rr * 1.4);
+        ellipse(cx, cy, rr * 3, rr * 1.4);
       }
       noStroke();
-      drawFlowArrows(z, 'rgba(255,255,255,0.85)');
+      drawFlowArrows(z, [220, 240, 255], 46);
     }
   }
 }
 
-function drawFlowArrows(z, col) {
+// Continuously slides small chevrons through the zone along its real
+// push direction (z.dirDeg), instead of a static grid of fixed arrows -
+// motion is what actually reads as "this current/slope is pushing the
+// ball," where a still triangle could just as easily be mistaken for
+// decoration. Each lead chevron trails a smaller, fainter one right
+// behind it for a streak-of-motion cue, and every arrow fades out near
+// whichever rectangle edge it's closest to (not just the ones the flow
+// crosses), so nothing pops in or out abruptly at the zone's border.
+// Sampled in the zone's own rotated flow/perpendicular axes rather than
+// a plain x/y grid - the only way to get a straight, evenly-spaced
+// stream running at an arbitrary angle like 20deg or 250deg.
+function drawFlowArrows(z, rgb, basePxPerSec) {
+  var cx = z.x + z.w / 2, cy = z.y + z.h / 2;
+  var dirX = cos(z.dirDeg), dirY = sin(z.dirDeg);
+  var perpX = -dirY, perpY = dirX;
+  var half = sqrt(z.w * z.w + z.h * z.h) / 2 + 20;
+  var spacing = 42, laneGap = 34;
+  var speedMult = constrain(map(z.strength, 0.02, 0.045, 0.7, 1.6), 0.6, 1.8);
+  var slide = (millis() / 1000 * basePxPerSec * speedMult) % spacing;
+  var numLanes = ceil((2 * half) / laneGap);
+  var numSteps = ceil((2 * half) / spacing) + 2;
   push();
-  fill(col);
-  var cols = max(2, floor(z.w / 60)), rows = max(1, floor(z.h / 60));
-  for (var i = 0; i < cols; i++) {
-    for (var j = 0; j < rows; j++) {
-      var ax = z.x + (i + 0.5) * (z.w / cols);
-      var ay = z.y + (j + 0.5) * (z.h / rows);
+  noStroke();
+  for (var li = 0; li <= numLanes; li++) {
+    var p = -half + li * laneGap;
+    for (var si = -1; si <= numSteps; si++) {
+      var t = -half + slide + si * spacing;
+      var x = cx + p * perpX + t * dirX;
+      var y = cy + p * perpY + t * dirY;
+      if (x < z.x - 2 || x > z.x + z.w + 2 || y < z.y - 2 || y > z.y + z.h + 2) continue;
+      var edgeFade = constrain(min(min(x - z.x, z.x + z.w - x), min(y - z.y, z.y + z.h - y)) / 18, 0, 1);
+      if (edgeFade <= 0.03) continue;
       push();
-      translate(ax, ay);
+      translate(x, y);
       rotate(z.dirDeg);
-      triangle(-6, -5, -6, 5, 6, 0);
+      fill(rgb[0], rgb[1], rgb[2], 90 * edgeFade);
+      triangle(-16, -4, -16, 4, -8, 0);
+      fill(rgb[0], rgb[1], rgb[2], 215 * edgeFade);
+      triangle(-7, -6, -7, 6, 8, 0);
       pop();
     }
   }
