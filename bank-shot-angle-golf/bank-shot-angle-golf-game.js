@@ -873,11 +873,16 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     };
   }
 
-  var stopPoint = { x: origin.x + aimDir.x * maxDist, y: origin.y + aimDir.y * maxDist };
   var tier2 = applyDifficultyTier(null, gameMode, holeNum, 179);
   return {
     type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: tier2.timerOn,
-    correctAnswer: 180 - tier2.known, point: stopPoint,
+    // The diagram/camera anchor for a straight shot - unlike WALL's
+    // point (the actual contact point on a rail), there's no natural
+    // "where" for an open-green shot except the ball's own launch spot.
+    // Using the far-off stopping point instead used to zoom the camera
+    // in on empty space well past the course, with the ball and the
+    // whole hole scrolled off screen entirely.
+    point: { x: origin.x, y: origin.y },
     triggerDist: maxDist * 0.6, aimDir: aimDir, power: power, applied: false
   };
 }
