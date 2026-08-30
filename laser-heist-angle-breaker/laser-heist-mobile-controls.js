@@ -52,7 +52,15 @@
     // teaching notes), which could trigger the browser's native text-
     // selection/callout mid-drag -- see laser-heist-angle-breaker.html's
     // own layout comment for the other half of this fix.
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 1000; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 1000; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    // pointer-events starts at none, not auto - an always-on "auto"
+    // here would permanently swallow every tap/scroll in this
+    // full-width bottom strip even on screens where neither the joystick
+    // nor the numpad is shown (title screen, results, and the standards
+    // panel/teaching notes further down the page once scrolled into this
+    // band). .mc-active (toggled in refreshVisibility below) re-enables
+    // it only while one of the two control surfaces is actually up.
+    '#mobile-controls.mc-active { pointer-events: auto; }' +
     '#mc-joy-base { position: absolute; left: 20px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; display: none; }' +
     '#mc-joy-stick { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
     '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
@@ -164,6 +172,7 @@
     var showJoy = isSneaking();
     numpadEl.classList.toggle('mc-visible', showNumpad);
     base.classList.toggle('mc-visible', showJoy);
+    wrap.classList.toggle('mc-active', showNumpad || showJoy);
     if (!showJoy) clearDirs();
   }
 

@@ -23,7 +23,18 @@
 
   var style = document.createElement('style');
   style.textContent =
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 1000; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    // pointer-events starts at none, not auto - this 240px bottom strip
+    // spans the FULL viewport width, and whenever the numpad itself
+    // isn't shown (any screen other than an active question - the
+    // title/menu, between-hole overlays, and critically the standards
+    // panel/teaching notes further down the page once scrolled into
+    // this band) an always-on "auto" here would silently swallow every
+    // tap and scroll gesture that lands in it, with nothing visible to
+    // explain why. The .mc-active class (toggled alongside mc-visible
+    // in refreshVisibility below) re-enables it only while the numpad
+    // itself is actually up.
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 1000; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mobile-controls.mc-active { pointer-events: auto; }' +
     '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
     '#mc-numpad.mc-visible { display: grid; }' +
     '.mc-num { border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,24,44,0.85); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; }' +
@@ -50,6 +61,7 @@
     var show = typeof gameState !== 'undefined' && gameState === 'PLAYING' &&
       typeof holePhase !== 'undefined' && holePhase === 'QUESTION';
     numpadEl.classList.toggle('mc-visible', show);
+    wrap.classList.toggle('mc-active', show);
   }
 
   var _mcPrevDraw = window.draw;

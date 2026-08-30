@@ -25,7 +25,15 @@
     // which could trigger the browser's native text-selection/callout
     // mid-drag -- see each HTML file's own layout comment for the other
     // half of this fix.
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 190px; z-index: 1000; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 190px; z-index: 1000; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    // pointer-events starts at none, not auto - an always-on "auto"
+    // here would permanently swallow every tap/scroll in this
+    // full-width bottom strip even on the title screen, where the
+    // joystick isn't needed and the standards panel/teaching notes
+    // further down the page can scroll into this same band. .mc-active
+    // (toggled in refreshVisibility below) re-enables it only while the
+    // player is actually past the title screen.
+    '#mobile-controls.mc-active { pointer-events: auto; }' +
     '#mc-joy-base { position: absolute; left: 20px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; }' +
     '#mc-joy-stick { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
     '#mc-action { position: absolute; right: 24px; bottom: 24px; width: 100px; height: 100px; border-radius: 50%; background: rgba(91,140,255,0.55); border: 2px solid rgba(255,255,255,0.5); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; pointer-events: auto; }' +
@@ -98,4 +106,20 @@
   actionBtn.addEventListener('pointerup', actionOff);
   actionBtn.addEventListener('pointercancel', actionOff);
   actionBtn.addEventListener('pointerleave', actionOff);
+
+  // ---- Show the joystick/action bar only once play has actually
+  // started - not on the title screen, where there's nothing to steer
+  // yet and this full-width strip would otherwise block reaching the
+  // standards panel/teaching notes below the fold. ----
+  function refreshVisibility() {
+    var show = typeof gameState !== 'undefined' && gameState !== 'title';
+    wrap.classList.toggle('mc-active', show);
+    if (!show) clearDirs();
+  }
+
+  var _mcPrevDraw = window.draw;
+  window.draw = function () {
+    _mcPrevDraw();
+    refreshVisibility();
+  };
 })();

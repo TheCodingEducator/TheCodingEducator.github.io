@@ -33,7 +33,16 @@
 
   var style = document.createElement('style');
   style.textContent =
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 1000; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    // pointer-events starts at none, not auto - see
+    // bank-shot-angle-golf-mobile-controls.js for the full reasoning:
+    // an always-on "auto" here would permanently swallow every tap and
+    // scroll gesture in this full-width bottom strip, including on the
+    // standards panel/teaching notes once scrolled into it, even on
+    // screens where the numpad itself isn't shown. .mc-active (toggled
+    // alongside mc-visible in refreshVisibility below) re-enables it
+    // only while the numpad is actually up.
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 1000; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mobile-controls.mc-active { pointer-events: auto; }' +
     '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
     '#mc-numpad.mc-visible { display: grid; }' +
     '.mc-num { border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,24,44,0.85); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; }' +
@@ -61,6 +70,7 @@
   function refreshVisibility() {
     var show = typeof screenState !== 'undefined' && screenState === 'input';
     numpadEl.classList.toggle('mc-visible', show);
+    wrap.classList.toggle('mc-active', show);
   }
 
   var _mcPrevDraw = window.draw;
