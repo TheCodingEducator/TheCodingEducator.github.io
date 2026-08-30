@@ -1266,6 +1266,25 @@ function drawVertexAngleMarker() {
   arc(0, 0, r * 2, r * 2, kLo, kHi);
   stroke('#4dff4d');
   arc(0, 0, r * 2, r * 2, uLo, uHi);
+
+  // Same right-angle bracket the live question diagram uses for a
+  // complementary pair - without it, a 90deg wedge and a wider one
+  // aren't visually distinguishable at a glance, and the whole point
+  // of "complementary" is that these two specifically fill a square
+  // corner. Supplementary already reads as its own thing: the baseline
+  // above spans both directions through the vertex (a real straight
+  // line), and the two arcs together sweep a full 180deg semicircle
+  // over it - no separate marker needed to say "this is a straight
+  // line," the line itself already shows that.
+  if (totalDeg === 90) {
+    noFill();
+    stroke(255, 255, 255, 230);
+    strokeWeight(1.5);
+    var m = 7;
+    beginShape();
+    vertex(m, 0); vertex(m, m * resolvedInfo.sweepSign); vertex(0, m * resolvedInfo.sweepSign);
+    endShape();
+  }
   pop();
 }
 
