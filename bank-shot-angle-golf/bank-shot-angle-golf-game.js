@@ -1769,9 +1769,17 @@ function shotBaseAngleAndSweep(shot) {
 // Resolving the answer is also the moment the shot actually launches -
 // the ball has been frozen at the aim/power the player already chose
 // while the question was live. Correct: leaves at the true angle
-// (complementary/supplementary as shown). Wrong: leaves at whatever
-// the player actually typed instead - a direct, logical consequence
-// of their own number, not a generic penalty.
+// (complementary/supplementary as shown), following the drag's real
+// aim all the way to the wall/cup like normal physics. Wrong: leaves
+// FROM THE TEE, immediately, already pointed the way the player's own
+// (wrong) number implies - not a scripted mid-flight bend or a bounce
+// off the wall at a fabricated angle once it gets there. Making the
+// ball travel the correct-looking approach first and only reveal the
+// error later (at the wall, or partway down the fairway) read as a
+// physics glitch - a bounce at an angle that doesn't match how it hit
+// the wall, or a ball that swerves for no visible reason mid-roll.
+// Baking the wrong angle into the very first frame means what the
+// player sees IS the consequence of their answer, start to finish.
 function submitAnswer() {
   if (holePhase !== 'QUESTION' || answerLocked || answerText.length === 0 || !pendingShot) return;
   var typed = parseInt(answerText, 10);
@@ -1780,16 +1788,32 @@ function submitAnswer() {
   pendingShot.correct = correct;
   pendingShot.launchFrom = { x: ball.x, y: ball.y };
 
+  var launchDir = pendingShot.aimDir;
   if (pendingShot.type === 'WALL') {
     pendingShot.resolvedAngle = correct ? pendingShot.correctAnswer : constrain(typed, 1, 179);
+    if (!correct) {
+      // Same outgoing-ray formula resolveWallCollision uses for a real
+      // bounce (see its own comment for the derivation) - just applied
+      // at launch instead of at wall contact, and the wall trigger is
+      // marked used up (`applied`) so the real collision code never
+      // fires its own scripted bounce on top of this one.
+      launchDir = vNorm(vAdd(vScale(pendingShot.Wd, sin(pendingShot.resolvedAngle)), vScale(pendingShot.N, cos(pendingShot.resolvedAngle))));
+      pendingShot.applied = true;
+    }
   } else {
-    if (!correct) pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
+    if (!correct) {
+      pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
+      var aimAngle = atan2(pendingShot.aimDir.y, pendingShot.aimDir.x);
+      var bentAngle = aimAngle + pendingShot.bendDeg;
+      launchDir = { x: cos(bentAngle), y: sin(bentAngle) };
+      pendingShot.applied = true;
+    }
   }
   triggerScreenFlash(correct ? '#3ea158' : '#e63946', correct);
 
   answerLocked = true;
-  ball.vx = pendingShot.aimDir.x * pendingShot.power;
-  ball.vy = pendingShot.aimDir.y * pendingShot.power;
+  ball.vx = launchDir.x * pendingShot.power;
+  ball.vy = launchDir.y * pendingShot.power;
   holePhase = 'ROLLING';
   nextStroke();
   playSound('hit');
