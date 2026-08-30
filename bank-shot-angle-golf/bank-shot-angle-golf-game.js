@@ -246,6 +246,15 @@ var sinkAnim = 0;              // 0..1
 var trail = [];
 var intendedPath = null;       // ghost route the correct answer would have taken, shown alongside the real one
 
+// The resolved-question readout shown next to the vertex while the
+// ball rolls - the correct angle always, plus the player's own wrong
+// number when they missed it. Captured as its own snapshot (not read
+// live off pendingShot) because pendingShot itself goes null the
+// instant a Hero-mode timeout fires (see triggerTimeoutChaos), and
+// this needs to keep showing what the correct answer WAS regardless.
+// Same lifecycle as trail/intendedPath above.
+var resolvedInfo = null;       // { correctAnswer, typed, correct, point, offsetDir }
+
 // Camera zoom: eases toward the live question's real point while a
 // question is up (making the small angle diagram big and legible),
 // and back out to a full-course view otherwise. Plain exponential
@@ -298,7 +307,7 @@ function gameDraw() {
   drawCup();
   if (!confirmExitOpen) updatePhysics();
   drawIntendedPath();
-  drawWrongAnswerLabel();
+  drawResolvedAngleLabels();
   drawTrail();
   drawBall();
   drawAimPreview();
@@ -695,6 +704,7 @@ function startHole(idx) {
   answerLocked = false;
   trail = [];
   intendedPath = null;
+  resolvedInfo = null;
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -1234,22 +1244,34 @@ function drawIntendedPath() {
   ellipse(last.x, last.y, 8, 8);
 }
 
-// Shown from the moment a wrong answer launches the ball until the
-// stroke resets (updatePhysics clears pendingShot once the ball stops),
-// so the player can see the actual number they typed right where the
-// angle was measured from, alongside the true/intended dotted path.
-function drawWrongAnswerLabel() {
-  if (!pendingShot || pendingShot.correct !== false) return;
-  var offset = pendingShot.type === 'WALL' ? vScale(pendingShot.N, 30) : { x: 0, y: -30 };
-  var lx = pendingShot.point.x + offset.x, ly = pendingShot.point.y + offset.y;
+// Shown from the moment a shot launches until the stroke resets
+// (updatePhysics/startHole clear resolvedInfo once the ball stops), so
+// the player always sees what the correct angle actually was right
+// where it was measured from - not just on a miss. A wrong answer (or
+// a Hero-mode timeout, which never let them answer at all) additionally
+// shows the number they were actually judged against, stacked further
+// out along the same offset direction so the two labels never overlap.
+function drawResolvedAngleLabels() {
+  if (!resolvedInfo) return;
+  var d = resolvedInfo.offsetDir;
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   textSize(26);
+
+  var cx = resolvedInfo.point.x + d.x * 30, cy = resolvedInfo.point.y + d.y * 30;
   fill(0, 0, 0, 150);
-  text(pendingShot.typed + '°', lx + 1.5, ly + 1.5);
-  fill('#e63946');
-  text(pendingShot.typed + '°', lx, ly);
+  text(resolvedInfo.correctAnswer + '°', cx + 1.5, cy + 1.5);
+  fill('#5b8cff');
+  text(resolvedInfo.correctAnswer + '°', cx, cy);
+
+  if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
+    var wx = resolvedInfo.point.x + d.x * 62, wy = resolvedInfo.point.y + d.y * 62;
+    fill(0, 0, 0, 150);
+    text(resolvedInfo.typed + '°', wx + 1.5, wy + 1.5);
+    fill('#e63946');
+    text(resolvedInfo.typed + '°', wx, wy);
+  }
   textStyle(NORMAL);
 }
 
@@ -1313,6 +1335,7 @@ function updatePhysics() {
       pendingShot = null;
       trail = [];
       intendedPath = null;
+      resolvedInfo = null;
     }
     return;
   }
@@ -1716,6 +1739,11 @@ function submitAnswer() {
   playSound(correct ? 'correct' : 'wrong');
   trail = [{ x: ball.x, y: ball.y }];
   intendedPath = simulateShotPath(pendingShot);
+  resolvedInfo = {
+    correctAnswer: pendingShot.correctAnswer, typed: typed, correct: correct,
+    point: { x: pendingShot.point.x, y: pendingShot.point.y },
+    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 }
+  };
 }
 
 // ---------------------------------------------------------------
@@ -1870,6 +1898,14 @@ function drawFeedbackToast() {
 // ---------------------------------------------------------------
 function triggerTimeoutChaos() {
   answerLocked = true;
+  // Captured before pendingShot goes null just below - chaos never lets
+  // the player answer, but they should still see what the correct angle
+  // WAS, same as a normal wrong answer would show.
+  resolvedInfo = {
+    correctAnswer: pendingShot.correctAnswer, typed: null, correct: false,
+    point: { x: pendingShot.point.x, y: pendingShot.point.y },
+    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 }
+  };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
   preShotPos.x = ball.x; preShotPos.y = ball.y;
