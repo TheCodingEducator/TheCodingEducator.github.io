@@ -1228,6 +1228,10 @@ function drawIntendedPath() {
 // a Hero-mode timeout, which never let them answer at all) additionally
 // shows the number they were actually judged against, stacked further
 // out along the same offset direction so the two labels never overlap.
+// Both carry a checkmark/X alongside the color - red/green alone isn't
+// reliably distinguishable for players with red-green color blindness,
+// and unlike the brief screen flash, these labels stay up for the
+// whole roll, long enough to actually read the icon.
 function drawResolvedAngleLabels() {
   if (!resolvedInfo) return;
   var d = resolvedInfo.offsetDir;
@@ -1237,17 +1241,19 @@ function drawResolvedAngleLabels() {
   textSize(26);
 
   var cx = resolvedInfo.point.x + d.x * 30, cy = resolvedInfo.point.y + d.y * 30;
+  var correctLabel = '✓ ' + resolvedInfo.correctAnswer + '°';
   fill(0, 0, 0, 150);
-  text(resolvedInfo.correctAnswer + '°', cx + 1.5, cy + 1.5);
+  text(correctLabel, cx + 1.5, cy + 1.5);
   fill('#4dff4d');
-  text(resolvedInfo.correctAnswer + '°', cx, cy);
+  text(correctLabel, cx, cy);
 
   if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
     var wx = resolvedInfo.point.x + d.x * 62, wy = resolvedInfo.point.y + d.y * 62;
+    var wrongLabel = '✗ ' + resolvedInfo.typed + '°';
     fill(0, 0, 0, 150);
-    text(resolvedInfo.typed + '°', wx + 1.5, wy + 1.5);
+    text(wrongLabel, wx + 1.5, wy + 1.5);
     fill('#e63946');
-    text(resolvedInfo.typed + '°', wx, wy);
+    text(wrongLabel, wx, wy);
   }
   textStyle(NORMAL);
 }
@@ -1710,7 +1716,7 @@ function submitAnswer() {
   } else {
     if (!correct) pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
   }
-  triggerScreenFlash(correct ? '#3ea158' : '#e63946');
+  triggerScreenFlash(correct ? '#3ea158' : '#e63946', correct);
 
   answerLocked = true;
   ball.vx = pendingShot.aimDir.x * pendingShot.power;
@@ -1733,10 +1739,10 @@ function submitAnswer() {
 // ---------------------------------------------------------------
 // Correct/incorrect screen flash
 // ---------------------------------------------------------------
-var screenFlash = null; // { col, start, duration }
+var screenFlash = null; // { col, start, duration, isCorrect }
 
-function triggerScreenFlash(col) {
-  screenFlash = { col: col, start: millis(), duration: 380 };
+function triggerScreenFlash(col, isCorrect) {
+  screenFlash = { col: col, start: millis(), duration: 380, isCorrect: isCorrect };
 }
 
 function drawScreenFlash() {
@@ -1749,6 +1755,17 @@ function drawScreenFlash() {
   noStroke();
   fill(red(c), green(c), blue(c), alpha);
   rect(0, 0, width, height);
+
+  // A checkmark/X alongside the color tint, same red-green-color-
+  // blindness reasoning as drawResolvedAngleLabels - brief as this flash
+  // is, it's still the very first thing a player sees after answering.
+  var iconAlpha = (1 - t) * (1 - t) * 220;
+  fill(red(c), green(c), blue(c), iconAlpha);
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  textSize(120);
+  text(screenFlash.isCorrect ? '✓' : '✗', width / 2, height / 2);
+  textStyle(NORMAL);
 }
 
 // ---------------------------------------------------------------
@@ -1893,7 +1910,7 @@ function triggerTimeoutChaos() {
   chaosShakeMag = 5;
   nextStroke();
   playSound('chaos');
-  triggerScreenFlash('#e63946');
+  triggerScreenFlash('#e63946', false);
   trail = [{ x: ball.x, y: ball.y }];
   intendedPath = null;
 
@@ -1961,10 +1978,10 @@ function drawEquation() {
     var alg = resolvedInfo.algebra;
     textSize(21);
     text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, 25);
-    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 57);
+    text('✓ ' + sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 57);
   } else {
     textSize(28);
-    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
+    text('✓ ' + sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
   }
   textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
@@ -2056,9 +2073,9 @@ function drawExplainModal() {
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  fill(255);
+  fill('#e63946');
   textSize(25);
-  text('Let’s Break This Down', width / 2, by + 38);
+  text('✗ Let’s Break This Down', width / 2, by + 38);
   textStyle(NORMAL);
 
   textSize(15.5);
