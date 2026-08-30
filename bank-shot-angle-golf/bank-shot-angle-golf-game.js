@@ -327,6 +327,7 @@ function gameDraw() {
   }
 
   drawHUD();
+  drawEquation();
   if (gameState === 'PLAYING') drawExitButton();
   if (holePhase === 'QUESTION') drawQuestionOverlay();
   drawFeedbackToast();
@@ -1231,19 +1232,21 @@ function simulateShotPath(shot) {
 
 function drawIntendedPath() {
   if (!intendedPath || intendedPath.points.length < 2) return;
-  // On a wrong answer, this dotted line is the ONLY place the correct
-  // path is still visible (the real trail has already diverged onto
-  // the player's own wrong angle) - coloring it the same bright green
-  // as a correct answer's trail marks it unmistakably as "this was the
-  // right one," instead of a neutral white that doesn't say why it's
-  // there. Stays white on a correct answer, where it just overlays the
-  // trail exactly and doesn't need to carry that meaning.
-  var wrong = resolvedInfo && resolvedInfo.correct === false;
+  // On a correct answer this ghost path exactly overlays the real
+  // trail (same route, by definition), so drawing it too is pure
+  // redundant clutter across the whole course - skip it entirely and
+  // let the real green trail alone carry the correct angle. It only
+  // earns its keep on a wrong answer, where it's the ONLY place the
+  // correct path is still visible at all (the real trail has already
+  // diverged onto the player's own wrong angle) - colored the same
+  // bright green as a correct trail there, marking it unmistakably as
+  // "this was the right one" instead of a neutral, unexplained white.
+  if (resolvedInfo && resolvedInfo.correct === true) return;
   push();
   drawingContext.setLineDash([3, 6]);
   strokeCap(ROUND);
   noFill();
-  if (wrong) stroke(77, 255, 77, 210); else stroke(255, 255, 255, 200);
+  stroke(77, 255, 77, 210);
   strokeWeight(2.5);
   beginShape();
   for (var i = 0; i < intendedPath.points.length; i++) vertex(intendedPath.points[i].x, intendedPath.points[i].y);
@@ -1251,7 +1254,7 @@ function drawIntendedPath() {
   drawingContext.setLineDash([]);
   pop();
   noStroke();
-  if (wrong) fill(77, 255, 77, 210); else fill(255, 255, 255, 200);
+  fill(77, 255, 77, 210);
   for (i = 0; i < intendedPath.bouncePoints.length; i++) {
     var p = intendedPath.bouncePoints[i];
     ellipse(p.x, p.y, 7, 7);
@@ -1758,7 +1761,8 @@ function submitAnswer() {
   resolvedInfo = {
     correctAnswer: pendingShot.correctAnswer, typed: typed, correct: correct,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
-    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 }
+    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
+    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra
   };
 }
 
@@ -1920,7 +1924,8 @@ function triggerTimeoutChaos() {
   resolvedInfo = {
     correctAnswer: pendingShot.correctAnswer, typed: null, correct: false,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
-    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 }
+    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
+    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
@@ -1981,6 +1986,34 @@ function drawHUD() {
   fill(180, 195, 180);
   var modeLabel = gameMode === MODE_EASY ? 'Golf Gamer' : (gameMode === MODE_HARD ? 'Hole-In-One Hero' : 'Putting Green');
   text(modeLabel, width - 20, 54);
+  textAlign(LEFT, BASELINE);
+}
+
+// The actual arithmetic behind the correct angle, shown centered in
+// the HUD bar (between the hole/mode readouts on either side) for as
+// long as the ball keeps rolling - always, win or lose, in the same
+// bright green as a correct trail/label, since this is showing the
+// correct answer itself rather than judging what the player did. On a
+// miss it's the direct answer to "what should I have typed," sitting
+// right alongside the red wrong-number label at the vertex instead of
+// making the player hunt for it.
+function drawEquation() {
+  if (!resolvedInfo) return;
+  var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  fill('#4dff4d');
+  if (resolvedInfo.algebra) {
+    var alg = resolvedInfo.algebra;
+    textSize(14.5);
+    text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, 26);
+    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 54);
+  } else {
+    textSize(17);
+    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
+  }
+  textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
 }
 
