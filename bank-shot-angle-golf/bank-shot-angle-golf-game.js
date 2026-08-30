@@ -1270,15 +1270,20 @@ function drawAimPreview() {
 
   var arrowLen = 46 + powerNorm * 150;
   var tipX = ball.x + aimDir.x * arrowLen, tipY = ball.y + aimDir.y * arrowLen;
+  // Shaft stops short of the tip by the arrowhead's own length - a
+  // round line cap reaching all the way to the tip peeks out past the
+  // triangle's sharp point (the triangle is only a couple px wide right
+  // at its very tip), reading as a stray dot sitting past the arrowhead.
+  var shaftX = ball.x + aimDir.x * (arrowLen - 22), shaftY = ball.y + aimDir.y * (arrowLen - 22);
 
   push();
   strokeCap(ROUND);
   stroke(0, 0, 0, 130);
   strokeWeight(11);
-  line(ball.x, ball.y, tipX, tipY);
+  line(ball.x, ball.y, shaftX, shaftY);
   stroke(col);
   strokeWeight(7);
-  line(ball.x, ball.y, tipX, tipY);
+  line(ball.x, ball.y, shaftX, shaftY);
   pop();
 
   push();
