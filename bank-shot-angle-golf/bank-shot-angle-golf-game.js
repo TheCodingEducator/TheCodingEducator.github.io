@@ -15,7 +15,15 @@ var BOUND = { x: 50, y: 104, w: 600, h: 556 };
 var BALL_R = 9;
 var CUP_R = 14;
 var FRICTION = 0.986;
-var MIN_STOP_SPEED = 0.06;
+// Exponential decay (v *= FRICTION every frame) never truly reaches
+// zero, so how "stopped" is defined matters as much as the decay rate
+// itself - at the old 0.06, the ball spent its last ~2.5s crawling at
+// a speed too slow to actually see while still being tracked as
+// ROLLING. Raised well above that so the roll gets cut off once it's
+// already imperceptibly slow, not once it's mathematically exact -
+// stoppingDistance()/aiming preview are untouched since those only
+// depend on FRICTION, not this.
+var MIN_STOP_SPEED = 0.25;
 var MAX_DRAG = 170;
 var MAX_LAUNCH_SPEED = 15;
 var WALL_REST = 0.8;
