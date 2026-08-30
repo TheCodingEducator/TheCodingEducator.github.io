@@ -1223,11 +1223,19 @@ function simulateShotPath(shot) {
 
 function drawIntendedPath() {
   if (!intendedPath || intendedPath.points.length < 2) return;
+  // On a wrong answer, this dotted line is the ONLY place the correct
+  // path is still visible (the real trail has already diverged onto
+  // the player's own wrong angle) - coloring it the same bright green
+  // as a correct answer's trail marks it unmistakably as "this was the
+  // right one," instead of a neutral white that doesn't say why it's
+  // there. Stays white on a correct answer, where it just overlays the
+  // trail exactly and doesn't need to carry that meaning.
+  var wrong = resolvedInfo && resolvedInfo.correct === false;
   push();
   drawingContext.setLineDash([3, 6]);
   strokeCap(ROUND);
   noFill();
-  stroke(255, 255, 255, 200);
+  if (wrong) stroke(77, 255, 77, 210); else stroke(255, 255, 255, 200);
   strokeWeight(2.5);
   beginShape();
   for (var i = 0; i < intendedPath.points.length; i++) vertex(intendedPath.points[i].x, intendedPath.points[i].y);
@@ -1235,7 +1243,7 @@ function drawIntendedPath() {
   drawingContext.setLineDash([]);
   pop();
   noStroke();
-  fill(255, 255, 255, 200);
+  if (wrong) fill(77, 255, 77, 210); else fill(255, 255, 255, 200);
   for (i = 0; i < intendedPath.bouncePoints.length; i++) {
     var p = intendedPath.bouncePoints[i];
     ellipse(p.x, p.y, 7, 7);
