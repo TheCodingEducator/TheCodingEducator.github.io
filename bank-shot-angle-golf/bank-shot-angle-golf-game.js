@@ -843,6 +843,21 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
   var maxDist = stoppingDistance(power);
   var hit = raycastWalls(origin, aimDir, maxDist, hole.walls);
 
+  // A wall can sit further down the same ray past the cup - raycastWalls
+  // has no idea the ball would sink well before ever reaching it. If the
+  // aim is lined up to drop straight into the cup before that wall (or
+  // before running out of power at all), this is a shot into open
+  // green, not a bank shot - a supplementary question, not
+  // complementary, regardless of what the ray eventually hits.
+  if (hit && hole.cup) {
+    var toCup = vSub(hole.cup, origin);
+    var alongRay = vDot(toCup, aimDir);
+    if (alongRay > 0 && alongRay < hit.t) {
+      var closest = vAdd(origin, vScale(aimDir, alongRay));
+      if (dist(closest.x, closest.y, hole.cup.x, hole.cup.y) < CUP_R) hit = null;
+    }
+  }
+
   if (hit) {
     var w = hit.wall;
     var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
@@ -1811,6 +1826,10 @@ function touchEnded() { mouseReleased(); return false; }
 function keyPressed() {
   if (explainOpen) {
     if (keyCode === ENTER || keyCode === RETURN || key === ' ') { explainOpen = false; playSound('click'); }
+    return false;
+  }
+  if (gameState === 'HOLE_COMPLETE') {
+    if (keyCode === ENTER || keyCode === RETURN || key === ' ') { advanceAfterHole(); playSound('click'); }
     return false;
   }
   if (holePhase !== 'QUESTION') return false;
