@@ -1091,13 +1091,13 @@ function drawTrail() {
   if (trail.length >= 2) {
     push();
     noFill();
-    // Blue once the answer's been resolved correctly, red for a wrong
-    // answer OR a Hero-mode timeout (chaos clears pendingShot entirely,
-    // so no pendingShot at all during ROLLING reads as the same kind of
-    // miss) - the trail color itself becomes the at-a-glance verdict,
-    // not just the toast/flash that already faded by the time the ball
-    // is still rolling.
-    stroke(pendingShot && pendingShot.correct === true ? '#5b8cff' : '#e63946');
+    // Bright green once the answer's been resolved correctly, red for a
+    // wrong answer OR a Hero-mode timeout (chaos clears pendingShot
+    // entirely, so no pendingShot at all during ROLLING reads as the
+    // same kind of miss) - the trail color itself becomes the
+    // at-a-glance verdict, not just the toast/flash that already faded
+    // by the time the ball is still rolling.
+    stroke(pendingShot && pendingShot.correct === true ? '#4dff4d' : '#e63946');
     strokeWeight(4);
     strokeCap(ROUND);
     strokeJoin(ROUND);
@@ -1262,7 +1262,7 @@ function drawResolvedAngleLabels() {
   var cx = resolvedInfo.point.x + d.x * 30, cy = resolvedInfo.point.y + d.y * 30;
   fill(0, 0, 0, 150);
   text(resolvedInfo.correctAnswer + '°', cx + 1.5, cy + 1.5);
-  fill('#5b8cff');
+  fill('#4dff4d');
   text(resolvedInfo.correctAnswer + '°', cx, cy);
 
   if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
