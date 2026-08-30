@@ -2406,6 +2406,11 @@ function turnStatusText() {
 var keyboardOpen = false;
 
 function drawKeyboardButton() {
+  // On a touch device, linear-world-cup-mobile-controls.js supplies a
+  // real bottom-of-viewport numpad instead - this on-canvas one only
+  // exists as a fallback for phones running without that script, and
+  // would otherwise sit as redundant clutter overlapping the field.
+  if (window.mobileNumpadActive) { keyboardOpen = false; return; }
   var bx = 4, by = 370, bw = 80, bh = 26;
   drawBtn(bx, by, bw, bh, "KEYBOARD", keyboardOpen ? col(20, 130, 90) : col(70, 60, 90));
   if (wasClicked(bx, by, bw, bh)) keyboardOpen = !keyboardOpen;
