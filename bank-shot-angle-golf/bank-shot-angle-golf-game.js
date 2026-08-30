@@ -240,7 +240,15 @@ var dragNow = { x: 0, y: 0 };
 // mid-question or lets the ball keep rolling unseen.
 var confirmExitOpen = false;
 
-var feedbackToast = null;      // { text, color, until }
+// Opened the instant a typed answer turns out wrong (see submitAnswer)
+// - a full worked explanation of the exact question just missed, not
+// just a "you got it wrong" toast. Freezes physics same as
+// confirmExitOpen, so the player can actually read it before the ball
+// goes anywhere. Reads resolvedInfo directly for its content rather
+// than its own snapshot, since both are set together at the same
+// moment and share the same lifecycle.
+var explainOpen = false;
+
 var chaosUntil = 0;
 var chaosShakeMag = 0;
 var preShotPos = { x: 0, y: 0 };
@@ -313,7 +321,7 @@ function gameDraw() {
   drawWalls();
   drawBushes();
   drawCup();
-  if (!confirmExitOpen) updatePhysics();
+  if (!confirmExitOpen && !explainOpen) updatePhysics();
   drawIntendedPath();
   drawResolvedAngleLabels();
   drawTrail();
@@ -330,10 +338,10 @@ function gameDraw() {
   drawEquation();
   if (gameState === 'PLAYING') drawExitButton();
   if (holePhase === 'QUESTION') drawQuestionOverlay();
-  drawFeedbackToast();
   drawScreenFlash();
   if (gameState === 'HOLE_COMPLETE') drawHoleCompleteOverlay();
   if (confirmExitOpen) drawExitConfirm();
+  if (explainOpen) drawExplainModal();
 }
 
 // ---------------------------------------------------------------
@@ -714,6 +722,7 @@ function startHole(idx) {
   trail = [];
   intendedPath = null;
   resolvedInfo = null;
+  explainOpen = false;
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -1742,10 +1751,8 @@ function submitAnswer() {
 
   if (pendingShot.type === 'WALL') {
     pendingShot.resolvedAngle = correct ? pendingShot.correctAnswer : constrain(typed, 1, 179);
-    showToast(correct ? 'Correct! That bank lines right up.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the bounce goes wide!', correct ? '#3ea158' : '#e63946');
   } else {
     if (!correct) pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
-    showToast(correct ? 'Correct! Straight down the fairway.' : 'Off by ' + abs(typed - pendingShot.correctAnswer) + '° — the shot drifts off line!', correct ? '#3ea158' : '#e63946');
   }
   triggerScreenFlash(correct ? '#3ea158' : '#e63946');
 
@@ -1764,6 +1771,7 @@ function submitAnswer() {
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra
   };
+  if (!correct) explainOpen = true;
 }
 
 // ---------------------------------------------------------------
@@ -1791,6 +1799,10 @@ function drawScreenFlash() {
 // Aiming input
 // ---------------------------------------------------------------
 function mousePressed() {
+  if (explainOpen) {
+    if (explainModalHit(mouseX, mouseY)) { explainOpen = false; playSound('click'); }
+    return;
+  }
   if (confirmExitOpen) {
     var choice = exitConfirmHit(mouseX, mouseY);
     if (choice === 'exit') { confirmExitOpen = false; dragging = false; gameState = 'MENU'; playSound('click'); }
@@ -1861,6 +1873,10 @@ function touchEnded() { mouseReleased(); return false; }
 // uses the on-screen keypad in bank-shot-angle-golf-mobile-controls.js,
 // which calls handleAnswerKey() directly.
 function keyPressed() {
+  if (explainOpen) {
+    if (keyCode === ENTER || keyCode === RETURN || key === ' ') { explainOpen = false; playSound('click'); }
+    return false;
+  }
   if (holePhase !== 'QUESTION') return false;
   if (key >= '0' && key <= '9') { handleAnswerKey(key); return false; }
   if (keyCode === BACKSPACE) { handleAnswerKey('backspace'); return false; }
@@ -1891,27 +1907,6 @@ function mouseReleased() {
   holePhase = 'QUESTION';
 }
 
-function showToast(text, col) {
-  feedbackToast = { text: text, color: col, until: millis() + 2600 };
-}
-
-function drawFeedbackToast() {
-  if (!feedbackToast || millis() > feedbackToast.until) return;
-  var alpha = 255;
-  var remain = feedbackToast.until - millis();
-  if (remain < 400) alpha = map(remain, 0, 400, 0, 255);
-  noStroke();
-  fill(red(color(feedbackToast.color)), green(color(feedbackToast.color)), blue(color(feedbackToast.color)), alpha * 0.25);
-  rectMode(CENTER);
-  rect(width / 2, 70, 560, 48, 12);
-  rectMode(CORNER);
-  fill(255, 255, 255, alpha);
-  textAlign(CENTER, CENTER);
-  textSize(18);
-  textStyle(BOLD);
-  text(feedbackToast.text, width / 2, 70);
-  textStyle(NORMAL);
-}
 
 // ---------------------------------------------------------------
 // Hero-mode timeout chaos shot
@@ -1938,7 +1933,6 @@ function triggerTimeoutChaos() {
   chaosShakeMag = 5;
   nextStroke();
   playSound('chaos');
-  showToast('Time’s up! That one got away from you...', '#e63946');
   triggerScreenFlash('#e63946');
   trail = [{ x: ball.x, y: ball.y }];
   intendedPath = null;
@@ -1989,16 +1983,15 @@ function drawHUD() {
   textAlign(LEFT, BASELINE);
 }
 
-// The actual arithmetic behind the correct angle, shown centered in
-// the HUD bar (between the hole/mode readouts on either side) for as
-// long as the ball keeps rolling - always, win or lose, in the same
-// bright green as a correct trail/label, since this is showing the
-// correct answer itself rather than judging what the player did. On a
-// miss it's the direct answer to "what should I have typed," sitting
-// right alongside the red wrong-number label at the vertex instead of
-// making the player hunt for it.
+// The actual arithmetic behind a correct answer, shown big and bold
+// across the HUD bar (between the hole/mode readouts on either side)
+// for as long as the ball keeps rolling, in the same bright green as
+// the correct trail/label - this is the reward for getting it right,
+// so it's sized to be unmissable rather than a small readout. A wrong
+// answer gets its own full explanation via drawExplainModal instead
+// of a shrunk-down version of this.
 function drawEquation() {
-  if (!resolvedInfo) return;
+  if (!resolvedInfo || !resolvedInfo.correct) return;
   var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
   noStroke();
   textAlign(CENTER, CENTER);
@@ -2006,15 +1999,154 @@ function drawEquation() {
   fill('#4dff4d');
   if (resolvedInfo.algebra) {
     var alg = resolvedInfo.algebra;
-    textSize(14.5);
-    text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, 26);
-    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 54);
+    textSize(21);
+    text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, 25);
+    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 57);
   } else {
-    textSize(17);
+    textSize(28);
     text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
   }
   textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
+}
+
+// A big standalone version of the same wedge diagram drawn during the
+// live question (see drawLiveAngleDiagram) - fixed at a chosen center/
+// radius instead of tied to the ball's real position and camera zoom,
+// since this is a review, not something happening on the course right
+// now. Reveals the solved unknown angle in green instead of a "?",
+// since the whole point here is showing what it resolves to.
+function drawExplainDiagram(cx, cy, r, info) {
+  var sum = info.type === 'WALL' ? 90 : 180;
+  var known = info.known, correctAns = info.correctAnswer;
+  push();
+  translate(cx, cy);
+
+  stroke(255, 255, 255, 220);
+  strokeWeight(3);
+  strokeCap(ROUND);
+  line(-r * 1.15, 0, r * 1.15, 0);
+
+  noStroke();
+  fill(224, 160, 48, 150);
+  arc(0, 0, r * 2, r * 2, -known, 0, PIE);
+  fill(77, 255, 77, 130);
+  arc(0, 0, r * 2, r * 2, -sum, -known, PIE);
+
+  noFill();
+  strokeWeight(5);
+  stroke('#e0a030');
+  arc(0, 0, r * 2, r * 2, -known, 0);
+  stroke('#4dff4d');
+  arc(0, 0, r * 2, r * 2, -sum, -known);
+
+  if (sum === 90) {
+    stroke(255, 255, 255, 230);
+    strokeWeight(3);
+    noFill();
+    var m = r * 0.28;
+    beginShape();
+    vertex(m, 0); vertex(m, -m); vertex(0, -m);
+    endShape();
+  }
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  fill('#ffce6b');
+  textSize(r * 0.19);
+  var kMid = -known / 2;
+  text(known + '°', cos(kMid) * r * 0.62, sin(kMid) * r * 0.62);
+  fill('#4dff4d');
+  textSize(r * 0.22);
+  var uMid = -(known + sum) / 2;
+  text(correctAns + '°', cos(uMid) * r * 0.65, sin(uMid) * r * 0.65);
+  textStyle(NORMAL);
+  pop();
+}
+
+var EXPLAIN_BOX = { w: 580, h: 560 };
+var EXPLAIN_BTN = { w: 200, h: 50 };
+
+// Opened the instant a typed answer turns out wrong (see submitAnswer,
+// explainOpen). Rebuilds the exact question the player just faced as a
+// large standalone diagram, states the rule in words, then walks the
+// same arithmetic drawEquation shows a correct answer - so a miss
+// teaches the rule instead of just penalizing it. Physics stays frozen
+// (see the updatePhysics guard in gameDraw) until "Got It" is clicked.
+function drawExplainModal() {
+  if (!resolvedInfo) { explainOpen = false; return; }
+  var b = EXPLAIN_BOX;
+  var bx = width / 2 - b.w / 2, by = height / 2 - b.h / 2;
+
+  noStroke();
+  fill(0, 0, 0, 195);
+  rect(0, 0, width, height);
+
+  fill(15, 22, 16, 250);
+  rect(bx, by, b.w, b.h, 18);
+  stroke(77, 255, 77, 130);
+  strokeWeight(2);
+  noFill();
+  rect(bx, by, b.w, b.h, 18);
+
+  var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
+  var relWord = resolvedInfo.type === 'WALL' ? 'complementary' : 'supplementary';
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  fill(255);
+  textSize(25);
+  text('Let’s Break This Down', width / 2, by + 38);
+  textStyle(NORMAL);
+
+  textSize(15.5);
+  fill(206, 218, 206);
+  text('These two angles are ' + relWord + ' - together they always', width / 2, by + 70);
+  text('add up to ' + sum + '°.', width / 2, by + 90);
+
+  drawExplainDiagram(width / 2, by + 245, 128, resolvedInfo);
+
+  var eqY = by + 400;
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  if (resolvedInfo.algebra) {
+    var alg = resolvedInfo.algebra;
+    fill('#ffce6b');
+    textSize(19);
+    text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, eqY);
+    fill('#4dff4d');
+    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY + 30);
+  } else {
+    fill('#4dff4d');
+    textSize(24);
+    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY);
+  }
+  textStyle(NORMAL);
+
+  if (resolvedInfo.typed !== null) {
+    fill(230, 130, 130);
+    textSize(13.5);
+    text('You answered ' + resolvedInfo.typed + '° instead.', width / 2, eqY + (resolvedInfo.algebra ? 56 : 32));
+  }
+
+  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 68;
+  fill('#3ea158');
+  rect(btnX, btnY, btn.w, btn.h, 12);
+  noStroke();
+  fill(255);
+  textSize(18);
+  textStyle(BOLD);
+  text('Got It', width / 2, btnY + btn.h / 2 + 1);
+  textStyle(NORMAL);
+}
+
+function explainModalHit(mx, my) {
+  var b = EXPLAIN_BOX;
+  var bx = width / 2 - b.w / 2, by = height / 2 - b.h / 2;
+  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 68;
+  return mx > btnX && mx < btnX + btn.w && my > btnY && my < btnY + btn.h;
 }
 
 // Small exit button, always in the bottom-left corner during play
