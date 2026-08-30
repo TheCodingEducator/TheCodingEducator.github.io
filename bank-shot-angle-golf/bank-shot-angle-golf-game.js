@@ -876,6 +876,7 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
   var tier2 = applyDifficultyTier(null, gameMode, holeNum, 179);
   return {
     type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: tier2.timerOn,
+    correctAnswer: 180 - tier2.known,
     // The diagram/camera anchor for a straight shot - unlike WALL's
     // point (the actual contact point on a rail), there's no natural
     // "where" for an open-green shot except the ball's own launch spot.
@@ -1233,10 +1234,6 @@ function drawIntendedPath() {
 // a Hero-mode timeout, which never let them answer at all) additionally
 // shows the number they were actually judged against, stacked further
 // out along the same offset direction so the two labels never overlap.
-// Both carry a checkmark/X alongside the color - red/green alone isn't
-// reliably distinguishable for players with red-green color blindness,
-// and unlike the brief screen flash, these labels stay up for the
-// whole roll, long enough to actually read the icon.
 function drawResolvedAngleLabels() {
   if (!resolvedInfo) return;
   var d = resolvedInfo.offsetDir;
@@ -1246,7 +1243,7 @@ function drawResolvedAngleLabels() {
   textSize(26);
 
   var cx = resolvedInfo.point.x + d.x * 30, cy = resolvedInfo.point.y + d.y * 30;
-  var correctLabel = '✓ ' + resolvedInfo.correctAnswer + '°';
+  var correctLabel = resolvedInfo.correctAnswer + '°';
   fill(0, 0, 0, 150);
   text(correctLabel, cx + 1.5, cy + 1.5);
   fill('#4dff4d');
@@ -1254,7 +1251,7 @@ function drawResolvedAngleLabels() {
 
   if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
     var wx = resolvedInfo.point.x + d.x * 62, wy = resolvedInfo.point.y + d.y * 62;
-    var wrongLabel = '✗ ' + resolvedInfo.typed + '°';
+    var wrongLabel = resolvedInfo.typed + '°';
     fill(0, 0, 0, 150);
     text(wrongLabel, wx + 1.5, wy + 1.5);
     fill('#e63946');
