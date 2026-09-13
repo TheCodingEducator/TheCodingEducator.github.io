@@ -75,6 +75,7 @@ var equivalentRotation = false; // correct endpoint reached via alternate rotati
 // there. Rotation is skipped either way since the tracing-paper
 // mini-game already IS that animation, performed live by the player.
 var DEMO_DURATION = 40; // frames
+var ROTATION_DEMO_DURATION = 55; // rotations get a bit longer - up to a full 360° sweep to read
 var demoStartFrame = 0;
 var lockedGX = 0, lockedGY = 0;
 var showingTimer = 0;
@@ -1342,6 +1343,41 @@ function drawAnswerDemo(){
   }
 }
 
+// The demo's target sweep for each rotation type, in the same signed
+// (positive = CCW, negative = CW) convention paperSignedAngle already
+// uses - see getTracingAnswer's own comment for the derivation. 180 is
+// swept CCW by convention; a half-turn looks identical either way.
+function rotationDemoSweep(ch) {
+  if (ch.type==="rot90ccw")  return 90;
+  if (ch.type==="rot90cw")   return -90;
+  if (ch.type==="rot180")    return 180;
+  if (ch.type==="rot270ccw") return 270;
+  if (ch.type==="rot270cw")  return -270;
+  if (ch.type==="rot360")    return 360;
+  return 0;
+}
+
+// Replays the CORRECT rotation on the very same tracing-paper visual
+// the player just used to answer - reuses drawTracingPaper() wholesale
+// by driving its paperAngle/paperSignedAngle state programmatically
+// (sweeping 0 -> the real answer's angle) instead of from player input,
+// so the player watches the point actually rotate around the center
+// instead of only reading the correct final coordinates. Safe to
+// overwrite centerGX/GY and paperPointGX/GY here - resetRound()/
+// loadRound() fully reinitialize all of this before the player's next
+// real attempt either way.
+function drawRotationAnswerDemo(){
+  var ch = curCh();
+  var t = constrain((frameCount-demoStartFrame)/ROTATION_DEMO_DURATION, 0, 1);
+  var eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+  centerGX = ch.cx; centerGY = ch.cy;
+  paperPointGX = startGX; paperPointGY = startGY;
+  paperSignedAngle = rotationDemoSweep(ch) * eased;
+  paperAngle = ((paperSignedAngle % 360) + 360) % 360;
+  tracingPhase = "PAPER";
+  drawTracingPaper();
+}
+
 function drawPracticeHintGraphic(hintType, yShift) {
   yShift = yShift || 0;
   push(); translate(0, yShift);
@@ -1400,10 +1436,9 @@ function drawPracticeHintGraphic(hintType, yShift) {
   if (hintType==="degrees") {
     fill(220,220,255); noStroke(); textSize(13); textAlign(CENTER,CENTER);
     text("Each 90° = one right-angle turn.",200,198);
-    text("The point lands in a new position each time!",200,215);
 
     // Diagram: center + 4 arms at 90° intervals, showing 0°=start, 90°, 180°, 270°
-    var dcx=200, dcy=272, dr=48;
+    var dcx=200, dcy=287, dr=48;
     // Arms
     var armAngles=[-90,0,90,180]; // screen angles: -90=up, 0=right, 90=down, 180=left
     var armLabels=["Start","90°","180°","270°"];
@@ -2272,7 +2307,7 @@ function draw(){
       if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
       if(!feedbackCorrect) practiceHintType=detectPracticeHint();
       playSound(feedbackCorrect?'correct':'wrong');
-      if(!feedbackCorrect&&!isRotation(curCh())){ demoStartFrame=frameCount; STATE="ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
+      if(!feedbackCorrect){ demoStartFrame=frameCount; STATE=isRotation(curCh())?"ROTATION_DEMO":"ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
       return;
     }
     if(STATE==="FEEDBACK"){
@@ -2345,7 +2380,7 @@ function draw(){
         if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
         if(!feedbackCorrect) practiceHintType=detectPracticeHint();
         playSound(feedbackCorrect?'correct':'wrong');
-        if(!feedbackCorrect&&!isRotation(curCh())){ demoStartFrame=frameCount; STATE="ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
+        if(!feedbackCorrect){ demoStartFrame=frameCount; STATE=isRotation(curCh())?"ROTATION_DEMO":"ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
         return;
       }
       if(STATE==="FEEDBACK"){
@@ -2426,15 +2461,28 @@ function draw(){
   }
 
   // ANSWER_DEMO — short animated replay of the CORRECT transformation
-  // after a wrong answer, before FEEDBACK and the retry
+  // after a wrong answer, before FEEDBACK and the retry. No target ring
+  // is shown - the animation itself is the only reveal of where it goes.
   if(STATE==="ANSWER_DEMO"){
     drawGrid();
     drawStartMarker();
-    drawTarget();
     drawAnswerDemo();
     drawHUD();
     drawSprites();
     if(frameCount-demoStartFrame>=DEMO_DURATION) STATE="FEEDBACK";
+    return;
+  }
+
+  // ROTATION_DEMO — same idea as ANSWER_DEMO, but for a wrong rotation:
+  // replays the CORRECT rotation on the same tracing-paper visual the
+  // player just used, sweeping it from 0 to the real answer's angle.
+  if(STATE==="ROTATION_DEMO"){
+    drawGrid();
+    drawStartMarker();
+    drawRotationAnswerDemo();
+    drawHUD();
+    drawSprites();
+    if(frameCount-demoStartFrame>=ROTATION_DEMO_DURATION) STATE="FEEDBACK";
     return;
   }
 
