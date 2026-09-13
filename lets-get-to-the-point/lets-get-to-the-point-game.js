@@ -66,14 +66,16 @@ var topicR = 150, topicG = 150, topicB = 150;
 var feedbackCorrect = false;
 var equivalentRotation = false; // correct endpoint reached via alternate rotation path
 
-// ---------- CORRECT-ANSWER CELEBRATION ----------
-// Plays right after a (non-rotation, non-H2H) correct answer, before the
-// FEEDBACK card - an animated replay of the point actually sliding/
-// flipping to its answer, instead of cutting straight to a static
-// "CORRECT!" label. Rotation is skipped since the tracing-paper
+// ---------- WRONG-ANSWER TRANSFORMATION DEMO ----------
+// Plays right after a (non-rotation) WRONG answer, before the FEEDBACK
+// card and the retry - an animated replay of what the CORRECT
+// transformation actually does, so the player sees it happen instead of
+// only reading the right coordinates. A correct answer shows no visual
+// at all - the player already knows where it went, they just placed it
+// there. Rotation is skipped either way since the tracing-paper
 // mini-game already IS that animation, performed live by the player.
-var CELEB_DURATION = 40; // frames
-var celebStartFrame = 0;
+var DEMO_DURATION = 40; // frames
+var demoStartFrame = 0;
 var lockedGX = 0, lockedGY = 0;
 var showingTimer = 0;
 
@@ -1288,28 +1290,55 @@ function drawLockedMarker(){
   stroke(255); strokeWeight(2); ellipse(px,py,22,22);
 }
 
-// Animates the point actually traveling from its start to the answer,
-// eased in/out, instead of jumping straight to the final spot.
-function drawCelebrationAnim(){
-  var t = constrain((frameCount-celebStartFrame)/CELEB_DURATION, 0, 1);
-  var eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
-  var gx = startGX+(targetGX-startGX)*eased, gy = startGY+(targetGY-startGY)*eased;
-  var px = toPixelX(gx), py = toPixelY(gy);
+// Demonstrates the CORRECT transformation after a wrong answer, before
+// the retry. A translation slides axis-aligned only - never diagonally -
+// moving horizontally first and then vertically, in the same (x, y)
+// order the algebra is written in. A reflection instead scales the
+// marker through zero across the reflection axis so it reads as the
+// point actually flipping over that line, like a card turning on a
+// hinge - the position itself already moves in a straight line
+// perpendicular to the axis for a reflection (only one coordinate ever
+// changes), so the flip-scale is what turns that plain slide into
+// something that visibly reads as "flipping," not just "sliding."
+function drawAnswerDemo(){
+  var t = constrain((frameCount-demoStartFrame)/DEMO_DURATION, 0, 1);
+  var ch = curCh();
+  var gx, gy, flipSX=1, flipSY=1;
 
-  var sk=PLAYER_SKINS[currentSkinIdx];
-  drawFaceAt(px,py,sk.r,sk.g,sk.b,"("+Math.round(gx)+", "+Math.round(gy)+")");
-
-  // Sparkle burst as the animation lands
-  if (t>0.82) {
-    var burstT=(t-0.82)/0.18;
-    var tpx=toPixelX(targetGX), tpy=toPixelY(targetGY);
-    noStroke();
-    for (var si=0; si<10; si++){
-      var ang=si*36, rad=14+burstT*26;
-      var a=Math.floor((1-burstT)*255);
-      fill(255,230,120,a);
-      ellipse(tpx+cos(ang)*rad, tpy+sin(ang)*rad, 5,5);
+  if (ch.type==="reflect_x" || ch.type==="reflect_y") {
+    var eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+    gx = startGX+(targetGX-startGX)*eased;
+    gy = startGY+(targetGY-startGY)*eased;
+    var flip = cos(t*180); // 1 -> 0 (edge-on, right at the axis) -> -1 (fully flipped over)
+    if (ch.type==="reflect_x") flipSY = flip; else flipSX = flip;
+  } else {
+    // Translation: horizontal leg first (x: start -> target), then
+    // vertical leg second (y: start -> target) - an L-shaped path, each
+    // leg independently eased so the direction change at the elbow
+    // doesn't read as a sudden jump in speed.
+    var segT = t*2;
+    if (segT < 1) {
+      var e1 = segT<0.5 ? 2*segT*segT : 1-Math.pow(-2*segT+2,2)/2;
+      gx = startGX+(targetGX-startGX)*e1;
+      gy = startGY;
+    } else {
+      var lt = segT-1;
+      var e2 = lt<0.5 ? 2*lt*lt : 1-Math.pow(-2*lt+2,2)/2;
+      gx = targetGX;
+      gy = startGY+(targetGY-startGY)*e2;
     }
+  }
+
+  var px = toPixelX(gx), py = toPixelY(gy);
+  var sk = PLAYER_SKINS[currentSkinIdx];
+  if (flipSX!==1 || flipSY!==1) {
+    push();
+    translate(px,py);
+    scale(flipSX, flipSY);
+    drawFaceAt(0,0,sk.r,sk.g,sk.b,"("+Math.round(gx)+", "+Math.round(gy)+")");
+    pop();
+  } else {
+    drawFaceAt(px,py,sk.r,sk.g,sk.b,"("+Math.round(gx)+", "+Math.round(gy)+")");
   }
 }
 
@@ -2243,7 +2272,7 @@ function draw(){
       if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
       if(!feedbackCorrect) practiceHintType=detectPracticeHint();
       playSound(feedbackCorrect?'correct':'wrong');
-      if(feedbackCorrect&&!isRotation(curCh())){ celebStartFrame=frameCount; STATE="CELEBRATE"; } else { STATE="FEEDBACK"; }
+      if(!feedbackCorrect&&!isRotation(curCh())){ demoStartFrame=frameCount; STATE="ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
       return;
     }
     if(STATE==="FEEDBACK"){
@@ -2316,7 +2345,7 @@ function draw(){
         if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
         if(!feedbackCorrect) practiceHintType=detectPracticeHint();
         playSound(feedbackCorrect?'correct':'wrong');
-        if(feedbackCorrect&&!isRotation(curCh())){ celebStartFrame=frameCount; STATE="CELEBRATE"; } else { STATE="FEEDBACK"; }
+        if(!feedbackCorrect&&!isRotation(curCh())){ demoStartFrame=frameCount; STATE="ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
         return;
       }
       if(STATE==="FEEDBACK"){
@@ -2396,15 +2425,16 @@ function draw(){
     drawHUD(); drawSprites(); return;
   }
 
-  // CELEBRATE — short animated replay of a correct answer, before FEEDBACK
-  if(STATE==="CELEBRATE"){
+  // ANSWER_DEMO — short animated replay of the CORRECT transformation
+  // after a wrong answer, before FEEDBACK and the retry
+  if(STATE==="ANSWER_DEMO"){
     drawGrid();
     drawStartMarker();
     drawTarget();
-    drawCelebrationAnim();
+    drawAnswerDemo();
     drawHUD();
     drawSprites();
-    if(frameCount-celebStartFrame>=CELEB_DURATION) STATE="FEEDBACK";
+    if(frameCount-demoStartFrame>=DEMO_DURATION) STATE="FEEDBACK";
     return;
   }
 
