@@ -2085,6 +2085,12 @@ function triggerTimeoutChaos() {
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
+  // A timeout is exactly as "not correct" as a wrong typed answer, and
+  // the wild shot below is aimed straight at the cup (with only a
+  // random spread) rather than off in whatever direction a bank-shot
+  // miss happens to send it - if anything, the cup is MORE likely to
+  // be in the ball's path here, so it needs the same metal-pole block.
+  holeBlockedThisStroke = true;
   preShotPos.x = ball.x; preShotPos.y = ball.y;
   var toCup = atan2(hole.cup.y - ball.y, hole.cup.x - ball.x);
   var wildAngle = toCup + random(-40, 40);
@@ -2106,6 +2112,7 @@ function triggerTimeoutChaos() {
     ball.y = preShotPos.y + sin(away) * dist2;
     ball.vx = 0; ball.vy = 0;
     holePhase = 'AIMING';
+    holeBlockedThisStroke = false;
     rollAlgebraSeed();
   }, 1400);
 }
