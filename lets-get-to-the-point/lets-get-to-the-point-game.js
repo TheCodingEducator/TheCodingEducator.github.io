@@ -34,7 +34,8 @@ var gameMode = "GENIUS";
 var skillTranslations = true;
 var skillReflections  = true;
 var skillRotations    = true;
-var skillFocusIdx = 0; // 0=Translations 1=Rotations 2=Reflections 3=StartButton
+var skillSequence     = true;
+var skillFocusIdx = 0; // 0=Translations 1=Rotations 2=Reflections 3=Sequence 4=StartButton
 var modeIndex = 1;
 var modeIds = ["PRACTICE", "GENIUS", "GEOMETRY", "HEADTOHEAD"];
 
@@ -65,6 +66,15 @@ var topicLabel = "";
 var topicR = 150, topicG = 150, topicB = 150;
 var feedbackCorrect = false;
 var equivalentRotation = false; // correct endpoint reached via alternate rotation path
+
+// ---------- CORRECT-ANSWER CELEBRATION ----------
+// Plays right after a (non-rotation, non-H2H) correct answer, before the
+// FEEDBACK card - an animated replay of the point actually sliding/
+// flipping to its answer, instead of cutting straight to a static
+// "CORRECT!" label. Rotation is skipped since the tracing-paper
+// mini-game already IS that animation, performed live by the player.
+var CELEB_DURATION = 40; // frames
+var celebStartFrame = 0;
 var lockedGX = 0, lockedGY = 0;
 var showingTimer = 0;
 
@@ -90,6 +100,31 @@ var roundWinner = 0;      // 0=none 1=P1 2=P2
 
 // Practice
 var practiceAttempts = 0;
+
+// ---------- COSMETICS (player skins) ----------
+// All unlocked/free for now - purely a visual preference, not a
+// performance record, so it's fine to persist client-side without
+// touching the "no accounts, no permanent record" design of the game.
+var PLAYER_SKINS = [
+  { name:"Classic Yellow", r:255, g:220, b:50  },
+  { name:"Cool Blue",      r:80,  g:180, b:255 },
+  { name:"Hot Pink",       r:255, g:90,  b:180 },
+  { name:"Lime Green",     r:140, g:230, b:60  },
+  { name:"Sunset Orange",  r:255, g:140, b:50  },
+  { name:"Royal Purple",   r:170, g:100, b:255 }
+];
+var currentSkinIdx = 0;
+function loadSkin() {
+  try {
+    var v = localStorage.getItem('lgttp_skin');
+    if (v !== null) { var n = parseInt(v,10); if (!isNaN(n) && n>=0 && n<PLAYER_SKINS.length) currentSkinIdx = n; }
+  } catch (e) {}
+}
+function saveSkin(idx) {
+  currentSkinIdx = idx;
+  try { localStorage.setItem('lgttp_skin', String(idx)); } catch (e) {}
+}
+loadSkin();
 
 // ---------- TRACING PAPER STATE ----------
 var tracingActive = false;
@@ -188,6 +223,11 @@ function applyChallenge(ch, x, y) {
   if (ch.type === "translate")   return { x: x+ch.dx, y: y+ch.dy };
   if (ch.type === "reflect_x")   return { x: x,  y: -y };
   if (ch.type === "reflect_y")   return { x: -x, y: y  };
+  if (ch.type === "sequence") {
+    var p = { x: x, y: y };
+    for (var si = 0; si < ch.steps.length; si++) p = applyChallenge(ch.steps[si], p.x, p.y);
+    return p;
+  }
   var dx = x - ch.cx, dy = y - ch.cy;
   if (ch.type === "rot90ccw")  return { x: ch.cx-dy,  y: ch.cy+dx  }; // 90° CCW
   if (ch.type === "rot90cw")   return { x: ch.cx+dy,  y: ch.cy-dx  }; // 90° CW
@@ -202,6 +242,43 @@ function isRotation(ch) {
   return ch && (ch.type==="rot90ccw"  || ch.type==="rot90cw"  ||
                 ch.type==="rot180"    || ch.type==="rot270ccw" ||
                 ch.type==="rot270cw"  || ch.type==="rot360");
+}
+
+// ---------- SEQUENCE OF TRANSFORMATIONS ----------
+// Composite challenge: two chained steps, each a translate or reflection
+// (no rotation - rotation answers are entered via the tracing-paper
+// mini-game, which has no natural way to run twice in one round). The
+// player only ever enters the FINAL landing point, same input as any
+// other round; applyChallenge's own "sequence" case (see above) already
+// chains the steps for free, so no new input handling is needed.
+function sequenceStepLabel(step) {
+  if (step.type === "translate") {
+    var sx = (step.dx>=0?"+":"-")+Math.abs(step.dx), sy = (step.dy>=0?"+":"-")+Math.abs(step.dy);
+    return "Translate (x"+sx+", y"+sy+")";
+  }
+  if (step.type === "reflect_x") return "Reflect over x-axis";
+  if (step.type === "reflect_y") return "Reflect over y-axis";
+  return "";
+}
+
+function randomSequenceStep() {
+  var kinds = ["translate","translate","reflect_x","reflect_y"]; // translate weighted 2x - more variety than a coin-flip of just 2 axes
+  var k = kinds[Math.floor(Math.random()*kinds.length)];
+  if (k === "translate") {
+    var dx=0, dy=0;
+    while (dx===0 && dy===0) { dx = Math.floor(Math.random()*9)-4; dy = Math.floor(Math.random()*9)-4; }
+    return { type:"translate", dx:dx, dy:dy };
+  }
+  return { type:k };
+}
+
+function makeSequenceChallenge() {
+  var s1 = randomSequenceStep(), s2 = randomSequenceStep();
+  return {
+    topic:"Sequence", r:255, g:170, b:40,
+    label: sequenceStepLabel(s1)+"  →  "+sequenceStepLabel(s2),
+    type:"sequence", steps:[s1, s2]
+  };
 }
 
 // ---------- SHUFFLE ----------
@@ -229,12 +306,19 @@ function buildOrder() {
     else if (ch.topic === "Rotation")     rotIdx.push(idx);
     else if (ch.topic === "Reflection")   refIdx.push(idx);
   }
-  // Fixed 3-round sequence: Translation → Rotation → Reflection
+  // Fixed round sequence: Translation → Rotation → Reflection, plus a 4th
+  // Sequence-of-Transformations round for the two timed modes (not H2H,
+  // which races the same 3-round set head-to-head).
   challengeOrder = [
     transIdx[Math.floor(Math.random() * transIdx.length)],
     rotIdx  [Math.floor(Math.random() * rotIdx.length)],
     refIdx  [Math.floor(Math.random() * refIdx.length)]
   ];
+  if (gameMode === "GENIUS" || gameMode === "GEOMETRY") {
+    var seqIdx = challengePool.length;
+    challengePool.push(makeSequenceChallenge());
+    challengeOrder.push(seqIdx);
+  }
 }
 
 function buildPracticeOrder() {
@@ -245,11 +329,18 @@ function buildPracticeOrder() {
     if (ch.noGenius) continue;
     challengePool.push(ch);
   }
+  // Sequence challenges are generated fresh (not part of the static
+  // `challenges` bank) since their steps are randomized - a handful
+  // added to the pool up front so buildPracticeOrder's normal
+  // topic-filtering below can pick among them just like any other type.
+  for (var qi = 0; qi < 6; qi++) challengePool.push(makeSequenceChallenge());
+
   var types = [];
   if (skillTranslations) types.push("Translation");
   if (skillRotations)    types.push("Rotation");
   if (skillReflections)  types.push("Reflection");
-  if (types.length === 0) types = ["Translation","Rotation","Reflection"];
+  if (skillSequence)     types.push("Sequence");
+  if (types.length === 0) types = ["Translation","Rotation","Reflection","Sequence"];
   TOTAL_ROUNDS = 5;
   challengeOrder = [];
   var lastType = "";
@@ -429,11 +520,11 @@ function resetGame() {
   newHighScore=false; timerFinished=0; practiceHintType=""; practiceQNum=0;
   // Keep player-chosen skills for PRACTICE; reset to all-on for other modes
   if (gameMode !== "PRACTICE") {
-    skillTranslations=true; skillRotations=true; skillReflections=true;
+    skillTranslations=true; skillRotations=true; skillReflections=true; skillSequence=true;
   }
   lives = (gameMode==="GENIUS"||gameMode==="GEOMETRY"||gameMode==="PRACTICE") ? 999 : 3;
   if (gameMode==="PRACTICE") { buildPracticeOrder(); }
-  else { TOTAL_ROUNDS=3; buildOrder(); }
+  else { TOTAL_ROUNDS = (gameMode==="GENIUS"||gameMode==="GEOMETRY") ? 4 : 3; buildOrder(); }
   timerStart = Date.now();
   loadRound();
 }
@@ -1035,7 +1126,7 @@ function drawHUD(){
     fill(50,38,0);     rect(141,pY,pW,pH,7);
     fill(255,210,60);  textSize(13); text("Q #"+practiceQNum, 200,pCY);
     // Pill 3: active skills indicator (no timer)
-    var skStr=(skillTranslations?"T ":"")+(skillRotations?"R ":"")+(skillReflections?"F":"");
+    var skStr=(skillTranslations?"T ":"")+(skillRotations?"R ":"")+(skillReflections?"F ":"")+(skillSequence?"S":"");
     fill(20,0,40);     rect(274,pY,pW,pH,7);
     fill(200,160,255); textSize(11); text("Skills: "+skStr.trim(), 333,pCY);
   } else {
@@ -1053,8 +1144,8 @@ function drawHUD(){
 
   // Challenge label row
   fill(20,35,90); noStroke(); rect(8,28,384,28,6);
-  fill(255,255,255); textSize(13); textAlign(CENTER,CENTER);
-  text(challengeLabel,200,43);
+  fill(255,255,255); textAlign(CENTER,CENTER);
+  fitText(challengeLabel,200,43,364,13);
 
   // Bottom bar
   fill(8,12,30); noStroke(); rect(0,376,400,24);
@@ -1146,7 +1237,8 @@ function drawPlayer(){
     px=toPixelX(playerGX); py=toPixelY(playerGY);
     gx=playerGX; gy=playerGY;
   }
-  drawFaceAt(px,py,255,220,50,"("+gx+", "+gy+")");
+  var sk=PLAYER_SKINS[currentSkinIdx];
+  drawFaceAt(px,py,sk.r,sk.g,sk.b,"("+gx+", "+gy+")");
 }
 
 function drawTarget(){
@@ -1195,6 +1287,53 @@ function drawLockedMarker(){
   var px=toPixelX(lockedGX),py=toPixelY(lockedGY);
   if(feedbackCorrect){fill(0,255,120);}else{fill(255,60,60);}
   stroke(255); strokeWeight(2); ellipse(px,py,22,22);
+}
+
+// Animates the point actually traveling from its start to the answer -
+// through the midpoint for a Sequence challenge, so both chained steps
+// visibly play out one after another instead of jumping straight to
+// the final spot.
+function drawCelebrationAnim(){
+  var t = constrain((frameCount-celebStartFrame)/CELEB_DURATION, 0, 1);
+  var ch = curCh();
+  var pts = [{x:startGX,y:startGY}];
+  if (ch.type==="sequence") {
+    var p = {x:startGX,y:startGY};
+    for (var i=0;i<ch.steps.length;i++){ p = applyChallenge(ch.steps[i], p.x, p.y); pts.push({x:p.x,y:p.y}); }
+  } else {
+    pts.push({x:targetGX,y:targetGY});
+  }
+  var nSeg = pts.length-1;
+  var segT = t*nSeg;
+  var segIdx = Math.min(Math.floor(segT), nSeg-1);
+  var localT = segT-segIdx;
+  var eased = localT<0.5 ? 2*localT*localT : 1-Math.pow(-2*localT+2,2)/2;
+  var fromPt=pts[segIdx], toPt=pts[segIdx+1];
+  var gx = fromPt.x+(toPt.x-fromPt.x)*eased, gy = fromPt.y+(toPt.y-fromPt.y)*eased;
+  var px = toPixelX(gx), py = toPixelY(gy);
+
+  // Mark each waypoint already passed through (visible for a Sequence's midpoint)
+  noStroke();
+  for (var wi=1; wi<=segIdx; wi++){
+    fill(255,220,60,140);
+    ellipse(toPixelX(pts[wi].x), toPixelY(pts[wi].y), 14,14);
+  }
+
+  var sk=PLAYER_SKINS[currentSkinIdx];
+  drawFaceAt(px,py,sk.r,sk.g,sk.b,"("+Math.round(gx)+", "+Math.round(gy)+")");
+
+  // Sparkle burst as the animation lands
+  if (t>0.82) {
+    var burstT=(t-0.82)/0.18;
+    var tpx=toPixelX(targetGX), tpy=toPixelY(targetGY);
+    noStroke();
+    for (var si=0; si<10; si++){
+      var ang=si*36, rad=14+burstT*26;
+      var a=Math.floor((1-burstT)*255);
+      fill(255,230,120,a);
+      ellipse(tpx+cos(ang)*rad, tpy+sin(ang)*rad, 5,5);
+    }
+  }
 }
 
 function drawPracticeHintGraphic(hintType, yShift) {
@@ -1512,15 +1651,16 @@ function drawSkillSelect() {
   text("Choose which skills to practice:", 200, 57);
 
   var skills = [
-    { label:"Translations", desc:"SLIDING up, down, left, and right",    r:0,   g:180, b:255, flag:skillTranslations  },
-    { label:"Rotations",    desc:"TURNING around a center of rotation", r:80,  g:220, b:120, flag:skillRotations     },
-    { label:"Reflections",  desc:"FLIPPING over a line of reflection",  r:220, g:80,  b:200, flag:skillReflections   }
+    { label:"Translations", desc:"SLIDING up, down, left, and right",     r:0,   g:180, b:255, flag:skillTranslations },
+    { label:"Rotations",    desc:"TURNING around a center of rotation",   r:80,  g:220, b:120, flag:skillRotations    },
+    { label:"Reflections",  desc:"FLIPPING over a line of reflection",    r:220, g:80,  b:200, flag:skillReflections  },
+    { label:"Sequences",    desc:"CHAINING two transformations together", r:255, g:170, b:40,  flag:skillSequence     }
   ];
 
-  var rowH = 80, startY = 96;
-  for (var i = 0; i < 3; i++) {
+  var rowH = 58, gap = 6, startY = 92;
+  for (var i = 0; i < skills.length; i++) {
     var sk = skills[i];
-    var by = startY + i * (rowH + 8);
+    var by = startY + i * (rowH + gap);
     var hov = (mouseX>=40 && mouseX<=360 && mouseY>=by && mouseY<=by+rowH);
     if(hov) skillFocusIdx = i;
 
@@ -1539,42 +1679,43 @@ function drawSkillSelect() {
     // Checkbox
     fill(sk.flag ? sk.r : 25, sk.flag ? sk.g : 25, sk.flag ? sk.b : 25);
     stroke(sk.r, sk.g, sk.b); strokeWeight(2);
-    rect(62, by+25, 30, 30, 5);
+    rect(58, by+14, 24, 24, 5);
     if (sk.flag) {
       stroke(255); strokeWeight(3); noFill();
-      line(68, by+40, 75, by+48);
-      line(75, by+48, 86, by+32);
+      line(63, by+26, 68, by+32);
+      line(68, by+32, 77, by+20);
     }
 
     // Label + description
     fill(sk.flag ? 255 : 110); noStroke();
-    textSize(14); textAlign(LEFT, CENTER);
-    text(sk.label, 106, by+30);
-    fill(sk.flag ? 180 : 70); textSize(9);
-    text(sk.desc, 106, by+50);
+    textSize(13); textAlign(LEFT, CENTER);
+    text(sk.label, 96, by+20);
+    fill(sk.flag ? 180 : 70); textSize(8);
+    text(sk.desc, 96, by+37);
 
     // ON / OFF tag
     fill(sk.flag ? sk.r : 50, sk.flag ? sk.g : 50, sk.flag ? sk.b : 50);
-    noStroke(); rect(308, by+28, 34, 18, 8);
+    noStroke(); rect(308, by+19, 34, 18, 8);
     fill(sk.flag ? 0 : 160); textSize(9); textAlign(CENTER,CENTER);
-    text(sk.flag ? "ON" : "OFF", 325, by+37);
+    text(sk.flag ? "ON" : "OFF", 325, by+28);
 
     // Click to toggle
     if (hov && mouseWentDown("left")) {
       if (i===0) skillTranslations = !skillTranslations;
       if (i===1) skillRotations    = !skillRotations;
       if (i===2) skillReflections  = !skillReflections;
+      if (i===3) skillSequence     = !skillSequence;
     }
   }
 
-  var anyOn = skillTranslations || skillReflections || skillRotations;
+  var anyOn = skillTranslations || skillReflections || skillRotations || skillSequence;
   var startHov = (mouseX>=120 && mouseX<=280 && mouseY>=358 && mouseY<=394);
-  if(startHov) skillFocusIdx = 3;
+  if(startHov) skillFocusIdx = 4;
   if (!anyOn) {
     fill(255,80,80); textSize(10); textAlign(CENTER,CENTER); noStroke();
     text("Select at least one skill to continue", 200, 372);
   } else {
-    var startFocused = (skillFocusIdx === 3);
+    var startFocused = (skillFocusIdx === 4);
     fill(startFocused?50:0, startFocused?180:130, startFocused?100:60);
     stroke(0,200,100); strokeWeight(startFocused?3:2);
     rect(120,358,160,36,18);
@@ -1583,6 +1724,64 @@ function drawSkillSelect() {
     text("START", 200, 376);
     if(startHov && mouseWentDown("left")) resetGame();
   }
+  drawSprites();
+}
+
+// ---------- SKIN SELECT SCREEN (cosmetics — all free/unlocked) ----------
+function drawSkinSelect() {
+  background(10, 15, 38);
+  stroke(25, 35, 70); strokeWeight(1);
+  for(var gx=0;gx<=400;gx+=30) line(gx,0,gx,400);
+  for(var gy=0;gy<=400;gy+=30) line(0,gy,400,gy);
+
+  fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,16,360,50,12);
+  fill(0,220,255); noStroke(); textSize(16); textAlign(CENTER,CENTER);
+  text("Choose Your Skin", 200, 34);
+  fill(140,180,255); textSize(10);
+  text("Everything here is free — pick any look", 200, 52);
+
+  var cols=2, cardW=164, cardH=88, gapX=12, gapY=10;
+  var gridW = cols*cardW+gapX, startX=(400-gridW)/2, startY=82;
+  for (var i=0;i<PLAYER_SKINS.length;i++) {
+    var sk=PLAYER_SKINS[i];
+    var col=i%cols, row=Math.floor(i/cols);
+    var bx=startX+col*(cardW+gapX), by=startY+row*(cardH+gapY);
+    var sel=(i===currentSkinIdx);
+    var hov=(mouseX>=bx&&mouseX<=bx+cardW&&mouseY>=by&&mouseY<=by+cardH);
+
+    fill(sel?18:10, sel?30:14, sel?70:32);
+    stroke(sk.r,sk.g,sk.b, sel?230:(hov?150:70)); strokeWeight(sel?3:hov?2:1);
+    rect(bx,by,cardW,cardH,12);
+    if (sel) { noFill(); stroke(255,220,60); strokeWeight(2); rect(bx+3,by+3,cardW-6,cardH-6,10); }
+
+    // Face preview only (no coord label — drawFaceAt always draws one)
+    var fcx=bx+cardW/2, fcy=by+38;
+    fill(sk.r,sk.g,sk.b); stroke(Math.max(sk.r-60,0),Math.max(sk.g-60,0),Math.max(sk.b-60,0));
+    strokeWeight(2); ellipse(fcx,fcy,30,30);
+    fill(30,30,80); noStroke();
+    ellipse(fcx-6,fcy-4,5,5); ellipse(fcx+6,fcy-4,5,5);
+    fill(255); ellipse(fcx-5,fcy-5,2,2); ellipse(fcx+7,fcy-5,2,2);
+    stroke(30,30,80); strokeWeight(2); noFill();
+    for(var si=0;si<12;si++){
+      var a1=25+(130/12)*si, a2=25+(130/12)*(si+1);
+      line(fcx+cos(a1)*8,fcy+2+sin(a1)*6,fcx+cos(a2)*8,fcy+2+sin(a2)*6);
+    }
+    fill(sel?255:200); noStroke(); textSize(11); textAlign(CENTER,CENTER);
+    text(sk.name, bx+cardW/2, by+68);
+    if (sel) { fill(255,220,60); textSize(9); text("SELECTED", bx+cardW/2, by+80); }
+    else     { fill(140,160,200); textSize(9); text("FREE", bx+cardW/2, by+80); }
+
+    if (hov && mouseWentDown("left")) saveSkin(i);
+  }
+
+  // BACK button
+  var backHov=(mouseX>=150&&mouseX<=250&&mouseY>=360&&mouseY<=392);
+  fill(backHov?70:40, backHov?80:40, backHov?170:130); stroke(100,120,220); strokeWeight(2);
+  rect(150,360,100,32,16);
+  fill(255); noStroke(); textSize(12); textAlign(CENTER,CENTER);
+  text("BACK", 200, 377);
+  if (backHov && mouseWentDown("left")) STATE="START";
+
   drawSprites();
 }
 
@@ -1635,6 +1834,16 @@ function drawStart(){
   text("Let's Get to the Point",200,20);
   fill(100,160,255); textSize(10);
   text("Transformations",200,38);
+
+  // SKINS button — top-right corner, free cosmetics
+  var skinHov=(mouseX>=356&&mouseX<=396&&mouseY>=4&&mouseY<=34);
+  fill(skinHov?60:30, skinHov?40:20, skinHov?100:70); stroke(180,140,255); strokeWeight(skinHov?2:1);
+  rect(356,4,40,30,8);
+  fill(255); noStroke(); textSize(16); textAlign(CENTER,CENTER);
+  text("🎨",376,17);
+  fill(200,180,255); textSize(7);
+  text("SKINS",376,29);
+  if(skinHov&&mouseWentDown("left")){STATE="SKIN_SELECT";}
 
   // Glowing divider
   var dg=(sin(t*3)+1)*0.5;
@@ -1759,7 +1968,7 @@ function drawStart(){
     if(hov&&mouseWentDown("left")){
       gameMode=m.id; modeIndex=mi;
       if(gameMode==="PRACTICE"){
-        skillTranslations=true; skillRotations=true; skillReflections=true;
+        skillTranslations=true; skillRotations=true; skillReflections=true; skillSequence=true;
         skillFocusIdx=0; STATE="SKILL_SELECT";
       } else { resetGame(); }
     }
@@ -1914,6 +2123,22 @@ function drawSpeedResult(){
 
 function drawWin(){
   background(8,14,35);
+  var t=frameCount;
+
+  // Post-match flourish for a decisive Head-to-Head result — confetti
+  // burst (same visual language as the new-high-score screen) behind
+  // everything else, plus a pulsing trophy next to the winner's name
+  // below. Skipped for a tie, which has nothing to celebrate.
+  var h2hWinner = gameMode==="HEADTOHEAD" && p1wins!==p2wins;
+  if (h2hWinner) {
+    for(var ci=0;ci<28;ci++){
+      var cfx=((ci*53)+Math.floor(sin(t*0.8+ci*15)*30)+200)%400;
+      var cfy=(ci*19+t*0.9)%400;
+      var crs=[255,255,0,80,60,200], cgs=[60,200,255,200,255,60], cbs=[60,60,255,60,100,255];
+      fill(crs[ci%6],cgs[ci%6],cbs[ci%6]); noStroke();
+      rect(cfx,cfy,7,7,2);
+    }
+  }
 
   if(gameMode==="PRACTICE"){
     fill(20,0,50); stroke(140,80,220); strokeWeight(2); rect(30,60,340,260,16);
@@ -1957,6 +2182,12 @@ function drawWin(){
     textSize(16); text(w,200,186);
     fill(200,220,255); textSize(12);
     text("P1: "+p1wins+" rounds   P2: "+p2wins+" rounds",200,212);
+    if (h2hWinner) {
+      var pulse=(sin(t*4)+1)*0.5;
+      fill(255,220,60,Math.floor(150+pulse*105));
+      textSize(Math.floor(30+pulse*4));
+      text("🏆", 200, 240);
+    }
   } else {
     fill(200,240,255); textSize(14); text("All 3 rounds complete!",200,186);
   }
@@ -1997,12 +2228,13 @@ function draw(){
 
   // ---- SPACE ----
   if(keyWentDown("space")){
-    if(STATE==="START"){ if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();} return; }
+    if(STATE==="START"){ if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillSequence=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();} return; }
     if(STATE==="SKILL_SELECT"){
       if(skillFocusIdx===0){ skillTranslations=!skillTranslations; return; }
       if(skillFocusIdx===1){ skillRotations=!skillRotations;       return; }
       if(skillFocusIdx===2){ skillReflections=!skillReflections;   return; }
-      if(skillFocusIdx===3){ var anyOn2=skillTranslations||skillRotations||skillReflections; if(anyOn2)resetGame(); return; }
+      if(skillFocusIdx===3){ skillSequence=!skillSequence;         return; }
+      if(skillFocusIdx===4){ var anyOn2=skillTranslations||skillRotations||skillReflections||skillSequence; if(anyOn2)resetGame(); return; }
     }
     if(STATE==="SPEED_RESULT"){ if(srSel===0){STATE="START";}else{resetGame();} return; }
     if(STATE==="MOVING"){
@@ -2035,7 +2267,8 @@ function draw(){
         timerFinished=(Date.now()-timerStart)/1000;
       if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
       if(!feedbackCorrect) practiceHintType=detectPracticeHint();
-      STATE="FEEDBACK"; return;
+      if(feedbackCorrect&&!isRotation(curCh())){ celebStartFrame=frameCount; STATE="CELEBRATE"; } else { STATE="FEEDBACK"; }
+      return;
     }
     if(STATE==="FEEDBACK"){
       if((gameMode==="GENIUS"||gameMode==="PRACTICE")&&!feedbackCorrect){ practiceHintType=""; resetRound(); STATE="MOVING"; return; }
@@ -2075,12 +2308,13 @@ function draw(){
       }
     } else {
       // Non-H2H: Enter acts like Space
-      if(STATE==="START"){ if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();} return; }
+      if(STATE==="START"){ if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillSequence=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();} return; }
       if(STATE==="SKILL_SELECT"){
         if(skillFocusIdx===0){ skillTranslations=!skillTranslations; return; }
         if(skillFocusIdx===1){ skillRotations=!skillRotations;       return; }
         if(skillFocusIdx===2){ skillReflections=!skillReflections;   return; }
-        if(skillFocusIdx===3){ var anyOn3=skillTranslations||skillRotations||skillReflections; if(anyOn3)resetGame(); return; }
+        if(skillFocusIdx===3){ skillSequence=!skillSequence;         return; }
+        if(skillFocusIdx===4){ var anyOn3=skillTranslations||skillRotations||skillReflections||skillSequence; if(anyOn3)resetGame(); return; }
       }
       if(STATE==="SPEED_RESULT"){ if(srSel===0){STATE="START";}else{resetGame();} return; }
       if(STATE==="MOVING"){
@@ -2104,7 +2338,8 @@ function draw(){
           timerFinished=(Date.now()-timerStart)/1000;
         if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
         if(!feedbackCorrect) practiceHintType=detectPracticeHint();
-        STATE="FEEDBACK"; return;
+        if(feedbackCorrect&&!isRotation(curCh())){ celebStartFrame=frameCount; STATE="CELEBRATE"; } else { STATE="FEEDBACK"; }
+        return;
       }
       if(STATE==="FEEDBACK"){
         if((gameMode==="GENIUS"||gameMode==="PRACTICE")&&!feedbackCorrect){ practiceHintType=""; resetRound(); STATE="MOVING"; return; }
@@ -2140,12 +2375,13 @@ function draw(){
     if(keyWentDown("left")||keyWentDown("right")) srSel = 1 - srSel;
   }
   if(STATE==="SKILL_SELECT"){
-    if(keyWentDown("down")) skillFocusIdx=(skillFocusIdx+1)%4;
-    if(keyWentDown("up"))   skillFocusIdx=(skillFocusIdx+3)%4;
+    if(keyWentDown("down")) skillFocusIdx=(skillFocusIdx+1)%5;
+    if(keyWentDown("up"))   skillFocusIdx=(skillFocusIdx+4)%5;
   }
 
   // Early exits
   if(STATE==="START"){drawStart();return;}
+  if(STATE==="SKIN_SELECT"){drawSkinSelect();return;}
   if(STATE==="SKILL_SELECT"){drawSkillSelect();return;}
   if(STATE==="SPEED_RESULT"){drawSpeedResult();return;}
   if(STATE==="WIN"){drawWin();return;}
@@ -2179,6 +2415,18 @@ function draw(){
     else if(geomShapeType!==""&&gameMode==="GEOMETRY")fitText("Apply the translation to all vertices",200,scY+152,sbw,14);
     else fitText("Get ready...",200,scY+152,sbw,14);
     drawHUD(); drawSprites(); return;
+  }
+
+  // CELEBRATE — short animated replay of a correct answer, before FEEDBACK
+  if(STATE==="CELEBRATE"){
+    drawGrid();
+    drawStartMarker();
+    drawTarget();
+    drawCelebrationAnim();
+    drawHUD();
+    drawSprites();
+    if(frameCount-celebStartFrame>=CELEB_DURATION) STATE="FEEDBACK";
+    return;
   }
 
   // MOVING — input
