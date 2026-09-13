@@ -249,6 +249,14 @@ var confirmExitOpen = false;
 // moment and share the same lifecycle.
 var explainOpen = false;
 
+// Set the instant a wrong answer resolves (see submitAnswer) and cleared
+// the instant the resulting shot comes to rest (see updatePhysics'
+// ROLLING->AIMING transition) and at the start of every hole/stroke - so
+// a missed question caps the cup with a metal pole for exactly the one
+// stroke it just cost the player, not permanently and not retroactively
+// for strokes before the miss.
+var holeBlockedThisStroke = false;
+
 var chaosUntil = 0;
 var chaosShakeMag = 0;
 var preShotPos = { x: 0, y: 0 };
@@ -724,6 +732,7 @@ function startHole(idx) {
   intendedPath = null;
   resolvedInfo = null;
   explainOpen = false;
+  holeBlockedThisStroke = false;
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -895,6 +904,7 @@ function nextStroke() {
 
 function checkHoleComplete() {
   if (!hole.cup) return; // Putting Green practice arena has no cup to sink
+  if (holeBlockedThisStroke) return; // capped by the metal pole - see collidePole
   var d = dist(ball.x, ball.y, hole.cup.x, hole.cup.y);
   var speed = mag(ball.vx, ball.vy);
   if (d < CUP_R - 2 && speed < CUP_CAPTURE_SPEED && holePhase === 'ROLLING') {
@@ -1108,6 +1118,12 @@ function drawCup() {
   ellipse(h.x, h.y, CUP_R * 2, CUP_R * 1.7);
   fill(30, 30, 30);
   ellipse(h.x, h.y, CUP_R * 1.4, CUP_R * 1.1);
+
+  if (holeBlockedThisStroke) {
+    drawBlockingPole(h);
+    return;
+  }
+
   // flag
   stroke(220);
   strokeWeight(2.5);
@@ -1116,6 +1132,35 @@ function drawCup() {
   var wave = sin(millis() / 130) * 4;
   fill('#e63946');
   triangle(h.x, h.y - 70, h.x + 26 + wave, h.y - 62, h.x, h.y - 54);
+}
+
+// Caps the cup with a hazard-striped metal pole for the stroke a wrong
+// answer just cost the player (see holeBlockedThisStroke/collidePole) -
+// a solid plate seals the mouth of the hole so the ball visibly cannot
+// drop in, and the red/white banding reads as "blocked" the same way a
+// real construction barrier pole does, at a glance and from any zoom.
+function drawBlockingPole(h) {
+  noStroke();
+  fill(60, 64, 68);
+  ellipse(h.x, h.y, CUP_R * 2.3, CUP_R * 1.5);
+  fill(178, 183, 188);
+  ellipse(h.x, h.y, CUP_R * 2.0, CUP_R * 1.2);
+  fill(228, 231, 235);
+  ellipse(h.x - CUP_R * 0.3, h.y - CUP_R * 0.18, CUP_R * 0.9, CUP_R * 0.42);
+
+  var top = h.y - 62, poleW = 10, bandH = 8;
+  for (var y = h.y; y > top; y -= bandH) {
+    var bandIdx = floor((h.y - y) / bandH);
+    fill(bandIdx % 2 === 0 ? '#e6e6e6' : '#d1372f');
+    rect(h.x - poleW / 2, max(y - bandH, top), poleW, min(bandH, y - top));
+  }
+  fill(255, 255, 255, 90);
+  rect(h.x - poleW / 2 + 1.5, top, 2, h.y - top);
+
+  fill(210, 214, 218);
+  ellipse(h.x, top, poleW + 4, poleW + 4);
+  fill(255, 255, 255, 150);
+  ellipse(h.x - 2, top - 2, (poleW + 4) * 0.4, (poleW + 4) * 0.4);
 }
 
 // Traces the ball's whole route for the shot in progress, so the
@@ -1382,6 +1427,7 @@ function updatePhysics() {
       trail = [];
       intendedPath = null;
       resolvedInfo = null;
+      holeBlockedThisStroke = false;
     }
     return;
   }
@@ -1390,7 +1436,7 @@ function updatePhysics() {
     trail.push({ x: ball.x, y: ball.y });
   }
 
-  stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones);
+  stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones, false, holeBlockedThisStroke);
   checkHoleComplete();
 }
 
@@ -1401,7 +1447,7 @@ function updatePhysics() {
 // ghost line - not an approximation of the real physics, the same
 // deterministic math running twice, so the two are guaranteed to
 // match instead of just usually agreeing.
-function stepBallOneFrame(b, pending, walls, bushes, zones, silent) {
+function stepBallOneFrame(b, pending, walls, bushes, zones, silent, poleActive) {
   for (var i = 0; i < zones.length; i++) {
     var z = zones[i];
     if (b.x > z.x && b.x < z.x + z.w && b.y > z.y && b.y < z.y + z.h) {
@@ -1441,6 +1487,11 @@ function stepBallOneFrame(b, pending, walls, bushes, zones, silent) {
 
     collideWalls(b, pending, walls, silent);
     collideBushes(b, bushes);
+    // Only real gameplay passes poleActive=true (see updatePhysics) - the
+    // ghost "intended path" simulation (simulateShotPath) always assumes
+    // the correct answer, and the pole only exists because THIS stroke's
+    // answer was wrong, so the ghost must run without it.
+    if (poleActive && hole.cup) collidePole(b, hole.cup);
 
     // A pendingShot resolving (wall bounce or straight-line bend) is
     // the exact instant the trail/intended-path comparison matters
@@ -1561,6 +1612,30 @@ function collideBushes(b, bushes) {
         b.vx -= (1 + BUSH_REST) * vn * nx;
         b.vy -= (1 + BUSH_REST) * vn * ny;
       }
+    }
+  }
+}
+
+// The metal pole capping the cup after a wrong answer (see drawBlockingPole)
+// - a plain solid-circle bounce, same shape as collideBushes, but sized
+// past CUP_R so the ball is physically turned away before its center
+// ever gets close enough to satisfy checkHoleComplete's sink radius, and
+// springier (POLE_REST) since it reads as a firm metal bounce, not a
+// soft hedge.
+var POLE_R = CUP_R + BALL_R * 0.6;
+var POLE_REST = 0.85;
+
+function collidePole(b, cup) {
+  var dx = b.x - cup.x, dy = b.y - cup.y;
+  var d = mag(dx, dy);
+  if (d < POLE_R && d > 0.0001) {
+    var nx = dx / d, ny = dy / d;
+    b.x = cup.x + nx * POLE_R;
+    b.y = cup.y + ny * POLE_R;
+    var vn = b.vx * nx + b.vy * ny;
+    if (vn < 0) {
+      b.vx -= (1 + POLE_REST) * vn * nx;
+      b.vy -= (1 + POLE_REST) * vn * ny;
     }
   }
 }
@@ -1771,13 +1846,13 @@ function shotBaseAngleAndSweep(shot) {
 // while the question was live. Correct: leaves at the true angle
 // (complementary/supplementary as shown), following the drag's real
 // aim all the way to the wall/cup like normal physics. Wrong: leaves
-// FROM THE TEE, immediately, already pointed the way the player's own
-// (wrong) number implies - not a scripted mid-flight bend or a bounce
-// off the wall at a fabricated angle once it gets there. Making the
-// ball travel the correct-looking approach first and only reveal the
-// error later (at the wall, or partway down the fairway) read as a
-// physics glitch - a bounce at an angle that doesn't match how it hit
-// the wall, or a ball that swerves for no visible reason mid-roll.
+// FROM THE TEE, immediately, already on a path that reflects the
+// player's own (wrong) number - not a scripted mid-flight bend or a
+// bounce off the wall at a fabricated angle once it gets there. Making
+// the ball travel the correct-looking approach first and only reveal
+// the error later (at the wall, or partway down the fairway) read as
+// a physics glitch - a bounce at an angle that doesn't match how it
+// hit the wall, or a ball that swerves for no visible reason mid-roll.
 // Baking the wrong angle into the very first frame means what the
 // player sees IS the consequence of their answer, start to finish.
 function submitAnswer() {
@@ -1787,17 +1862,29 @@ function submitAnswer() {
   pendingShot.typed = typed;
   pendingShot.correct = correct;
   pendingShot.launchFrom = { x: ball.x, y: ball.y };
+  if (!correct) holeBlockedThisStroke = true;
 
   var launchDir = pendingShot.aimDir;
   if (pendingShot.type === 'WALL') {
     pendingShot.resolvedAngle = correct ? pendingShot.correctAnswer : constrain(typed, 1, 179);
     if (!correct) {
-      // Same outgoing-ray formula resolveWallCollision uses for a real
-      // bounce (see its own comment for the derivation) - just applied
-      // at launch instead of at wall contact, and the wall trigger is
-      // marked used up (`applied`) so the real collision code never
-      // fires its own scripted bounce on top of this one.
-      launchDir = vNorm(vAdd(vScale(pendingShot.Wd, sin(pendingShot.resolvedAngle)), vScale(pendingShot.N, cos(pendingShot.resolvedAngle))));
+      // The direction a ball leaving the wall AT the typed angle would
+      // be heading (same outgoing-ray formula resolveWallCollision uses
+      // for a real bounce - see its own comment for the derivation).
+      var outDir = vNorm(vAdd(vScale(pendingShot.Wd, sin(pendingShot.resolvedAngle)), vScale(pendingShot.N, cos(pendingShot.resolvedAngle))));
+      // Mirroring that back across the wall's own normal gives the
+      // INCOMING direction that would produce it on a genuine physics
+      // bounce off this same wall (reflection is its own inverse) - so
+      // a typed answer close to correct launches close to the real aim
+      // (reflecting the true answer's outDir back out this way is
+      // provably a no-op, landing exactly on aimDir again), instead of
+      // jumping straight to the unrelated post-bounce direction, which
+      // could point anywhere - even roughly opposite the real aim -
+      // for even a one-degree miss. `applied` is still marked used up
+      // so the wall doesn't ALSO fire its own scripted-angle override
+      // when the ball reaches it - whatever wall this incoming path
+      // actually touches bounces off via real, ordinary physics.
+      launchDir = vNorm(vAdd(outDir, vScale(pendingShot.N, -2 * vDot(outDir, pendingShot.N))));
       pendingShot.applied = true;
     }
   } else {
