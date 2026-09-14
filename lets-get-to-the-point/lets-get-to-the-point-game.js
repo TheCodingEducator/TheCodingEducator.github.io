@@ -1606,6 +1606,9 @@ function drawFeedback(){
   // Show hint graphic: always for rotation errors; for PRACTICE on all wrong types
   var showRotHint = !feedbackCorrect && isRotation(curCh()) && practiceHintType!=="";
   var hasHint = showRotHint || (gameMode==="PRACTICE"&&!feedbackCorrect&&practiceHintType!=="");
+  // A rot360 question answered by not turning the paper at all - 0° and
+  // 360° are the same rotation, so this is fully correct, not a fluke.
+  var isZeroFor360 = feedbackCorrect && curCh().type==="rot360" && Math.round(paperSignedAngle/90)*90===0;
 
   // All cards share the same width; heights are chosen so the card stays within y=60..375.
   // Center of available space = (60+375)/2 = 217.5 → 218.
@@ -1613,7 +1616,7 @@ function drawFeedback(){
   if     (hasHint&&diagramHints[practiceHintType])  cardH=310; // top≈63  bottom≈373
   else if(hasHint)                                  cardH=260; // top≈88  bottom≈348
   else if(gameMode==="HEADTOHEAD")                  cardH=240; // top≈98  bottom≈338
-  else if(feedbackCorrect&&equivalentRotation)      cardH=240; // top≈98  bottom≈338
+  else if(feedbackCorrect&&(equivalentRotation||isZeroFor360)) cardH=240; // top≈98  bottom≈338
   else if(feedbackCorrect)                          cardH=200; // top≈118 bottom≈318
   else                                              cardH=210; // top≈113 bottom≈323
 
@@ -1639,6 +1642,16 @@ function drawFeedback(){
     stroke(255,255,255,50); strokeWeight(1);
     line(cardX+20,cardY+157,cardX+cardW-20,cardY+157); noStroke();
     fill(200,220,255); fitText("SPACE or ENTER",cx,cardY+196,bw,15);
+    return;
+  }
+
+  // ---- CORRECT via a 0° "rotation" on a 360° question ----
+  if(feedbackCorrect&&isZeroFor360){
+    fill(255); fitText("CORRECT!",cx,cardY+44,bw,28);
+    fill(230,250,255); fitText("("+lockedGX+", "+lockedGY+")",cx,cardY+96,bw,22);
+    fill(255,230,80); fitText("Nice! A rotation of 0 degree is the same",cx,cardY+140,bw,14);
+    fitText("as 360 degrees! A full circle!",cx,cardY+158,bw,14);
+    fill(200,220,255); fitText("SPACE to continue",cx,cardY+208,bw,15);
     return;
   }
 
@@ -2322,8 +2335,10 @@ function draw(){
       // Landing on the right coordinates isn't enough on its own for a
       // rotation - a wrong center combined with a wrong angle can
       // coincidentally land on the same point as the real answer. The
-      // center actually pinned down has to be the real one too.
-      if(feedbackCorrect && isRotation(ch) && tracingPhase==="PAPER" && (centerGX!==ch.cx||centerGY!==ch.cy)){
+      // center actually pinned down has to be the real one too - except
+      // for rot360, where a 0°/360° turn is the identity for ANY center,
+      // so the center genuinely doesn't matter there.
+      if(feedbackCorrect && isRotation(ch) && ch.type!=="rot360" && tracingPhase==="PAPER" && (centerGX!==ch.cx||centerGY!==ch.cy)){
         feedbackCorrect=false;
       }
       // Correct endpoint via alternate rotation path → praise but still fully correct
@@ -2402,8 +2417,10 @@ function draw(){
         // Landing on the right coordinates isn't enough on its own for a
         // rotation - a wrong center combined with a wrong angle can
         // coincidentally land on the same point as the real answer. The
-        // center actually pinned down has to be the real one too.
-        if(feedbackCorrect && isRotation(ec) && tracingPhase==="PAPER" && (centerGX!==ec.cx||centerGY!==ec.cy)){
+        // center actually pinned down has to be the real one too - except
+        // for rot360, where a 0°/360° turn is the identity for ANY center,
+        // so the center genuinely doesn't matter there.
+        if(feedbackCorrect && isRotation(ec) && ec.type!=="rot360" && tracingPhase==="PAPER" && (centerGX!==ec.cx||centerGY!==ec.cy)){
           feedbackCorrect=false;
         }
         // Correct endpoint via alternate rotation path → praise but still fully correct
