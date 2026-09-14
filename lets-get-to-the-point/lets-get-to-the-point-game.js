@@ -2296,6 +2296,13 @@ function draw(){
         lockedGX=playerGX; lockedGY=playerGY;
       }
       feedbackCorrect=(lockedGX===targetGX&&lockedGY===targetGY);
+      // Landing on the right coordinates isn't enough on its own for a
+      // rotation - a wrong center combined with a wrong angle can
+      // coincidentally land on the same point as the real answer. The
+      // center actually pinned down has to be the real one too.
+      if(feedbackCorrect && isRotation(ch) && tracingPhase==="PAPER" && (centerGX!==ch.cx||centerGY!==ch.cy)){
+        feedbackCorrect=false;
+      }
       // Correct endpoint via alternate rotation path → praise but still fully correct
       if(feedbackCorrect && isRotation(curCh()) && tracingPhase==="PAPER"){
         if(!isCorrectRotationAmount(curCh())) equivalentRotation=true;
@@ -2369,6 +2376,13 @@ function draw(){
           lockedGX=playerGX; lockedGY=playerGY;
         }
         feedbackCorrect=(lockedGX===targetGX&&lockedGY===targetGY);
+        // Landing on the right coordinates isn't enough on its own for a
+        // rotation - a wrong center combined with a wrong angle can
+        // coincidentally land on the same point as the real answer. The
+        // center actually pinned down has to be the real one too.
+        if(feedbackCorrect && isRotation(ec) && tracingPhase==="PAPER" && (centerGX!==ec.cx||centerGY!==ec.cy)){
+          feedbackCorrect=false;
+        }
         // Correct endpoint via alternate rotation path → praise but still fully correct
         if(feedbackCorrect&&isRotation(curCh())&&tracingPhase==="PAPER"){
           if(!isCorrectRotationAmount(curCh())) equivalentRotation=true;
