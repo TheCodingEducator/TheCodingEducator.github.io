@@ -102,19 +102,71 @@ var roundWinner = 0;      // 0=none 1=P1 2=P2
 
 // Practice
 var practiceAttempts = 0;
+// Session-only progress bar for Practice mode - climbs +8 per correct
+// answer (never drops on a miss - Practice is the low-stakes mode) and
+// unlocks harder challenges into the pool once it crosses 50 (see
+// buildPracticeOrder). Resets to 0 at the start of every fresh session.
+var practiceMastery = 0;
 
 // ---------- COSMETICS (player skins) ----------
-// All unlocked/free for now - purely a visual preference, not a
+// Skin 0 is always free/owned as a starter default; every other skin is
+// bought in the Shop with coins earned from streaks (see SKIN_PRICE /
+// ownedSkins below) - a play-progress/preference state, not a
 // performance record, so it's fine to persist client-side without
 // touching the "no accounts, no permanent record" design of the game.
+// `style` picks the extra visual flourish drawn by drawSkinnedFace().
 var PLAYER_SKINS = [
-  { name:"Classic Yellow", r:255, g:220, b:50  },
-  { name:"Cool Blue",      r:80,  g:180, b:255 },
-  { name:"Hot Pink",       r:255, g:90,  b:180 },
-  { name:"Lime Green",     r:140, g:230, b:60  },
-  { name:"Sunset Orange",  r:255, g:140, b:50  },
-  { name:"Royal Purple",   r:170, g:100, b:255 }
+  { name:"Classic Yellow", r:255, g:220, b:50,  style:"plain"      },
+  { name:"Cool Blue",      r:80,  g:180, b:255, style:"plain"      },
+  { name:"Hot Pink",       r:255, g:90,  b:180, style:"sparkle"    },
+  { name:"Lime Green",     r:140, g:230, b:60,  style:"spots"      },
+  { name:"Sunset Orange",  r:255, g:140, b:50,  style:"gradient"   },
+  { name:"Royal Purple",   r:170, g:100, b:255, style:"crown"      },
+  { name:"Fire Red",       r:255, g:80,  b:40,  style:"fire"       },
+  { name:"Ice Blue",       r:150, g:220, b:255, style:"halo"       },
+  { name:"Robot Silver",   r:190, g:200, b:210, style:"robot"      },
+  { name:"Alien Green",    r:110, g:220, b:110, style:"alien"      },
+  { name:"Cool Shades",    r:210, g:180, b:130, style:"sunglasses" },
+  { name:"Rainbow Burst",  r:255, g:255, b:255, style:"rainbow"    }
 ];
+var SKIN_PRICE = 3;
+
+// ---------- COINS / STREAK / OWNED SKINS ----------
+// Session-crossing progress (a play-currency + unlock list), not a
+// record of right/wrong answers - persisted the same way the skin
+// preference already was.
+var coins = 0;
+var ownedSkins = [0]; // skin 0 is always owned
+var currentStreak = 0; // consecutive correct answers, non-H2H modes; resets on a miss
+function loadCoinsAndSkins() {
+  try {
+    var c = localStorage.getItem('lgttp_coins');
+    if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) coins=n; }
+    var o = localStorage.getItem('lgttp_owned_skins');
+    if (o!==null) { var arr=JSON.parse(o); if (Array.isArray(arr)) ownedSkins=arr; }
+  } catch (e) {}
+  if (ownedSkins.indexOf(0)===-1) ownedSkins.push(0);
+}
+function saveCoinsAndSkins() {
+  try {
+    localStorage.setItem('lgttp_coins', String(coins));
+    localStorage.setItem('lgttp_owned_skins', JSON.stringify(ownedSkins));
+  } catch (e) {}
+}
+loadCoinsAndSkins();
+
+// Awards a coin every 3rd consecutive correct answer (3, 6, 9, ...).
+// Wrong answers reset the streak to 0 elsewhere, right where
+// feedbackCorrect is determined.
+var coinPopup = 0; // frames remaining to show the "+1 coin!" toast
+function registerCorrectForStreak() {
+  currentStreak++;
+  if (currentStreak%3===0) {
+    coins++;
+    saveCoinsAndSkins();
+    coinPopup = 60;
+  }
+}
 // ---------- SOUND (synthesized retro/chiptune SFX - no audio files) ----------
 var _sfxCtx = null;
 function _sfxEnsureCtx() {
@@ -150,10 +202,30 @@ function _sfxTone(freq, dur, type, vol, delay, glideTo) {
 }
 
 function playSound(name) {
-  if (name === 'correct') {
-    _sfxTone(523.25, 0.09, 'square', 0.12, 0);     // C5
-    _sfxTone(659.25, 0.09, 'square', 0.12, 0.09);  // E5
-    _sfxTone(783.99, 0.16, 'square', 0.13, 0.18);  // G5
+  // Each transformation gets its own short "flavor" sound leading into
+  // the shared 3-note correct chime, so the ear picks up on WHICH kind
+  // of move just happened, not just that it was right.
+  if (name === 'correct' || name === 'correct_translate') {
+    _sfxTone(300, 0.08, 'sine', 0.07, 0, 480);     // quick upward slide/whoosh
+    _sfxTone(523.25, 0.09, 'square', 0.12, 0.07);
+    _sfxTone(659.25, 0.09, 'square', 0.12, 0.16);
+    _sfxTone(783.99, 0.16, 'square', 0.13, 0.25);
+    return;
+  }
+  if (name === 'correct_reflect') {
+    _sfxTone(680, 0.06, 'triangle', 0.08, 0, 240);  // quick downward "flip"
+    _sfxTone(523.25, 0.09, 'square', 0.12, 0.06);
+    _sfxTone(659.25, 0.09, 'square', 0.12, 0.15);
+    _sfxTone(783.99, 0.16, 'square', 0.13, 0.24);
+    return;
+  }
+  if (name === 'correct_rotate') {
+    _sfxTone(260, 0.045, 'sawtooth', 0.05, 0);      // three quick rising blips = a "spin"
+    _sfxTone(340, 0.045, 'sawtooth', 0.05, 0.045);
+    _sfxTone(440, 0.05,  'sawtooth', 0.06, 0.09);
+    _sfxTone(523.25, 0.09, 'square', 0.12, 0.15);
+    _sfxTone(659.25, 0.09, 'square', 0.12, 0.24);
+    _sfxTone(783.99, 0.16, 'square', 0.13, 0.33);
     return;
   }
   if (name === 'wrong') { _sfxTone(190, 0.22, 'sawtooth', 0.12, 0, 90); return; }
@@ -170,6 +242,12 @@ function playSound(name) {
   }
 }
 
+function correctSoundFor(ch) {
+  if (isRotation(ch)) return 'correct_rotate';
+  if (ch.type==="reflect_x"||ch.type==="reflect_y") return 'correct_reflect';
+  return 'correct_translate';
+}
+
 var currentSkinIdx = 0;
 function loadSkin() {
   try {
@@ -177,9 +255,23 @@ function loadSkin() {
     if (v !== null) { var n = parseInt(v,10); if (!isNaN(n) && n>=0 && n<PLAYER_SKINS.length) currentSkinIdx = n; }
   } catch (e) {}
 }
-function saveSkin(idx) {
+// Equips an owned skin. Returns false (no-op) if it hasn't been bought.
+function equipSkin(idx) {
+  if (ownedSkins.indexOf(idx)===-1) return false;
   currentSkinIdx = idx;
   try { localStorage.setItem('lgttp_skin', String(idx)); } catch (e) {}
+  return true;
+}
+// Buys AND equips an unowned skin if there are enough coins. Returns
+// false if already owned or too expensive.
+function buySkin(idx) {
+  if (ownedSkins.indexOf(idx)!==-1) return false;
+  if (coins < SKIN_PRICE) return false;
+  coins -= SKIN_PRICE;
+  ownedSkins.push(idx);
+  saveCoinsAndSkins();
+  equipSkin(idx);
+  return true;
 }
 loadSkin();
 
@@ -331,9 +423,14 @@ function buildOrder() {
 
 function buildPracticeOrder() {
   challengePool = [];
+  // Non-origin rotation centers (normally Geometry Genius only) phase
+  // into Practice's own pool once the mastery meter crosses 50 - a real
+  // difficulty step using already-authored harder content, rather than
+  // a separate escalation system.
+  var unlockHarder = practiceMastery >= 50;
   for (var i = 0; i < challenges.length; i++) {
     var ch = challenges[i];
-    if (ch.geometryOnly) continue;
+    if (ch.geometryOnly && !unlockHarder) continue;
     if (ch.noGenius) continue;
     challengePool.push(ch);
   }
@@ -479,7 +576,9 @@ function loadRound() {
   geomInputX=""; geomInputY=""; geomInputField="x";
   equivalentRotation=false;
   if(gameMode==="PRACTICE") practiceQNum++;
-  showingTimer=90;
+  // Head-to-Head gets extra frames here for a "3-2-1-GO" countdown (see
+  // the SHOWING render block) before the race actually starts.
+  showingTimer = (gameMode==="HEADTOHEAD") ? 120 : 90;
   STATE="SHOWING";
 }
 
@@ -519,6 +618,7 @@ function resetGame() {
   score=0; round=0;
   p1wins=0; p2wins=0;
   newHighScore=false; timerFinished=0; practiceHintType=""; practiceQNum=0;
+  currentStreak=0; practiceMastery=0;
   // Keep player-chosen skills for PRACTICE; reset to all-on for other modes
   if (gameMode !== "PRACTICE") {
     skillTranslations=true; skillRotations=true; skillReflections=true;
@@ -1122,8 +1222,12 @@ function drawGrid(){
 
 // ---------- HUD ----------
 function drawHUD(){
-  fill(8,12,30); noStroke(); rect(0,0,400,62);
-  stroke(40,60,120); strokeWeight(1); line(0,62,400,62);
+  // H2H doesn't track coins/streak/mastery, so its HUD stays the
+  // original compact height; every other mode gets a coin+streak row,
+  // and Practice additionally gets its mastery bar below that.
+  var hudH = gameMode==="HEADTOHEAD" ? 62 : (gameMode==="PRACTICE" ? 90 : 76);
+  fill(8,12,30); noStroke(); rect(0,0,400,hudH);
+  stroke(40,60,120); strokeWeight(1); line(0,hudH,400,hudH);
 
   // Three equal pills centered across the full width
   // Layout: |8px| pill1(118) |15px| pill2(118) |15px| pill3(118) |8px|
@@ -1163,6 +1267,35 @@ function drawHUD(){
   fill(20,35,90); noStroke(); rect(8,28,384,28,6);
   fill(255,255,255); textAlign(CENTER,CENTER);
   fitText(challengeLabel,200,43,364,13);
+
+  // Coin + streak row (every mode except Head-to-Head)
+  if (gameMode!=="HEADTOHEAD") {
+    drawCoinLabel(60, 66, coins, 13);
+    if (currentStreak>=2) {
+      noStroke(); textAlign(CENTER,CENTER);
+      fill(255,140,60); textSize(13);
+      text("🔥 "+currentStreak, 340, 66);
+    }
+    if (coinPopup>0) {
+      var popT=coinPopup/60;
+      fill(255,220,80,Math.floor(255*popT));
+      textSize(12+Math.floor((1-popT)*4));
+      text("+1 coin!", 200, 66-(1-popT)*10);
+      coinPopup--;
+    }
+  }
+
+  // Practice mastery bar
+  if (gameMode==="PRACTICE") {
+    var mbX=40, mbY=78, mbW=320, mbH=10;
+    fill(20,25,45); noStroke(); rect(mbX,mbY,mbW,mbH,5);
+    var mbFillW=mbW*(practiceMastery/100);
+    var mbCol = practiceMastery>=50 ? color(255,200,60) : color(90,180,255);
+    fill(mbCol); rect(mbX,mbY,mbFillW,mbH,5);
+    noFill(); stroke(80,100,150); strokeWeight(1); rect(mbX,mbY,mbW,mbH,5);
+    fill(200,215,255); noStroke(); textSize(8); textAlign(CENTER,CENTER);
+    text(practiceMastery>=50?"MASTERY "+practiceMastery+"% — harder questions unlocked!":"MASTERY "+practiceMastery+"%", 200, mbY+mbH/2);
+  }
 
   // Bottom bar
   fill(8,12,30); noStroke(); rect(0,376,400,24);
@@ -1241,6 +1374,127 @@ function drawFaceAt(px,py,fr,fg,fb,label){
   fill(80,220,255); textSize(9); textAlign(CENTER,BOTTOM); text(label,px,textY);
 }
 
+// Draws the equipped skin's face plus its own extra flourish (see the
+// `style` field on PLAYER_SKINS) - the base anatomy matches drawFaceAt
+// exactly so the coordinate label positioning stays identical; only the
+// decoration drawn behind/on/around it differs per skin.
+function drawSkinnedFace(px, py, skin, label) {
+  var fr=skin.r, fg=skin.g, fb=skin.b, style=skin.style||"plain";
+
+  // ---- Behind the face ----
+  if (style==="halo") {
+    var haloPulse=(sin(frameCount*3)+1)/2;
+    noFill(); stroke(200,240,255,Math.floor(120+haloPulse*100)); strokeWeight(3);
+    ellipse(px,py-1,44+haloPulse*6,44+haloPulse*6);
+  }
+  if (style==="fire") {
+    noStroke();
+    for (var fi=0; fi<10; fi++){
+      var fa=fi*36+frameCount*2;
+      var flick=(sin(frameCount*8+fi)+1)/2;
+      fill(255,120+flick*80,30,200);
+      var fx1=px+cos(fa)*13, fy1=py+sin(fa)*13;
+      var fx2=px+cos(fa)*(19+flick*6), fy2=py+sin(fa)*(19+flick*6);
+      triangle(fx1+cos(fa+90)*3,fy1+sin(fa+90)*3, fx1+cos(fa-90)*3,fy1+sin(fa-90)*3, fx2,fy2);
+    }
+  }
+  if (style==="galaxy") {
+    noStroke();
+    for (var gi=0; gi<8; gi++){
+      var ga=gi*45+frameCount;
+      fill(255,255,255,150); ellipse(px+cos(ga)*15,py+sin(ga)*15,2,2);
+    }
+  }
+  if (style==="rainbow") {
+    noFill(); strokeWeight(2.5);
+    var rbColors=[[255,80,80],[255,180,60],[255,240,80],[100,220,120],[100,180,255],[180,120,255]];
+    for (var rbi=0;rbi<6;rbi++){
+      var rc=rbColors[(rbi+Math.floor(frameCount/6))%6];
+      stroke(rc[0],rc[1],rc[2],220);
+      arc(px,py,34+rbi*3,34+rbi*3, rbi*60, rbi*60+50);
+    }
+  }
+
+  // ---- Base face ----
+  if (style==="gradient") {
+    fill(Math.min(255,fr+50),Math.min(255,fg+50),Math.min(255,fb+50));
+    stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0)); strokeWeight(2);
+    ellipse(px,py,30,30);
+    noStroke(); fill(fr,fg,fb,190); ellipse(px+4,py+4,25,25);
+  } else {
+    fill(fr,fg,fb); stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0));
+    strokeWeight(2); ellipse(px,py,30,30);
+  }
+  if (style==="spots") {
+    noStroke(); fill(Math.max(fr-80,0),Math.max(fg-80,0),Math.max(fb-80,0),170);
+    ellipse(px-7,py-8,5,5); ellipse(px+6,py+7,4,4); ellipse(px-4,py+8,3,3); ellipse(px+8,py-6,3,3);
+  }
+  if (style==="stripes") {
+    stroke(Math.max(fr-90,0),Math.max(fg-90,0),Math.max(fb-90,0),150); strokeWeight(2);
+    line(px-13,py-8,px+2,py+13); line(px-6,py-13,px+9,py+8); line(px+1,py-13,px+13,py+2);
+  }
+
+  // ---- Face features ----
+  noStroke();
+  if (style==="robot") {
+    fill(30,30,40); rect(px-9,py-6,6,5,1); rect(px+3,py-6,6,5,1);
+    fill(120,220,255); rect(px-8,py-5,4,3,1); rect(px+4,py-5,4,3,1);
+    stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0)); strokeWeight(2); noFill();
+    line(px,py-15,px,py-19);
+    noStroke(); fill(255,60,60); ellipse(px,py-20,4,4);
+    stroke(60,60,70); strokeWeight(1.5); noFill(); line(px-6,py+4,px+6,py+4);
+  } else if (style==="alien") {
+    fill(20,50,20); ellipse(px-6,py-3,7,9); ellipse(px+6,py-3,7,9);
+    fill(255,255,255,220); ellipse(px-6,py-4,2,2); ellipse(px+6,py-4,2,2);
+    stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0)); strokeWeight(2);
+    line(px-4,py-15,px-7,py-20); line(px+4,py-15,px+7,py-20);
+    noStroke(); fill(255,220,80); ellipse(px-7,py-21,3,3); ellipse(px+7,py-21,3,3);
+    stroke(30,60,30); strokeWeight(1.5); noFill(); line(px-4,py+5,px+4,py+5);
+  } else if (style==="sunglasses") {
+    fill(20,20,25); rect(px-11,py-6,9,6,2); rect(px+2,py-6,9,6,2);
+    fill(230,240,255,90); rect(px-10,py-5,7,3,1); rect(px+3,py-5,7,3,1);
+    stroke(20,20,25); strokeWeight(2); line(px-2,py-4,px+2,py-4);
+    stroke(30,30,80); strokeWeight(1); noFill();
+    for(var smi=0;smi<10;smi++){ var sma1=25+(130/10)*smi, sma2=25+(130/10)*(smi+1);
+      line(px+cos(sma1)*5,py+1.5+sin(sma1)*3.5,px+cos(sma2)*5,py+1.5+sin(sma2)*3.5); }
+  } else {
+    fill(30,30,80);
+    ellipse(px-3.5,py-2.5,3,3); ellipse(px+3.5,py-2.5,3,3);
+    fill(255); ellipse(px-3,py-3,1,1); ellipse(px+4,py-3,1,1);
+    stroke(30,30,80); strokeWeight(1); noFill();
+    for(var msi=0;msi<10;msi++){ var ma1=25+(130/10)*msi, ma2=25+(130/10)*(msi+1);
+      line(px+cos(ma1)*5,py+1.5+sin(ma1)*3.5,px+cos(ma2)*5,py+1.5+sin(ma2)*3.5); }
+  }
+
+  // ---- On top of the face ----
+  if (style==="sparkle") {
+    textAlign(CENTER,CENTER); textSize(10); noStroke();
+    for (var spi=0; spi<3; spi++){
+      var sang=spi*120+frameCount*4;
+      var srad=17+sin(frameCount*6+spi)*2;
+      fill(255,255,255,200);
+      text("✦",px+cos(sang)*srad,py+sin(sang)*srad);
+    }
+  }
+  if (style==="crown") {
+    fill(255,215,0); stroke(200,160,0); strokeWeight(1);
+    triangle(px-9,py-15, px-9,py-24, px-4,py-17);
+    triangle(px-4,py-17, px,py-26, px+4,py-17);
+    triangle(px+4,py-17, px+9,py-24, px+9,py-15);
+    rect(px-9,py-15,18,4,1);
+  }
+
+  // ---- Coordinate label (same as drawFaceAt) - skipped when label is empty ----
+  if (label) {
+    var tw=label.length*6+8;
+    var labelAbove=(py-38>66);
+    var tagY=labelAbove?py-38:py+26;
+    var textY=labelAbove?py-25:py+39;
+    fill(0,0,0); noStroke(); rect(px-tw/2,tagY,tw,14,4);
+    fill(80,220,255); textSize(9); textAlign(CENTER,BOTTOM); text(label,px,textY);
+  }
+}
+
 function drawPlayer(){
   if (gameMode==="GEOMETRY"&&geomShapeType!=="") {
     drawGeomShape(playerPX,playerPY,true);
@@ -1255,7 +1509,7 @@ function drawPlayer(){
     gx=playerGX; gy=playerGY;
   }
   var sk=PLAYER_SKINS[currentSkinIdx];
-  drawFaceAt(px,py,sk.r,sk.g,sk.b,"("+gx+", "+gy+")");
+  drawSkinnedFace(px,py,sk,"("+gx+", "+gy+")");
 }
 
 function drawTarget(){
@@ -1351,10 +1605,10 @@ function drawAnswerDemo(){
     push();
     translate(px,py);
     scale(flipSX, flipSY);
-    drawFaceAt(0,0,sk.r,sk.g,sk.b,"("+Math.round(gx)+", "+Math.round(gy)+")");
+    drawSkinnedFace(0,0,sk,"("+Math.round(gx)+", "+Math.round(gy)+")");
     pop();
   } else {
-    drawFaceAt(px,py,sk.r,sk.g,sk.b,"("+Math.round(gx)+", "+Math.round(gy)+")");
+    drawSkinnedFace(px,py,sk,"("+Math.round(gx)+", "+Math.round(gy)+")");
   }
 }
 
@@ -1803,50 +2057,59 @@ function drawSkillSelect() {
 }
 
 // ---------- SKIN SELECT SCREEN (cosmetics — all free/unlocked) ----------
-function drawSkinSelect() {
+var shopMsg = "", shopMsgTimer = 0; // brief "not enough coins" feedback
+
+function drawShop() {
   background(10, 15, 38);
   stroke(25, 35, 70); strokeWeight(1);
   for(var gx=0;gx<=400;gx+=30) line(gx,0,gx,400);
   for(var gy=0;gy<=400;gy+=30) line(0,gy,400,gy);
 
-  fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,16,360,50,12);
+  fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,10,360,44,12);
   fill(0,220,255); noStroke(); textSize(16); textAlign(CENTER,CENTER);
-  text("Choose Your Skin", 200, 34);
-  fill(140,180,255); textSize(10);
-  text("Everything here is free — pick any look", 200, 52);
+  text("Shop", 130, 32);
+  drawCoinLabel(330, 32, coins, 15);
+  textAlign(CENTER,CENTER);
 
-  var cols=2, cardW=164, cardH=88, gapX=12, gapY=10;
-  var gridW = cols*cardW+gapX, startX=(400-gridW)/2, startY=82;
+  var cols=3, cardW=104, cardH=62, gapX=6, gapY=6;
+  var gridW=cols*cardW+(cols-1)*gapX, startX=(400-gridW)/2, startY=60;
   for (var i=0;i<PLAYER_SKINS.length;i++) {
     var sk=PLAYER_SKINS[i];
     var col=i%cols, row=Math.floor(i/cols);
     var bx=startX+col*(cardW+gapX), by=startY+row*(cardH+gapY);
+    var owned=(ownedSkins.indexOf(i)!==-1);
     var sel=(i===currentSkinIdx);
     var hov=(mouseX>=bx&&mouseX<=bx+cardW&&mouseY>=by&&mouseY<=by+cardH);
 
     fill(sel?18:10, sel?30:14, sel?70:32);
-    stroke(sk.r,sk.g,sk.b, sel?230:(hov?150:70)); strokeWeight(sel?3:hov?2:1);
-    rect(bx,by,cardW,cardH,12);
-    if (sel) { noFill(); stroke(255,220,60); strokeWeight(2); rect(bx+3,by+3,cardW-6,cardH-6,10); }
+    stroke(sk.r,sk.g,sk.b, sel?230:(hov?150:owned?90:50)); strokeWeight(sel?3:hov?2:1);
+    rect(bx,by,cardW,cardH,10);
+    if (sel) { noFill(); stroke(255,220,60); strokeWeight(2); rect(bx+2,by+2,cardW-4,cardH-4,8); }
 
-    // Face preview only (no coord label — drawFaceAt always draws one)
-    var fcx=bx+cardW/2, fcy=by+38;
-    fill(sk.r,sk.g,sk.b); stroke(Math.max(sk.r-60,0),Math.max(sk.g-60,0),Math.max(sk.b-60,0));
-    strokeWeight(2); ellipse(fcx,fcy,30,30);
-    fill(30,30,80); noStroke();
-    ellipse(fcx-6,fcy-4,5,5); ellipse(fcx+6,fcy-4,5,5);
-    fill(255); ellipse(fcx-5,fcy-5,2,2); ellipse(fcx+7,fcy-5,2,2);
-    stroke(30,30,80); strokeWeight(2); noFill();
-    for(var si=0;si<12;si++){
-      var a1=25+(130/12)*si, a2=25+(130/12)*(si+1);
-      line(fcx+cos(a1)*8,fcy+2+sin(a1)*6,fcx+cos(a2)*8,fcy+2+sin(a2)*6);
+    // p5's push()/pop() doesn't track raw canvas globalAlpha, so it has
+    // to be reset back to 1 explicitly right after - left at 0.35 it
+    // would silently fade out every draw call for the rest of the frame.
+    var fcx=bx+cardW/2, fcy=by+22;
+    if (!owned) drawingContext.globalAlpha=0.35;
+    drawSkinnedFace(fcx,fcy,sk,"");
+    if (!owned) drawingContext.globalAlpha=1;
+
+    fill(sel?255:owned?200:130); noStroke(); textSize(9); textAlign(CENTER,CENTER);
+    fitText(sk.name, bx+cardW/2, by+45, cardW-10, 9);
+    if (sel)       { fill(255,220,60); textSize(8); text("EQUIPPED", bx+cardW/2, by+56); }
+    else if (owned){ fill(140,220,160); textSize(8); text("OWNED", bx+cardW/2, by+56); }
+    else           { drawCoinLabel(bx+cardW/2, by+56, SKIN_PRICE, 9); }
+
+    if (hov && mouseWentDown("left")) {
+      if (owned) { equipSkin(i); }
+      else if (!buySkin(i)) { shopMsg="Not enough coins!"; shopMsgTimer=60; }
     }
-    fill(sel?255:200); noStroke(); textSize(11); textAlign(CENTER,CENTER);
-    text(sk.name, bx+cardW/2, by+68);
-    if (sel) { fill(255,220,60); textSize(9); text("SELECTED", bx+cardW/2, by+80); }
-    else     { fill(140,160,200); textSize(9); text("FREE", bx+cardW/2, by+80); }
+  }
 
-    if (hov && mouseWentDown("left")) saveSkin(i);
+  if (shopMsgTimer>0) {
+    fill(255,90,90); noStroke(); textSize(11); textAlign(CENTER,CENTER);
+    text(shopMsg, 200, 336);
+    shopMsgTimer--;
   }
 
   // BACK button
@@ -1858,6 +2121,29 @@ function drawSkinSelect() {
   if (backHov && mouseWentDown("left")) STATE="START";
 
   drawSprites();
+}
+
+// A hand-drawn coin (the 🪙 emoji doesn't render in this environment -
+// shows as a missing-glyph box - so the coin balance is drawn as a
+// small vector icon instead, matching the game's existing hand-drawn
+// art style everywhere else).
+function drawCoinIcon(x, y, r) {
+  noStroke(); fill(255,200,40); ellipse(x,y,r*2,r*2);
+  noFill(); stroke(200,150,0); strokeWeight(1); ellipse(x,y,r*2,r*2);
+  noStroke(); fill(255,230,120); ellipse(x-r*0.28,y-r*0.28,r*0.7,r*0.7);
+}
+// Coin icon + number, centered as one unit around (cx, cy).
+function drawCoinLabel(cx, cy, count, size, col) {
+  size = size || 13;
+  var str = String(count);
+  textSize(size);
+  var numW = textWidth(str);
+  var iconR = size*0.42;
+  var totalW = iconR*2 + 4 + numW;
+  var iconX = cx - totalW/2 + iconR, numX = cx + totalW/2 - numW/2;
+  drawCoinIcon(iconX, cy, iconR);
+  fill(col||[255,215,60]); noStroke(); textAlign(CENTER,CENTER); textSize(size);
+  text(str, numX, cy+1);
 }
 
 // Shrink font until str fits within maxW, then draw centered at (cx, y)
@@ -1908,17 +2194,7 @@ function drawStart(){
   fill(0,220,255); textSize(20);
   text("Let's Get to the Point",200,20);
   fill(100,160,255); textSize(10);
-  text("Transformations",200,38);
-
-  // SKINS button — top-right corner, free cosmetics
-  var skinHov=(mouseX>=356&&mouseX<=396&&mouseY>=4&&mouseY<=34);
-  fill(skinHov?60:30, skinHov?40:20, skinHov?100:70); stroke(180,140,255); strokeWeight(skinHov?2:1);
-  rect(356,4,40,30,8);
-  fill(255); noStroke(); textSize(16); textAlign(CENTER,CENTER);
-  text("🎨",376,17);
-  fill(200,180,255); textSize(7);
-  text("SKINS",376,29);
-  if(skinHov&&mouseWentDown("left")){STATE="SKIN_SELECT";}
+  text("Rigid Transformations",200,38);
 
   // Glowing divider
   var dg=(sin(t*3)+1)*0.5;
@@ -1949,7 +2225,7 @@ function drawStart(){
      r:160,g:25,  b:25}
   ];
 
-  var bw=92, bh=326, gap=4, startX=8, cardTop=57;
+  var bw=92, bh=293, gap=4, startX=8, cardTop=57;
   for(var mi=0;mi<4;mi++){
     var m=modes[mi];
     var bx2=startX+mi*(bw+gap), by2=cardTop;
@@ -2048,6 +2324,20 @@ function drawStart(){
       } else { resetGame(); }
     }
   }
+
+  // SHOP bar — big and flat, right under the play-button row, so it
+  // reads as a real destination rather than a small icon easy to miss.
+  var shopBarY=356, shopBarH=36;
+  var shopHov=(mouseX>=20&&mouseX<=380&&mouseY>=shopBarY&&mouseY<=shopBarY+shopBarH);
+  var shopPulse=(sin(t*3)+1)/2;
+  fill(shopHov?70:40, shopHov?50:30, shopHov?140:100);
+  stroke(180,140,255,Math.floor(150+shopPulse*90)); strokeWeight(shopHov?2.5:2);
+  rect(20,shopBarY,360,shopBarH,14);
+  noStroke(); textAlign(CENTER,CENTER);
+  fill(255); textSize(20); text("🎨",50,shopBarY+shopBarH/2+1);
+  fill(220,200,255); textSize(17); textStyle(BOLD); text("SHOP",205,shopBarY+shopBarH/2+1); textStyle(NORMAL);
+  drawCoinLabel(352, shopBarY+shopBarH/2+1, coins, 13);
+  if(shopHov&&mouseWentDown("left")){STATE="SHOP";}
 
   drawSprites();
 }
@@ -2318,7 +2608,7 @@ function draw(){
         if(p2GX===targetGX&&p2GY===targetGY){
           roundWinner=2; p2wins++;
           feedbackCorrect=true; lockedGX=p2GX; lockedGY=p2GY;
-          playSound('correct');
+          playSound(correctSoundFor(ch));
           STATE="FEEDBACK";
         }
         return;
@@ -2351,7 +2641,9 @@ function draw(){
         timerFinished=(Date.now()-timerStart)/1000;
       if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
       if(!feedbackCorrect) practiceHintType=detectPracticeHint();
-      playSound(feedbackCorrect?'correct':'wrong');
+      if(feedbackCorrect) registerCorrectForStreak(); else currentStreak=0;
+      if(gameMode==="PRACTICE"&&feedbackCorrect) practiceMastery=Math.min(100,practiceMastery+8);
+      playSound(feedbackCorrect?correctSoundFor(ch):'wrong');
       if(!feedbackCorrect){ demoStartFrame=frameCount; STATE=isRotation(curCh())?"ROTATION_DEMO":"ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
       return;
     }
@@ -2386,7 +2678,7 @@ function draw(){
         if(p1GX===targetGX&&p1GY===targetGY){
           roundWinner=1; p1wins++;
           feedbackCorrect=true; lockedGX=p1GX; lockedGY=p1GY;
-          playSound('correct');
+          playSound(correctSoundFor(curCh()));
           STATE="FEEDBACK";
         }
       } else if(STATE==="FEEDBACK"){
@@ -2433,7 +2725,9 @@ function draw(){
           timerFinished=(Date.now()-timerStart)/1000;
         if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
         if(!feedbackCorrect) practiceHintType=detectPracticeHint();
-        playSound(feedbackCorrect?'correct':'wrong');
+        if(feedbackCorrect) registerCorrectForStreak(); else currentStreak=0;
+        if(gameMode==="PRACTICE"&&feedbackCorrect) practiceMastery=Math.min(100,practiceMastery+8);
+        playSound(feedbackCorrect?correctSoundFor(ec):'wrong');
         if(!feedbackCorrect){ demoStartFrame=frameCount; STATE=isRotation(curCh())?"ROTATION_DEMO":"ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
         return;
       }
@@ -2478,7 +2772,7 @@ function draw(){
 
   // Early exits
   if(STATE==="START"){drawStart();return;}
-  if(STATE==="SKIN_SELECT"){drawSkinSelect();return;}
+  if(STATE==="SHOP"){drawShop();return;}
   if(STATE==="SKILL_SELECT"){drawSkillSelect();return;}
   if(STATE==="SPEED_RESULT"){drawSpeedResult();return;}
   if(STATE==="WIN"){drawWin();return;}
@@ -2511,6 +2805,19 @@ function draw(){
     if(isRotation(curCh()))fitText("Place pencil at center, then rotate!",200,scY+152,sbw,14);
     else if(geomShapeType!==""&&gameMode==="GEOMETRY")fitText("Apply the translation to all vertices",200,scY+152,sbw,14);
     else fitText("Get ready...",200,scY+152,sbw,14);
+    // Head-to-Head: big "3-2-1-GO" countdown on top of everything else,
+    // building a little race-start tension before the timer unfreezes.
+    if(gameMode==="HEADTOHEAD"){
+      var cdRemain=showingTimer, cdLabel, cdCol, cdPhaseT;
+      if(cdRemain>90){ cdLabel="3"; cdCol=[255,90,90]; cdPhaseT=(120-cdRemain)/30; }
+      else if(cdRemain>60){ cdLabel="2"; cdCol=[255,190,60]; cdPhaseT=(90-cdRemain)/30; }
+      else if(cdRemain>30){ cdLabel="1"; cdCol=[120,255,140]; cdPhaseT=(60-cdRemain)/30; }
+      else { cdLabel="GO!"; cdCol=[255,230,60]; cdPhaseT=(30-cdRemain)/30; }
+      var cdPop=1+Math.max(0,0.4-cdPhaseT*0.4);
+      noStroke(); textAlign(CENTER,CENTER);
+      fill(0,0,0,150); textSize(Math.floor(70*cdPop)); text(cdLabel,202,204);
+      fill(cdCol[0],cdCol[1],cdCol[2]); textSize(Math.floor(70*cdPop)); text(cdLabel,200,202);
+    }
     drawHUD(); drawSprites(); return;
   }
 
