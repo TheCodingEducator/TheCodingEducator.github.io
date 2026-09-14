@@ -303,7 +303,7 @@ var shootOutcomeDecided = false;
 var shootWasSaved = false;
 var screenShakeTimer = 0;
 var postHitTimer = 0, postHitDuration = 30, postHitX = 0;
-var saveTimer = 0, saveDuration = 30, saveX = 0, saveY = 0;
+var saveTimer = 0, saveDuration = 30, saveX = 0, saveY = 0, saveIsCatch = false;
 var blockTimer = 0, blockDuration = 30, blockX = 0, blockY = 0, blockDirX = 1;
 var enemyPostHitTimer = 0, enemyPostHitDuration = 30, enemyPostHitX = 0;
 
@@ -946,6 +946,10 @@ function hitPost() {
 
 function makeSave(atX, atY) {
   saveX = atX; saveY = atY;
+  // A weak shot hit basically straight at the keeper is an easy catch; a
+  // stronger shot, or one that only clips a glove out near its reach, gets
+  // punched away instead - a keeper wouldn't risk catching either of those.
+  saveIsCatch = shotPower < 0.35 && abs(atX - keeperX) < 0.25;
   saveTimer = 0;
   screenShakeTimer = 30;
   screenState = "saved";
@@ -1674,6 +1678,11 @@ function updateEnemyWander() {
     enemySpeedT[i] = lerp(enemySpeedT[i], enemySpeedTargetT[i], enemyEaseT[i]);
   }
 
+  // Defenders won't drop back past this line toward GY_MIN even when their
+  // marked attacker roams further downfield - keeps the defense holding a
+  // shape near their own goal instead of chasing attackers deep.
+  var defenseHoldLineY = GY_MAX - 2.2;
+
   for (var j = 0; j < enemyTargetO.length; j++) {
     var mark = enemyDispT[j % enemyDispT.length];
     var standoff = 0.5;
@@ -1685,7 +1694,7 @@ function updateEnemyWander() {
       enemyJitterO[j] = random(-0.9, 0.9);
     }
     enemyTargetO[j].x = constrain(mark.x + enemyJitterO[j], GX_MIN + 0.4, GX_MAX - 0.4);
-    enemyTargetO[j].y = constrain(mark.y + standoff, mark.y + 0.3, PLAYER_Y_CAP);
+    enemyTargetO[j].y = constrain(mark.y + standoff, defenseHoldLineY, PLAYER_Y_CAP);
 
     enemySpeedTimerO[j]--;
     if (enemySpeedTimerO[j] <= 0) {
@@ -2951,12 +2960,18 @@ function draw() {
 
     saveTimer++;
     var svt = constrain(saveTimer / saveDuration, 0, 1);
-    // Always punch the ball away to the side, even on an easy/weak shot,
-    // instead of catching it - a real keeper parries shots clear rather
-    // than risking a catch, so every save should look like a deflection.
-    var saveDir = saveX >= 0 ? 1 : -1;
-    var saveBallX = saveX + saveDir * svt * 2.2;
-    var saveBallY = saveY - svt * 1.7;
+    var saveBallX, saveBallY;
+    if (saveIsCatch) {
+      saveBallX = lerp(saveX, keeperX, min(svt * 2.5, 1));
+      saveBallY = lerp(saveY, GY_MAX - 0.15, min(svt * 2.5, 1));
+    } else {
+      // Punch the ball away to the side instead of catching it - anything
+      // that wasn't a weak shot hit straight at the keeper (see makeSave)
+      // gets parried clear rather than caught.
+      var saveDir = saveX >= 0 ? 1 : -1;
+      saveBallX = saveX + saveDir * svt * 2.2;
+      saveBallY = saveY - svt * 1.7;
+    }
     drawField();
     drawOtherFieldPlayers();
     drawGoalie(gridSX(keeperX), gridSY(GY_MAX), defenderColor(), { dirX: saveX >= keeperX ? 1 : -1, svt: svt });
