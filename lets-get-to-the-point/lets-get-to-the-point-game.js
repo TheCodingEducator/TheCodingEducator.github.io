@@ -2909,7 +2909,7 @@ function draw(){
     var sbw=scW-32;
     fill(255,220,60);
     if(geomShapeType!==""&&gameMode==="GEOMETRY")
-      fitText("Move the whole shape!",200,scY+42,sbw,22);
+      fitText("Move the whole figure!",200,scY+42,sbw,22);
     else
       fitText("Start: ("+startGX+", "+startGY+")",200,scY+42,sbw,22);
     fill(200,230,255); fitText(challengeLabel,200,scY+100,sbw,17);
