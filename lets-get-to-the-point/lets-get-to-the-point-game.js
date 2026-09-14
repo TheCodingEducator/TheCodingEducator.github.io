@@ -37,6 +37,10 @@ var skillRotations    = true;
 var skillFocusIdx = 0; // 0=Translations 1=Rotations 2=Reflections 3=StartButton
 var modeIndex = 1;
 var modeIds = ["PRACTICE", "GENIUS", "GEOMETRY", "HEADTOHEAD"];
+// Start screen keyboard focus: false = one of the 4 mode cards
+// (left/right cycles modeIndex, as before), true = the Shop bar below
+// them (DOWN moves focus there, UP moves back).
+var startFocusIsShop = false;
 
 // Practice mode hint + question counter
 var practiceHintType = ""; // "", "cwccw", "degrees", "rotation_other", "generic"
@@ -2321,6 +2325,7 @@ function drawStart(){
     var cx=bx2+bw/2;
     var sel=(gameMode===m.id);
     var hov=(mouseX>=bx2&&mouseX<=bx2+bw&&mouseY>=by2&&mouseY<=by2+bh);
+    if(hov) startFocusIsShop=false;
     var p2=(sin(t*3)+1)*0.5;
 
     // Card glow
@@ -2338,8 +2343,9 @@ function drawStart(){
     strokeWeight(sel?3:hov?2:1);
     rect(bx2,by2,bw,bh,14);
 
-    // Gold border when selected
-    if(sel){
+    // Gold keyboard-focus border - only on the mode cards while focus
+    // hasn't moved down to the Shop bar (see startFocusIsShop)
+    if(sel&&!startFocusIsShop){
       noFill(); stroke(255,220,60,Math.floor(130+p2*125));
       strokeWeight(3); rect(bx2+3,by2+3,bw-6,bh-6,12);
     }
@@ -2418,10 +2424,17 @@ function drawStart(){
   // reads as a real destination rather than a small icon easy to miss.
   var shopBarY=356, shopBarH=36;
   var shopHov=(mouseX>=20&&mouseX<=380&&mouseY>=shopBarY&&mouseY<=shopBarY+shopBarH);
+  if(shopHov) startFocusIsShop=true;
   var shopPulse=(sin(t*3)+1)/2;
   fill(shopHov?70:40, shopHov?50:30, shopHov?140:100);
   stroke(180,140,255,Math.floor(150+shopPulse*90)); strokeWeight(shopHov?2.5:2);
   rect(20,shopBarY,360,shopBarH,14);
+  // Same gold keyboard-focus ring the mode cards use, shown here instead
+  // once DOWN has moved focus onto the Shop bar
+  if(startFocusIsShop){
+    noFill(); stroke(255,220,60,Math.floor(130+shopPulse*125));
+    strokeWeight(3); rect(23,shopBarY+3,354,shopBarH-6,12);
+  }
   noStroke(); textAlign(CENTER,CENTER);
   fill(255); textSize(20); text("🎨",50,shopBarY+shopBarH/2+1);
   fill(220,200,255); textSize(17); textStyle(BOLD); text("SHOP",205,shopBarY+shopBarH/2+1); textStyle(NORMAL);
@@ -2682,7 +2695,11 @@ function draw(){
 
   // ---- SPACE ----
   if(keyWentDown("space")){
-    if(STATE==="START"){ if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();} return; }
+    if(STATE==="START"){
+      if(startFocusIsShop){ STATE="SHOP"; return; }
+      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();}
+      return;
+    }
     if(STATE==="SKILL_SELECT"){
       if(skillFocusIdx===0){ skillTranslations=!skillTranslations; return; }
       if(skillFocusIdx===1){ skillRotations=!skillRotations;       return; }
@@ -2776,7 +2793,11 @@ function draw(){
       }
     } else {
       // Non-H2H: Enter acts like Space
-      if(STATE==="START"){ if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();} return; }
+      if(STATE==="START"){
+      if(startFocusIsShop){ STATE="SHOP"; return; }
+      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();}
+      return;
+    }
       if(STATE==="SKILL_SELECT"){
         if(skillFocusIdx===0){ skillTranslations=!skillTranslations; return; }
         if(skillFocusIdx===1){ skillRotations=!skillRotations;       return; }
@@ -2850,6 +2871,8 @@ function draw(){
     if(keyWentDown("right")) modeIndex = (modeIndex+1)%4;
     if(keyWentDown("left"))  modeIndex = (modeIndex+3)%4;
     gameMode = modeIds[modeIndex];
+    if(keyWentDown("down")) startFocusIsShop = true;
+    if(keyWentDown("up"))   startFocusIsShop = false;
   }
   if(STATE==="SPEED_RESULT"){
     if(keyWentDown("left")||keyWentDown("right")) srSel = 1 - srSel;
