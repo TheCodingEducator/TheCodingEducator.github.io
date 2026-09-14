@@ -3086,17 +3086,20 @@ function draw() {
       if (celebrateSnapshot.goalie) {
         drawGoalie(gridSX(celebrateSnapshot.goalie.x), gridSY(celebrateSnapshot.goalie.y), celebrateSnapshot.goalie.c);
       }
-      // Drift the ball only a small, fixed distance into the net - not at
-      // some clamped real-world velocity that can carry it clean off the
-      // canvas before it has a chance to visibly fade - and fade it out
-      // while that drift is still well within the visible net area, so it
-      // gradually disappears there instead of just flying off-screen.
-      var celebT = constrain((60 - celebrateTimer) / 60, 0, 1);
-      var driftT = min(celebT * 2.5, 1);
-      var cbPvx = constrain(celebrateSnapshot.ball.pvx || 0, -3, 3);
-      var cbPxX = gridSX(celebrateSnapshot.ball.x) + cbPvx * 8 * driftT;
-      var cbPxY = gridSY(celebrateSnapshot.ball.y) - 26 * driftT;
-      var cbAlpha = celebT < 0.25 ? 255 : constrain(map(celebT, 0.25, 0.65, 255, 0), 0, 255);
+      // Keep the ball moving into the net at the same speed it was already
+      // travelling - no slow-down/freeze - and fade it out over a fixed
+      // DISTANCE traveled rather than a fixed time, so it always vanishes
+      // close to the net (never off-screen) no matter how fast the shot was.
+      var celebElapsed = 60 - celebrateTimer;
+      var cbPvx = constrain(celebrateSnapshot.ball.pvx || 0, -8, 8);
+      var cbPvy = min(celebrateSnapshot.ball.pvy || 0, -3);
+      var cbPxX = gridSX(celebrateSnapshot.ball.x) + cbPvx * celebElapsed;
+      // Never render above the scoreboard strip (rect at y:4..30, drawn
+      // separately every frame regardless of screenState) - the ball's
+      // distance-based fade below still finishes it off shortly after.
+      var cbPxY = max(gridSY(celebrateSnapshot.ball.y) + cbPvy * celebElapsed, 34);
+      var cbDistTraveled = abs(cbPvy) * celebElapsed;
+      var cbAlpha = constrain(map(cbDistTraveled, 5, 45, 255, 0), 0, 255);
       if (cbAlpha > 0) drawBallFading(cbPxX, cbPxY, cbAlpha);
     }
 
