@@ -1088,6 +1088,22 @@ function drawGrid(){
         line(toPixelX(0),toPixelY(GRID_MIN),toPixelX(0),toPixelY(GRID_MAX));
       }
     }
+    // Head-to-Head skips the tracing-paper mini-game for speed, so a
+    // rotation question there gets no other visual aid at all - a giant
+    // circle around the rotation center shows both players that the
+    // correct answer must land SOMEWHERE on it (rotation preserves
+    // distance from center), without giving away the exact angle.
+    if(gameMode==="HEADTOHEAD"&&ch&&isRotation(ch)){
+      var rcx=toPixelX(ch.cx), rcy=toPixelY(ch.cy);
+      var rDist=Math.sqrt(Math.pow(startGX-ch.cx,2)+Math.pow(startGY-ch.cy,2));
+      var rr=rDist*CELL;
+      var rPulse=(sin(frameCount*4)+1)/2;
+      noFill();
+      stroke(255,230,0,Math.floor(30+rPulse*110)); strokeWeight(4+rPulse*5);
+      ellipse(rcx,rcy,rr*2,rr*2);
+      stroke(255,220,0,190); strokeWeight(2);
+      ellipse(rcx,rcy,rr*2,rr*2);
+    }
   }
 
   stroke(80,100,180); strokeWeight(2);
