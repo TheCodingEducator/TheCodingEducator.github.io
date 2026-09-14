@@ -245,6 +245,13 @@ var BALL_RADIUS_GRID = 0.22;
 // net is drawn from the FIELD_XB per-integer-grid-unit lookup table.
 var GOAL_HALF_WIDTH = 4;
 
+// How far a shot can pass from the goalie and still be saved, in grid units
+// and in the equivalent screen pixels (grid * UNIT_PX) - sized to reach the
+// splayed fingertips of drawGlove, not just the goalie's body, so a shot
+// that visibly clips a glove actually counts as blocked.
+var GOALIE_REACH_GRID = 0.95;
+var GOALIE_REACH_PX = GOALIE_REACH_GRID * UNIT_PX;
+
 var EQ_LABEL_W_READY = false;
 var YEQ_W = 0, XPLUS_W = 0, SIGN_BTN_W = 0;
 function ensureEquationLabelWidths() {
@@ -557,7 +564,7 @@ function buildFormation(forB) {
   }
 
   var gapX;
-  do { gapX = randInt(-3, 3); } while (gapX === 0);
+  do { gapX = randInt(-GOAL_HALF_WIDTH, GOAL_HALF_WIDTH); } while (gapX === 0);
   return { teammates: tms, opponents: opp, goalGapX: gapX, goalieX: 0 };
 }
 
@@ -789,7 +796,7 @@ function drawBreakawayScene() {
   // into view, instead of drifting in at its own independent rate.
   var goalSlide = lerp(-(FIELD_Y0 - FY1), 0, easeInOutPass(bt));
   if (goalUnlocked()) {
-    var goalLeftPx = gridSX(-3), goalRightPx = gridSX(3);
+    var goalLeftPx = gridSX(-GOAL_HALF_WIDTH), goalRightPx = gridSX(GOAL_HALF_WIDTH);
     drawGoalNet(goalLeftPx, goalRightPx, FY1 - 16 + goalSlide, FY1 + goalSlide);
     fill(210); stroke(160); strokeWeight(2);
     rect(goalLeftPx, FY1 - 9 + goalSlide, goalRightPx - goalLeftPx, 9);
@@ -1235,7 +1242,7 @@ function resolveEquation(eq) {
     }
     var gx = gridSX(goalieX), gy = gridSY(GY_MAX);
     var bx = gridSX(target.x), by = gridSY(target.y);
-    if (pointSegDist(gx, gy, ax, ay, bx, by) < 16) {
+    if (pointSegDist(gx, gy, ax, ay, bx, by) < GOALIE_REACH_PX) {
       startKickAnimation(eq, goalieX, eq.m * goalieX + eq.b, false, false, "GOALIE BLOCKED IT");
       return;
     }
@@ -1473,7 +1480,7 @@ function pickEnemyGoalAimX(holder) {
   candidates.push(0, -farSide * 1.2);
   for (var k = 0; k < candidates.length; k++) {
     var cx = candidates[k];
-    if (abs(cx - goalieX) > 0.6 && enemyShotPathClear(holder.x, holder.y, cx, GY_MAX, 0.35)) return cx;
+    if (abs(cx - goalieX) > GOALIE_REACH_GRID && enemyShotPathClear(holder.x, holder.y, cx, GY_MAX, 0.35)) return cx;
   }
 
   return constrain(farSide * 2.3, -2.5, 2.5);
@@ -1487,7 +1494,7 @@ function beginEnemyResolution(forceShoot) {
     enemyPhase = "shoot";
     enemyShotStartX = holder.x; enemyShotStartY = holder.y;
 
-    enemyShotEndX = enemyPossessionScores ? pickEnemyGoalAimX(holder) : (random(0, 1) < 0.5 ? random(2.9, 4.2) : random(-4.2, -2.9));
+    enemyShotEndX = enemyPossessionScores ? pickEnemyGoalAimX(holder) : (random(0, 1) < 0.5 ? random(GOAL_HALF_WIDTH - 0.1, GOAL_HALF_WIDTH + 1.2) : random(-(GOAL_HALF_WIDTH + 1.2), -(GOAL_HALF_WIDTH - 0.1)));
 
     enemyShotEndY = GY_MAX + BALL_RADIUS_GRID;
     var power = random(0, 1);
@@ -1529,7 +1536,7 @@ function updateEnemyResolution() {
     if (goalieX < sbx) goalieX = min(sbx, goalieX + speed);
     else if (goalieX > sbx) goalieX = max(sbx, goalieX - speed);
 
-    if (!enemyPossessionScores && sby > GY_MAX - 0.7 && abs(goalieX - sbx) < 0.56182) enemyShotSaved = true;
+    if (!enemyPossessionScores && sby > GY_MAX - 0.7 && abs(goalieX - sbx) < GOALIE_REACH_GRID) enemyShotSaved = true;
 
     if (sft >= 1) {
       if (enemyShotSaved) {
@@ -1539,14 +1546,14 @@ function updateEnemyResolution() {
         enemySaveFromX = sbx; enemySaveFromY = sby;
       } else {
         var ballRadius = BALL_RADIUS_GRID;
-        var edgeDist = abs(abs(enemyShotEndX) - 3);
+        var edgeDist = abs(abs(enemyShotEndX) - GOAL_HALF_WIDTH);
         if (edgeDist <= ballRadius) {
 
           enemyPhase = "postHit";
           enemyPostHitTimer = 0;
           enemyPostHitX = enemyShotEndX;
           screenShakeTimer = 30;
-        } else if (abs(enemyShotEndX) < 3 - ballRadius) {
+        } else if (abs(enemyShotEndX) < GOAL_HALF_WIDTH - ballRadius) {
           enemyResolving = false;
           if (attackingTeam === "A") scoreA++; else scoreB++;
           var enemyPlayers = buildPlayerSnapshot(enemyDispO, defenderColor()).concat(buildPlayerSnapshot(enemyDispT, attackerColor()));
@@ -1983,7 +1990,7 @@ function drawField() {
   rect(FX1, FY1, FX2 - FX1, FIELD_Y0 - FY1);
 
   if (goalUnlocked() || screenState === "enemyPossession") {
-    var goalLeftPx = xB[-3 - GX_MIN], goalRightPx = xB[3 - GX_MIN];
+    var goalLeftPx = xB[-GOAL_HALF_WIDTH - GX_MIN], goalRightPx = xB[GOAL_HALF_WIDTH - GX_MIN];
     drawGoalNet(goalLeftPx, goalRightPx, 32, FY1);
     fill(210); stroke(160); strokeWeight(2);
     rect(goalLeftPx, FY1 - 9, goalRightPx - goalLeftPx, 9);
@@ -2905,7 +2912,7 @@ function draw() {
       makeBlocked(sbx, sby, blocker.x);
     }
 
-    if (sby > GY_MAX - 0.7 && abs(keeperX - sbx) < 0.56182) {
+    if (sby > GY_MAX - 0.7 && abs(keeperX - sbx) < GOALIE_REACH_GRID) {
       shootWasSaved = true;
     }
 
@@ -2915,10 +2922,10 @@ function draw() {
         makeSave(sbx, sby);
       } else {
         var ballRadius = BALL_RADIUS_GRID;
-        var edgeDist = abs(abs(shootEndX) - 3);
+        var edgeDist = abs(abs(shootEndX) - GOAL_HALF_WIDTH);
         if (edgeDist <= ballRadius) {
           hitPost();
-        } else if (abs(shootEndX) < 3 - ballRadius) {
+        } else if (abs(shootEndX) < GOAL_HALF_WIDTH - ballRadius) {
           finishShoot(true, "GOAL!");
         } else {
           finishShoot(false, "WIDE SHOT");
