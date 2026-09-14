@@ -840,7 +840,7 @@ function startPossessionAction() {
 }
 
 function spaceOrTap() {
-  return keyWentDown("space") || keyWentDown(" ") || (mouseIsPressed && !prevMouse);
+  return keyWentDown("space") || keyWentDown(" ") || keyWentDown("enter") || (mouseIsPressed && !prevMouse);
 }
 
 // Power is chosen first (arrow fixed straight up while the bar fills),
@@ -2271,7 +2271,18 @@ function drawKickFlight(bx, by) {
   var kStartX = gridSX(0), kStartY = gridSY(ballB);
   var kDist = dist(kStartX, kStartY, kEndX, kEndY);
   drawWindMarkers(kbx, kby, kEndX - kStartX, kEndY - kStartY, speedFracFromPixelsPerFrame(kDist / kickDuration));
-  drawBall(kbx, kby);
+
+  // Fade the ball out over the last stretch of a scoring kick so it visibly
+  // sinks into the net instead of just stopping dead-on-target - the
+  // outcome (kickIsGoal) is already decided before this animation starts,
+  // unlike the live shootout flight where the save/miss isn't known yet.
+  if (kickIsGoal) {
+    var kFadeT = constrain(kickTimer / kickDuration, 0, 1);
+    var kAlpha = kFadeT > 0.6 ? map(kFadeT, 0.6, 1, 255, 0) : 255;
+    if (kAlpha > 0) drawBallFading(kbx, kby, kAlpha);
+  } else {
+    drawBall(kbx, kby);
+  }
 
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
@@ -2766,7 +2777,7 @@ function draw() {
     var powerOriginPx = drawShootoutBase();
     if (screenState === "powering") {
       drawPivotArrow(0, powerFrac, powerOriginPx);
-      drawShootoutPanel("Press SPACE or CLICK to set your power!");
+      drawShootoutPanel("Press SPACE, ENTER, or CLICK to set your power!");
     } else {
       drawPivotArrow(0, shotPower, powerOriginPx);
     }
@@ -2775,7 +2786,7 @@ function draw() {
     var aimOriginPx = drawShootoutBase();
     if (screenState === "aiming") {
       drawPivotArrow(aimAngle, shotPower, aimOriginPx);
-      drawShootoutPanel("Press SPACE or CLICK to lock your aim and SHOOT!");
+      drawShootoutPanel("Press SPACE, ENTER, or CLICK to lock your aim and SHOOT!");
     }
   } else if (screenState === "shootFlight") {
     shootFlightTimer++;

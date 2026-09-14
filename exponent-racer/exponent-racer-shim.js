@@ -4,8 +4,10 @@
 
 // ---- Canvas bootstrap (Code.org injects this behind the scenes) ----
 function setup() {
+  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
+    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
   createCanvas(400, 400).parent('game-canvas-slot');
-  pixelDensity(4); // renders into a 1600x1600 backing buffer instead of 400x400 so the canvas stays sharp when CSS stretches it up to 700px (desktop) or fullscreen - all game coordinates stay in the same 0-400 logical space either way
+  pixelDensity(isTouch ? Math.min(2, displayDensity()) : Math.min(4, displayDensity())); // renders into a sharper-than-400x400 backing buffer so the canvas stays crisp when CSS stretches it up to 700px (desktop) or fullscreen, but never beyond what the actual screen can show or above 2x on touch devices - see bank-shot-angle-golf-shim.js for the same fix (Piggy Bank Math ran laggy on phones until this was capped)
   frameRate(30); // Game Lab's default frame rate; the game's speed constants were tuned against it
   angleMode(DEGREES); // Game Lab uses degrees everywhere (rotate(), arc() angles), unlike plain p5.js's radians default
 }

@@ -14,11 +14,17 @@
 function setup() {
   createCanvas(400, 400).parent('game-canvas-slot');
   pixelDensity(4); // renders into a 1600x1600 backing buffer instead of 400x400 so the canvas stays sharp when CSS stretches it up to 700px (desktop) or fullscreen - all game coordinates stay in the same 0-400 logical space either way
-  // The game's own clock/timer math is tuned for 60fps specifically - e.g.
-  // "enemyAnimDuration = round(random(240, 240)); // 4 seconds at 60fps"
-  // and gameClockSeconds advancing by 50/60 per frame - so this is the one
-  // port so far that does NOT use Game Lab's usual frameRate(30) default.
-  frameRate(60);
+  // Every duration/timer in this file (breakaway run, power meter cycle,
+  // aim oscillation, shot flight, enemy AI timers, gameClockSeconds) is
+  // counted in frames, not real time, with nothing normalizing by
+  // deltaTime/millis() - so frameRate is the single global speed dial for
+  // the whole game. It was tuned for 60fps, but that made everything feel
+  // rushed (hard to time the power meter, breakaway run over almost
+  // instantly, ball flight barely visible), so this now runs at the same
+  // 30fps as every other game on the site, which halves the real-time
+  // speed of all of it in one place instead of re-tuning dozens of
+  // scattered per-effect constants.
+  frameRate(30);
   angleMode(DEGREES); // Game Lab uses degrees everywhere (the flag/arc/aim-arrow math here all assumes degrees), unlike plain p5.js's radians default
 }
 // Per-frame input edge-detection bookkeeping is wired up in
