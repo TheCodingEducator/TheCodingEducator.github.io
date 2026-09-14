@@ -1427,9 +1427,11 @@ function drawSkinnedFace(px, py, skin, label) {
 
   // ---- Behind the face ----
   if (style==="halo") {
+    // Pulses close against the face's own 30px edge (34-38px diameter)
+    // instead of floating well outside it (was 44-50px).
     var haloPulse=(sin(frameCount*3)+1)/2;
     noFill(); stroke(200,240,255,Math.floor(120+haloPulse*100)); strokeWeight(3);
-    ellipse(px,py-1,44+haloPulse*6,44+haloPulse*6);
+    ellipse(px,py,34+haloPulse*4,34+haloPulse*4);
   }
   if (style==="fire") {
     noStroke();
