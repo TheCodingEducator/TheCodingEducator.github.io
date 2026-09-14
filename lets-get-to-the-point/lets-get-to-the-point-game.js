@@ -646,10 +646,38 @@ function resetGame() {
 }
 
 // ---------- ROTATION MATH ----------
+// How far off an exact right-angle multiple the player's angle is
+// allowed to be and still count as landing exactly there - just enough
+// to absorb GEOMETRY mode's continuous ±2°/frame overshoot, never wide
+// enough to reach into the neighboring multiple. Non-GEOMETRY modes
+// move in fixed 15° steps, so every reachable angle that ISN'T itself a
+// multiple of 90 (60°, 75°, 105°, ...) sits at least 15° from the
+// nearest one - safely outside this tolerance either way.
+var ROTATION_SNAP_TOLERANCE = 5;
+
+// True only when paperSignedAngle is genuinely close to SOME multiple
+// of 90 - not just "closer to this one than the others." The old
+// unconditional Math.round(angle/90)*90 treated anything up to 44° off
+// (nearly half of a full quarter-turn) as if it were exactly there, so
+// rotating only 60° of a required 90° still snapped to - and scored as
+// - a perfect 90°.
+function nearestRightAngle(angleDeg) {
+  var nearest = Math.round(angleDeg/90)*90;
+  return Math.abs(angleDeg-nearest) <= ROTATION_SNAP_TOLERANCE ? nearest : null;
+}
+
 function getTracingAnswer() {
   var dx=paperPointGX-centerGX, dy=paperPointGY-centerGY;
-  var s=Math.round(paperSignedAngle/90)*90;
-  var absS=Math.abs(s)%360;
+  var s=nearestRightAngle(paperSignedAngle);
+  // Not close enough to any right-angle multiple at all - NaN can never
+  // equal a real target coordinate, so this fails the correctness check
+  // unconditionally. Returning the un-rotated point here instead (as a
+  // previous version of this function did) was indistinguishable from a
+  // GENUINE 0°/360° answer, so an arbitrary bad angle like 45° could
+  // slip through as correct on a rot360 question (whose target IS the
+  // un-rotated point) even though it isn't remotely close to 0 or 360.
+  if (s===null) return {x:NaN, y:NaN};
+  var absS = Math.abs(s)%360;
   if (absS===0) return {x:paperPointGX, y:paperPointGY};
   if (s>0) {
     if (absS===90)  return {x:centerGX-dy, y:centerGY+dx};
@@ -660,13 +688,14 @@ function getTracingAnswer() {
     if (absS===180) return {x:centerGX-dx, y:centerGY-dy};
     if (absS===270) return {x:centerGX-dy, y:centerGY+dx};
   }
-  return {x:paperPointGX, y:paperPointGY};
+  return {x:NaN, y:NaN};
 }
 
 // Returns true if the player's current paperSignedAngle matches the
 // rotation amount the challenge actually asks for.
 function isCorrectRotationAmount(ch) {
-  var s = Math.round(paperSignedAngle / 90) * 90;
+  var s = nearestRightAngle(paperSignedAngle);
+  if (s===null) return false;
   if (ch.type === "rot90ccw")  return s === 90;
   if (ch.type === "rot90cw")   return s === -90;
   if (ch.type === "rot180")    return Math.abs(s) === 180; // either direction OK
