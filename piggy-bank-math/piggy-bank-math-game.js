@@ -19,6 +19,25 @@ var resultsTime = 0;
 var resultsPreviousBest = null;
 var resultsIsNewRecord = false;
 
+// Best times persisted locally so a student's record survives leaving
+// and coming back - purely anonymous play-progress state (a number of
+// seconds), never transmitted anywhere, not tied to any name or identity.
+function loadBestTimes() {
+  try {
+    var e = localStorage.getItem('piggybank_best_easy');
+    if (e!==null) { var en=parseFloat(e); if (!isNaN(en)&&en>=0) bestTimeEasy=en; }
+    var h = localStorage.getItem('piggybank_best_hard');
+    if (h!==null) { var hn=parseFloat(h); if (!isNaN(hn)&&hn>=0) bestTimeHard=hn; }
+  } catch (err) {}
+}
+function saveBestTimes() {
+  try {
+    if (bestTimeEasy!==null) localStorage.setItem('piggybank_best_easy', String(bestTimeEasy));
+    if (bestTimeHard!==null) localStorage.setItem('piggybank_best_hard', String(bestTimeHard));
+  } catch (err) {}
+}
+loadBestTimes();
+
 var coinValues = { penny: 1, nickel: 5, dime: 10, quarter: 25 };
 var confettiColors = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"];
 var confettiParticles = [];
@@ -665,15 +684,17 @@ function spawnUndoAnimation(val) {
 }
 
 function checkAndSaveBestTime(seconds) {
+  var improved = false;
   if (difficulty === "easy") {
     if (bestTimeEasy === null || seconds < bestTimeEasy) {
-      bestTimeEasy = seconds;
+      bestTimeEasy = seconds; improved = true;
     }
   } else {
     if (bestTimeHard === null || seconds < bestTimeHard) {
-      bestTimeHard = seconds;
+      bestTimeHard = seconds; improved = true;
     }
   }
+  if (improved) saveBestTimes();
 }
 
 function updateAndDrawAnimations() {
