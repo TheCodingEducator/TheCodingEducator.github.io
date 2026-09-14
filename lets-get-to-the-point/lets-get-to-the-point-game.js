@@ -144,6 +144,11 @@ function loadCoinsAndSkins() {
     if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) coins=n; }
     var o = localStorage.getItem('lgttp_owned_skins');
     if (o!==null) { var arr=JSON.parse(o); if (Array.isArray(arr)) ownedSkins=arr; }
+    // The streak persists across page reloads too, same as coins/skins -
+    // it only ever breaks on an actual wrong answer, never on a mode
+    // switch or a fresh visit.
+    var s = localStorage.getItem('lgttp_streak');
+    if (s!==null) { var sn=parseInt(s,10); if (!isNaN(sn)&&sn>=0) currentStreak=sn; }
   } catch (e) {}
   if (ownedSkins.indexOf(0)===-1) ownedSkins.push(0);
 }
@@ -151,6 +156,7 @@ function saveCoinsAndSkins() {
   try {
     localStorage.setItem('lgttp_coins', String(coins));
     localStorage.setItem('lgttp_owned_skins', JSON.stringify(ownedSkins));
+    localStorage.setItem('lgttp_streak', String(currentStreak));
   } catch (e) {}
 }
 loadCoinsAndSkins();
@@ -163,9 +169,13 @@ function registerCorrectForStreak() {
   currentStreak++;
   if (currentStreak%3===0) {
     coins++;
-    saveCoinsAndSkins();
     coinPopup = 60;
   }
+  saveCoinsAndSkins(); // persists the streak itself every time, not just on a coin award
+}
+function resetStreak() {
+  currentStreak = 0;
+  saveCoinsAndSkins();
 }
 // ---------- SOUND (synthesized retro/chiptune SFX - no audio files) ----------
 var _sfxCtx = null;
@@ -618,7 +628,12 @@ function resetGame() {
   score=0; round=0;
   p1wins=0; p2wins=0;
   newHighScore=false; timerFinished=0; practiceHintType=""; practiceQNum=0;
-  currentStreak=0; practiceMastery=0;
+  // currentStreak is intentionally NOT reset here - it carries across
+  // mode switches and fresh sessions alike, breaking only on an actual
+  // wrong answer (see registerCorrectForStreak / the two spots that set
+  // currentStreak=0). practiceMastery is Practice-specific and does
+  // reset each session, same as before.
+  practiceMastery=0;
   // Keep player-chosen skills for PRACTICE; reset to all-on for other modes
   if (gameMode !== "PRACTICE") {
     skillTranslations=true; skillRotations=true; skillReflections=true;
@@ -753,6 +768,11 @@ function drawReflectionDistances() {
     if (ch.type === "reflect_x" && playerGY !== 0) return;
   }
 
+  // Keeps every label's box on-screen and clear of the top HUD / bottom
+  // instruction bar (or the left/right edges, for the x-axis case),
+  // regardless of how close to a grid edge the point is.
+  var LBL_MIN_Y=100, LBL_MAX_Y=368, LBL_MIN_X=8, LBL_MAX_X=400-8-54;
+
   // ---- Y-AXIS REFLECTION: horizontal distances ----
   if (ch.type === "reflect_y") {
     var axPX = toPixelX(0);
@@ -767,10 +787,11 @@ function drawReflectionDistances() {
       line(sxPX, syPY-5, sxPX, syPY+5);
       line(axPX, syPY-5, axPX, syPY+5);
       // label above
-      var midX1 = (sxPX + axPX) / 2;
-      fill(0,0,0,170); noStroke(); rect(midX1-28, syPY-22, 56, 14, 4);
+      var midX1 = constrain((sxPX + axPX) / 2, LBL_MIN_X+28, LBL_MAX_X+54-28);
+      var lbY1 = constrain(syPY-15, LBL_MIN_Y, LBL_MAX_Y);
+      fill(0,0,0,170); noStroke(); rect(midX1-28, lbY1-7, 56, 14, 4);
       fill(80,210,255); textSize(9); textAlign(CENTER,CENTER); noStroke();
-      text(sDist + " unit" + (sDist!==1?"s":""), midX1, syPY-15);
+      text(sDist + " unit" + (sDist!==1?"s":""), midX1, lbY1);
     }
 
     // --- Axis → player (dynamic, green), only when player has left the axis ---
@@ -782,10 +803,11 @@ function drawReflectionDistances() {
       line(axPX, pyPY-5, axPX, pyPY+5);
       line(pxPX, pyPY-5, pxPX, pyPY+5);
       // label below
-      var midX2 = (axPX + pxPX) / 2;
-      fill(0,0,0,170); noStroke(); rect(midX2-28, pyPY+8, 56, 14, 4);
+      var midX2 = constrain((axPX + pxPX) / 2, LBL_MIN_X+28, LBL_MAX_X+54-28);
+      var lbY2 = constrain(pyPY+15, LBL_MIN_Y, LBL_MAX_Y);
+      fill(0,0,0,170); noStroke(); rect(midX2-28, lbY2-7, 56, 14, 4);
       fill(80,255,170); textSize(9); textAlign(CENTER,CENTER); noStroke();
-      text(pDist + " unit" + (pDist!==1?"s":""), midX2, pyPY+15);
+      text(pDist + " unit" + (pDist!==1?"s":""), midX2, lbY2);
     }
   }
 
@@ -802,10 +824,11 @@ function drawReflectionDistances() {
       line(sxPX2-5, syPY2, sxPX2+5, syPY2);
       line(sxPX2-5, axPY,  sxPX2+5, axPY);
       // label to the right
-      var midY1 = (syPY2 + axPY) / 2;
-      fill(0,0,0,170); noStroke(); rect(sxPX2+6, midY1-7, 54, 14, 4);
+      var midY1 = constrain((syPY2 + axPY) / 2, LBL_MIN_Y-7, LBL_MAX_Y+7);
+      var boxX1 = constrain(sxPX2+6, LBL_MIN_X, LBL_MAX_X);
+      fill(0,0,0,170); noStroke(); rect(boxX1, midY1-7, 54, 14, 4);
       fill(80,210,255); textSize(9); textAlign(LEFT,CENTER); noStroke();
-      text(sDist2 + " unit" + (sDist2!==1?"s":""), sxPX2+10, midY1);
+      text(sDist2 + " unit" + (sDist2!==1?"s":""), boxX1+4, midY1);
     }
 
     // --- Axis → player (dynamic, green) ---
@@ -817,10 +840,11 @@ function drawReflectionDistances() {
       line(pxPX2-5, axPY,  pxPX2+5, axPY);
       line(pxPX2-5, pyPY2, pxPX2+5, pyPY2);
       // label to the left
-      var midY2 = (axPY + pyPY2) / 2;
-      fill(0,0,0,170); noStroke(); rect(pxPX2-60, midY2-7, 54, 14, 4);
+      var midY2 = constrain((axPY + pyPY2) / 2, LBL_MIN_Y-7, LBL_MAX_Y+7);
+      var boxX2 = constrain(pxPX2-60, LBL_MIN_X, LBL_MAX_X);
+      fill(0,0,0,170); noStroke(); rect(boxX2, midY2-7, 54, 14, 4);
       fill(80,255,170); textSize(9); textAlign(RIGHT,CENTER); noStroke();
-      text(pDist2 + " unit" + (pDist2!==1?"s":""), pxPX2-8, midY2);
+      text(pDist2 + " unit" + (pDist2!==1?"s":""), boxX2+48, midY2);
     }
   }
 }
@@ -939,14 +963,21 @@ function drawTranslationHelper() {
   // Algebraic labels contain "(x"; natural language contain "units"
   var isAlgebraic = (ch.label.indexOf("(x") !== -1);
 
+  // Keeps every label's full box on-screen and clear of the top HUD /
+  // bottom instruction bar, regardless of how close to a grid edge the
+  // start or current point is - a point near y=-5 or y=5 used to push
+  // its label's text under one of those opaque bars, invisible even
+  // though it "drew" there.
+  var LBL_MIN_Y=100, LBL_MAX_Y=368, LBL_MIN_X=38, LBL_MAX_X=362;
+
   // Horizontal leg
   if (dxU!==0) {
     stroke(80,200,255,180); strokeWeight(2); line(sxPX,syPY,cxPX,syPY);
     var ax=dxU>0?cxPX-6:cxPX+6;
     fill(80,200,255,200); noStroke();
     triangle(cxPX,syPY,ax,syPY-4,ax,syPY+4);
-    var midHX=(sxPX+cxPX)/2;
-    var lbY=syPY+(cyPY>syPY?-14:14);
+    var midHX=constrain((sxPX+cxPX)/2, LBL_MIN_X, LBL_MAX_X);
+    var lbY=constrain(syPY+(cyPY>syPY?-14:14), LBL_MIN_Y, LBL_MAX_Y);
     var hLabel=isAlgebraic ? ("x "+(dxU>0?"+ ":"- ")+Math.abs(dxU))
                            : ((Math.abs(dxU)===1?"1 unit":Math.abs(dxU)+" units")+(dxU>0?" right":" left"));
     fill(0,0,0,160); noStroke(); rect(midHX-30,lbY-8,60,16,4);
@@ -960,8 +991,8 @@ function drawTranslationHelper() {
     var ay=dyU>0?cyPY+6:cyPY-6;
     fill(80,255,160,200); noStroke();
     triangle(cxPX,cyPY,cxPX-4,ay,cxPX+4,ay);
-    var midVY=(syPY+cyPY)/2;
-    var lbX=cxPX+(cxPX<300?34:-34);
+    var midVY=constrain((syPY+cyPY)/2, LBL_MIN_Y, LBL_MAX_Y);
+    var lbX=constrain(cxPX+(cxPX<300?34:-34), LBL_MIN_X, LBL_MAX_X);
     var vLabel=isAlgebraic ? ("y "+(dyU>0?"+ ":"- ")+Math.abs(dyU))
                            : ((Math.abs(dyU)===1?"1 unit":Math.abs(dyU)+" units")+(dyU>0?" up":" down"));
     fill(0,0,0,160); noStroke(); rect(lbX-30,midVY-8,60,16,4);
@@ -977,11 +1008,15 @@ function drawTracingPaper() {
   var showDeg=(gameMode!=="GEOMETRY");
 
   if (tracingPhase==="PENCIL") {
-    fill(10,20,60,230); stroke(80,120,220); strokeWeight(1); rect(10,66,380,32,8);
+    // Starts right below whichever HUD height the current mode actually
+    // uses (Practice's is taller, for its mastery bar) so this banner
+    // never sits partly hidden under it.
+    var bannerTop = hudHeight()+4;
+    fill(10,20,60,230); stroke(80,120,220); strokeWeight(1); rect(10,bannerTop,380,32,8);
     fill(180,210,255); textSize(11); textAlign(CENTER,CENTER); noStroke();
-    text("STEP 1: Use arrow keys to move pencil to center of rotation",200,78);
+    text("STEP 1: Use arrow keys to move pencil to center of rotation",200,bannerTop+12);
     fill(140,170,220); textSize(10);
-    text("Then press SPACE to pin it there",200,92);
+    text("Then press SPACE to pin it there",200,bannerTop+26);
     for (var gx2=GRID_MIN;gx2<=GRID_MAX;gx2++)
       for (var gy2=GRID_MIN;gy2<=GRID_MAX;gy2++) {
         noFill(); stroke(80,120,200,80); strokeWeight(1);
@@ -992,7 +1027,10 @@ function drawTracingPaper() {
     fill(255,220,60); textSize(9); textAlign(CENTER,BOTTOM); noStroke();
     text("("+pencilGX+","+pencilGY+")",spx,spy-18);
     drawPencil(pencilX,pencilY);
-    if (drawButton(140,354,120,28,"CONFIRM CENTER",0,140,60)) confirmCenter();
+    // Ends well above the bottom instruction bar (376-400) - it used to
+    // reach into that bar's territory and visually collide with its
+    // "Arrow keys: move pencil..." hint text.
+    if (drawButton(140,340,120,28,"CONFIRM CENTER",0,140,60)) confirmCenter();
     return;
   }
 
@@ -1220,12 +1258,16 @@ function drawGrid(){
   text("y",toPixelX(0)+14,toPixelY(GRID_MAX)+12);
 }
 
+// Only Practice needs extra HUD height (for its mastery bar) - coins and
+// streak now live INLINE in the challenge label row for every mode, so
+// they no longer need a row of their own. Shared with drawTracingPaper's
+// PENCIL-phase banner so nothing it draws ever starts above where the
+// HUD (whichever height applies) actually ends.
+function hudHeight() { return gameMode==="PRACTICE" ? 76 : 62; }
+
 // ---------- HUD ----------
 function drawHUD(){
-  // H2H doesn't track coins/streak/mastery, so its HUD stays the
-  // original compact height; every other mode gets a coin+streak row,
-  // and Practice additionally gets its mastery bar below that.
-  var hudH = gameMode==="HEADTOHEAD" ? 62 : (gameMode==="PRACTICE" ? 90 : 76);
+  var hudH = hudHeight();
   fill(8,12,30); noStroke(); rect(0,0,400,hudH);
   stroke(40,60,120); strokeWeight(1); line(0,hudH,400,hudH);
 
@@ -1263,31 +1305,33 @@ function drawHUD(){
     fill(0,220,255);   textSize(13); text(te.toFixed(2)+" s",     333,pCY);
   }
 
-  // Challenge label row
+  // Challenge label row - coins on the left, streak on the right, the
+  // challenge text itself centered in the narrower space between them
+  // (every mode except Head-to-Head, which doesn't track either).
   fill(20,35,90); noStroke(); rect(8,28,384,28,6);
   fill(255,255,255); textAlign(CENTER,CENTER);
-  fitText(challengeLabel,200,43,364,13);
-
-  // Coin + streak row (every mode except Head-to-Head)
   if (gameMode!=="HEADTOHEAD") {
-    drawCoinLabel(60, 66, coins, 13);
+    fitText(challengeLabel,200,43,250,13);
+    drawCoinLabel(30, 43, coins, 12);
     if (currentStreak>=2) {
       noStroke(); textAlign(CENTER,CENTER);
-      fill(255,140,60); textSize(13);
-      text("🔥 "+currentStreak, 340, 66);
+      fill(255,140,60); textSize(12);
+      text("🔥"+currentStreak, 370, 43);
     }
     if (coinPopup>0) {
       var popT=coinPopup/60;
-      fill(255,220,80,Math.floor(255*popT));
-      textSize(12+Math.floor((1-popT)*4));
-      text("+1 coin!", 200, 66-(1-popT)*10);
+      fill(255,220,80,Math.floor(255*popT)); noStroke(); textAlign(CENTER,CENTER);
+      textSize(10+Math.floor((1-popT)*3));
+      text("+1!", 30, 43-14-(1-popT)*6);
       coinPopup--;
     }
+  } else {
+    fitText(challengeLabel,200,43,364,13);
   }
 
-  // Practice mastery bar
+  // Practice mastery bar - the one extra row hudHeight() makes room for
   if (gameMode==="PRACTICE") {
-    var mbX=40, mbY=78, mbW=320, mbH=10;
+    var mbX=40, mbY=62, mbW=320, mbH=10;
     fill(20,25,45); noStroke(); rect(mbX,mbY,mbW,mbH,5);
     var mbFillW=mbW*(practiceMastery/100);
     var mbCol = practiceMastery>=50 ? color(255,200,60) : color(90,180,255);
@@ -2641,7 +2685,7 @@ function draw(){
         timerFinished=(Date.now()-timerStart)/1000;
       if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
       if(!feedbackCorrect) practiceHintType=detectPracticeHint();
-      if(feedbackCorrect) registerCorrectForStreak(); else currentStreak=0;
+      if(feedbackCorrect) registerCorrectForStreak(); else resetStreak();
       if(gameMode==="PRACTICE"&&feedbackCorrect) practiceMastery=Math.min(100,practiceMastery+8);
       playSound(feedbackCorrect?correctSoundFor(ch):'wrong');
       if(!feedbackCorrect){ demoStartFrame=frameCount; STATE=isRotation(curCh())?"ROTATION_DEMO":"ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
@@ -2725,7 +2769,7 @@ function draw(){
           timerFinished=(Date.now()-timerStart)/1000;
         if(!feedbackCorrect&&gameMode!=="GENIUS"&&gameMode!=="GEOMETRY"&&gameMode!=="PRACTICE") lives--;
         if(!feedbackCorrect) practiceHintType=detectPracticeHint();
-        if(feedbackCorrect) registerCorrectForStreak(); else currentStreak=0;
+        if(feedbackCorrect) registerCorrectForStreak(); else resetStreak();
         if(gameMode==="PRACTICE"&&feedbackCorrect) practiceMastery=Math.min(100,practiceMastery+8);
         playSound(feedbackCorrect?correctSoundFor(ec):'wrong');
         if(!feedbackCorrect){ demoStartFrame=frameCount; STATE=isRotation(curCh())?"ROTATION_DEMO":"ANSWER_DEMO"; } else { STATE="FEEDBACK"; }
