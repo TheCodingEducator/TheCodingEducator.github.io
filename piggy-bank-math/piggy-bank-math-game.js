@@ -177,12 +177,21 @@ function setupNextLevel() {
   nextBtn.visible = false;
   roundScored = false;
 
+  // Each timed run is 4 rounds (see solvedCount >= 4 in drawGame) - ramp the
+  // target amount and the minimum coin count required round-by-round within
+  // that run, so round 4 asks for a bigger, fiddlier coin combo than round 1
+  // instead of every round being drawn from the same fixed range.
+  var rampStep = constrain(solvedCount, 0, 3);
+  var minCoinsReq = 3 + Math.floor(rampStep / 2); // 3, 3, 4, 4
+
   if (difficulty === "easy") {
     allowedCoins = ["penny", "nickel", "dime", "quarter"];
     challengeText = "";
+    var easyMin = [1, 1, 15, 30][rampStep];
+    var easyMax = [40, 65, 85, 99][rampStep];
     do {
-      targetAmount = randomNumber(1, 99);
-    } while (minCoinsToMake(targetAmount, allowedCoins) < 3);
+      targetAmount = randomNumber(easyMin, easyMax);
+    } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
   } else {
     var challengeRoll = randomNumber(1, 4);
 
@@ -191,25 +200,25 @@ function setupNextLevel() {
       allowedCoins = ["penny", "nickel"];
       do {
         targetAmount = randomNumber(51, 99);
-      } while (minCoinsToMake(targetAmount, allowedCoins) < 3);
+      } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     } else if (challengeRoll === 2) {
       challengeText = "Challenge: Use only Dimes and Pennies!";
       allowedCoins = ["penny", "dime"];
       do {
         targetAmount = randomNumber(51, 199);
-      } while (minCoinsToMake(targetAmount, allowedCoins) < 3);
+      } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     } else if (challengeRoll === 3) {
       challengeText = "Challenge: Use only Dimes and Nickels!";
       allowedCoins = ["nickel", "dime"];
       do {
         targetAmount = randomNumber(11, 39) * 5;
-      } while (minCoinsToMake(targetAmount, allowedCoins) < 3);
+      } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     } else {
       challengeText = "Challenge: Use only Quarters and Nickels!";
       allowedCoins = ["nickel", "quarter"];
       do {
         targetAmount = Math.round(randomNumber(11, 100) * 5 / 5) * 5;
-      } while (minCoinsToMake(targetAmount, allowedCoins) < 3);
+      } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     }
   }
 }
