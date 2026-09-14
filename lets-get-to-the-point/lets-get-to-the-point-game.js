@@ -1021,7 +1021,7 @@ function drawTracingPaper() {
     fill(255,60,60); noStroke(); ellipse(cx,cy,10,10);
     fill(255); ellipse(cx,cy,4,4);
 
-    if (drawButton(8,350,110,26,"< Change Ctr",60,30,100)) {
+    if (drawButton(8,350,130,26,"< Change Center",60,30,100)) {
       tracingPhase="PENCIL";
       pencilX=toPixelX(centerGX); pencilY=toPixelY(centerGY);
       pencilGX=centerGX; pencilGY=centerGY;
