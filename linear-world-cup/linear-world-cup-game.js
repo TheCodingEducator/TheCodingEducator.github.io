@@ -2110,6 +2110,16 @@ function drawPlayerCircle(x, y, countryIdx) {
 function drawGoalie(x, y, countryIdx) {
   var s = 26;
   var c = countries[countryIdx].color;
+
+  // Goalie gloves: bright paddle-shaped ellipses peeking out on either side
+  // of the body circle, drawn first so the jersey/face ring layers over
+  // their inner edge - keeps the goalie a single readable token like every
+  // other player circle while still marking them out as the keeper.
+  var gloveOffset = s * 0.6;
+  fill(255, 225, 40); stroke(40, 30, 0); strokeWeight(1.5);
+  ellipse(x - gloveOffset, y + 3, 11, 15);
+  ellipse(x + gloveOffset, y + 3, 11, 15);
+
   fill(c[0], c[1], c[2]); stroke(255); strokeWeight(2);
   ellipse(x, y, s, s);
   noFill(); stroke(255); strokeWeight(1);
@@ -2193,13 +2203,39 @@ function drawShootoutFlight(bx, by) {
   return { x: dpx, y: dpy };
 }
 
+// Splits msg into lines no wider than maxWidth (at the given text size) so a
+// long message wraps inside the panel instead of running off the left/right
+// edges of the 400-wide canvas.
+function wrapTextToWidth(msg, maxWidth, size) {
+  textSize(size);
+  var words = msg.split(" ");
+  var lines = [];
+  var current = "";
+  for (var i = 0; i < words.length; i++) {
+    var test = current === "" ? words[i] : current + " " + words[i];
+    if (textWidth(test) > maxWidth && current !== "") {
+      lines.push(current);
+      current = words[i];
+    } else {
+      current = test;
+    }
+  }
+  if (current !== "") lines.push(current);
+  return lines;
+}
+
 function drawShootoutPanel(msg) {
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
   fill(200, 220, 255); textSize(15); textAlign(CENTER);
   text("Distance to goal: " + (round((GY_MAX - dribY) * 10) / 10) + " units", 200, FY2 + 30);
-  fill(255); textSize(16); textAlign(CENTER);
-  text(msg, 200, FY2 + 85);
+  fill(255); textAlign(CENTER);
+  var msgLines = wrapTextToWidth(msg, 360, 16);
+  var lineHeight = 18;
+  var startY = FY2 + 75 - ((msgLines.length - 1) * lineHeight) / 2;
+  for (var li = 0; li < msgLines.length; li++) {
+    text(msgLines[li], 200, startY + li * lineHeight);
+  }
 }
 
 function drawEquationReadout(topY) {
@@ -2777,7 +2813,7 @@ function draw() {
     var powerOriginPx = drawShootoutBase();
     if (screenState === "powering") {
       drawPivotArrow(0, powerFrac, powerOriginPx);
-      drawShootoutPanel("Press SPACE, ENTER, or CLICK to set your power!");
+      drawShootoutPanel("SPACE, ENTER, or CLICK to set power!");
     } else {
       drawPivotArrow(0, shotPower, powerOriginPx);
     }
@@ -2786,7 +2822,7 @@ function draw() {
     var aimOriginPx = drawShootoutBase();
     if (screenState === "aiming") {
       drawPivotArrow(aimAngle, shotPower, aimOriginPx);
-      drawShootoutPanel("Press SPACE, ENTER, or CLICK to lock your aim and SHOOT!");
+      drawShootoutPanel("SPACE, ENTER, or CLICK to lock aim and SHOOT!");
     }
   } else if (screenState === "shootFlight") {
     shootFlightTimer++;
