@@ -36,6 +36,13 @@ function saveBestTimes() {
     if (bestTimeHard!==null) localStorage.setItem('piggybank_best_hard', String(bestTimeHard));
   } catch (err) {}
 }
+// Safety net: flush whatever's in memory the instant the tab is hidden
+// or closed, so a record set right at a round's end is never lost even
+// if a future code path forgets to call saveBestTimes().
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') saveBestTimes();
+});
+window.addEventListener('pagehide', saveBestTimes);
 loadBestTimes();
 
 var coinValues = { penny: 1, nickel: 5, dime: 10, quarter: 25 };

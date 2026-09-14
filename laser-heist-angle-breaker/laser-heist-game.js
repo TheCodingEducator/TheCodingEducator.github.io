@@ -436,6 +436,13 @@ function saveHighScores() {
     localStorage.setItem('laserheist_unlocked_skins', JSON.stringify(unlockedSkinIndices));
   } catch (e) {}
 }
+// Safety net: flush whatever's in memory the instant the tab is hidden
+// or closed, so nothing earned since the last save is lost even if a
+// future code path forgets to call saveHighScores().
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') saveHighScores();
+});
+window.addEventListener('pagehide', saveHighScores);
 
 function checkSkinUnlocks() {
   for (var i = 0; i < LASER_SKINS.length; i++) {
@@ -1394,6 +1401,12 @@ function handleCorrectAnswer() {
   var gained = addScoreForCorrectAnswer();
   streak += 1;
   if (streak > bestStreakEver) { bestStreakEver = streak; }
+  // A discrete per-answer event (not a per-frame loop), so saving here
+  // immediately is safe - previously bestStreakEver/sessionHighScore/
+  // skin unlocks only got flushed at completeLevel()/triggerGameOver(),
+  // so a new record set mid-level was lost if the tab closed before
+  // reaching one of those checkpoints.
+  saveHighScores();
   showFeedback("+" + gained + "  STREAK x" + scoreMultiplier, COLOR_TEXT_GOOD, 40);
   playSfx("correct");
   puzzlesSolvedInLevel += 1;

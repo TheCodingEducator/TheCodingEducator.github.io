@@ -51,6 +51,14 @@ function saveExponentProgress() {
     localStorage.setItem('exprace_hard_skills', JSON.stringify(unlockedHardSkills));
   } catch (e) {}
 }
+// Safety net: flush whatever's in memory the instant the tab is hidden
+// or closed (switching tabs, closing the browser, navigating away
+// mid-run), so nothing earned since the last checkpoint save is lost
+// even if a future code path forgets to call saveExponentProgress().
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') saveExponentProgress();
+});
+window.addEventListener('pagehide', saveExponentProgress);
 
 var shopData = {
   cars: [
@@ -941,6 +949,7 @@ function playGame(isFrozen) {
                  if (cBiome === "rain" || dayPhase < 1.0) { cValue = 50; rgbColor = "255, 68, 68"; } else { cValue = 20; rgbColor = "218, 112, 214"; }
              }
              score += (cValue / 10); totalCoins += cValue;
+             saveExponentProgress(); // a discrete per-coin event (not a per-frame loop), so saving here immediately is safe - otherwise coins earned mid-run are lost if the page closes before a checkpoint
              coinPopupValue = "+$" + (cValue / 100).toFixed(2); coinPopupColor = rgbColor; coinPopupTimer = 60;
              coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
              playSound("sound://category_achievements/lighthearted_bonus_objective_1.mp3");

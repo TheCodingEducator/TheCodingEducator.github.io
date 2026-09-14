@@ -172,6 +172,13 @@ function saveCoinsAndSkins() {
     localStorage.setItem('lgttp_hs_geometry', String(hsGeometry));
   } catch (e) {}
 }
+// Safety net: flush whatever's in memory the instant the tab is hidden
+// or closed, so nothing earned since the last save is lost even if a
+// future code path forgets to call saveCoinsAndSkins().
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') saveCoinsAndSkins();
+});
+window.addEventListener('pagehide', saveCoinsAndSkins);
 loadCoinsAndSkins();
 
 // Awards a coin every 3rd consecutive correct answer (3, 6, 9, ...).
