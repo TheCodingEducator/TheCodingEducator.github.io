@@ -150,7 +150,6 @@ function _sfxTone(freq, dur, type, vol, delay, glideTo) {
 }
 
 function playSound(name) {
-  if (name === 'move') { _sfxTone(320, 0.045, 'square', 0.05); return; }
   if (name === 'correct') {
     _sfxTone(523.25, 0.09, 'square', 0.12, 0);     // C5
     _sfxTone(659.25, 0.09, 'square', 0.12, 0.09);  // E5
@@ -2539,7 +2538,7 @@ function draw(){
         else if ((keyDown("right")||keyDown("d"))&&playerGX<GRID_MAX){playerGX++;transMoved=true;}
         else if ((keyDown("up")||keyDown("w"))   &&playerGY<GRID_MAX){playerGY++;transMoved=true;}
         else if ((keyDown("down")||keyDown("s")) &&playerGY>GRID_MIN){playerGY--;transMoved=true;}
-        if (transMoved) { moveCooldown = transFirst ? 12 : 5; playSound('move'); }
+        if (transMoved) moveCooldown = transFirst ? 12 : 5;
       }
     }
   }
