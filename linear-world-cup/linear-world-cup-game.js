@@ -240,6 +240,11 @@ var PLAYER_Y_CAP = GY_MAX - 1;
 var highlightRow = 1;
 var BALL_RADIUS_GRID = 0.22;
 
+// Half-width of the goal mouth in grid units (posts sit at -GOAL_HALF_WIDTH
+// and +GOAL_HALF_WIDTH) - kept an integer since the equation-kick screen's
+// net is drawn from the FIELD_XB per-integer-grid-unit lookup table.
+var GOAL_HALF_WIDTH = 4;
+
 var EQ_LABEL_W_READY = false;
 var YEQ_W = 0, XPLUS_W = 0, SIGN_BTN_W = 0;
 function ensureEquationLabelWidths() {
@@ -3063,13 +3068,17 @@ function draw() {
       if (celebrateSnapshot.goalie) {
         drawGoalie(gridSX(celebrateSnapshot.goalie.x), gridSY(celebrateSnapshot.goalie.y), celebrateSnapshot.goalie.c);
       }
-      var celebElapsed = 60 - celebrateTimer;
-      var cbPvx = celebrateSnapshot.ball.pvx || 0;
-      var cbPvy = constrain(celebrateSnapshot.ball.pvy || -2.5, -4.5, -1.5);
-      var cbPxX = gridSX(celebrateSnapshot.ball.x) + cbPvx * celebElapsed;
-      var cbPxY = gridSY(celebrateSnapshot.ball.y) + cbPvy * celebElapsed;
-      var cbNetTop = 32;
-      var cbAlpha = cbPxY >= cbNetTop ? 255 : constrain(map(cbPxY, -20, cbNetTop, 0, 255), 0, 255);
+      // Drift the ball only a small, fixed distance into the net - not at
+      // some clamped real-world velocity that can carry it clean off the
+      // canvas before it has a chance to visibly fade - and fade it out
+      // while that drift is still well within the visible net area, so it
+      // gradually disappears there instead of just flying off-screen.
+      var celebT = constrain((60 - celebrateTimer) / 60, 0, 1);
+      var driftT = min(celebT * 2.5, 1);
+      var cbPvx = constrain(celebrateSnapshot.ball.pvx || 0, -3, 3);
+      var cbPxX = gridSX(celebrateSnapshot.ball.x) + cbPvx * 8 * driftT;
+      var cbPxY = gridSY(celebrateSnapshot.ball.y) - 26 * driftT;
+      var cbAlpha = celebT < 0.25 ? 255 : constrain(map(celebT, 0.25, 0.65, 255, 0), 0, 255);
       if (cbAlpha > 0) drawBallFading(cbPxX, cbPxY, cbAlpha);
     }
 
