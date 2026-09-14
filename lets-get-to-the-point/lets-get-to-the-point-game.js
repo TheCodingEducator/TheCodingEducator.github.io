@@ -2536,7 +2536,10 @@ function draw(){
   if(STATE==="MOVING"&&(c.type==="reflect_x"||c.type==="reflect_y")) drawReflectionDistances();
   drawStartMarker();
   if(isRotation(c)&&STATE==="MOVING"&&gameMode!=="HEADTOHEAD") drawTracingPaper();
-  if(STATE==="FEEDBACK"){drawTarget();drawLockedMarker();}
+  // Wrong-answer FEEDBACK skips the yellow target ring - the ANSWER_DEMO/
+  // ROTATION_DEMO animation just shown already revealed where it goes, so
+  // a lingering ring here would just be redundant clutter on top of that.
+  if(STATE==="FEEDBACK"){ if(feedbackCorrect) drawTarget(); drawLockedMarker(); }
   if(gameMode==="HEADTOHEAD"){
     drawFaceAt(toPixelX(p1GX),toPixelY(p1GY),255,80,80,"P1 ("+p1GX+","+p1GY+")");
     drawFaceAt(toPixelX(p2GX),toPixelY(p2GY),80,160,255,"P2 ("+p2GX+","+p2GY+")");
