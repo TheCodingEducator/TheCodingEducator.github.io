@@ -153,6 +153,13 @@ function loadCoinsAndSkins() {
     // switch or a fresh visit.
     var s = localStorage.getItem('lgttp_streak');
     if (s!==null) { var sn=parseInt(s,10); if (!isNaN(sn)&&sn>=0) currentStreak=sn; }
+    // Genius/Geometry best times - these are the game's whole "beat your
+    // best time" hook, so they should survive a reload same as anything
+    // else here; previously only held in memory and lost on refresh.
+    var hg = localStorage.getItem('lgttp_hs_genius');
+    if (hg!==null) { var hgn=parseFloat(hg); if (!isNaN(hgn)&&hgn>=0) hsGenius=hgn; }
+    var hm = localStorage.getItem('lgttp_hs_geometry');
+    if (hm!==null) { var hmn=parseFloat(hm); if (!isNaN(hmn)&&hmn>=0) hsGeometry=hmn; }
   } catch (e) {}
   if (ownedSkins.indexOf(0)===-1) ownedSkins.push(0);
 }
@@ -161,6 +168,8 @@ function saveCoinsAndSkins() {
     localStorage.setItem('lgttp_coins', String(coins));
     localStorage.setItem('lgttp_owned_skins', JSON.stringify(ownedSkins));
     localStorage.setItem('lgttp_streak', String(currentStreak));
+    localStorage.setItem('lgttp_hs_genius', String(hsGenius));
+    localStorage.setItem('lgttp_hs_geometry', String(hsGeometry));
   } catch (e) {}
 }
 loadCoinsAndSkins();
@@ -2766,6 +2775,7 @@ function draw(){
           } else {
             if(hsGeometry===0||timerFinished<hsGeometry){hsGeometry=timerFinished;newHighScore=true;}
           }
+          if(newHighScore) saveCoinsAndSkins();
           playSound(newHighScore?'newRecord':'correct');
           srSel=1; STATE="SPEED_RESULT";
         } else if(gameMode==="PRACTICE"){
@@ -2854,6 +2864,7 @@ function draw(){
             } else {
               if(hsGeometry===0||timerFinished<hsGeometry){hsGeometry=timerFinished;newHighScore=true;}
             }
+            if(newHighScore) saveCoinsAndSkins();
             playSound(newHighScore?'newRecord':'correct');
             srSel=1; STATE="SPEED_RESULT";
           } else if(gameMode==="PRACTICE"){
