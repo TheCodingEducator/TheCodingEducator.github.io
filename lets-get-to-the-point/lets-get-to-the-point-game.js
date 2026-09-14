@@ -1106,17 +1106,17 @@ function drawTracingPaper() {
       }
     }
 
-    // Rotated point — mini yellow character
-    fill(255,220,50,40); noStroke(); ellipse(rpx,rpy,27,27);
-    fill(255,220,50); stroke(195,160,0); strokeWeight(1.5); ellipse(rpx,rpy,18,18);
-    fill(30,30,80); noStroke();
-    ellipse(rpx-3.5,rpy-2.5,3,3); ellipse(rpx+3.5,rpy-2.5,3,3);
-    fill(255); ellipse(rpx-3,rpy-3,1,1); ellipse(rpx+4,rpy-3,1,1);
-    stroke(30,30,80); strokeWeight(1); noFill();
-    for(var msi=0;msi<10;msi++){
-      var ma1=25+(130/10)*msi, ma2=25+(130/10)*(msi+1);
-      line(rpx+cos(ma1)*5,rpy+1.5+sin(ma1)*3.5,rpx+cos(ma2)*5,rpy+1.5+sin(ma2)*3.5);
-    }
+    // Rotated point - matches whichever skin the player has equipped,
+    // scaled down to fit the paper's smaller marker (drawSkinnedFace's
+    // own face is 30px across; this spot is 18px), so a rotation looks
+    // like their own point turning, not a generic yellow placeholder.
+    var rpSkin = PLAYER_SKINS[currentSkinIdx];
+    noStroke(); fill(rpSkin.r,rpSkin.g,rpSkin.b,40); ellipse(rpx,rpy,27,27);
+    push();
+    translate(rpx,rpy);
+    scale(0.6);
+    drawSkinnedFace(0,0,rpSkin,"");
+    pop();
 
     // Coordinate label — hidden in Geometry Genius
     if (gameMode!=="GEOMETRY") {
@@ -1450,21 +1450,35 @@ function drawSkinnedFace(px, py, skin, label) {
     }
   }
   if (style==="rainbow") {
-    noFill(); strokeWeight(2.5);
+    // One fixed ring right at the face's own edge (30px face -> 36px
+    // ring), not six growing rings spiraling outward - the colors cycle
+    // which segment they're in, but the ring itself never moves.
+    noFill(); strokeWeight(3);
     var rbColors=[[255,80,80],[255,180,60],[255,240,80],[100,220,120],[100,180,255],[180,120,255]];
+    var ringD=36;
     for (var rbi=0;rbi<6;rbi++){
       var rc=rbColors[(rbi+Math.floor(frameCount/6))%6];
       stroke(rc[0],rc[1],rc[2],220);
-      arc(px,py,34+rbi*3,34+rbi*3, rbi*60, rbi*60+50);
+      arc(px,py,ringD,ringD, rbi*60, rbi*60+62);
     }
   }
 
   // ---- Base face ----
   if (style==="gradient") {
-    fill(Math.min(255,fr+50),Math.min(255,fg+50),Math.min(255,fb+50));
-    stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0)); strokeWeight(2);
+    // A true radial gradient centered exactly on (px,py) - the old
+    // version faked a "glow" with a second circle offset a few pixels
+    // down-right, which read as off-center and made it harder to tell
+    // exactly which grid point the marker was sitting on.
+    noStroke();
+    var grad = drawingContext.createRadialGradient(px,py,2, px,py,15);
+    grad.addColorStop(0, 'rgb('+Math.min(255,fr+60)+','+Math.min(255,fg+70)+','+Math.min(255,fb+60)+')');
+    grad.addColorStop(1, 'rgb('+fr+','+fg+','+fb+')');
+    drawingContext.fillStyle = grad;
+    drawingContext.beginPath();
+    drawingContext.arc(px,py,15,0,Math.PI*2);
+    drawingContext.fill();
+    noFill(); stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0)); strokeWeight(2);
     ellipse(px,py,30,30);
-    noStroke(); fill(fr,fg,fb,190); ellipse(px+4,py+4,25,25);
   } else {
     fill(fr,fg,fb); stroke(Math.max(fr-60,0),Math.max(fg-60,0),Math.max(fb-60,0));
     strokeWeight(2); ellipse(px,py,30,30);
