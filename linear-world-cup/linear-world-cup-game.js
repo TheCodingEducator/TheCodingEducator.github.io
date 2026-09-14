@@ -2663,18 +2663,24 @@ function drawGameOver() {
   background(8, 10, 30);
 
   noStroke();
-  var trailFrontX, trailFrontY;
+  var trailFrontX, trailFrontY, trailFrontSize;
   for (var i = 0; i < 9; i++) {
     var t = frameCount * 0.007 + i * 0.7;
     var ox = 200 + cos(t + i * 0.44) * (95 + i * 12);
     var oy = 195 + sin(t * 0.62 + i * 0.65) * (72 + i * 9);
+    var osize = 26 + i * 7;
     fill(150 + i * 11, 170 + i * 6, 255, 10 + i * 2);
-    ellipse(ox, oy, 26 + i * 7, 26 + i * 7);
-    if (i === 0) { trailFrontX = ox; trailFrontY = oy; }
+    ellipse(ox, oy, osize, osize);
+    if (i === 8) { trailFrontX = ox; trailFrontY = oy; trailFrontSize = osize; }
   }
-  // Cap the front (smallest/innermost) of that drifting circle cluster with
-  // an actual ball, so the other 8 growing, fading circles read as its trail.
-  drawBall(trailFrontX, trailFrontY);
+  // Cap the front (largest/outermost) of that drifting circle cluster with a
+  // big ball sized to match it, so the other 8 shrinking, fading circles
+  // read as its trail. drawBall is normally a fixed 14px, so scale it up.
+  push();
+  translate(trailFrontX, trailFrontY);
+  scale(trailFrontSize / 14);
+  drawBall(0, 0);
+  pop();
 
   // ── WORLD CUP CHAMPION: full custom screen ─────────────────
   if (tournamentMode && tRound === 2 && scoreA >= scoreB) {
