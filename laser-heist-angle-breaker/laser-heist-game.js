@@ -409,19 +409,32 @@ function playSfx(name) {
 // ----------------------------------------------------------------
 // SECTION 8: STORAGE (high score persistence)
 // ----------------------------------------------------------------
-// Game Lab's JS runs in a sandboxed interpreter with no access to
-// real browser globals (window, localStorage, document, etc.) --
-// touching them crashes the interpreter itself, even inside a
-// try/catch. So these are in-memory only: score/streak/skins reset
-// each time the program is run. That's fine for a single play
-// session; it just won't survive a page refresh.
+// This file is ported to run as a real static web page (see
+// laser-heist-shim.js/-hook.js) on top of real p5.js, not inside
+// Code.org's own sandboxed Game Lab interpreter - window/localStorage/
+// document all work fine here despite the game's own Game-Lab-style
+// API surface. Purely local to this browser, anonymous play-progress
+// state (best score/streak, which skins have been unlocked) - never
+// transmitted anywhere, not tied to any name or identity - so a
+// student can leave and come back without losing their record.
 function loadHighScores() {
-  // Nothing to load -- session starts fresh every run.
+  try {
+    var hs = localStorage.getItem('laserheist_high_score');
+    if (hs!==null) { var n=parseInt(hs,10); if (!isNaN(n)&&n>=0) sessionHighScore=n; }
+    var bs = localStorage.getItem('laserheist_best_streak');
+    if (bs!==null) { var bn=parseInt(bs,10); if (!isNaN(bn)&&bn>=0) bestStreakEver=bn; }
+    var sk = localStorage.getItem('laserheist_unlocked_skins');
+    if (sk!==null) { var arr=JSON.parse(sk); if (Array.isArray(arr)) unlockedSkinIndices=arr; }
+  } catch (e) {}
+  if (unlockedSkinIndices.indexOf(0)===-1) unlockedSkinIndices.push(0);
 }
 
 function saveHighScores() {
-  // Nothing to persist -- sessionHighScore/bestStreakEver/
-  // unlockedSkinIndices already live in memory for this run.
+  try {
+    localStorage.setItem('laserheist_high_score', String(sessionHighScore));
+    localStorage.setItem('laserheist_best_streak', String(bestStreakEver));
+    localStorage.setItem('laserheist_unlocked_skins', JSON.stringify(unlockedSkinIndices));
+  } catch (e) {}
 }
 
 function checkSkinUnlocks() {
