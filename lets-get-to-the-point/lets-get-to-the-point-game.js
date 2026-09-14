@@ -1437,10 +1437,16 @@ function drawPracticeHintGraphic(hintType, yShift) {
     text("Each 90° = one right-angle turn.",200,198);
 
     // Diagram: center + 4 arms at 90° intervals, showing 0°=start, 90°, 180°, 270°
+    // - matching the CURRENT question's actual turn direction, not always
+    // clockwise, so a CCW question's diagram doesn't mislabel which way
+    // 90/180/270 actually go.
+    var degCh=curCh();
+    var isCCWDeg=(degCh.type==="rot90ccw"||degCh.type==="rot270ccw");
     var dcx=200, dcy=287, dr=48;
-    // Arms
-    var armAngles=[-90,0,90,180]; // screen angles: -90=up, 0=right, 90=down, 180=left
-    var armLabels=["Start","90°","180°","270°"];
+    // Arms - screen angles: -90=up, 0=right, 90=down, 180=left. Start is
+    // always up; CW then goes up->right->down->left, CCW up->left->down->right.
+    var armAngles = isCCWDeg ? [-90,180,90,0] : [-90,0,90,180];
+    var armLabels=["Start: 0°","90°","180°","270°"];
     var armColors=[[180,180,220],[100,220,120],[255,180,60],[220,100,100]];
     for(var ri=0;ri<4;ri++){
       stroke(armColors[ri][0],armColors[ri][1],armColors[ri][2]); strokeWeight(2.5);
@@ -1449,7 +1455,9 @@ function drawPracticeHintGraphic(hintType, yShift) {
       fill(armColors[ri][0],armColors[ri][1],armColors[ri][2]); noStroke();
       ellipse(ax,ay,8,8);
       textSize(11); textAlign(CENTER,CENTER);
-      text(armLabels[ri],ax+(ri===1?17:ri===3?-17:0),ay+(ri===0?-13:ri===2?13:0));
+      // Label pushed further out along the same direction as its own arm,
+      // so it reads correctly regardless of which side that arm ends up on.
+      text(armLabels[ri],ax+cos(armAngles[ri])*14,ay+sin(armAngles[ri])*14);
     }
     fill(80,80,140); noStroke(); ellipse(dcx,dcy,10,10);
   }
