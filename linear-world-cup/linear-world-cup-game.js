@@ -2662,23 +2662,26 @@ function updateDrawWCConfetti() {
 function drawGameOver() {
   background(8, 10, 30);
 
+  // A single ball loops along one path (a figure-eight-ish curve); the trail
+  // is that same path sampled a little further back in time each step, so
+  // the echoes are strung out directly behind the head instead of just
+  // being separate circles drifting on their own orbits.
   noStroke();
-  var trailFrontX, trailFrontY, trailFrontSize;
-  for (var i = 0; i < 9; i++) {
-    var t = frameCount * 0.007 + i * 0.7;
-    var ox = 200 + cos(t + i * 0.44) * (95 + i * 12);
-    var oy = 195 + sin(t * 0.62 + i * 0.65) * (72 + i * 9);
-    var osize = 26 + i * 7;
-    fill(150 + i * 11, 170 + i * 6, 255, 10 + i * 2);
-    ellipse(ox, oy, osize, osize);
-    if (i === 8) { trailFrontX = ox; trailFrontY = oy; trailFrontSize = osize; }
+  var headAngle = frameCount * 1.7;
+  for (var i = 9; i >= 1; i--) {
+    var trailAng = headAngle - i * 7;
+    var trailX = 200 + cos(trailAng) * 112, trailY = 195 + sin(trailAng * 1.3) * 78;
+    var trailSize = map(i, 9, 1, 8, 30);
+    var trailAlpha = map(i, 9, 1, 12, 150);
+    fill(255, 255, 255, trailAlpha);
+    ellipse(trailX, trailY, trailSize, trailSize);
   }
-  // Cap the front (largest/outermost) of that drifting circle cluster with a
-  // big ball sized to match it, so the other 8 shrinking, fading circles
-  // read as its trail. drawBall is normally a fixed 14px, so scale it up.
+  // The ball itself: big, fully opaque, drawn last so it sits in front of
+  // its own trail - looking like it was just kicked at speed.
+  var headX = 200 + cos(headAngle) * 112, headY = 195 + sin(headAngle * 1.3) * 78;
   push();
-  translate(trailFrontX, trailFrontY);
-  scale(trailFrontSize / 14);
+  translate(headX, headY);
+  scale(3.4);
   drawBall(0, 0);
   pop();
 
