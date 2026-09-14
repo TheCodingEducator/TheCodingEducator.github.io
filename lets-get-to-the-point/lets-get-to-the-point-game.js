@@ -133,7 +133,7 @@ var PLAYER_SKINS = [
   { name:"Cool Shades",    r:210, g:180, b:130, style:"sunglasses" },
   { name:"Rainbow Burst",  r:255, g:255, b:255, style:"rainbow"    }
 ];
-var SKIN_PRICE = 0; // TEMP: free for testing - set back to 3 once skins are confirmed good
+var SKIN_PRICE = 3;
 
 // ---------- COINS / STREAK / OWNED SKINS ----------
 // Session-crossing progress (a play-currency + unlock list), not a
