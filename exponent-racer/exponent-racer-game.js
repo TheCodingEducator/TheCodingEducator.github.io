@@ -18,6 +18,40 @@ var unlockedItems = {
 
 var equipped = { car: "red", trail: "none", boost: "none", world: "default" };
 
+// ---------- SAVED PROGRESS (coins, unlocks, equipped cosmetics) ----------
+// Purely local to this browser - never sent anywhere, not tied to any
+// name or identity, just anonymous play-progress state (same category
+// as a game remembering your last settings). Lets a student close the
+// tab and come back with their coins/unlocks/hard-mode progress intact
+// instead of starting over every visit.
+function loadExponentProgress() {
+  try {
+    var c = localStorage.getItem('exprace_coins');
+    if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) totalCoins=n; }
+    var u = localStorage.getItem('exprace_unlocked');
+    if (u!==null) { var uo=JSON.parse(u); if (uo&&uo.cars&&uo.trails&&uo.boosts) unlockedItems=uo; }
+    var e = localStorage.getItem('exprace_equipped');
+    if (e!==null) { var eo=JSON.parse(e); if (eo) equipped=Object.assign(equipped,eo); }
+    var h = localStorage.getItem('exprace_hard_unlocked');
+    if (h!==null) hasUnlockedHardMode = (h==='true');
+    var hs = localStorage.getItem('exprace_hard_skills');
+    if (hs!==null) { var hsa=JSON.parse(hs); if (Array.isArray(hsa)&&hsa.length===6) unlockedHardSkills=hsa; }
+  } catch (e2) {}
+  // "red" car / "none" trail/boost are always free starter defaults
+  if (unlockedItems.cars.indexOf("red")===-1) unlockedItems.cars.push("red");
+  if (unlockedItems.trails.indexOf("none")===-1) unlockedItems.trails.push("none");
+  if (unlockedItems.boosts.indexOf("none")===-1) unlockedItems.boosts.push("none");
+}
+function saveExponentProgress() {
+  try {
+    localStorage.setItem('exprace_coins', String(totalCoins));
+    localStorage.setItem('exprace_unlocked', JSON.stringify(unlockedItems));
+    localStorage.setItem('exprace_equipped', JSON.stringify(equipped));
+    localStorage.setItem('exprace_hard_unlocked', String(hasUnlockedHardMode));
+    localStorage.setItem('exprace_hard_skills', JSON.stringify(unlockedHardSkills));
+  } catch (e) {}
+}
+
 var shopData = {
   cars: [
     { id: "red", name: "Red Car", price: 100 }, { id: "blue", name: "Blue Car", price: 100 },
@@ -70,6 +104,8 @@ var signMessages = ["KEEP\nIT UP!", "MATH\nRULES!", "GREAT\nJOB!", "YOU GOT\nTHI
 var lastSignMessage = "", lastPickedAnswer = "", lastQuestionString = "", pauseTimer = 0;
 
 var skillStates = [true, true, true, true, true, true], showSkillError = false;
+
+loadExponentProgress();
 
 var player = createSprite(200, 350, 26, 43); player.visible = false;
 var targetCarX = 200, targetCarY = 350;
@@ -300,6 +336,7 @@ function drawStartScreen() {
   if (keyDown("shift") && (keyWentDown("u") || keyWentDown("U"))) {
     hasUnlockedHardMode = true; for (var k = 0; k < 6; k++) unlockedHardSkills[k] = true;
     totalCoins += 5000; playSound("sound://category_achievements/peaceful_win_1.mp3");
+    saveExponentProgress();
   }
 
   if (mouseWentDown("leftButton")) {
@@ -375,9 +412,11 @@ function drawShopScreen() {
               if (!isUnlocked) {
                 if (totalCoins >= item.price) {
                   totalCoins -= item.price; unlockedItems[shopTab].push(item.id); equipped[shopTab.slice(0, -1)] = item.id; playSound("sound://category_achievements/lighthearted_bonus_objective_1.mp3");
+                  saveExponentProgress();
                 }
               } else if (!isEquipped) {
                 equipped[shopTab.slice(0, -1)] = item.id; playSound("sound://category_pop/puzzle_game_ui_pop_01.mp3");
+                saveExponentProgress();
               }
           }
         }
@@ -795,7 +834,13 @@ function playGame(isFrozen) {
     }
 
     if (gameMode === "easy" && score >= 75) {
-      for (var i = 0; i < 6; i++) { if (skillStates[i] && !unlockedHardSkills[i]) { unlockedHardSkills[i] = true; hasUnlockedHardMode = true; } }
+      var justUnlockedHard = false;
+      for (var i = 0; i < 6; i++) { if (skillStates[i] && !unlockedHardSkills[i]) { unlockedHardSkills[i] = true; hasUnlockedHardMode = true; justUnlockedHard = true; } }
+      // This block re-runs every frame once score crosses 75 (the guards
+      // above just skip re-setting already-true values) - only save when
+      // something actually changed, not 30 times a second for the rest
+      // of the run.
+      if (justUnlockedHard) saveExponentProgress();
     }
 
     roadOffset += (activeSpeed * 5 * currentSpeedMult * dir);
@@ -836,7 +881,7 @@ function playGame(isFrozen) {
 
     player.x += (targetCarX - player.x) * handling; player.y += (targetCarY - player.y) * handling;
 
-    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = "Ran out of gas!"; playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; return; }
+    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = "Ran out of gas!"; playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; saveExponentProgress(); return; }
 
     if (frameCounter % 200 === 0 && !coinActive && startSequencePhase === 0) {
       coinActive = true;
@@ -871,7 +916,7 @@ function playGame(isFrozen) {
             activeShield = false; damageFrames = 60; hitObsRef.destroy();
         } else {
             strikes++;
-            if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; return; }
+            if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; saveExponentProgress(); return; }
             else { damageFrames = 60; shakeFrames = 60; }
         }
       }
@@ -914,6 +959,7 @@ function playGame(isFrozen) {
        if (fuelOptions[pLane] === answer) { score += 10; fuel = Math.min(fuel + 25, maxFuel); correctAnswersCount++;
           if (score >= 200 && gameMode === "easy") {
             gameState = "winSequence"; finishLineY = -100; winCarAccel = 0; engineSoundPlayed = false; speed = 2;
+            saveExponentProgress();
             playSound("sound://category_background/f1_race.mp3");
             for (var i = 0; i < obstacles.length; i++) obstacles.get(i).y = 1000;
             fuelY = -1000;
@@ -1603,7 +1649,7 @@ function drawPausedScreen() {
   } else {
     if (Math.floor(Date.now() / 500) % 2 === 0) { if (strikes >= 3) text("Press any key to finish", 200, currentY); else text("Press any key to continue", 200, currentY); }
     if (keyWentDown("left") || keyWentDown("a") || keyWentDown("right") || keyWentDown("d") || keyWentDown("up") || keyWentDown("w") || keyWentDown("down") || keyWentDown("s") || keyWentDown("space") || keyWentDown(" ") || keyWentDown("enter") || keyWentDown("Enter")) {
-      if (strikes >= 3) gameState = "over"; else { shakeFrames = 15; damageFrames = 90; resetQuestion(); moveCooldown = 15; gameState = "play"; }
+      if (strikes >= 3) { gameState = "over"; saveExponentProgress(); } else { shakeFrames = 15; damageFrames = 90; resetQuestion(); moveCooldown = 15; gameState = "play"; }
     }
   }
   textStyle(NORMAL); textAlign(CENTER, CENTER); pop();
