@@ -2107,23 +2107,63 @@ function drawPlayerCircle(x, y, countryIdx) {
   ellipse(x, y, s, s);
 }
 
-function drawGoalie(x, y, countryIdx) {
+// One glove: a dark wrist cuff, a mitt-shaped padded palm, a thumb bump, and
+// a couple of grip-seam lines - reads clearly as a goalkeeper's glove rather
+// than a plain colored dot.
+function drawGlove(gx, gy) {
+  noStroke();
+  fill(30, 25, 10);
+  ellipse(gx, gy + 6, 9, 7);
+
+  fill(255, 225, 40); stroke(40, 30, 0); strokeWeight(1.5);
+  ellipse(gx, gy, 14, 18);
+  ellipse(gx + 5, gy - 6, 7, 7);
+
+  stroke(210, 150, 0); strokeWeight(1);
+  line(gx - 4, gy - 5, gx + 3, gy - 6);
+  line(gx - 5, gy, gx + 4, gy - 1);
+  line(gx - 4, gy + 5, gx + 3, gy + 4);
+}
+
+// Small fading starburst drawn over the glove that made a save, right as the
+// ball would be making contact with it.
+function drawImpactBurst(x, y, svt) {
+  var a = svt < 0.45 ? map(svt, 0, 0.45, 230, 0) : 0;
+  if (a <= 0) return;
+  stroke(255, 255, 255, a); strokeWeight(2); noFill();
+  for (var ang = 0; ang < 360; ang += 60) {
+    line(x + cos(ang) * 6, y + sin(ang) * 6, x + cos(ang) * 13, y + sin(ang) * 13);
+  }
+}
+
+// savePose (optional): { dirX, svt } - dirX is which side the ball is on
+// (>0 right, <0 left) and svt is the save animation's 0-1 progress. When
+// given, the glove on that side punches outward with an impact burst, so a
+// save actually looks like the keeper's glove stopping the ball.
+function drawGoalie(x, y, countryIdx, savePose) {
   var s = 26;
   var c = countries[countryIdx].color;
 
-  // Goalie gloves: bright paddle-shaped ellipses peeking out on either side
-  // of the body circle, drawn first so the jersey/face ring layers over
-  // their inner edge - keeps the goalie a single readable token like every
-  // other player circle while still marking them out as the keeper.
   var gloveOffset = s * 0.6;
-  fill(255, 225, 40); stroke(40, 30, 0); strokeWeight(1.5);
-  ellipse(x - gloveOffset, y + 3, 11, 15);
-  ellipse(x + gloveOffset, y + 3, 11, 15);
+  var punch = savePose ? min(savePose.svt * 6, 1) : 0;
+  var outL = (savePose && savePose.dirX < 0) ? punch * 11 : 0;
+  var outR = (savePose && savePose.dirX > 0) ? punch * 11 : 0;
+  var liftL = (savePose && savePose.dirX < 0) ? -punch * 7 : 0;
+  var liftR = (savePose && savePose.dirX > 0) ? -punch * 7 : 0;
+
+  drawGlove(x - gloveOffset - outL, y + 3 + liftL);
+  drawGlove(x + gloveOffset + outR, y + 3 + liftR);
 
   fill(c[0], c[1], c[2]); stroke(255); strokeWeight(2);
   ellipse(x, y, s, s);
   noFill(); stroke(255); strokeWeight(1);
   ellipse(x, y, 14, 14);
+
+  if (savePose) {
+    var ix = savePose.dirX > 0 ? x + gloveOffset + outR : x - gloveOffset - outL;
+    var iy = y + 3 + (savePose.dirX > 0 ? liftR : liftL);
+    drawImpactBurst(ix, iy, savePose.svt);
+  }
 }
 
 function drawRotatedRect(bx, by, c, s, x, y, w, h) {
@@ -2307,18 +2347,7 @@ function drawKickFlight(bx, by) {
   var kStartX = gridSX(0), kStartY = gridSY(ballB);
   var kDist = dist(kStartX, kStartY, kEndX, kEndY);
   drawWindMarkers(kbx, kby, kEndX - kStartX, kEndY - kStartY, speedFracFromPixelsPerFrame(kDist / kickDuration));
-
-  // Fade the ball out over the last stretch of a scoring kick so it visibly
-  // sinks into the net instead of just stopping dead-on-target - the
-  // outcome (kickIsGoal) is already decided before this animation starts,
-  // unlike the live shootout flight where the save/miss isn't known yet.
-  if (kickIsGoal) {
-    var kFadeT = constrain(kickTimer / kickDuration, 0, 1);
-    var kAlpha = kFadeT > 0.6 ? map(kFadeT, 0.6, 1, 255, 0) : 255;
-    if (kAlpha > 0) drawBallFading(kbx, kby, kAlpha);
-  } else {
-    drawBall(kbx, kby);
-  }
+  drawBall(kbx, kby);
 
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
@@ -2622,13 +2651,18 @@ function drawGameOver() {
   background(8, 10, 30);
 
   noStroke();
+  var trailFrontX, trailFrontY;
   for (var i = 0; i < 9; i++) {
     var t = frameCount * 0.007 + i * 0.7;
     var ox = 200 + cos(t + i * 0.44) * (95 + i * 12);
     var oy = 195 + sin(t * 0.62 + i * 0.65) * (72 + i * 9);
     fill(150 + i * 11, 170 + i * 6, 255, 10 + i * 2);
     ellipse(ox, oy, 26 + i * 7, 26 + i * 7);
+    if (i === 0) { trailFrontX = ox; trailFrontY = oy; }
   }
+  // Cap the front (smallest/innermost) of that drifting circle cluster with
+  // an actual ball, so the other 8 growing, fading circles read as its trail.
+  drawBall(trailFrontX, trailFrontY);
 
   // ── WORLD CUP CHAMPION: full custom screen ─────────────────
   if (tournamentMode && tRound === 2 && scoreA >= scoreB) {
@@ -2896,7 +2930,7 @@ function draw() {
     }
     drawField();
     drawOtherFieldPlayers();
-    drawGoalie(gridSX(keeperX), gridSY(GY_MAX), defenderColor());
+    drawGoalie(gridSX(keeperX), gridSY(GY_MAX), defenderColor(), { dirX: saveX >= keeperX ? 1 : -1, svt: svt });
     drawPlayerCircle(gridSX(dribX), gridSY(dribY), attackerColor());
     drawBall(gridSX(saveBallX), gridSY(saveBallY));
     drawShootoutPanel("SAVED!");
