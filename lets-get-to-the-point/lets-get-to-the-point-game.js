@@ -129,7 +129,7 @@ var PLAYER_SKINS = [
   { name:"Cool Shades",    r:210, g:180, b:130, style:"sunglasses" },
   { name:"Rainbow Burst",  r:255, g:255, b:255, style:"rainbow"    }
 ];
-var SKIN_PRICE = 3;
+var SKIN_PRICE = 0; // TEMP: free for testing - set back to 3 once skins are confirmed good
 
 // ---------- COINS / STREAK / OWNED SKINS ----------
 // Session-crossing progress (a play-currency + unlock list), not a
@@ -2065,14 +2065,14 @@ function drawShop() {
   for(var gx=0;gx<=400;gx+=30) line(gx,0,gx,400);
   for(var gy=0;gy<=400;gy+=30) line(0,gy,400,gy);
 
-  fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,10,360,44,12);
-  fill(0,220,255); noStroke(); textSize(16); textAlign(CENTER,CENTER);
-  text("Shop", 130, 32);
-  drawCoinLabel(330, 32, coins, 15);
+  fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,8,360,50,12);
+  fill(0,220,255); noStroke(); textAlign(CENTER,CENTER);
+  fitText("SHOP: Get a Streak of 3 for a Coin!", 200, 24, 340, 15);
+  drawCoinLabel(200, 46, coins, 14);
   textAlign(CENTER,CENTER);
 
   var cols=3, cardW=104, cardH=62, gapX=6, gapY=6;
-  var gridW=cols*cardW+(cols-1)*gapX, startX=(400-gridW)/2, startY=60;
+  var gridW=cols*cardW+(cols-1)*gapX, startX=(400-gridW)/2, startY=64;
   for (var i=0;i<PLAYER_SKINS.length;i++) {
     var sk=PLAYER_SKINS[i];
     var col=i%cols, row=Math.floor(i/cols);
