@@ -2107,22 +2107,34 @@ function drawPlayerCircle(x, y, countryIdx) {
   ellipse(x, y, s, s);
 }
 
-// One glove: a dark wrist cuff, a mitt-shaped padded palm, a thumb bump, and
-// a couple of grip-seam lines - reads clearly as a goalkeeper's glove rather
-// than a plain colored dot.
-function drawGlove(gx, gy) {
+// One glove: a dark wrist cuff plus a palm with four splayed fingers and a
+// thumb, drawn as round-capped lines fanning out from the palm - an open
+// hand rather than a mitt blob, colored to match the goalie's own team.
+// facing is +1 for the glove on the goalie's right, -1 for the left, so the
+// fingers fan outward away from the body on each side.
+function drawGlove(gx, gy, facing, c) {
+  push();
+
   noStroke();
   fill(30, 25, 10);
-  ellipse(gx, gy + 6, 9, 7);
+  ellipse(gx - facing * 5, gy + 6, 9, 7);
 
-  fill(255, 225, 40); stroke(40, 30, 0); strokeWeight(1.5);
-  ellipse(gx, gy, 14, 18);
-  ellipse(gx + 5, gy - 6, 7, 7);
+  var baseAngle = facing > 0 ? 0 : 180;
+  strokeCap(ROUND);
+  stroke(c[0], c[1], c[2]); strokeWeight(4);
+  var fingerSpread = [-28, -10, 10, 28];
+  for (var i = 0; i < fingerSpread.length; i++) {
+    var ang = baseAngle + fingerSpread[i];
+    line(gx, gy, gx + cos(ang) * 11, gy + sin(ang) * 11);
+  }
+  strokeWeight(3.5);
+  var thumbAngle = baseAngle - facing * 55;
+  line(gx, gy, gx + cos(thumbAngle) * 8, gy + sin(thumbAngle) * 8);
 
-  stroke(210, 150, 0); strokeWeight(1);
-  line(gx - 4, gy - 5, gx + 3, gy - 6);
-  line(gx - 5, gy, gx + 4, gy - 1);
-  line(gx - 4, gy + 5, gx + 3, gy + 4);
+  fill(c[0], c[1], c[2]); stroke(255); strokeWeight(1.2);
+  ellipse(gx, gy, 11, 11);
+
+  pop();
 }
 
 // Small fading starburst drawn over the glove that made a save, right as the
@@ -2151,8 +2163,8 @@ function drawGoalie(x, y, countryIdx, savePose) {
   var liftL = (savePose && savePose.dirX < 0) ? -punch * 7 : 0;
   var liftR = (savePose && savePose.dirX > 0) ? -punch * 7 : 0;
 
-  drawGlove(x - gloveOffset - outL, y + 3 + liftL);
-  drawGlove(x + gloveOffset + outR, y + 3 + liftR);
+  drawGlove(x - gloveOffset - outL, y + 3 + liftL, -1, c);
+  drawGlove(x + gloveOffset + outR, y + 3 + liftR, 1, c);
 
   fill(c[0], c[1], c[2]); stroke(255); strokeWeight(2);
   ellipse(x, y, s, s);
