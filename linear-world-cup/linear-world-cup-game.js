@@ -358,13 +358,19 @@ function wasClicked(x, y, w, h) {
   return tappedX !== null && tappedX > x && tappedX < x + w && tappedY > y && tappedY < y + h;
 }
 
-// Only blocks the page's default touch behavior (scrolling, pinch-zoom,
-// tap-and-hold callouts) on the canvas -- doesn't touch mouseIsPressed/
-// mouseX/mouseY at all, leaving that entirely to the platform's own
-// (already-working) touch-to-mouse simulation.
-function touchStarted() { return false; }
+// p5's own automatic touch-to-mouse-click synthesis isn't reliable across
+// real touch devices once a sketch defines its own touchStarted/Moved/Ended
+// (which this one needs anyway, to block scrolling/pinch-zoom on the
+// canvas) - on some browsers mouseClicked() then simply never fires from a
+// real tap, so every button here (driven by wasClicked()/mouseClicked())
+// silently stops registering taps on phones even though a mouse click in
+// a desktop browser works fine. Manually driving mouseIsPressed and calling
+// mouseClicked() here removes the dependency on that synthesis entirely -
+// see bank-shot-angle-golf-game.js's touchStarted/touchEnded for the same
+// pattern already proven to work on this site.
+function touchStarted() { mouseIsPressed = true; return false; }
 function touchMoved() { return false; }
-function touchEnded() { return false; }
+function touchEnded() { mouseIsPressed = false; mouseClicked(); return false; }
 
 function pointSegDist(px, py, ax, ay, bx, by) {
   var dx = bx - ax, dy = by - ay;
