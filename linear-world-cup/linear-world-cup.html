@@ -62,12 +62,22 @@
   /* Keeps the standards panel (and everything after it) below the first
      screenful on a touch device, so it never renders under the fixed
      on-screen numpad (see linear-world-cup-mobile-controls.js's
-     #mobile-controls) at the default scroll position -- see
-     exponent-hoops.html for the full reasoning behind this rule.
-     touch-action:none on #mobile-controls (see the JS file) is the
-     second, load-bearing half of this fix. */
+     #mobile-controls, 240px tall) at the default scroll position -- see
+     exponent-hoops.html for the full reasoning behind sizing the CANVAS
+     SLOT specifically rather than .play-area. Top-aligning instead of
+     centering the canvas within that tall slot (align-items was "center")
+     is the fix for a real bug this otherwise causes: on a typical phone,
+     centering puts the canvas' own bottom edge inside that bottom 240px
+     strip, so the numpad visually overlapped the canvas itself, and the
+     touch-action:none canvas ends up filling nearly the whole screen with
+     no obvious non-canvas area left for a normal scroll swipe to land on.
+     Top-aligning keeps the canvas near the top (clear of the numpad) and
+     collapses all the leftover slot height into one large, ordinary
+     (scrollable) empty area right below it instead of splitting it above
+     and below the canvas. touch-action:none on #mobile-controls (see the
+     JS file) is the second, load-bearing half of this fix. */
   @media (hover: none) and (pointer: coarse) {
-    #game-canvas-slot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    #game-canvas-slot { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; }
   }
   .standards-panel {
     background: var(--panel);
