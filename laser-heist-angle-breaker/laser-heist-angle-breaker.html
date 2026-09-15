@@ -77,13 +77,20 @@
      that minimum (which it does here, since the panel alone is taller
      than a typical phone viewport), so the container just grows to fit
      everything and the constraint never engages. Sizing the first
-     row's own box is what actually pushes row two down.
+     row's own box is what actually pushes row two down. Top-aligning
+     instead of centering the canvas within that tall slot (align-items
+     was "center") fixes a real bug centering caused: on a typical phone
+     the canvas' own bottom edge landed inside the fixed control strip,
+     so touches meant for the canvas were eaten by the controls (and
+     vice versa), and the touch-action:none canvas filled nearly the
+     whole screen with no obvious non-canvas area left for a normal
+     scroll swipe to land on. Top-aligning keeps the canvas near the top
+     (clear of the controls) and collapses the leftover slot height into
+     one large, ordinary (scrollable) empty area right below it.
      touch-action:none on #mobile-controls (see the JS file) is the
-     second, load-bearing half of this fix -- it stops a touch from
-     reaching the panel at all even in a layout this doesn't fully
-     clear, so accidental text-selection can't happen either way. */
+     second, load-bearing half of this fix. */
   @media (hover: none) and (pointer: coarse) {
-    #game-canvas-slot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    #game-canvas-slot { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; }
   }
   .standards-panel {
     background: var(--panel);

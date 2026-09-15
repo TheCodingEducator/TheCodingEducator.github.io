@@ -56,9 +56,18 @@
      flex-wrap row) specifically, not .play-area, or the constraint
      never engages once the panel below it already exceeds 100vh. This
      game's only touch control is the numpad (240px, see
-     bank-shot-angle-golf-mobile-controls.js). */
+     bank-shot-angle-golf-mobile-controls.js). Top-aligning instead of
+     centering the canvas within that tall slot (align-items was
+     "center") fixes a real bug centering caused: on a typical phone the
+     canvas' own bottom edge landed inside the numpad's fixed strip, so
+     the numpad overlapped the canvas itself, and the touch-action:none
+     canvas filled nearly the whole screen with no obvious non-canvas
+     area left for a normal scroll swipe to land on. Top-aligning keeps
+     the canvas near the top (clear of the numpad) and collapses the
+     leftover slot height into one large, ordinary (scrollable) empty
+     area right below it. */
   @media (hover: none) and (pointer: coarse) {
-    #game-canvas-slot { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    #game-canvas-slot { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; }
   }
   .standards-panel {
     background: var(--panel);
