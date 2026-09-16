@@ -725,8 +725,11 @@ function resetQuestion() {
 
   // Exponents of Zero and One: always include 0 and 1 as answer choices (whichever
   // of them isn't the correct answer), since those are the classic misconceptions
-  // this skill is testing - "does x^0 = 0?" and "does x^1 = 1 or x?".
-  if (pickedSkill === 4) {
+  // this skill is testing - "does x^0 = 0?" and "does x^1 = 1 or x?". Also applies
+  // to Evaluating Powers whenever the curated pair's answer itself is 0 or 1 (e.g.
+  // 0^3, 2^0), so those questions deliberately dangle the other of {0,1} as a
+  // wrong choice every time instead of leaving it to chance.
+  if (pickedSkill === 4 || (pickedSkill === 0 && (getMathVal(answer) === 0 || getMathVal(answer) === 1))) {
     var requiredDistractors = [];
     if (getMathVal(answer) !== 0) requiredDistractors.push(0);
     if (getMathVal(answer) !== 1) requiredDistractors.push(1);
