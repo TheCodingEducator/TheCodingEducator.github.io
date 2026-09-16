@@ -1904,10 +1904,39 @@ function toggleSign() {
   }
 }
 
+var exitConfirmPending = false;
+
+// Drawn from inside drawMenuButton() (called last, each frame, from the
+// live-match render path) rather than as a top-level early-return like the
+// menu/over/bracket screens use, since replicating this file's manual
+// tappedX/tappedY/keyTapped reset bookkeeping for a new early-return branch
+// would be easy to get subtly wrong. It still visually covers the whole
+// screen on top of the match as requested; the match clock keeps ticking
+// behind it for the brief moment the confirm is open.
 function drawMenuButton() {
   drawBtn(4, 4, 66, 26, "MENU", col(70, 60, 90));
-  if (wasClicked(4, 4, 66, 26)) {
-    screenState = "menu"; mainMode = null; subMode = null;
+  if (!exitConfirmPending && wasClicked(4, 4, 66, 26)) {
+    exitConfirmPending = true;
+  }
+  if (exitConfirmPending) drawExitConfirmOverlay();
+}
+
+function drawExitConfirmOverlay() {
+  noStroke(); fill(10, 12, 20, 235); rect(0, 0, 400, 400);
+  fill(255); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(20);
+  text("Exit to Main Menu?", 200, 165);
+  fill(200); textSize(13); textStyle(NORMAL);
+  text("Your current match will end.", 200, 190);
+
+  var btnW = 130, btnH = 44, gap = 14, btnY = 225;
+  var yesX = 200 - btnW - gap / 2, noX = 200 + gap / 2;
+  drawBtn(yesX, btnY, btnW, btnH, "YES, EXIT", col(180, 50, 50));
+  drawBtn(noX, btnY, btnW, btnH, "CANCEL", col(30, 150, 30));
+
+  if (wasClicked(yesX, btnY, btnW, btnH)) {
+    exitConfirmPending = false; screenState = "menu"; mainMode = null; subMode = null;
+  } else if (wasClicked(noX, btnY, btnW, btnH)) {
+    exitConfirmPending = false;
   }
 }
 
