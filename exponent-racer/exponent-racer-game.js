@@ -36,6 +36,8 @@ function loadExponentProgress() {
     if (h!==null) hasUnlockedHardMode = (h==='true');
     var hs = localStorage.getItem('exprace_hard_skills');
     if (hs!==null) { var hsa=JSON.parse(hs); if (Array.isArray(hsa)&&hsa.length===6) unlockedHardSkills=hsa; }
+    var hhs = localStorage.getItem('exprace_hard_high_score');
+    if (hhs!==null) { var hn=parseInt(hhs,10); if (!isNaN(hn)&&hn>=0) hardHighScore=hn; }
   } catch (e2) {}
   // "red" car / "none" trail/boost are always free starter defaults
   if (unlockedItems.cars.indexOf("red")===-1) unlockedItems.cars.push("red");
@@ -49,6 +51,7 @@ function saveExponentProgress() {
     localStorage.setItem('exprace_equipped', JSON.stringify(equipped));
     localStorage.setItem('exprace_hard_unlocked', String(hasUnlockedHardMode));
     localStorage.setItem('exprace_hard_skills', JSON.stringify(unlockedHardSkills));
+    localStorage.setItem('exprace_hard_high_score', String(hardHighScore));
   } catch (e) {}
 }
 // Safety net: flush whatever's in memory the instant the tab is hidden
@@ -95,7 +98,7 @@ var coinPopupTimer = 0, coinPopupValue = "", coinPopupColor = "";
 
 // Variables to track unlocks for specific skills
 var unlockedHardSkills = [false, false, false, false, false, false];
-var hasUnlockedHardMode = false, correctAnswersCount = 0;
+var hasUnlockedHardMode = false, correctAnswersCount = 0, hardHighScore = 0;
 
 var lanes = [128, 200, 272];
 var base, exponent, answer, expressionString, explanationString;
@@ -333,7 +336,14 @@ function drawStartScreen() {
 
   drawMenuButton(40, 200, 140, 60, "#27ae60", "STREET RACING");
   if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", "LOCKED", "(Score 75+ in\nStreet Racing)");
-  else drawMenuButton(220, 200, 140, 60, "#e74c3c", "MAXIMUM\nVELOCITY");
+  else {
+    drawMenuButton(220, 200, 140, 60, "#e74c3c", "MAXIMUM\nVELOCITY");
+    // Best score in Maximum Velocity - an endless/survival mode with no
+    // win condition, so a high score is the natural progress to chase.
+    noStroke(); fill("white"); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD);
+    text("Best: " + hardHighScore, 290, 270);
+    textStyle(NORMAL);
+  }
 
   drawMenuButton(150, 280, 100, 45, "#8e44ad", "SHOP");
 
@@ -889,7 +899,7 @@ function playGame(isFrozen) {
 
     player.x += (targetCarX - player.x) * handling; player.y += (targetCarY - player.y) * handling;
 
-    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = "Ran out of gas!"; playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; saveExponentProgress(); return; }
+    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = "Ran out of gas!"; playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
 
     if (frameCounter % 200 === 0 && !coinActive && startSequencePhase === 0) {
       coinActive = true;
@@ -924,7 +934,7 @@ function playGame(isFrozen) {
             activeShield = false; damageFrames = 60; hitObsRef.destroy();
         } else {
             strikes++;
-            if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; saveExponentProgress(); return; }
+            if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
             else { damageFrames = 60; shakeFrames = 60; }
         }
       }
@@ -1658,7 +1668,7 @@ function drawPausedScreen() {
   } else {
     if (Math.floor(Date.now() / 500) % 2 === 0) { if (strikes >= 3) text("Press any key to finish", 200, currentY); else text("Press any key to continue", 200, currentY); }
     if (keyWentDown("left") || keyWentDown("a") || keyWentDown("right") || keyWentDown("d") || keyWentDown("up") || keyWentDown("w") || keyWentDown("down") || keyWentDown("s") || keyWentDown("space") || keyWentDown(" ") || keyWentDown("enter") || keyWentDown("Enter")) {
-      if (strikes >= 3) { gameState = "over"; saveExponentProgress(); } else { shakeFrames = 15; damageFrames = 90; resetQuestion(); moveCooldown = 15; gameState = "play"; }
+      if (strikes >= 3) { gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); } else { shakeFrames = 15; damageFrames = 90; resetQuestion(); moveCooldown = 15; gameState = "play"; }
     }
   }
   textStyle(NORMAL); textAlign(CENTER, CENTER); pop();
