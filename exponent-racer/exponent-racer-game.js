@@ -72,14 +72,22 @@ var shopData = {
     { id: "green", name: "Green Car", price: 100 }, { id: "purple", name: "Purple Car", price: 100 },
     { id: "orange", name: "Orange Car", price: 100 }, { id: "pink", name: "Pink Car", price: 100 },
     { id: "yellow", name: "Yellow Car", price: 100 }, { id: "black", name: "Black Car", price: 100 },
-    { id: "white", name: "White Car", price: 100 }, { id: "superhero", name: "Superhero", price: 1000 }
+    { id: "white", name: "White Car", price: 100 },
+    { id: "cyan", name: "Cyan Car", price: 100 }, { id: "lime", name: "Lime Car", price: 100 },
+    { id: "gold", name: "Gold Car", price: 100 }, { id: "silver", name: "Silver Car", price: 100 },
+    { id: "crimson", name: "Crimson Car", price: 100 }, { id: "teal", name: "Teal Car", price: 100 },
+    { id: "superhero", name: "Superhero", price: 1000 },
+    { id: "rainbow", name: "Rainbow Car", price: 1000 }
   ],
 
   trails: [
     { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
     { id: "blue", name: "Blue Smoke", price: 300 }, { id: "red", name: "Red Smoke", price: 300 },
     { id: "pink", name: "Pink Smoke", price: 300 }, { id: "bubbles", name: "Bubbles", price: 500 },
-    { id: "money", name: "Money Trail", price: 500 }
+    { id: "money", name: "Money Trail", price: 500 },
+    { id: "purple", name: "Violet Trail", price: 300 }, { id: "green", name: "Toxic Trail", price: 300 },
+    { id: "gold", name: "Golden Trail", price: 500 }, { id: "ice", name: "Ice Trail", price: 500 },
+    { id: "rainbow", name: "Rainbow Trail", price: 1000 }
   ],
   boosts: [
     { id: "none", name: "No Powerup", price: 500 },
@@ -405,6 +413,8 @@ function drawShopScreen() {
               else if (item.id === "fire") { fill("orange"); ellipse(0, 0, 25, 25); fill("yellow"); ellipse(0, 0, 15, 15); }
               else if (item.id === "bubbles") { fill("cyan"); ellipse(0, 0, 20, 20); noFill(); stroke("white"); ellipse(5, -5, 6, 6); }
               else if (item.id === "money") { fill("green"); rect(-15, -10, 30, 20); fill("white"); textAlign(CENTER, CENTER); textSize(16); text("$", 0, 0); }
+              else if (item.id === "ice") { fill("#8fe3ff"); ellipse(0, 0, 22, 22); fill("white"); ellipse(-5, -5, 7, 7); }
+              else if (item.id === "rainbow") { var rbColors = ["#ff3b3b", "#ff9f1c", "#ffe135", "#5cff5c", "#3ba7ff", "#b15cff"]; for (var ri = 0; ri < rbColors.length; ri++) { fill(rbColors[ri]); ellipse(-12 + ri * 5, 0, 9, 9); } }
               else { fill(item.id); ellipse(0, 0, 25, 25); }
           } else if (shopTab === "boosts") {
               translate(50, yPos + 20); // Centered vertically next to the text
@@ -1512,6 +1522,15 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           else if (equipped.trail === "blue") { smokeParticles.push({ type: "glow", c: "0,150,255,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
           else if (equipped.trail === "red") { smokeParticles.push({ type: "glow", c: "255,50,50,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
           else if (equipped.trail === "pink") { smokeParticles.push({ type: "glow", c: "255,105,180,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
+          else if (equipped.trail === "purple") { smokeParticles.push({ type: "glow", c: "155,50,255,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
+          else if (equipped.trail === "green") { smokeParticles.push({ type: "glow", c: "60,255,90,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
+          else if (equipped.trail === "gold") { smokeParticles.push({ type: "glow", c: "255,215,0,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
+          else if (equipped.trail === "ice") { smokeParticles.push({ type: "glow", c: "140,230,255,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
+          else if (equipped.trail === "rainbow") {
+            var rbHue = (frameCounter * 6) % 360;
+            colorMode(HSB, 360, 100, 100); var rbCol = color(rbHue, 85, 95); colorMode(RGB, 255);
+            smokeParticles.push({ type: "glow", c: red(rbCol) + "," + green(rbCol) + "," + blue(rbCol) + ",", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy });
+          }
           else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(3, 8), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "money") {
              if (frameCounter % 6 === 0) {
@@ -1817,7 +1836,13 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
     stroke("black"); strokeWeight(1); fill("black");
     rect(cx - 16, cy + 7, 6, 12); rect(cx + 10, cy + 7, 6, 12); rect(cx - 16, cy + 26, 6, 12); rect(cx + 10, cy + 26, 6, 12);
 
-    fill(color); rect(cx - 13, cy, 26, 43);
+    if (color === "rainbow") {
+      // Cycles hue continuously by frame count, then immediately resets
+      // colorMode back to the default 0-255 RGB every other fill() call
+      // in this function (and elsewhere) assumes.
+      colorMode(HSB, 360, 100, 100); fill((frameCount * 3) % 360, 85, 95); colorMode(RGB, 255);
+    } else { fill(color); }
+    rect(cx - 13, cy, 26, 43);
     fill("rgba(255,255,255,0.2)"); rect(cx - 10, cy + 10, 20, 22);
     fill("lightblue"); rect(cx - 8, cy + 7, 16, 7); rect(cx - 8, cy + 29, 16, 6);
 
