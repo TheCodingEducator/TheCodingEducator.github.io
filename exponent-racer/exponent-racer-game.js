@@ -1,4 +1,5 @@
 var gameState = "start";
+var exitConfirmPending = false;
 var gameMode = "";
 var score = 0;
 var totalCoins = 0;
@@ -303,16 +304,16 @@ function drawTides(yTop, yBottom) {
 function draw() {
   textFont("sans-serif");
 
+  if (exitConfirmPending) { drawExitConfirmOverlay(); return; }
+
   // Escape acts as the Menu button, wherever one is on screen. In-run
-  // states get the same score-save treatment as clicking the in-play
-  // MENU button, so quitting via Escape doesn't lose progress either.
+  // states get the same confirm-before-quitting treatment as clicking the
+  // in-play MENU button.
   if (keyWentDown("escape")) {
     if (gameState === "skillSelect" || gameState === "shop" || gameState === "over" || gameState === "winScreen") {
       gameState = "start";
     } else if (gameState === "play" || gameState === "paused") {
-      if (gameMode === "hard" && score > hardHighScore) hardHighScore = score;
-      saveExponentProgress();
-      gameState = "start";
+      exitConfirmPending = true;
     }
   }
 
@@ -409,7 +410,7 @@ function drawStartScreen() {
   fill("white"); textAlign(LEFT, CENTER); textSize(24); textStyle(BOLD);
   text("$" + (totalCoins / 100).toFixed(2), 45, 26); textStyle(NORMAL);
 
-  if (keyDown("shift") && (keyWentDown("u") || keyWentDown("U")) && !cheatCoinsUsed) {
+  if (keyDown("shift") && keyDown("t") && keyDown("a") && keyDown("v") && !cheatCoinsUsed) {
     cheatCoinsUsed = true;
     hasUnlockedHardMode = true; for (var k = 0; k < 6; k++) unlockedHardSkills[k] = true;
     totalCoins = 999999; playSound("sound://category_achievements/peaceful_win_1.mp3"); // $9999.99 - totalCoins is stored in cents
@@ -1987,13 +1988,39 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
   fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text("MENU", 40, 375); textStyle(NORMAL);
   if (mouseWentDown("leftButton") && mouseX > 10 && mouseX < 70 && mouseY > 360 && mouseY < 390) {
     playSound("sound://category_app/perfect_clean_app_button_click.mp3");
-    // Quitting mid-run counts as the run ending here - same high-score
-    // check/save as a natural game over, so progress isn't lost just
-    // because the player left via the menu button instead of running
-    // out of fuel or striking out.
-    if (gameMode === "hard" && score > hardHighScore) hardHighScore = score;
-    saveExponentProgress();
-    gameState = "start";
+    exitConfirmPending = true;
+  }
+}
+
+function drawExitConfirmOverlay() {
+  fill("#1a1d24"); noStroke(); rect(0, 0, 400, 400);
+  fill("white"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(24);
+  text("Exit to Main Menu?", 200, 150);
+  fill("lightgray"); textSize(15); textStyle(NORMAL);
+  text("Your progress this run will be saved.", 200, 185);
+
+  var hoverYes = (mouseX > 60 && mouseX < 190 && mouseY > 230 && mouseY < 280);
+  var hoverNo = (mouseX > 210 && mouseX < 340 && mouseY > 230 && mouseY < 280);
+  fill(hoverYes ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(60, 230, 130, 50, 10);
+  fill(hoverNo ? "#229954" : "#27ae60"); rect(210, 230, 130, 50, 10);
+  fill("white"); noStroke(); textSize(17); textStyle(BOLD);
+  text("YES, EXIT", 125, 255); text("CANCEL", 275, 255); textStyle(NORMAL);
+
+  if (mouseWentDown("leftButton")) {
+    if (hoverYes) {
+      exitConfirmPending = false;
+      // Quitting mid-run counts as the run ending here - same high-score
+      // check/save as a natural game over, so progress isn't lost just
+      // because the player left via the menu button instead of running
+      // out of fuel or striking out.
+      if (gameState === "play" || gameState === "paused") {
+        if (gameMode === "hard" && score > hardHighScore) hardHighScore = score;
+        saveExponentProgress();
+      }
+      gameState = "start";
+    } else if (hoverNo) {
+      exitConfirmPending = false;
+    }
   }
 }
 
