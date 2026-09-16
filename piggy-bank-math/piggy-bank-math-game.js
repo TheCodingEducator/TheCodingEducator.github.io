@@ -1,4 +1,5 @@
 var gameState = "menu";
+var exitConfirmPending = false;
 var difficulty = "easy";
 var targetAmount = 0;
 var currentTotal = 0;
@@ -98,6 +99,8 @@ playAgainBtn.visible = false;
 function draw() {
   background("lightblue");
 
+  if (exitConfirmPending) { drawExitConfirmOverlay(); return; }
+
   if (gameState === "menu") {
     drawMenu();
   } else if (gameState === "game") {
@@ -158,6 +161,26 @@ function startGame() {
   overTargetCount = 0;
   blockStartTime = millis();
   setupNextLevel();
+}
+
+function drawExitConfirmOverlay() {
+  fill("#1a1d24"); noStroke(); rect(0, 0, 400, 400);
+  fill("white"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(22);
+  text("Exit to Main Menu?", 200, 150);
+  fill("lightgray"); textSize(14); textStyle(NORMAL);
+  text("Your progress this round will be lost.", 200, 178);
+
+  var hoverYes = (mouseX > 60 && mouseX < 190 && mouseY > 225 && mouseY < 270);
+  var hoverNo = (mouseX > 210 && mouseX < 340 && mouseY > 225 && mouseY < 270);
+  fill(hoverYes ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(60, 225, 130, 45, 10);
+  fill(hoverNo ? "#229954" : "#27ae60"); rect(210, 225, 130, 45, 10);
+  fill("white"); noStroke(); textSize(15); textStyle(BOLD);
+  text("YES, EXIT", 125, 247); text("CANCEL", 275, 247); textStyle(NORMAL);
+
+  if (mouseWentDown("leftButton")) {
+    if (hoverYes) { exitConfirmPending = false; backToMenu(); }
+    else if (hoverNo) { exitConfirmPending = false; }
+  }
 }
 
 function backToMenu() {
@@ -658,7 +681,7 @@ function checkClicks() {
     }
 
     if (mouseIsOver(menuBtn)) {
-      backToMenu();
+      exitConfirmPending = true;
       return;
     }
 
