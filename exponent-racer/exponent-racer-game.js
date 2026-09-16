@@ -590,6 +590,21 @@ function getMathVal(val) {
   return Number(s);
 }
 
+// Fixed (base, exponent) pairs for the Evaluating Powers skill - zero and
+// one exponents/bases, then squares up to 10, then a powers-of-ten
+// progression and cubes, instead of the old fully-random 2-10 base /
+// 2-6 exponent range which could surface awkward, hard-to-place-value
+// combinations (e.g. 9^5). Hard mode still applies its usual negative-base
+// (in parens) / negative-result (no parens) treatment on top of whichever
+// pair gets picked, same as before.
+var EVAL_POWER_PAIRS = [
+  [0,0],[1,0],[2,0],[3,0],[4,0],
+  [0,1],[0,2],[0,3],[0,4],
+  [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],
+  [10,3],[10,4],
+  [1,3],[2,3],[3,3],[4,3],[5,3]
+];
+
 function resetQuestion() {
   var answerFormat = "normal", currentBase = 1, currentExp = 1, valid = false, trickPool = [], currentOp = -1, powerOfPowerSumTrick = null;
   var activeSkills = []; for (var i = 0; i < 6; i++) { if (skillStates[i]) activeSkills.push(i); }
@@ -599,27 +614,28 @@ function resetQuestion() {
     var pickedSkill = activeSkills[randomNumber(0, activeSkills.length - 1)];
 
     if (pickedSkill === 0) {
-      exponent = randomNumber(2, 6); base = randomNumber(2, 10);
+      var evalPair = EVAL_POWER_PAIRS[randomNumber(0, EVAL_POWER_PAIRS.length - 1)];
+      base = evalPair[0]; exponent = evalPair[1];
       if (gameMode === "hard") {
         var hardType = randomNumber(0, 1);
         if (hardType === 0) {
           answer = Math.pow(-base, exponent);
-          if (Math.abs(answer) <= 100) {
-            expressionString = "(-" + base + ")" + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
-            var arr = []; for(var i=0; i<exponent; i++) arr.push("(-" + base + ")"); explanationString = "Parentheses mean the negative is grouped:\n" + arr.join(" × "); valid = true;
-          }
+          expressionString = "(-" + base + ")" + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
+          if (exponent === 0) { explanationString = "Rule: Any number to the power\nof 0 is ALWAYS 1"; }
+          else { var arr = []; for(var i=0; i<exponent; i++) arr.push("(-" + base + ")"); explanationString = "Parentheses mean the negative is grouped:\n" + arr.join(" × "); }
+          valid = true;
         } else {
           answer = -1 * Math.pow(base, exponent);
-          if (Math.abs(answer) <= 100) {
-            expressionString = "-" + base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
-            var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = "No parentheses? Do the exponent FIRST,\nthen make it negative:\n-(" + arr.join(" × ") + ")"; valid = true;
-          }
+          expressionString = "-" + base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
+          if (exponent === 0) { explanationString = "Negative is OUTSIDE the power of 0.\n-(1) = -1"; }
+          else { var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = "No parentheses? Do the exponent FIRST,\nthen make it negative:\n-(" + arr.join(" × ") + ")"; }
+          valid = true;
         }
       } else {
-        if (Math.pow(base, exponent) <= 100) {
-          answer = Math.pow(base, exponent); expressionString = base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
-          var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = base + " multiplied by itself " + exponent + " times:\n" + arr.join(" × "); valid = true;
-        }
+        answer = Math.pow(base, exponent); expressionString = base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
+        if (exponent === 0) { explanationString = "Rule: Any number to the power\nof 0 is ALWAYS 1"; }
+        else { var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = base + " multiplied by itself " + exponent + " times:\n" + arr.join(" × "); }
+        valid = true;
       }
     }
     else if (pickedSkill === 1 || pickedSkill === 2) {
@@ -1604,7 +1620,16 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
 
   fill("white"); stroke("black"); strokeWeight(2); rect(10, 360, 60, 30);
   fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text("MENU", 40, 375); textStyle(NORMAL);
-  if (mouseWentDown("leftButton") && mouseX > 10 && mouseX < 70 && mouseY > 360 && mouseY < 390) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); gameState = "start"; }
+  if (mouseWentDown("leftButton") && mouseX > 10 && mouseX < 70 && mouseY > 360 && mouseY < 390) {
+    playSound("sound://category_app/perfect_clean_app_button_click.mp3");
+    // Quitting mid-run counts as the run ending here - same high-score
+    // check/save as a natural game over, so progress isn't lost just
+    // because the player left via the menu button instead of running
+    // out of fuel or striking out.
+    if (gameMode === "hard" && score > hardHighScore) hardHighScore = score;
+    saveExponentProgress();
+    gameState = "start";
+  }
 }
 
 function drawPausedScreen() {
