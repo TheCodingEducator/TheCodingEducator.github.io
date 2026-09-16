@@ -72,7 +72,7 @@ window.addEventListener('pagehide', saveExponentProgress);
 // of them as a single lineup of clickable swatches instead of 9 separate
 // rows, so CLASSIC_CAR_COLORS is the source of truth for both that row and
 // for which car ids can be equipped without going through unlock/price logic.
-var CLASSIC_CAR_COLORS = ["red", "blue", "green", "purple", "orange", "pink", "yellow", "black", "white"];
+var CLASSIC_CAR_COLORS = ["red", "blue", "green", "purple", "orange", "pink", "yellow", "black"];
 
 var shopData = {
   cars: [
@@ -90,28 +90,27 @@ var shopData = {
     { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
     { id: "blue", name: "Spark Trail", price: 300 }, { id: "red", name: "Ember Trail", price: 300 },
     { id: "pink", name: "Heart Trail", price: 300 }, { id: "purple", name: "Twinkle Trail", price: 300 },
-    { id: "green", name: "Leaf Trail", price: 300 },
     { id: "bubbles", name: "Bubbles", price: 500 }, { id: "money", name: "Money Trail", price: 500 },
     { id: "gold", name: "Diamond Trail", price: 500 }, { id: "ice", name: "Snowflake Trail", price: 500 },
     { id: "rainbow", name: "Rainbow Trail", price: 1000 }
   ],
-  // Priced by how much of an edge each actually gives in a run, not
-  // uniformly: Electric removes an entire way to lose (fuel) for the
-  // WHOLE game, so it costs the most. Time Freeze and Shield are
-  // single-use saves but a full 10-second stop-the-world beats a single
-  // hit absorbed, so it's priced above Shield. Second Chance protects
-  // against the same things Shield does (plus wrong answers) but only
-  // comes up on the rarer "already about to fail" moment, so per
-  // feedback it's priced just under Shield. Magnet and Double Coins
-  // never prevent a loss - they're pure economy/QoL - so they're cheapest.
+  // Priced by how much of an edge each actually gives in a run. Electric
+  // is priced lowest of all - per feedback, fuel almost never actually
+  // runs out in practice, so removing that risk entirely isn't worth much.
+  // Time Freeze and Shield are single-use saves but a full 10-second
+  // stop-the-world beats a single hit absorbed, so it's priced above
+  // Shield. Second Chance protects against the same things Shield does
+  // (plus wrong answers) but only comes up on the rarer "already about to
+  // fail" moment, so per feedback it's priced just under Shield. Magnet
+  // and Double Coins never prevent a loss - they're pure economy/QoL.
   boosts: [
+    { id: "fuelsaver", name: "Electric (No Fuel)", price: 200 },
     { id: "none", name: "No Powerup", price: 500 },
     { id: "doublecoins", name: "Double Coins", price: 500 },
     { id: "magnet", name: "Coin Magnet", price: 600 },
     { id: "secondchance", name: "Second Chance", price: 700 },
     { id: "shield", name: "Forcefield", price: 800 },
-    { id: "timefreeze", name: "Time Freeze", price: 1000 },
-    { id: "fuelsaver", name: "Electric (No Fuel)", price: 1200 }
+    { id: "timefreeze", name: "Time Freeze", price: 1000 }
   ],
 };
 
@@ -131,6 +130,11 @@ var unlockedHardSkills = [false, false, false, false, false, false];
 var hasUnlockedHardMode = false, correctAnswersCount = 0, hardHighScore = 0, cheatCoinsUsed = false;
 
 var lanes = [128, 200, 272];
+function nearestLane(x) {
+  var best = lanes[0];
+  for (var i = 1; i < lanes.length; i++) { if (Math.abs(x - lanes[i]) < Math.abs(x - best)) best = lanes[i]; }
+  return best;
+}
 var base, exponent, answer, expressionString, explanationString;
 var fuelOptions = [null, null, null], fuelY = -100, zoomFrames = 0, maxZoomFrames = 100;
 var shakeFrames = 0, damageFrames = 0, dayPhase = 1.0, lightPoles = [-100, 100, 300, 500];
@@ -353,6 +357,7 @@ function draw() {
   else if (gameState === "timeFreezeTip") drawTimeFreezeTip();
   else if (gameState === "maxVelocityPrompt") drawMaxVelocityPrompt();
   else if (gameState === "paused") drawPausedScreen();
+  else if (gameState === "rewinding") drawRewindEffect();
   else if (gameState === "over") drawGameOver();
   else if (gameState === "unlockPopup") drawUnlockPopup();
   else if (gameState === "winSequence") drawWinSequence();
@@ -418,6 +423,23 @@ function drawStartScreen() {
   }
 }
 
+// A flickering flame silhouette: wide base near the source (local -y),
+// narrowing to a wobbling point trailing away (local +y). Used 3x per fire
+// particle (glow/body/core) at different sizes/colors/seeds for a layered
+// licking-flame look instead of a plain ellipse blob.
+function drawFlameBlob(cx, cy, s, colorRgba, seed, wob) {
+  var w1 = Math.sin(frameCounter * 0.6 + seed) * wob;
+  var w2 = Math.sin(frameCounter * 0.7 + seed + 2) * wob;
+  var wt = Math.sin(frameCounter * 0.5 + seed + 4) * wob * 1.6;
+  push(); translate(cx, cy); noStroke(); fill(colorRgba);
+  beginShape();
+  vertex(-s * 0.5, -s * 0.7); vertex(-s * 0.28, s * 0.1); vertex(-s * 0.12 + w1, s * 0.8);
+  vertex(0, s * 1.5 + wt);
+  vertex(s * 0.12 + w2, s * 0.8); vertex(s * 0.28, s * 0.1); vertex(s * 0.5, -s * 0.7);
+  endShape(CLOSE);
+  pop();
+}
+
 function drawTrailGlyph(id) {
   if (id === "none") { fill("gray"); ellipse(0, 0, 15, 15); }
   else if (id === "fire") { fill("orange"); ellipse(0, 0, 25, 25); fill("yellow"); ellipse(0, 0, 15, 15); }
@@ -429,7 +451,6 @@ function drawTrailGlyph(id) {
   else if (id === "red") { noStroke(); fill("rgba(255,90,30,0.4)"); ellipse(0, 0, 24, 24); fill("#ffb43c"); ellipse(0, 0, 12, 12); }
   else if (id === "pink") { noStroke(); fill("#ff5aa0"); ellipse(-4, -3, 9, 9); ellipse(4, -3, 9, 9); triangle(-8, -1, 8, -1, 0, 10); }
   else if (id === "purple") { stroke("#be78ff"); strokeWeight(2); line(-11, 0, 11, 0); line(0, -11, 0, 11); stroke("white"); strokeWeight(1); line(-6, -6, 6, 6); line(-6, 6, 6, -6); }
-  else if (id === "green") { noStroke(); fill("#3cc85a"); ellipse(0, 0, 20, 11); stroke("#1e8c3c"); strokeWeight(1); line(-9, 0, 9, 0); }
   else if (id === "gold") { noStroke(); fill("#ffd73c"); quad(0, -12, 8, 0, 0, 12, -8, 0); fill("white"); quad(0, -5, 3, 0, 0, 5, -3, 0); }
   else { fill(id); ellipse(0, 0, 25, 25); }
 }
@@ -462,10 +483,7 @@ function drawShopScreen() {
           push();
 
           if (shopTab === "cars" && item.id === "classic") {
-              translate(50, yPos + 20);
-              fill("#e74c3c"); noStroke(); ellipse(-6, -4, 11, 11);
-              fill("#3498db"); ellipse(6, -4, 11, 11);
-              fill("#2ecc71"); ellipse(0, 7, 11, 11);
+              // No preview icon here - the swatches themselves fill the row.
           } else if (shopTab === "cars") {
               translate(50, yPos + 10); // Car specific position
               scale(0.5); // Scale down the car so it fits
@@ -507,19 +525,20 @@ function drawShopScreen() {
 
 
     if (item.isColorPicker) {
-        // One row standing in for all 9 flat-color cars: every swatch is
-        // free and always available, so clicking one equips it directly
-        // instead of going through the normal unlock/buy button.
-        var swStartX = 92, swEndX = 358, swStep = (swEndX - swStartX) / (CLASSIC_CAR_COLORS.length - 1);
+        // One row standing in for the flat-color cars: every swatch is free
+        // and always available, so clicking one equips it directly instead
+        // of going through the normal unlock/buy button. No preview picture
+        // or label competing for space - the whole row is just swatches.
+        var swStartX = 40, swEndX = 345, swStep = (swEndX - swStartX) / (CLASSIC_CAR_COLORS.length - 1);
         for (var cc = 0; cc < CLASSIC_CAR_COLORS.length; cc++) {
           var cColor = CLASSIC_CAR_COLORS[cc]; var swX = swStartX + cc * swStep, swY = yPos + 20;
           var isThisEquipped = (equipped.car === cColor);
           stroke(isThisEquipped ? "gold" : "#ccc"); strokeWeight(isThisEquipped ? 3 : 1.5);
-          fill(cColor); ellipse(swX, swY, 22, 22);
+          fill(cColor); ellipse(swX, swY, 26, 26);
 
           if (mouseWentDown("leftButton") && mouseY >= 110 && mouseY <= 350) {
             var dx = mouseX - swX, dy = mouseY - swY;
-            if (dx * dx + dy * dy < 13 * 13) { equipped.car = cColor; playSound("sound://category_pop/puzzle_game_ui_pop_01.mp3"); saveExponentProgress(); }
+            if (dx * dx + dy * dy < 16 * 16) { equipped.car = cColor; playSound("sound://category_pop/puzzle_game_ui_pop_01.mp3"); saveExponentProgress(); }
           }
         }
     } else {
@@ -917,7 +936,7 @@ function resetQuestion() {
   questionCheckpoint = {
     fuelY: fuelY, cLane: cLane, expressionString: expressionString, explanationString: explanationString,
     answer: answer, fuelOptions: fuelOptions.slice(), lastQuestionString: lastQuestionString,
-    playerX: player.x, playerY: player.y, fuel: fuel, score: score, totalCoins: totalCoins,
+    playerX: nearestLane(player.x), playerY: player.y, fuel: fuel, score: score, totalCoins: totalCoins,
     strikes: strikes, speed: speed, questionTimeLimit: questionTimeLimit
   };
 }
@@ -928,7 +947,8 @@ function rewindToQuestionCheckpoint() {
 
   fuelY = cp.fuelY; expressionString = cp.expressionString; explanationString = cp.explanationString;
   answer = cp.answer; fuelOptions = cp.fuelOptions.slice(); lastQuestionString = cp.lastQuestionString;
-  player.x = cp.playerX; player.y = cp.playerY; targetCarX = cp.playerX; targetCarY = cp.playerY;
+  var snappedX = nearestLane(cp.playerX);
+  player.x = snappedX; player.y = cp.playerY; targetCarX = snappedX; targetCarY = cp.playerY;
   fuel = cp.fuel; score = cp.score; totalCoins = cp.totalCoins; strikes = cp.strikes;
   speed = cp.speed; questionTimeLimit = cp.questionTimeLimit;
 
@@ -945,6 +965,75 @@ function rewindToQuestionCheckpoint() {
   var safeLanes = [0, 1, 2]; safeLanes.splice(cp.cLane, 1);
   var sy = fuelY - 250;
   spawnObstacle(lanes[safeLanes[randomNumber(0, safeLanes.length - 1)]], sy, false);
+}
+
+var rewindAnim = null;
+
+// Snapshots where the car/fuel-sign visually were the instant Second Chance
+// triggers, restores the real game state immediately (rewindToQuestionCheckpoint
+// already handles that), then plays a short "rewinding a tape" cinematic that
+// visually tweens the car and road backward from the failure point to the
+// checkpoint - gameplay itself is already safely back at the checkpoint the
+// whole time, this is purely the visual sell of "you just got rewound".
+function triggerSecondChanceRewind() {
+  var fromX = player.x, fromY = player.y, fromFuelY = fuelY;
+  rewindToQuestionCheckpoint();
+  rewindAnim = { t: 0, total: 50, fromX: fromX, fromY: fromY, toX: player.x, toY: player.y, fromFuelY: fromFuelY, toFuelY: fuelY };
+  gameState = "rewinding";
+}
+
+function drawRewindEffect() {
+  rewindAnim.t++;
+  var frac = Math.min(1, rewindAnim.t / rewindAnim.total);
+  var ease = 1 - Math.pow(1 - frac, 3);
+  var curX = rewindAnim.fromX + (rewindAnim.toX - rewindAnim.fromX) * ease;
+  var curY = rewindAnim.fromY + (rewindAnim.toY - rewindAnim.fromY) * ease;
+  var curFuelY = rewindAnim.fromFuelY + (rewindAnim.toFuelY - rewindAnim.fromFuelY) * ease;
+
+  background("#0a0a12");
+  fill("#181820"); noStroke(); rect(100, 0, 200, 400);
+  fill("#2c2c38"); rect(96, 0, 4, 400); rect(300, 0, 4, 400);
+
+  // Dashed center lines scrolling backward fast, like tape reversing.
+  fill("rgba(220,220,255,0.35)");
+  var revOffset = ((frameCounter * -16) % 60 + 60) % 60;
+  for (var d = -60; d <= 420; d += 60) rect(198, d + revOffset, 4, 30);
+
+  // Faint fuel/answer sign sliding back up off-screen with the tween.
+  if (curFuelY > -340 && curFuelY < 420) {
+    fill("rgba(241,196,15,0.25)"); rect(110, curFuelY, 180, 30, 4);
+  }
+
+  // Speed-streak side lines suggesting fast reverse motion.
+  stroke("rgba(150,200,255,0.3)"); strokeWeight(2);
+  for (var sline = 0; sline < 5; sline++) {
+    var sy2 = ((frameCounter * 11 + sline * 90) % 460) - 40;
+    line(60 + sline * 9, sy2, 60 + sline * 9, sy2 - 35);
+    line(340 - sline * 9, sy2, 340 - sline * 9, sy2 - 35);
+  }
+  noStroke();
+
+  // The car itself, tweening backward from the crash/miss spot to the checkpoint.
+  push(); translate(curX, curY);
+  drawVehicle(0, 0, "car", equipped.car, true, "", false, 0, 0);
+  pop();
+
+  // Dark vignette + scanlines for a VHS-rewind look.
+  fill("rgba(0,0,0,0.4)"); rect(0, 0, 400, 400);
+  stroke("rgba(255,255,255,0.05)"); strokeWeight(1);
+  for (var yy = 0; yy < 400; yy += 5) line(0, yy, 400, yy);
+  noStroke();
+
+  var pulse = 0.65 + 0.35 * Math.sin(frameCounter * 0.6);
+  fill("rgba(255,255,255," + pulse + ")");
+  textAlign(CENTER, CENTER); textSize(30); textStyle(BOLD);
+  text("⏪ ⏪ ⏪", 200, 55);
+
+  fill("gold"); textSize(32);
+  text("SECOND CHANCE!", 200, 200);
+  textStyle(NORMAL);
+
+  if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
 }
 
 function spawnObstacle(x, y, isMerging) {
@@ -1067,6 +1156,15 @@ function playGame(isFrozen) {
         if ((keyWentDown("down") || keyWentDown("s")) && targetCarY < 350) { targetCarY += 24; moveCooldown = 8; }
         else if ((keyDown("down") || keyDown("s")) && targetCarY < 350 && moveCooldown === 0) { targetCarY += 24; moveCooldown = 2; }
 
+        // Belt-and-suspenders: targetCarX should only ever be one of the 3
+        // lane x-positions, but anything that sets it directly instead of
+        // stepping it by +/-72 (e.g. a Second Chance rewind restoring a
+        // mid-lane-change position) could otherwise leave it off-grid,
+        // letting the next left/right press walk the car past the outer
+        // lane and onto the grass. Re-snapping every frame makes that
+        // impossible regardless of how targetCarX got set.
+        targetCarX = nearestLane(targetCarX);
+
         var pEnv = (player.y < biomeTransitionY) ? newBiome : oldBiome;
         var isStorming = (pEnv === "rain" || dayPhase < 1.0) && equipped.world === "default";
         var targetPWater = (isStorming && gameMode === "hard") ? 1.0 : 0.0;
@@ -1124,7 +1222,7 @@ function playGame(isFrozen) {
             activeShield = false; damageFrames = 60; hitObsRef.destroy();
         } else if (equipped.boost === "secondchance" && !usedSecondChance) {
             usedSecondChance = true; damageFrames = 60; shakeFrames = 60; hitObsRef.destroy();
-            rewindToQuestionCheckpoint();
+            triggerSecondChanceRewind();
         } else {
             strikes++;
             if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
@@ -1192,7 +1290,7 @@ function playGame(isFrozen) {
           playSound("sound://category_hits/retro_game_simple_impact_1.mp3");
           if (equipped.boost === "secondchance" && !usedSecondChance) {
             usedSecondChance = true; shakeFrames = 30;
-            rewindToQuestionCheckpoint();
+            triggerSecondChanceRewind();
           } else {
             strikes++;
             if (strikes >= 3) gameOverReason = "3 Strikes! I'm sure your brain is exhaust-ed.";
@@ -1673,8 +1771,8 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           var px = emitPoints[ep] + randomNumber(-2, 2);
           if (equipped.trail === "fire") {
         // Shoots tight, fast streams out of dual exhaust positions behind the car
-        smokeParticles.push({ type: "fire", x: player.x - 7, y: player.y + 40, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
-        smokeParticles.push({ type: "fire", x: player.x + 7, y: player.y + 40, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
+        smokeParticles.push({ type: "fire", x: player.x - 7, y: player.y + 40, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10, seed: randomNumber(0, 1000) });
+        smokeParticles.push({ type: "fire", x: player.x + 7, y: player.y + 40, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10, seed: randomNumber(0, 1000) });
     }
 
           // Each of these gets its own particle type/shape (not just a
@@ -1684,16 +1782,18 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           // fire/bubbles/money, tuned closer to real speed already) - at
           // full road speed they used to fly past before their shape/motion
           // details (zigzag, flap, twinkle, etc.) had time to register.
-          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(9, 13), alpha: 1.0, dy: dy * 0.45, dx: randomNumber(-6, 6) / 10, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(2.5, 4.5), len: randomNumber(18, 55), alpha: 1.0, dy: dy * 0.5, flicker: randomNumber(0, 100) }); }
           else if (equipped.trail === "red") { smokeParticles.push({ type: "ember", x: px, y: py, size: randomNumber(9, 15), alpha: 1.0, dy: dy * 0.45, flicker: randomNumber(0, 100) }); }
           else if (equipped.trail === "pink") { smokeParticles.push({ type: "heart", x: px, y: py, size: randomNumber(13, 20), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "green") { smokeParticles.push({ type: "leaf", x: px, y: py, size: randomNumber(11, 17), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
           else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.35, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "rainbow") {
+          else if (equipped.trail === "rainbow" && frameCounter % 12 === 0) {
+            // Tiny color-cycling dots instead of the busier triangle ribbon,
+            // and only spawned on every other emission tick, per feedback
+            // that the triangles were too visually intense.
             var rbHue = (frameCounter * 6) % 360;
-            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(11, 17), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360), hue: rbHue });
+            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(6, 9), alpha: 1.0, dy: dy * 0.45, hue: rbHue });
           }
           else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(5, 11), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "money") {
@@ -1712,16 +1812,15 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     var p = smokeParticles[s];
     if (!isFrozen) {
         p.y += p.dy;
-        if (p.type === "spark") { p.x += p.dx; p.alpha -= 0.06; p.ang += 14; }
+        if (p.type === "spark") { p.alpha -= 0.14; }
         else if (p.type === "fire") { p.size -= 0.24; p.alpha -= 0.05; p.x += Math.sin(frameCounter * 0.4 + p.y * 0.15) * 0.8 + p.dx; }
         else if (p.type === "glow") { p.size -= 0.15; p.alpha -= 0.06; }
         else if (p.type === "ember") { p.alpha -= 0.035; p.x += Math.sin(frameCounter * 0.3 + p.flicker) * 0.5; }
         else if (p.type === "heart") { p.x += Math.sin(p.phase + p.y * 0.04) * 0.8; p.alpha -= 0.035; }
         else if (p.type === "twinkle") { p.ang += 4; p.alpha -= 0.035; }
-        else if (p.type === "leaf") { p.x += Math.sin(p.phase + p.y * 0.06) * 1.2; p.ang = Math.sin(p.phase * 0.5) * 30; p.alpha -= 0.035; }
         else if (p.type === "diamond") { p.ang += 5; p.alpha -= 0.035; }
         else if (p.type === "snowflake") { p.x += Math.sin(frameCounter * 0.08 + p.ang) * 0.4; p.ang += 2; p.alpha -= 0.03; }
-        else if (p.type === "prism") { p.ang += 7; p.alpha -= 0.035; }
+        else if (p.type === "prism") { p.hue = (p.hue + 4) % 360; p.alpha -= 0.035; }
         else if (p.type === "bubbles") { p.x += Math.sin(p.phase + p.y * 0.05) * 1.5; p.size += 0.05; p.alpha -= 0.04; }
         else if (p.type === "money") { p.alpha -= 0.03; p.x += p.dx; p.rot += p.rotSpeed; }
         else { p.size += 0.3; p.alpha -= 0.05; }
@@ -1732,36 +1831,38 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     }
     else {
         if (p.type === "fire") {
-            noStroke();
-
-            // Layer 1: Soft Outer Red Glow Edge
-            fill("rgba(231, 76, 60, " + (p.alpha * 0.45) + ")");
-            ellipse(p.x, p.y, p.size * 2.8 + randomNumber(-1,1), p.size * 3.4 + randomNumber(-1,1));
-
-            // Layer 2: Core Bright Orange Flame Body
-            fill("rgba(255, 120, 0, " + p.alpha + ")");
-            ellipse(p.x, p.y, p.size * 2.0, p.size * 2.5);
-
-            // Layer 3: Blazing White Afterburner Center (Only visible close to exhaust tips)
-            if (p.alpha > 0.45) {
-                fill("rgba(255, 255, 255, " + (p.alpha * 0.95) + ")");
-                ellipse(p.x + randomNumber(-1,1), p.y - 1, p.size * 1.1, p.size * 1.4);
+            // Actual licking-flame silhouettes (narrow flickering tip trailing
+            // away from the car, wide base near it) instead of plain ellipses,
+            // layered glow -> body -> white-hot core like a real flame.
+            drawFlameBlob(p.x, p.y, p.size * 1.7, "rgba(231, 76, 60, " + (p.alpha * 0.45) + ")", p.seed, p.size * 0.18);
+            drawFlameBlob(p.x, p.y, p.size * 1.15, "rgba(255, 120, 0, " + p.alpha + ")", p.seed + 10, p.size * 0.12);
+            if (p.alpha > 0.4) {
+                drawFlameBlob(p.x, p.y - p.size * 0.15, p.size * 0.55, "rgba(255, 240, 150, " + (p.alpha * 0.95) + ")", p.seed + 20, p.size * 0.08);
             }
         }
 
         else if (p.type === "spark") {
-            // An actual jagged lightning-bolt zigzag, not a thin rectangle.
-            push(); translate(p.x, p.y); rotate(p.ang);
-            var zz = p.size * 0.7;
-            stroke("rgba(" + p.c + p.alpha + ")"); strokeWeight(2.5); noFill();
+            // A quick vertical zap shooting straight down from the back of
+            // the car at a random length, not a shape rotating in place -
+            // re-jittered every frame it's alive so it crackles like real
+            // lightning instead of holding one static zigzag.
+            var flick = 0.55 + 0.45 * Math.sin(frameCounter * 1.6 + p.flicker);
+            var j1 = randomNumber(-4, 4), j2 = randomNumber(-4, 4), j3 = randomNumber(-4, 4);
+            noStroke();
+            fill("rgba(" + p.c + (p.alpha * 0.25 * flick) + ")");
+            ellipse(p.x, p.y + p.len * 0.5, p.size * 6, p.len * 1.2);
+
+            stroke("rgba(" + p.c + (p.alpha * flick) + ")"); strokeWeight(p.size * 0.6); noFill();
             beginShape();
-            vertex(0, -p.size * 1.6); vertex(zz * 0.5, -zz * 0.3); vertex(-zz * 0.3, 0); vertex(zz * 0.4, zz * 0.5); vertex(0, p.size * 1.6);
+            vertex(p.x, p.y); vertex(p.x + j1, p.y + p.len * 0.3); vertex(p.x + j2, p.y + p.len * 0.55);
+            vertex(p.x + j3, p.y + p.len * 0.8); vertex(p.x, p.y + p.len);
             endShape();
-            stroke("rgba(255,255,255," + p.alpha + ")"); strokeWeight(1);
+
+            stroke("rgba(255,255,255," + (p.alpha * flick) + ")"); strokeWeight(p.size * 0.25);
             beginShape();
-            vertex(0, -p.size * 1.6); vertex(zz * 0.5, -zz * 0.3); vertex(-zz * 0.3, 0); vertex(zz * 0.4, zz * 0.5); vertex(0, p.size * 1.6);
+            vertex(p.x, p.y); vertex(p.x + j1, p.y + p.len * 0.3); vertex(p.x + j2, p.y + p.len * 0.55);
+            vertex(p.x + j3, p.y + p.len * 0.8); vertex(p.x, p.y + p.len);
             endShape();
-            pop();
         }
         else if (p.type === "glow") { fill("rgba(" + p.c + (p.alpha * 0.4) + ")"); noStroke(); ellipse(p.x, p.y, p.size * 2.5, p.size * 2.5); fill("rgba(255,255,255," + p.alpha + ")"); ellipse(p.x, p.y, p.size, p.size); }
         else if (p.type === "ember") {
@@ -1778,12 +1879,6 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
             push(); translate(p.x, p.y); rotate(p.ang);
             stroke("rgba(190,120,255," + p.alpha + ")"); strokeWeight(1.5); line(-p.size, 0, p.size, 0); line(0, -p.size, 0, p.size);
             stroke("rgba(255,255,255," + p.alpha + ")"); strokeWeight(1); line(-p.size * 0.5, -p.size * 0.5, p.size * 0.5, p.size * 0.5); line(-p.size * 0.5, p.size * 0.5, p.size * 0.5, -p.size * 0.5);
-            pop();
-        }
-        else if (p.type === "leaf") {
-            push(); translate(p.x, p.y); rotate(p.ang); noStroke();
-            fill("rgba(60,200,90," + p.alpha + ")"); ellipse(0, 0, p.size * 1.6, p.size * 0.9);
-            stroke("rgba(30,140,60," + p.alpha + ")"); strokeWeight(1); line(-p.size * 0.8, 0, p.size * 0.8, 0);
             pop();
         }
         else if (p.type === "diamond") {
@@ -1808,15 +1903,12 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
             pop();
         }
         else if (p.type === "prism") {
-            // A little rainbow ribbon (3 overlapping wedges in neighboring
-            // hues), not one flat-colored triangle.
-            push(); translate(p.x, p.y); rotate(p.ang); noStroke();
+            // A tiny color-cycling dot instead of the busier triangle ribbon.
+            noStroke();
             colorMode(HSB, 360, 100, 100, 1);
-            fill((p.hue + 300) % 360, 85, 95, p.alpha * 0.7); triangle(-p.size * 0.5, -p.size, p.size * 0.4, p.size * 0.3, -p.size * 1.3, p.size * 0.7);
-            fill(p.hue, 85, 95, p.alpha); triangle(0, -p.size, p.size * 0.9, p.size * 0.7, -p.size * 0.9, p.size * 0.7);
-            fill((p.hue + 60) % 360, 85, 95, p.alpha * 0.7); triangle(p.size * 0.5, -p.size, p.size * 1.3, p.size * 0.7, -p.size * 0.4, p.size * 0.3);
+            fill(p.hue, 20, 100, p.alpha * 0.5); ellipse(p.x, p.y, p.size * 2, p.size * 2);
+            fill(p.hue, 85, 95, p.alpha); ellipse(p.x, p.y, p.size, p.size);
             colorMode(RGB, 255);
-            pop();
         }
         else if (p.type === "bubbles") { fill("rgba(150, 220, 255, " + (p.alpha * 0.3) + ")"); stroke("rgba(200, 240, 255, " + p.alpha + ")"); strokeWeight(1.5); ellipse(p.x, p.y, p.size * 2, p.size * 2); noStroke(); fill("rgba(255, 255, 255, " + p.alpha + ")"); ellipse(p.x - p.size * 0.3, p.y - p.size * 0.3, p.size * 0.4, p.size * 0.4); }
         else if (p.type === "money") {
