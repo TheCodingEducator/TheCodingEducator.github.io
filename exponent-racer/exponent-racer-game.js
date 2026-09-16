@@ -2006,12 +2006,17 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
     // frontmost points - so they can never reach up toward the
     // answer-choice bubbles shown above the car.
     noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 44, 26, 6);
-    fill("#164a1a");
-    beginShape(); vertex(cx - 12, cy + 14); vertex(cx - 30, cy + 10); vertex(cx - 24, cy + 22); vertex(cx - 32, cy + 26); vertex(cx - 13, cy + 30); endShape(CLOSE);
-    beginShape(); vertex(cx + 12, cy + 14); vertex(cx + 30, cy + 10); vertex(cx + 24, cy + 22); vertex(cx + 32, cy + 26); vertex(cx + 13, cy + 30); endShape(CLOSE);
-    fill("#2e7d32");
-    beginShape(); vertex(cx - 12, cy + 16); vertex(cx - 22, cy + 14); vertex(cx - 18, cy + 22); vertex(cx - 13, cy + 24); endShape(CLOSE);
-    beginShape(); vertex(cx + 12, cy + 16); vertex(cx + 22, cy + 14); vertex(cx + 18, cy + 22); vertex(cx + 13, cy + 24); endShape(CLOSE);
+    // Wings flap by rotating each one about its root (where it meets the
+    // body), mirrored so both move together instead of independently.
+    var flapAngle = Math.sin(frameCount * 0.2) * 15;
+    push(); translate(cx - 12, cy + 14); rotate(-flapAngle);
+    fill("#164a1a"); beginShape(); vertex(0, 0); vertex(-18, -4); vertex(-12, 8); vertex(-20, 12); vertex(-1, 16); endShape(CLOSE);
+    fill("#2e7d32"); beginShape(); vertex(0, 2); vertex(-10, 0); vertex(-6, 8); vertex(-1, 10); endShape(CLOSE);
+    pop();
+    push(); translate(cx + 12, cy + 14); rotate(flapAngle);
+    fill("#164a1a"); beginShape(); vertex(0, 0); vertex(18, -4); vertex(12, 8); vertex(20, 12); vertex(1, 16); endShape(CLOSE);
+    fill("#2e7d32"); beginShape(); vertex(0, 2); vertex(10, 0); vertex(6, 8); vertex(1, 10); endShape(CLOSE);
+    pop();
     fill("black"); ellipse(cx - 8, cy + 22, 8, 8); ellipse(cx + 8, cy + 22, 8, 8); ellipse(cx - 8, cy + 38, 8, 8); ellipse(cx + 8, cy + 38, 8, 8);
     fill("#1b5e20"); rect(cx - 13, cy + 6, 26, 37, 4);
     fill("#2e7d32");
@@ -2070,7 +2075,10 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
   if (type === "car") {
     noStroke(); fill("rgba(255, 255, 0, 0.4)");
     ellipse(cx - 7, cy - 3, 14, 14); ellipse(cx + 7, cy - 3, 14, 14);
-    stroke("black"); strokeWeight(1); fill("black");
+    // Ghost is meant to be entirely white/translucent from headlights to
+    // taillights, not just the body - wheels included.
+    if (color === "ghost") { stroke("white"); strokeWeight(1); fill("white"); }
+    else { stroke("black"); strokeWeight(1); fill("black"); }
     rect(cx - 16, cy + 7, 6, 12); rect(cx + 10, cy + 7, 6, 12); rect(cx - 16, cy + 26, 6, 12); rect(cx + 10, cy + 26, 6, 12);
 
     if (color === "rainbow") {
@@ -2082,7 +2090,7 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
     else { fill(color); }
     rect(cx - 13, cy, 26, 43);
     fill("rgba(255,255,255,0.2)"); rect(cx - 10, cy + 10, 20, 22);
-    fill("lightblue"); rect(cx - 8, cy + 7, 16, 7); rect(cx - 8, cy + 29, 16, 6);
+    fill(color === "ghost" ? "white" : "lightblue"); rect(cx - 8, cy + 7, 16, 7); rect(cx - 8, cy + 29, 16, 6);
 
     water = water || 0; sand = sand || 0;
     if (water > 0) {
@@ -2095,8 +2103,8 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
         rect(cx - 10, cy + 30, 20, 8); rect(cx - 12, cy + 15, 4, 15); rect(cx + 8, cy + 15, 4, 15);
     }
 
-    fill("yellow"); ellipse(cx - 7, cy + 1, 6, 6); ellipse(cx + 7, cy + 1, 6, 6);
-    fill("red"); ellipse(cx - 7, cy + 42, 6, 6); ellipse(cx + 7, cy + 42, 6, 6);
+    fill(color === "ghost" ? "white" : "yellow"); ellipse(cx - 7, cy + 1, 6, 6); ellipse(cx + 7, cy + 1, 6, 6);
+    fill(color === "ghost" ? "white" : "red"); ellipse(cx - 7, cy + 42, 6, 6); ellipse(cx + 7, cy + 42, 6, 6);
 
     if (blinkState && !isPlayer) {
       fill("#FFBF00");
