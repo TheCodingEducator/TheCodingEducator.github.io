@@ -76,7 +76,8 @@ var shopData = {
     { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 },
     { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot", price: 1000 },
     { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon", price: 1000 },
-    { id: "bird", name: "Bird", price: 1000 }, { id: "swervingtruck", name: "Swerving Truck", price: 1000 }
+    { id: "bird", name: "Bird", price: 1000 }, { id: "swervingtruck", name: "Swerving Truck", price: 1000 },
+    { id: "plane", name: "Crop Duster", price: 1000 }, { id: "bicycle", name: "Bicycle", price: 1000 }
   ],
 
   trails: [
@@ -1949,8 +1950,8 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
   if (color === "swervingtruck") {
     // Visibly swerves side to side as it drives, instead of just being a
     // static skin - the gimmick IS the motion, not just the shape.
-    var swerve = Math.sin(frameCount * 0.12) * 8;
-    push(); translate(cx, cy + 22); rotate(swerve * 0.25); translate(-cx, -(cy + 22));
+    var swerve = Math.sin(frameCount * 0.1) * 14;
+    push(); translate(cx + swerve * 0.5, cy + 22); rotate(swerve * 0.9); translate(-cx, -(cy + 22));
     noStroke(); fill("rgba(0,0,0,0.3)"); rect(cx - 14, cy + 41, 28, 6);
     fill("black"); ellipse(cx - 11, cy + 11, 9, 9); ellipse(cx + 11, cy + 11, 9, 9); ellipse(cx - 11, cy + 35, 9, 9); ellipse(cx + 11, cy + 35, 9, 9);
     fill("#e67e22"); rect(cx - 13, cy - 4, 26, 20);
@@ -2001,6 +2002,36 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
     fill("#1b5e20"); ellipse(cx, cy, 20, 14);
     fill("#0d3d10"); triangle(cx - 10, cy + 2, cx - 16, cy + 6, cx - 8, cy + 6); triangle(cx + 10, cy + 2, cx + 16, cy + 6, cx + 8, cy + 6);
     fill("#e74c3c"); ellipse(cx - 5, cy - 1, 3, 3); ellipse(cx + 5, cy - 1, 3, 3);
+    return;
+  }
+
+  if (color === "plane") {
+    // A crop-duster plane seen from above: wide wings crossing a narrow
+    // fuselage, a tail fin, and a spinning propeller up front.
+    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 42, 30, 8);
+    fill("#f1c40f"); rect(cx - 30, cy + 16, 60, 9, 2);
+    fill("#e67e22"); rect(cx - 30, cy + 16, 60, 3);
+    fill("#f1c40f"); rect(cx - 14, cy + 36, 28, 6, 2);
+    fill("#e67e22"); triangle(cx, cy + 30, cx, cy + 44, cx + 6, cy + 44);
+    fill("#f1c40f"); rect(cx - 5, cy - 6, 10, 46, 3);
+    fill("#2c3e50"); ellipse(cx, cy + 10, 8, 10);
+    push(); translate(cx, cy - 8); rotate(frameCount * 25);
+    stroke("#555"); strokeWeight(2); line(-9, 0, 9, 0); line(0, -9, 0, 9);
+    pop();
+    noStroke(); fill("#e67e22"); ellipse(cx, cy - 8, 5, 5);
+    return;
+  }
+
+  if (color === "bicycle") {
+    // A bicycle and rider seen from above: front/back wheels along a
+    // frame line, handlebars, and a simple rider torso and head.
+    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 42, 16, 6);
+    stroke("#c0392b"); strokeWeight(3); line(cx, cy + 6, cx, cy + 36); noStroke();
+    fill("#2c3e50"); ellipse(cx, cy + 4, 10, 10); ellipse(cx, cy + 38, 10, 10);
+    fill("#7f8c8d"); ellipse(cx, cy + 4, 5, 5); ellipse(cx, cy + 38, 5, 5);
+    stroke("#2c3e50"); strokeWeight(2); line(cx - 10, cy + 8, cx + 10, cy + 8); noStroke();
+    fill("#3498db"); ellipse(cx, cy + 20, 16, 20);
+    fill("#f1c27d"); ellipse(cx, cy + 10, 9, 9);
     return;
   }
 
