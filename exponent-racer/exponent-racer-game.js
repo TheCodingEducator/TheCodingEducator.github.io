@@ -38,6 +38,8 @@ function loadExponentProgress() {
     if (hs!==null) { var hsa=JSON.parse(hs); if (Array.isArray(hsa)&&hsa.length===6) unlockedHardSkills=hsa; }
     var hhs = localStorage.getItem('exprace_hard_high_score');
     if (hhs!==null) { var hn=parseInt(hhs,10); if (!isNaN(hn)&&hn>=0) hardHighScore=hn; }
+    var cc = localStorage.getItem('exprace_cheat_used');
+    if (cc!==null) cheatCoinsUsed = (cc==='true');
   } catch (e2) {}
   // "red" car / "none" trail/boost are always free starter defaults
   if (unlockedItems.cars.indexOf("red")===-1) unlockedItems.cars.push("red");
@@ -52,6 +54,7 @@ function saveExponentProgress() {
     localStorage.setItem('exprace_hard_unlocked', String(hasUnlockedHardMode));
     localStorage.setItem('exprace_hard_skills', JSON.stringify(unlockedHardSkills));
     localStorage.setItem('exprace_hard_high_score', String(hardHighScore));
+    localStorage.setItem('exprace_cheat_used', String(cheatCoinsUsed));
   } catch (e) {}
 }
 // Safety net: flush whatever's in memory the instant the tab is hidden
@@ -98,7 +101,7 @@ var coinPopupTimer = 0, coinPopupValue = "", coinPopupColor = "";
 
 // Variables to track unlocks for specific skills
 var unlockedHardSkills = [false, false, false, false, false, false];
-var hasUnlockedHardMode = false, correctAnswersCount = 0, hardHighScore = 0;
+var hasUnlockedHardMode = false, correctAnswersCount = 0, hardHighScore = 0, cheatCoinsUsed = false;
 
 var lanes = [128, 200, 272];
 var base, exponent, answer, expressionString, explanationString;
@@ -351,9 +354,10 @@ function drawStartScreen() {
   fill("white"); textAlign(LEFT, CENTER); textSize(24); textStyle(BOLD);
   text("$" + (totalCoins / 100).toFixed(2), 45, 26); textStyle(NORMAL);
 
-  if (keyDown("shift") && (keyWentDown("u") || keyWentDown("U"))) {
+  if (keyDown("shift") && (keyWentDown("u") || keyWentDown("U")) && !cheatCoinsUsed) {
+    cheatCoinsUsed = true;
     hasUnlockedHardMode = true; for (var k = 0; k < 6; k++) unlockedHardSkills[k] = true;
-    totalCoins += 5000; playSound("sound://category_achievements/peaceful_win_1.mp3");
+    totalCoins = 999999; playSound("sound://category_achievements/peaceful_win_1.mp3"); // $9999.99 - totalCoins is stored in cents
     saveExponentProgress();
   }
 
