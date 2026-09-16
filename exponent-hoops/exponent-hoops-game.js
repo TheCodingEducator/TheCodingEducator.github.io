@@ -35,6 +35,7 @@ p2EyeL.visible = false; p2EyeR.visible = false; ball.visible = false;
 
 var scoreBlue = 0; var scoreRed = 0;
 var gameMode = "title"; var gameState = "title";
+var exitConfirmPending = false;
 var possession = 1; var defenderLockedOut = false; var lockedOptionIndex = -1;
 
 var afkStreak = 0; var hasInteractedThisPossession = false; var prePauseState = "";
@@ -104,6 +105,8 @@ function renderWorld() {
 }
 
 function draw() {
+  if (exitConfirmPending) { drawExitConfirmOverlay(); return; }
+
   if (shakeTimer > 0) { camera.x = 200 + randomNumber(-8, 8); camera.y = 200 + randomNumber(-8, 8); shakeTimer--; }
   else { camera.x = 200; camera.y = 200; }
 
@@ -413,7 +416,7 @@ function draw() {
 
     if (mouseWentDown("leftButton")) {
       if (hoverResume) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
-      if (hoverMenu) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); afkStreak = 0; showCorrect = false; showPenalty = false; gameState = "title"; }
+      if (hoverMenu) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); exitConfirmPending = true; }
     }
   }
 }
@@ -656,7 +659,31 @@ function drawMenuButton() {
 
   fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("MENU", 200, 385); textStyle(NORMAL);
   if (mouseWentDown("leftButton") && hover) {
-    gameState = "title"; showCorrect = false; showPenalty = false;
+    exitConfirmPending = true;
+  }
+}
+
+function drawExitConfirmOverlay() {
+  fill("#1a1d24"); noStroke(); rect(0, 0, 400, 400);
+  fill("white"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(24);
+  text("Exit to Main Menu?", 200, 150);
+  fill("lightgray"); textSize(15); textStyle(NORMAL);
+  text("Your current game will end.", 200, 185);
+
+  var mx = World.mouseX; var my = World.mouseY;
+  var hoverYes = (mx > 60 && mx < 190 && my > 230 && my < 280);
+  var hoverNo = (mx > 210 && mx < 340 && my > 230 && my < 280);
+  fill(hoverYes ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(60, 230, 130, 50, 10);
+  fill(hoverNo ? "#229954" : "#27ae60"); rect(210, 230, 130, 50, 10);
+  fill("white"); noStroke(); textSize(17); textStyle(BOLD);
+  text("YES, EXIT", 125, 255); text("CANCEL", 275, 255); textStyle(NORMAL);
+
+  if (mouseWentDown("leftButton")) {
+    if (hoverYes) {
+      exitConfirmPending = false; showCorrect = false; showPenalty = false; afkStreak = 0; gameState = "title";
+    } else if (hoverNo) {
+      exitConfirmPending = false;
+    }
   }
 }
 
