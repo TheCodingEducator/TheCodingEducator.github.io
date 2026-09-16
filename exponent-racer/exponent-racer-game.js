@@ -72,12 +72,10 @@ var shopData = {
     { id: "green", name: "Green Car", price: 100 }, { id: "purple", name: "Purple Car", price: 100 },
     { id: "orange", name: "Orange Car", price: 100 }, { id: "pink", name: "Pink Car", price: 100 },
     { id: "yellow", name: "Yellow Car", price: 100 }, { id: "black", name: "Black Car", price: 100 },
-    { id: "white", name: "White Car", price: 100 },
-    { id: "cyan", name: "Cyan Car", price: 100 }, { id: "lime", name: "Lime Car", price: 100 },
-    { id: "gold", name: "Gold Car", price: 100 }, { id: "silver", name: "Silver Car", price: 100 },
-    { id: "crimson", name: "Crimson Car", price: 100 }, { id: "teal", name: "Teal Car", price: 100 },
-    { id: "superhero", name: "Superhero", price: 1000 },
-    { id: "rainbow", name: "Rainbow Car", price: 1000 }
+    { id: "white", name: "White Car", price: 100 }, { id: "cyan", name: "Cyan Car", price: 100 },
+    { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 },
+    { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot Car", price: 1000 },
+    { id: "alien", name: "Alien Car", price: 1000 }, { id: "dragon", name: "Dragon Car", price: 1000 }
   ],
 
   trails: [
@@ -1541,17 +1539,19 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
         smokeParticles.push({ type: "fire", x: player.x + 7, y: player.y + 40, size: randomNumber(5, 8), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
     }
 
-          else if (equipped.trail === "blue") { smokeParticles.push({ type: "glow", c: "0,150,255,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
-          else if (equipped.trail === "red") { smokeParticles.push({ type: "glow", c: "255,50,50,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
-          else if (equipped.trail === "pink") { smokeParticles.push({ type: "glow", c: "255,105,180,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
-          else if (equipped.trail === "purple") { smokeParticles.push({ type: "glow", c: "155,50,255,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
-          else if (equipped.trail === "green") { smokeParticles.push({ type: "glow", c: "60,255,90,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
-          else if (equipped.trail === "gold") { smokeParticles.push({ type: "glow", c: "255,215,0,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
-          else if (equipped.trail === "ice") { smokeParticles.push({ type: "glow", c: "140,230,255,", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy }); }
+          // Each of these gets its own particle type/shape (not just a
+          // recolored glow circle), so the trails actually look different
+          // from each other, not just tinted differently.
+          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(3, 5), alpha: 1.0, dy: dy, dx: randomNumber(-6, 6) / 10, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "red") { smokeParticles.push({ type: "ember", x: px, y: py, size: randomNumber(3, 6), alpha: 1.0, dy: dy, flicker: randomNumber(0, 100) }); }
+          else if (equipped.trail === "pink") { smokeParticles.push({ type: "heart", x: px, y: py, size: randomNumber(4, 7), alpha: 1.0, dy: dy, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(4, 7), alpha: 1.0, dy: dy, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "green") { smokeParticles.push({ type: "leaf", x: px, y: py, size: randomNumber(4, 7), alpha: 1.0, dy: dy, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(4, 7), alpha: 1.0, dy: dy, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(4, 7), alpha: 1.0, dy: dy * 0.6, ang: randomNumber(0, 360) }); }
           else if (equipped.trail === "rainbow") {
             var rbHue = (frameCounter * 6) % 360;
-            colorMode(HSB, 360, 100, 100); var rbCol = color(rbHue, 85, 95); colorMode(RGB, 255);
-            smokeParticles.push({ type: "glow", c: red(rbCol) + "," + green(rbCol) + "," + blue(rbCol) + ",", x: px, y: py, size: randomNumber(4, 8), alpha: 0.9, dy: dy });
+            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(4, 7), alpha: 1.0, dy: dy, ang: randomNumber(0, 360), hue: rbHue });
           }
           else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(3, 8), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "money") {
@@ -1570,9 +1570,16 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     var p = smokeParticles[s];
     if (!isFrozen) {
         p.y += p.dy;
-        if (p.type === "spark") { p.x += p.dx; p.alpha -= 0.1; }
+        if (p.type === "spark") { p.x += p.dx; p.alpha -= 0.09; p.ang += 25; }
         else if (p.type === "fire") { p.size -= 0.24; p.alpha -= 0.05; p.x += Math.sin(frameCounter * 0.4 + p.y * 0.15) * 0.8 + p.dx; }
         else if (p.type === "glow") { p.size -= 0.15; p.alpha -= 0.06; }
+        else if (p.type === "ember") { p.alpha -= 0.045; p.x += Math.sin(frameCounter * 0.3 + p.flicker) * 0.5; }
+        else if (p.type === "heart") { p.x += Math.sin(p.phase + p.y * 0.04) * 0.8; p.alpha -= 0.045; }
+        else if (p.type === "twinkle") { p.ang += 6; p.alpha -= 0.05; }
+        else if (p.type === "leaf") { p.x += Math.sin(p.phase + p.y * 0.06) * 1.2; p.ang = Math.sin(p.phase * 0.5) * 30; p.alpha -= 0.045; }
+        else if (p.type === "diamond") { p.ang += 8; p.alpha -= 0.045; }
+        else if (p.type === "snowflake") { p.x += Math.sin(frameCounter * 0.08 + p.ang) * 0.4; p.ang += 2; p.alpha -= 0.03; }
+        else if (p.type === "prism") { p.ang += 12; p.alpha -= 0.045; }
         else if (p.type === "bubbles") { p.x += Math.sin(p.phase + p.y * 0.05) * 1.5; p.size += 0.05; p.alpha -= 0.04; }
         else if (p.type === "money") { p.alpha -= 0.03; p.x += p.dx; p.rot += p.rotSpeed; }
         else { p.size += 0.3; p.alpha -= 0.05; }
@@ -1600,8 +1607,53 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
             }
         }
 
-        else if (p.type === "spark") { fill("rgba(255, 200, 0, " + p.alpha + ")"); noStroke(); rect(p.x, p.y, p.size, p.size * 2); }
+        else if (p.type === "spark") {
+            push(); translate(p.x, p.y); rotate(p.ang); noStroke();
+            fill("rgba(" + p.c + p.alpha + ")"); rect(-1, -p.size * 1.5, 2, p.size * 3);
+            fill("rgba(255,255,255," + p.alpha + ")"); rect(-0.5, -p.size * 0.8, 1, p.size * 1.6);
+            pop();
+        }
         else if (p.type === "glow") { fill("rgba(" + p.c + (p.alpha * 0.4) + ")"); noStroke(); ellipse(p.x, p.y, p.size * 2.5, p.size * 2.5); fill("rgba(255,255,255," + p.alpha + ")"); ellipse(p.x, p.y, p.size, p.size); }
+        else if (p.type === "ember") {
+            var flick = 0.6 + 0.4 * Math.sin(frameCounter * 0.5 + p.flicker);
+            noStroke(); fill("rgba(255,90,30," + (p.alpha * flick * 0.5) + ")"); ellipse(p.x, p.y, p.size * 3, p.size * 3);
+            fill("rgba(255,180,60," + (p.alpha * flick) + ")"); ellipse(p.x, p.y, p.size, p.size);
+        }
+        else if (p.type === "heart") {
+            noStroke(); fill("rgba(255,90,160," + p.alpha + ")"); var hs = p.size * 0.55;
+            ellipse(p.x - hs * 0.5, p.y - hs * 0.3, hs, hs); ellipse(p.x + hs * 0.5, p.y - hs * 0.3, hs, hs);
+            triangle(p.x - hs * 0.95, p.y - hs * 0.1, p.x + hs * 0.95, p.y - hs * 0.1, p.x, p.y + hs * 0.9);
+        }
+        else if (p.type === "twinkle") {
+            push(); translate(p.x, p.y); rotate(p.ang);
+            stroke("rgba(190,120,255," + p.alpha + ")"); strokeWeight(1.5); line(-p.size, 0, p.size, 0); line(0, -p.size, 0, p.size);
+            stroke("rgba(255,255,255," + p.alpha + ")"); strokeWeight(1); line(-p.size * 0.5, -p.size * 0.5, p.size * 0.5, p.size * 0.5); line(-p.size * 0.5, p.size * 0.5, p.size * 0.5, -p.size * 0.5);
+            pop();
+        }
+        else if (p.type === "leaf") {
+            push(); translate(p.x, p.y); rotate(p.ang); noStroke();
+            fill("rgba(60,200,90," + p.alpha + ")"); ellipse(0, 0, p.size * 1.6, p.size * 0.9);
+            stroke("rgba(30,140,60," + p.alpha + ")"); strokeWeight(1); line(-p.size * 0.8, 0, p.size * 0.8, 0);
+            pop();
+        }
+        else if (p.type === "diamond") {
+            push(); translate(p.x, p.y); rotate(p.ang); noStroke();
+            fill("rgba(255,215,60," + p.alpha + ")"); quad(0, -p.size, p.size * 0.7, 0, 0, p.size, -p.size * 0.7, 0);
+            fill("rgba(255,255,255," + (p.alpha * 0.8) + ")"); quad(0, -p.size * 0.4, p.size * 0.25, 0, 0, p.size * 0.4, -p.size * 0.25, 0);
+            pop();
+        }
+        else if (p.type === "snowflake") {
+            push(); translate(p.x, p.y); rotate(p.ang);
+            stroke("rgba(200,240,255," + p.alpha + ")"); strokeWeight(1.3);
+            line(-p.size, 0, p.size, 0); line(-p.size * 0.7, -p.size * 0.7, p.size * 0.7, p.size * 0.7); line(-p.size * 0.7, p.size * 0.7, p.size * 0.7, -p.size * 0.7);
+            pop();
+        }
+        else if (p.type === "prism") {
+            push(); translate(p.x, p.y); rotate(p.ang); noStroke();
+            colorMode(HSB, 360, 100, 100, 1); fill(p.hue, 85, 95, p.alpha); colorMode(RGB, 255);
+            triangle(0, -p.size, p.size * 0.9, p.size * 0.7, -p.size * 0.9, p.size * 0.7);
+            pop();
+        }
         else if (p.type === "bubbles") { fill("rgba(150, 220, 255, " + (p.alpha * 0.3) + ")"); stroke("rgba(200, 240, 255, " + p.alpha + ")"); strokeWeight(1.5); ellipse(p.x, p.y, p.size * 2, p.size * 2); noStroke(); fill("rgba(255, 255, 255, " + p.alpha + ")"); ellipse(p.x - p.size * 0.3, p.y - p.size * 0.3, p.size * 0.4, p.size * 0.4); }
         else if (p.type === "money") {
             push(); translate(p.x, p.y); rotate(p.rot);
@@ -1863,10 +1915,32 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
       // colorMode back to the default 0-255 RGB every other fill() call
       // in this function (and elsewhere) assumes.
       colorMode(HSB, 360, 100, 100); fill((frameCount * 3) % 360, 85, 95); colorMode(RGB, 255);
-    } else { fill(color); }
+    } else if (color === "ghost") { fill("rgba(220,245,255,0.5)"); }
+    else if (color === "robot") { fill("#8a97a3"); }
+    else if (color === "alien") { fill("#7ed957"); }
+    else if (color === "dragon") { fill("#2e7d32"); }
+    else { fill(color); }
     rect(cx - 13, cy, 26, 43);
     fill("rgba(255,255,255,0.2)"); rect(cx - 10, cy + 10, 20, 22);
     fill("lightblue"); rect(cx - 8, cy + 7, 16, 7); rect(cx - 8, cy + 29, 16, 6);
+
+    // Special-car decorations, drawn within the exact same body rect as
+    // every other car (not a separate custom shape) so every skin shares
+    // identical dimensions/hitbox.
+    if (color === "ghost") {
+      noStroke(); fill("rgba(60,80,90,0.6)"); ellipse(cx - 5, cy + 18, 4, 5); ellipse(cx + 5, cy + 18, 4, 5);
+    } else if (color === "robot") {
+      stroke("#4a5560"); strokeWeight(1.5); line(cx - 13, cy + 20, cx + 13, cy + 20); noStroke();
+      fill("#4a5560"); ellipse(cx - 10, cy + 3, 3, 3); ellipse(cx + 10, cy + 3, 3, 3); ellipse(cx - 10, cy + 39, 3, 3); ellipse(cx + 10, cy + 39, 3, 3);
+      stroke("#4a5560"); strokeWeight(2); line(cx, cy, cx, cy - 6); noStroke(); fill("#e74c3c"); ellipse(cx, cy - 7, 4, 4);
+    } else if (color === "alien") {
+      noStroke(); fill("rgba(200,255,210,0.35)"); ellipse(cx, cy + 17, 24, 20);
+      fill("#c6ffb8"); ellipse(cx - 12, cy + 18, 3, 3); ellipse(cx + 12, cy + 18, 3, 3);
+    } else if (color === "dragon") {
+      noStroke(); fill("#1b5e20");
+      triangle(cx - 8, cy, cx - 4, cy - 7, cx, cy); triangle(cx - 1, cy, cx + 3, cy - 8, cx + 7, cy);
+      fill("#e74c3c"); ellipse(cx - 9, cy + 12, 3, 3); ellipse(cx + 9, cy + 12, 3, 3);
+    }
 
     water = water || 0; sand = sand || 0;
     if (water > 0) {
