@@ -85,12 +85,13 @@ var shopData = {
     { id: "vintage", name: "Vintage Car", price: 1000 }, { id: "supercar", name: "Supercar", price: 1000 }
   ],
 
+  // Ordered cheapest-first / most-expensive-last within each shop tab.
   trails: [
     { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
     { id: "blue", name: "Spark Trail", price: 300 }, { id: "red", name: "Ember Trail", price: 300 },
-    { id: "pink", name: "Heart Trail", price: 300 }, { id: "bubbles", name: "Bubbles", price: 500 },
-    { id: "money", name: "Money Trail", price: 500 },
-    { id: "purple", name: "Twinkle Trail", price: 300 }, { id: "green", name: "Leaf Trail", price: 300 },
+    { id: "pink", name: "Heart Trail", price: 300 }, { id: "purple", name: "Twinkle Trail", price: 300 },
+    { id: "green", name: "Leaf Trail", price: 300 },
+    { id: "bubbles", name: "Bubbles", price: 500 }, { id: "money", name: "Money Trail", price: 500 },
     { id: "gold", name: "Diamond Trail", price: 500 }, { id: "ice", name: "Snowflake Trail", price: 500 },
     { id: "rainbow", name: "Rainbow Trail", price: 1000 }
   ],
@@ -105,12 +106,12 @@ var shopData = {
   // never prevent a loss - they're pure economy/QoL - so they're cheapest.
   boosts: [
     { id: "none", name: "No Powerup", price: 500 },
-    { id: "shield", name: "Forcefield", price: 800 },
+    { id: "doublecoins", name: "Double Coins", price: 500 },
     { id: "magnet", name: "Coin Magnet", price: 600 },
-    { id: "fuelsaver", name: "Electric (No Fuel)", price: 1200 },
     { id: "secondchance", name: "Second Chance", price: 700 },
+    { id: "shield", name: "Forcefield", price: 800 },
     { id: "timefreeze", name: "Time Freeze", price: 1000 },
-    { id: "doublecoins", name: "Double Coins", price: 500 }
+    { id: "fuelsaver", name: "Electric (No Fuel)", price: 1200 }
   ],
 };
 
@@ -470,13 +471,13 @@ function drawShopScreen() {
               scale(0.5); // Scale down the car so it fits
               drawVehicle(0, 0, "car", item.id, true, "", false, 0, 0);
           } else if (shopTab === "trails") {
-              // Default red car shown horizontal (facing right, as if driving
-              // forward) with the actual trail glyph streaming out behind it
-              // to the left - so the row reads as a little side-view replay
-              // of what the trail looks like in real gameplay.
-              translate(56, yPos + 20);
+              // Default red car shown horizontal, facing left (as if driving
+              // forward across the row) with the actual trail glyph emitting
+              // out its back (to the right) - so the row reads as a little
+              // side-view replay of what the trail looks like in real gameplay.
+              translate(39, yPos + 20);
               if (item.id !== "none") {
-                var trailPreviewSteps = [[-13, 1, 0.9], [-21, 0.7, 0.55], [-28, 0.45, 0.3]];
+                var trailPreviewSteps = [[13, 1, 0.9], [21, 0.7, 0.55], [28, 0.45, 0.3]];
                 for (var tp = 0; tp < trailPreviewSteps.length; tp++) {
                   push();
                   translate(trailPreviewSteps[tp][0], 0);
@@ -488,7 +489,7 @@ function drawShopScreen() {
                 }
               }
               push();
-              rotate(HALF_PI);
+              rotate(-HALF_PI);
               scale(0.32);
               drawVehicle(0, 0, "car", "red", true, "", false, 0, 0);
               pop();
@@ -1663,7 +1664,7 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
 
   // Trailing Particles Logic
   if (!isFrozen) {
-    var emitFreq = (equipped.trail !== "none") ? 2 : 5;
+    var emitFreq = (equipped.trail !== "none") ? 6 : 8;
     if (frameCounter % emitFreq === 0) {
       var dy = (activeSpeed * 4 * currentSpeedMult + 2) * dir;
       var py = player.y + 41;
@@ -1672,8 +1673,8 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           var px = emitPoints[ep] + randomNumber(-2, 2);
           if (equipped.trail === "fire") {
         // Shoots tight, fast streams out of dual exhaust positions behind the car
-        smokeParticles.push({ type: "fire", x: player.x - 7, y: player.y + 40, size: randomNumber(5, 8), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
-        smokeParticles.push({ type: "fire", x: player.x + 7, y: player.y + 40, size: randomNumber(5, 8), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
+        smokeParticles.push({ type: "fire", x: player.x - 7, y: player.y + 40, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
+        smokeParticles.push({ type: "fire", x: player.x + 7, y: player.y + 40, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 1.3, dx: randomNumber(-4, 4) / 10 });
     }
 
           // Each of these gets its own particle type/shape (not just a
@@ -1683,26 +1684,26 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           // fire/bubbles/money, tuned closer to real speed already) - at
           // full road speed they used to fly past before their shape/motion
           // details (zigzag, flap, twinkle, etc.) had time to register.
-          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(6, 9), alpha: 1.0, dy: dy * 0.45, dx: randomNumber(-6, 6) / 10, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "red") { smokeParticles.push({ type: "ember", x: px, y: py, size: randomNumber(6, 10), alpha: 1.0, dy: dy * 0.45, flicker: randomNumber(0, 100) }); }
-          else if (equipped.trail === "pink") { smokeParticles.push({ type: "heart", x: px, y: py, size: randomNumber(9, 14), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
-          else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "green") { smokeParticles.push({ type: "leaf", x: px, y: py, size: randomNumber(8, 12), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
-          else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.35, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(9, 13), alpha: 1.0, dy: dy * 0.45, dx: randomNumber(-6, 6) / 10, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "red") { smokeParticles.push({ type: "ember", x: px, y: py, size: randomNumber(9, 15), alpha: 1.0, dy: dy * 0.45, flicker: randomNumber(0, 100) }); }
+          else if (equipped.trail === "pink") { smokeParticles.push({ type: "heart", x: px, y: py, size: randomNumber(13, 20), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "green") { smokeParticles.push({ type: "leaf", x: px, y: py, size: randomNumber(11, 17), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.35, ang: randomNumber(0, 360) }); }
           else if (equipped.trail === "rainbow") {
             var rbHue = (frameCounter * 6) % 360;
-            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(8, 12), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360), hue: rbHue });
+            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(11, 17), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360), hue: rbHue });
           }
-          else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(3, 8), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(5, 11), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "money") {
              if (frameCounter % 6 === 0) {
                  for (var i = 0; i < 2; i++) {
-                   smokeParticles.push({ type: "money", x: player.x + randomNumber(-15, 15), y: player.y + 35, size: randomNumber(7, 11), alpha: 1.0, dy: dy * randomNumber(7, 12) / 10, dx: randomNumber(-30, 30) / 10, rot: randomNumber(0, 360), rotSpeed: randomNumber(-8, 8) });
+                   smokeParticles.push({ type: "money", x: player.x + randomNumber(-15, 15), y: player.y + 35, size: randomNumber(9, 13), alpha: 1.0, dy: dy * randomNumber(7, 12) / 10, dx: randomNumber(-30, 30) / 10, rot: randomNumber(0, 360), rotSpeed: randomNumber(-8, 8) });
                  }
              }
           }
-          else { smokeParticles.push({ type: "smoke", x: px, y: py, size: randomNumber(3, 6), alpha: 1.0, dy: dy }); }
+          else { smokeParticles.push({ type: "smoke", x: px, y: py, size: randomNumber(5, 8), alpha: 1.0, dy: dy }); }
       }
     }
   }
