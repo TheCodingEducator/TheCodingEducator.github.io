@@ -72,7 +72,7 @@ var shopData = {
     { id: "green", name: "Green Car", price: 100 }, { id: "purple", name: "Purple Car", price: 100 },
     { id: "orange", name: "Orange Car", price: 100 }, { id: "pink", name: "Pink Car", price: 100 },
     { id: "yellow", name: "Yellow Car", price: 100 }, { id: "black", name: "Black Car", price: 100 },
-    { id: "white", name: "White Car", price: 100 }, { id: "cyan", name: "Cyan Car", price: 100 },
+    { id: "white", name: "White Car", price: 100 },
     { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 },
     { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot Car", price: 1000 },
     { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon Car", price: 1000 },
@@ -1998,7 +1998,7 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
   // works), just with the WHOLE thing rendered at reduced opacity via
   // globalAlpha instead of only the body fill - a single translucent body
   // fill alone still left the opaque wheels/lights looking solid.
-  drawingContext.globalAlpha = (color === "ghost") ? 0.5 : 1;
+  drawingContext.globalAlpha = (color === "ghost") ? 0.4 : 1;
 
   if (dayPhase > 0) {
     noStroke(); fill("rgba(0, 0, 0, " + (dayPhase * 0.4).toFixed(2) + ")");
@@ -2017,7 +2017,7 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
       // colorMode back to the default 0-255 RGB every other fill() call
       // in this function (and elsewhere) assumes.
       colorMode(HSB, 360, 100, 100); fill((frameCount * 3) % 360, 85, 95); colorMode(RGB, 255);
-    } else if (color === "ghost") { fill("#dcf5ff"); } // opaque here - globalAlpha above is what makes the whole car see-through
+    } else if (color === "ghost") { fill("#ffffff"); } // opaque here - globalAlpha above is what makes the whole car see-through
     else { fill(color); }
     rect(cx - 13, cy, 26, 43);
     fill("rgba(255,255,255,0.2)"); rect(cx - 10, cy + 10, 20, 22);
