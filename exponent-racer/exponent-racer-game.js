@@ -284,6 +284,19 @@ function drawTides(yTop, yBottom) {
 function draw() {
   textFont("sans-serif");
 
+  // Escape acts as the Menu button, wherever one is on screen. In-run
+  // states get the same score-save treatment as clicking the in-play
+  // MENU button, so quitting via Escape doesn't lose progress either.
+  if (keyWentDown("escape")) {
+    if (gameState === "skillSelect" || gameState === "shop" || gameState === "over" || gameState === "winScreen") {
+      gameState = "start";
+    } else if (gameState === "play" || gameState === "paused") {
+      if (gameMode === "hard" && score > hardHighScore) hardHighScore = score;
+      saveExponentProgress();
+      gameState = "start";
+    }
+  }
+
   var shouldPlayStorm = false;
   if (gameMode === "hard" && (gameState === "play" || gameState === "paused" || gameState === "winSequence")) {
       var currentEnv = (player.y < biomeTransitionY) ? newBiome : oldBiome;
