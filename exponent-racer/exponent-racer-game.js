@@ -77,7 +77,8 @@ var shopData = {
     { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot", price: 1000 },
     { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon", price: 1000 },
     { id: "bird", name: "Bird", price: 1000 }, { id: "swervingtruck", name: "Swerving Truck", price: 1000 },
-    { id: "plane", name: "Crop Duster", price: 1000 }, { id: "bicycle", name: "Bicycle", price: 1000 }
+    { id: "plane", name: "Crop Duster", price: 1000 }, { id: "motorcycle", name: "Motorcycle", price: 1000 },
+    { id: "vintage", name: "Vintage Car", price: 1000 }, { id: "supercar", name: "Supercar", price: 1000 }
   ],
 
   trails: [
@@ -2046,16 +2047,55 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
     return;
   }
 
-  if (color === "bicycle") {
-    // A bicycle and rider seen from above: front/back wheels along a
-    // frame line, handlebars, and a simple rider torso and head.
-    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 42, 16, 6);
-    stroke("#c0392b"); strokeWeight(3); line(cx, cy + 6, cx, cy + 36); noStroke();
-    fill("#2c3e50"); ellipse(cx, cy + 4, 10, 10); ellipse(cx, cy + 38, 10, 10);
-    fill("#7f8c8d"); ellipse(cx, cy + 4, 5, 5); ellipse(cx, cy + 38, 5, 5);
-    stroke("#2c3e50"); strokeWeight(2); line(cx - 10, cy + 8, cx + 10, cy + 8); noStroke();
-    fill("#3498db"); ellipse(cx, cy + 20, 16, 20);
-    fill("#f1c27d"); ellipse(cx, cy + 10, 9, 9);
+  if (color === "motorcycle") {
+    // A motorcycle, not a bicycle: chunky tires, a visible engine block,
+    // an exhaust pipe, a headlight, and a helmeted rider - a thin frame
+    // with a bare-headed rider would read as a bicycle instead.
+    noStroke(); fill("rgba(0,0,0,0.3)"); ellipse(cx, cy + 42, 20, 6);
+    stroke("#111"); strokeWeight(4); line(cx, cy + 3, cx, cy + 39); noStroke();
+    fill("#111"); ellipse(cx, cy + 2, 15, 15); ellipse(cx, cy + 40, 15, 15);
+    fill("#555"); ellipse(cx, cy + 2, 6, 6); ellipse(cx, cy + 40, 6, 6);
+    fill("#2c3e50"); rect(cx - 7, cy + 15, 14, 14, 2);
+    fill("#7f8c8d"); rect(cx - 5, cy + 17, 10, 4);
+    fill("#bdc3c7"); rect(cx + 6, cy + 25, 11, 4, 2);
+    stroke("#111"); strokeWeight(2); line(cx - 12, cy + 6, cx + 12, cy + 6); noStroke();
+    fill("yellow"); ellipse(cx, cy - 1, 6, 6);
+    fill("#c0392b"); ellipse(cx, cy + 18, 15, 18);
+    fill("#111"); ellipse(cx, cy + 8, 9, 9);
+    fill("#3498db"); ellipse(cx, cy + 8, 6, 3);
+    return;
+  }
+
+  if (color === "vintage") {
+    // A classic car: cream rounded body with a black roof band, big round
+    // chrome headlights, chrome bumpers front and back, whitewall tires,
+    // and a spare tire mounted on the trunk.
+    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 44, 28, 6);
+    fill("black"); rect(cx - 16, cy + 6, 6, 12); rect(cx + 10, cy + 6, 6, 12); rect(cx - 16, cy + 27, 6, 12); rect(cx + 10, cy + 27, 6, 12);
+    fill("white"); ellipse(cx - 13, cy + 12, 4, 4); ellipse(cx + 13, cy + 12, 4, 4); ellipse(cx - 13, cy + 33, 4, 4); ellipse(cx + 13, cy + 33, 4, 4);
+    fill("#e8dcc0"); rect(cx - 13, cy, 26, 43, 6);
+    fill("#3a2a1a"); rect(cx - 13, cy + 12, 26, 14);
+    fill("#c9c9c9"); rect(cx - 14, cy - 2, 28, 4, 2); rect(cx - 14, cy + 41, 28, 4, 2);
+    fill("#c9c9c9"); ellipse(cx - 7, cy + 1, 7, 7); ellipse(cx + 7, cy + 1, 7, 7);
+    fill("#fdf6e3"); ellipse(cx - 7, cy + 1, 4, 4); ellipse(cx + 7, cy + 1, 4, 4);
+    fill("#c9c9c9"); ellipse(cx, cy + 44, 6, 6); fill("#7f7f7f"); ellipse(cx, cy + 44, 3, 3);
+    return;
+  }
+
+  if (color === "supercar") {
+    // A low, narrow, sleek body with a racing stripe, tinted cockpit,
+    // hood scoop, and a rear spoiler on struts - wide tires instead of
+    // the standard car's, since a "cheap plain color swap" was the exact
+    // complaint this whole roster of custom shapes exists to fix.
+    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 44, 26, 6);
+    fill("black"); rect(cx - 17, cy + 6, 6, 11); rect(cx + 11, cy + 6, 6, 11); rect(cx - 17, cy + 27, 6, 11); rect(cx + 11, cy + 27, 6, 11);
+    fill("#d40000"); rect(cx - 12, cy, 24, 43, 8);
+    fill("#ffcc00"); rect(cx - 2, cy, 4, 43);
+    fill("rgba(0,0,0,0.5)"); rect(cx - 9, cy + 9, 18, 16, 4);
+    fill("#111"); rect(cx - 7, cy - 3, 14, 4, 2);
+    fill("white"); ellipse(cx - 6, cy + 1, 4, 4); ellipse(cx + 6, cy + 1, 4, 4);
+    fill("#111"); rect(cx - 13, cy + 36, 3, 8); rect(cx + 10, cy + 36, 3, 8);
+    fill("#111"); rect(cx - 15, cy + 34, 30, 3, 1);
     return;
   }
 
