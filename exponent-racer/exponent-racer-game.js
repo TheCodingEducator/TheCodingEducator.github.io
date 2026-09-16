@@ -82,11 +82,11 @@ var shopData = {
 
   trails: [
     { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
-    { id: "blue", name: "Blue Smoke", price: 300 }, { id: "red", name: "Red Smoke", price: 300 },
-    { id: "pink", name: "Pink Smoke", price: 300 }, { id: "bubbles", name: "Bubbles", price: 500 },
+    { id: "blue", name: "Spark Trail", price: 300 }, { id: "red", name: "Ember Trail", price: 300 },
+    { id: "pink", name: "Heart Trail", price: 300 }, { id: "bubbles", name: "Bubbles", price: 500 },
     { id: "money", name: "Money Trail", price: 500 },
-    { id: "purple", name: "Violet Trail", price: 300 }, { id: "green", name: "Toxic Trail", price: 300 },
-    { id: "gold", name: "Golden Trail", price: 500 }, { id: "ice", name: "Ice Trail", price: 500 },
+    { id: "purple", name: "Twinkle Trail", price: 300 }, { id: "green", name: "Leaf Trail", price: 300 },
+    { id: "gold", name: "Diamond Trail", price: 500 }, { id: "ice", name: "Snowflake Trail", price: 500 },
     { id: "rainbow", name: "Rainbow Trail", price: 1000 }
   ],
   boosts: [
@@ -419,6 +419,12 @@ function drawShopScreen() {
               else if (item.id === "money") { fill("green"); rect(-15, -10, 30, 20); fill("white"); textAlign(CENTER, CENTER); textSize(16); text("$", 0, 0); }
               else if (item.id === "ice") { fill("#8fe3ff"); ellipse(0, 0, 22, 22); fill("white"); ellipse(-5, -5, 7, 7); }
               else if (item.id === "rainbow") { var rbColors = ["#ff3b3b", "#ff9f1c", "#ffe135", "#5cff5c", "#3ba7ff", "#b15cff"]; for (var ri = 0; ri < rbColors.length; ri++) { fill(rbColors[ri]); ellipse(-12 + ri * 5, 0, 9, 9); } }
+              else if (item.id === "blue") { noFill(); stroke("#50c8ff"); strokeWeight(3); beginShape(); vertex(0, -12); vertex(5, -3); vertex(-3, 0); vertex(4, 4); vertex(0, 12); endShape(); }
+              else if (item.id === "red") { noStroke(); fill("rgba(255,90,30,0.4)"); ellipse(0, 0, 24, 24); fill("#ffb43c"); ellipse(0, 0, 12, 12); }
+              else if (item.id === "pink") { noStroke(); fill("#ff5aa0"); ellipse(-4, -3, 9, 9); ellipse(4, -3, 9, 9); triangle(-8, -1, 8, -1, 0, 10); }
+              else if (item.id === "purple") { stroke("#be78ff"); strokeWeight(2); line(-11, 0, 11, 0); line(0, -11, 0, 11); stroke("white"); strokeWeight(1); line(-6, -6, 6, 6); line(-6, 6, 6, -6); }
+              else if (item.id === "green") { noStroke(); fill("#3cc85a"); ellipse(0, 0, 20, 11); stroke("#1e8c3c"); strokeWeight(1); line(-9, 0, 9, 0); }
+              else if (item.id === "gold") { noStroke(); fill("#ffd73c"); quad(0, -12, 8, 0, 0, 12, -8, 0); fill("white"); quad(0, -5, 3, 0, 0, 5, -3, 0); }
               else { fill(item.id); ellipse(0, 0, 25, 25); }
           } else if (shopTab === "boosts") {
               translate(50, yPos + 20); // Centered vertically next to the text
