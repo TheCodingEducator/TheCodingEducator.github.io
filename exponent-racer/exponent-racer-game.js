@@ -74,9 +74,9 @@ var shopData = {
     { id: "yellow", name: "Yellow Car", price: 100 }, { id: "black", name: "Black Car", price: 100 },
     { id: "white", name: "White Car", price: 100 },
     { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 },
-    { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot Car", price: 1000 },
-    { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon Car", price: 1000 },
-    { id: "bird", name: "Bird Car", price: 1000 }, { id: "swervingtruck", name: "Swerving Truck", price: 1000 }
+    { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot", price: 1000 },
+    { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon", price: 1000 },
+    { id: "bird", name: "Bird", price: 1000 }, { id: "swervingtruck", name: "Swerving Truck", price: 1000 }
   ],
 
   trails: [
