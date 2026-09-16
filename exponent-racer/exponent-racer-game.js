@@ -9,6 +9,7 @@ var maxVelocityPromptShown = false;
 
 // Shop & Customization Variables
 var activeShield = false, shopTab = "cars", shopScrollY = 0, usedSecondChance = false;
+var usedTimeFreeze = false, timeFreezeFramesLeft = 0, questionCheckpoint = null;
 
 var unlockedItems = {
   cars: ["red"],
@@ -27,7 +28,7 @@ var equipped = { car: "red", trail: "none", boost: "none", world: "default" };
 function loadExponentProgress() {
   try {
     var c = localStorage.getItem('exprace_coins');
-    if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) totalCoins=n; }
+    if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) totalCoins=Math.min(999999, n); }
     var u = localStorage.getItem('exprace_unlocked');
     if (u!==null) { var uo=JSON.parse(u); if (uo&&uo.cars&&uo.trails&&uo.boosts) unlockedItems=uo; }
     var e = localStorage.getItem('exprace_equipped');
@@ -66,13 +67,16 @@ document.addEventListener('visibilitychange', function () {
 });
 window.addEventListener('pagehide', saveExponentProgress);
 
+// The plain flat-color cars are free and never need "buying" - they're
+// bundled into one "classic" shop row (see drawShopScreen) that shows all
+// of them as a single lineup of clickable swatches instead of 9 separate
+// rows, so CLASSIC_CAR_COLORS is the source of truth for both that row and
+// for which car ids can be equipped without going through unlock/price logic.
+var CLASSIC_CAR_COLORS = ["red", "blue", "green", "purple", "orange", "pink", "yellow", "black", "white"];
+
 var shopData = {
   cars: [
-    { id: "red", name: "Red Car", price: 100 }, { id: "blue", name: "Blue Car", price: 100 },
-    { id: "green", name: "Green Car", price: 100 }, { id: "purple", name: "Purple Car", price: 100 },
-    { id: "orange", name: "Orange Car", price: 100 }, { id: "pink", name: "Pink Car", price: 100 },
-    { id: "yellow", name: "Yellow Car", price: 100 }, { id: "black", name: "Black Car", price: 100 },
-    { id: "white", name: "White Car", price: 100 },
+    { id: "classic", name: "Classic Colors", price: 0, isColorPicker: true },
     { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 },
     { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot", price: 1000 },
     { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon", price: 1000 },
@@ -90,13 +94,22 @@ var shopData = {
     { id: "gold", name: "Diamond Trail", price: 500 }, { id: "ice", name: "Snowflake Trail", price: 500 },
     { id: "rainbow", name: "Rainbow Trail", price: 1000 }
   ],
+  // Priced by how much of an edge each actually gives in a run, not
+  // uniformly: Electric removes an entire way to lose (fuel) for the
+  // WHOLE game, so it costs the most. Time Freeze and Shield are
+  // single-use saves but a full 10-second stop-the-world beats a single
+  // hit absorbed, so it's priced above Shield. Second Chance protects
+  // against the same things Shield does (plus wrong answers) but only
+  // comes up on the rarer "already about to fail" moment, so per
+  // feedback it's priced just under Shield. Magnet and Double Coins
+  // never prevent a loss - they're pure economy/QoL - so they're cheapest.
   boosts: [
     { id: "none", name: "No Powerup", price: 500 },
-    { id: "shield", name: "Forcefield", price: 500 },
-    { id: "magnet", name: "Coin Magnet", price: 500 },
-    { id: "fuelsaver", name: "Fuel Saver", price: 500 },
-    { id: "secondchance", name: "Second Chance", price: 500 },
-    { id: "timefreeze", name: "Time Freeze", price: 500 },
+    { id: "shield", name: "Forcefield", price: 800 },
+    { id: "magnet", name: "Coin Magnet", price: 600 },
+    { id: "fuelsaver", name: "Electric (No Fuel)", price: 1200 },
+    { id: "secondchance", name: "Second Chance", price: 700 },
+    { id: "timefreeze", name: "Time Freeze", price: 1000 },
     { id: "doublecoins", name: "Double Coins", price: 500 }
   ],
 };
@@ -324,9 +337,19 @@ function draw() {
           gameState = "maxVelocityPrompt";
           playSound("sound://category_achievements/puzzle_game_secret_unlock_01.mp3");
       } else {
-          playGame(false);
+          if (equipped.boost === "timefreeze" && !usedTimeFreeze && timeFreezeFramesLeft === 0 && (keyWentDown("space") || keyWentDown("enter"))) {
+              usedTimeFreeze = true; timeFreezeFramesLeft = 300; playSound("sound://category_achievements/peaceful_win_1.mp3");
+          }
+          if (timeFreezeFramesLeft > 0) {
+              timeFreezeFramesLeft--;
+              playGame(true);
+              drawTimeFreezeOverlay();
+          } else {
+              playGame(false);
+          }
       }
   }
+  else if (gameState === "timeFreezeTip") drawTimeFreezeTip();
   else if (gameState === "maxVelocityPrompt") drawMaxVelocityPrompt();
   else if (gameState === "paused") drawPausedScreen();
   else if (gameState === "over") drawGameOver();
@@ -394,6 +417,22 @@ function drawStartScreen() {
   }
 }
 
+function drawTrailGlyph(id) {
+  if (id === "none") { fill("gray"); ellipse(0, 0, 15, 15); }
+  else if (id === "fire") { fill("orange"); ellipse(0, 0, 25, 25); fill("yellow"); ellipse(0, 0, 15, 15); }
+  else if (id === "bubbles") { fill("cyan"); ellipse(0, 0, 20, 20); noFill(); stroke("white"); ellipse(5, -5, 6, 6); }
+  else if (id === "money") { fill("green"); rect(-15, -10, 30, 20); fill("white"); textAlign(CENTER, CENTER); textSize(16); text("$", 0, 0); }
+  else if (id === "ice") { fill("#8fe3ff"); ellipse(0, 0, 22, 22); fill("white"); ellipse(-5, -5, 7, 7); }
+  else if (id === "rainbow") { var rbColors = ["#ff3b3b", "#ff9f1c", "#ffe135", "#5cff5c", "#3ba7ff", "#b15cff"]; for (var ri = 0; ri < rbColors.length; ri++) { fill(rbColors[ri]); ellipse(-12 + ri * 5, 0, 9, 9); } }
+  else if (id === "blue") { noFill(); stroke("#50c8ff"); strokeWeight(3); beginShape(); vertex(0, -12); vertex(5, -3); vertex(-3, 0); vertex(4, 4); vertex(0, 12); endShape(); }
+  else if (id === "red") { noStroke(); fill("rgba(255,90,30,0.4)"); ellipse(0, 0, 24, 24); fill("#ffb43c"); ellipse(0, 0, 12, 12); }
+  else if (id === "pink") { noStroke(); fill("#ff5aa0"); ellipse(-4, -3, 9, 9); ellipse(4, -3, 9, 9); triangle(-8, -1, 8, -1, 0, 10); }
+  else if (id === "purple") { stroke("#be78ff"); strokeWeight(2); line(-11, 0, 11, 0); line(0, -11, 0, 11); stroke("white"); strokeWeight(1); line(-6, -6, 6, 6); line(-6, 6, 6, -6); }
+  else if (id === "green") { noStroke(); fill("#3cc85a"); ellipse(0, 0, 20, 11); stroke("#1e8c3c"); strokeWeight(1); line(-9, 0, 9, 0); }
+  else if (id === "gold") { noStroke(); fill("#ffd73c"); quad(0, -12, 8, 0, 0, 12, -8, 0); fill("white"); quad(0, -5, 3, 0, 0, 5, -3, 0); }
+  else { fill(id); ellipse(0, 0, 25, 25); }
+}
+
 function drawShopScreen() {
   background("#34495e");
 
@@ -421,31 +460,44 @@ function drawShopScreen() {
     // --- Draw Small Picture ---
           push();
 
-          if (shopTab === "cars") {
+          if (shopTab === "cars" && item.id === "classic") {
+              translate(50, yPos + 20);
+              fill("#e74c3c"); noStroke(); ellipse(-6, -4, 11, 11);
+              fill("#3498db"); ellipse(6, -4, 11, 11);
+              fill("#2ecc71"); ellipse(0, 7, 11, 11);
+          } else if (shopTab === "cars") {
               translate(50, yPos + 10); // Car specific position
               scale(0.5); // Scale down the car so it fits
               drawVehicle(0, 0, "car", item.id, true, "", false, 0, 0);
           } else if (shopTab === "trails") {
-              translate(50, yPos + 20); // Centered vertically next to the text
-              if (item.id === "none") { fill("gray"); ellipse(0, 0, 15, 15); }
-              else if (item.id === "fire") { fill("orange"); ellipse(0, 0, 25, 25); fill("yellow"); ellipse(0, 0, 15, 15); }
-              else if (item.id === "bubbles") { fill("cyan"); ellipse(0, 0, 20, 20); noFill(); stroke("white"); ellipse(5, -5, 6, 6); }
-              else if (item.id === "money") { fill("green"); rect(-15, -10, 30, 20); fill("white"); textAlign(CENTER, CENTER); textSize(16); text("$", 0, 0); }
-              else if (item.id === "ice") { fill("#8fe3ff"); ellipse(0, 0, 22, 22); fill("white"); ellipse(-5, -5, 7, 7); }
-              else if (item.id === "rainbow") { var rbColors = ["#ff3b3b", "#ff9f1c", "#ffe135", "#5cff5c", "#3ba7ff", "#b15cff"]; for (var ri = 0; ri < rbColors.length; ri++) { fill(rbColors[ri]); ellipse(-12 + ri * 5, 0, 9, 9); } }
-              else if (item.id === "blue") { noFill(); stroke("#50c8ff"); strokeWeight(3); beginShape(); vertex(0, -12); vertex(5, -3); vertex(-3, 0); vertex(4, 4); vertex(0, 12); endShape(); }
-              else if (item.id === "red") { noStroke(); fill("rgba(255,90,30,0.4)"); ellipse(0, 0, 24, 24); fill("#ffb43c"); ellipse(0, 0, 12, 12); }
-              else if (item.id === "pink") { noStroke(); fill("#ff5aa0"); ellipse(-4, -3, 9, 9); ellipse(4, -3, 9, 9); triangle(-8, -1, 8, -1, 0, 10); }
-              else if (item.id === "purple") { stroke("#be78ff"); strokeWeight(2); line(-11, 0, 11, 0); line(0, -11, 0, 11); stroke("white"); strokeWeight(1); line(-6, -6, 6, 6); line(-6, 6, 6, -6); }
-              else if (item.id === "green") { noStroke(); fill("#3cc85a"); ellipse(0, 0, 20, 11); stroke("#1e8c3c"); strokeWeight(1); line(-9, 0, 9, 0); }
-              else if (item.id === "gold") { noStroke(); fill("#ffd73c"); quad(0, -12, 8, 0, 0, 12, -8, 0); fill("white"); quad(0, -5, 3, 0, 0, 5, -3, 0); }
-              else { fill(item.id); ellipse(0, 0, 25, 25); }
+              // Default red car shown horizontal (facing right, as if driving
+              // forward) with the actual trail glyph streaming out behind it
+              // to the left - so the row reads as a little side-view replay
+              // of what the trail looks like in real gameplay.
+              translate(56, yPos + 20);
+              if (item.id !== "none") {
+                var trailPreviewSteps = [[-13, 1, 0.9], [-21, 0.7, 0.55], [-28, 0.45, 0.3]];
+                for (var tp = 0; tp < trailPreviewSteps.length; tp++) {
+                  push();
+                  translate(trailPreviewSteps[tp][0], 0);
+                  scale(trailPreviewSteps[tp][1]);
+                  drawingContext.globalAlpha = trailPreviewSteps[tp][2];
+                  drawTrailGlyph(item.id);
+                  drawingContext.globalAlpha = 1;
+                  pop();
+                }
+              }
+              push();
+              rotate(HALF_PI);
+              scale(0.32);
+              drawVehicle(0, 0, "car", "red", true, "", false, 0, 0);
+              pop();
           } else if (shopTab === "boosts") {
               translate(50, yPos + 20); // Centered vertically next to the text
               if (item.id === "none") { fill("gray"); textAlign(CENTER, CENTER); textSize(20); text("X", 0, 0); }
               else if (item.id === "shield") { noFill(); stroke("cyan"); strokeWeight(4); ellipse(0, 0, 30, 30); }
               else if (item.id === "magnet") { fill("gray"); rect(-12, -12, 24, 12); fill("red"); rect(-12, 0, 10, 12); fill("blue"); rect(2, 0, 10, 12); }
-              else if (item.id === "fuelsaver") { fill("#2ecc71"); rect(-8, -12, 16, 24, 3); fill("white"); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text("+", 0, -2); textStyle(NORMAL); }
+              else if (item.id === "fuelsaver") { noStroke(); fill("#2ecc71"); beginShape(); vertex(2, -13); vertex(-7, 2); vertex(-1, 2); vertex(-3, 13); vertex(8, -3); vertex(1, -3); endShape(CLOSE); }
               else if (item.id === "secondchance") { noFill(); stroke("gold"); strokeWeight(3); arc(0, 0, 28, 28, -220, 40); fill("gold"); noStroke(); textAlign(CENTER, CENTER); textSize(16); textStyle(BOLD); text("2", 0, 1); textStyle(NORMAL); }
               else if (item.id === "timefreeze") { noFill(); stroke("#7fdbff"); strokeWeight(3); ellipse(0, 0, 26, 26); stroke("white"); strokeWeight(2); line(0, 0, 0, -9); line(0, 0, 6, 3); }
               else if (item.id === "doublecoins") { fill("gold"); ellipse(-6, 3, 16, 16); fill("#e6b800"); noFill(); stroke("#b8860b"); strokeWeight(1.5); ellipse(6, -3, 16, 16); }
@@ -453,6 +505,23 @@ function drawShopScreen() {
           pop();
 
 
+    if (item.isColorPicker) {
+        // One row standing in for all 9 flat-color cars: every swatch is
+        // free and always available, so clicking one equips it directly
+        // instead of going through the normal unlock/buy button.
+        var swStartX = 92, swEndX = 358, swStep = (swEndX - swStartX) / (CLASSIC_CAR_COLORS.length - 1);
+        for (var cc = 0; cc < CLASSIC_CAR_COLORS.length; cc++) {
+          var cColor = CLASSIC_CAR_COLORS[cc]; var swX = swStartX + cc * swStep, swY = yPos + 20;
+          var isThisEquipped = (equipped.car === cColor);
+          stroke(isThisEquipped ? "gold" : "#ccc"); strokeWeight(isThisEquipped ? 3 : 1.5);
+          fill(cColor); ellipse(swX, swY, 22, 22);
+
+          if (mouseWentDown("leftButton") && mouseY >= 110 && mouseY <= 350) {
+            var dx = mouseX - swX, dy = mouseY - swY;
+            if (dx * dx + dy * dy < 13 * 13) { equipped.car = cColor; playSound("sound://category_pop/puzzle_game_ui_pop_01.mp3"); saveExponentProgress(); }
+          }
+        }
+    } else {
     fill("white"); noStroke(); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD);
     text(item.name, 75, yPos + 20); // Moved text to X=75 to make room for picture!
     textStyle(NORMAL);
@@ -480,6 +549,7 @@ function drawShopScreen() {
               }
           }
         }
+    }
     }
   }
 
@@ -553,7 +623,7 @@ function drawSkillSelectScreen() {
       } else if (mouseX > 220 && mouseX < 360) {
         var anyCheckedClick = false;
         for (var j = 0; j < 6; j++) { if (skillStates[j]) anyCheckedClick = true; }
-        if (!anyCheckedClick) showSkillError = true; else { showSkillError = false; playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3"); startGame(); }
+        if (!anyCheckedClick) showSkillError = true; else { showSkillError = false; playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3"); proceedToGame(); }
       }
     }
   }
@@ -562,8 +632,16 @@ function drawSkillSelectScreen() {
   if (keyWentDown("space") || keyWentDown("enter")) {
     var anyChecked = false;
     for (var j = 0; j < 6; j++) { if (skillStates[j]) anyChecked = true; }
-    if (!anyChecked) showSkillError = true; else { showSkillError = false; startGame(); }
+    if (!anyChecked) showSkillError = true; else { showSkillError = false; proceedToGame(); }
   }
+}
+
+function proceedToGame() {
+  // Time Freeze's activation control (space/enter mid-race) isn't discoverable
+  // on its own, so anyone with it equipped gets a one-screen heads-up before
+  // every race reminding them it's there and how to use it.
+  if (equipped.boost === "timefreeze") { gameState = "timeFreezeTip"; }
+  else { startGame(); }
 }
 
 function drawMenuButton(x, y, w, h, color, label, sublabel) {
@@ -573,13 +651,8 @@ function drawMenuButton(x, y, w, h, color, label, sublabel) {
   else { textSize(16); textStyle(BOLD); text(label, x + w/2, y + h/2); textStyle(NORMAL); }
 }
 
-// Time Freeze adds effective seconds to the question timer (lower speed =
-// more time before the car reaches the fuel-pickup line), rather than
-// touching questionTimeLimit itself so the normal per-correct-answer
-// difficulty ramp (see the questionTimeLimit *= ... lines) is unaffected.
 function currentQuestionSpeed() {
-  var effectiveLimit = questionTimeLimit + (equipped.boost === "timefreeze" ? 1.5 : 0);
-  return 16 / effectiveLimit;
+  return 16 / questionTimeLimit;
 }
 
 function startGame() {
@@ -591,7 +664,7 @@ function startGame() {
   damageFrames = 0; dayPhase = 1.0; lightPoles = [-100, 100, 300, 500]; gameOverReason = ""; wrongAnswersList = []; strikes = 0;
   roadDecorations = []; lastSignMessage = ""; lastPickedAnswer = ""; lastQuestionString = "";
   playerWater = 0; playerSand = 0; activeShield = (equipped.boost === "shield");
-  usedSecondChance = false;
+  usedSecondChance = false; usedTimeFreeze = false; timeFreezeFramesLeft = 0; questionCheckpoint = null;
 
   roadPatches = []; for (var rp = 0; rp < 8; rp++) roadPatches.push({ x: randomNumber(110, 290), y: rp * 60, s: randomNumber(40, 90) });
   sideTrees = [];
@@ -835,6 +908,42 @@ function resetQuestion() {
   var safeLanes = [0, 1, 2]; safeLanes.splice(cLane, 1);
   var sy = fuelY - 250;
   spawnObstacle(lanes[safeLanes[randomNumber(0, safeLanes.length - 1)]], sy, false);
+
+  // Snapshot everything that defines "this question" plus the surrounding
+  // game state at the moment it starts, so Second Chance can later rewind
+  // back to exactly this point and let the player retry the SAME question
+  // instead of just forgiving the strike and moving on to a new one.
+  questionCheckpoint = {
+    fuelY: fuelY, cLane: cLane, expressionString: expressionString, explanationString: explanationString,
+    answer: answer, fuelOptions: fuelOptions.slice(), lastQuestionString: lastQuestionString,
+    playerX: player.x, playerY: player.y, fuel: fuel, score: score, totalCoins: totalCoins,
+    strikes: strikes, speed: speed, questionTimeLimit: questionTimeLimit
+  };
+}
+
+function rewindToQuestionCheckpoint() {
+  var cp = questionCheckpoint;
+  if (!cp) return;
+
+  fuelY = cp.fuelY; expressionString = cp.expressionString; explanationString = cp.explanationString;
+  answer = cp.answer; fuelOptions = cp.fuelOptions.slice(); lastQuestionString = cp.lastQuestionString;
+  player.x = cp.playerX; player.y = cp.playerY; targetCarX = cp.playerX; targetCarY = cp.playerY;
+  fuel = cp.fuel; score = cp.score; totalCoins = cp.totalCoins; strikes = cp.strikes;
+  speed = cp.speed; questionTimeLimit = cp.questionTimeLimit;
+
+  coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
+
+  // Put the road back the way it looked right when the question began -
+  // clear whatever obstacles have since scrolled near the fuel line and
+  // respawn the single safe-lane obstacle in the same safe lane as before.
+  var obsLimit1 = fuelY - 200, obsLimit2 = fuelY + 200;
+  for (var o = obstacles.length - 1; o >= 0; o--) {
+    var ob = obstacles.get(o);
+    if (ob.y > obsLimit1 && ob.y < obsLimit2) { ob.destroy(); }
+  }
+  var safeLanes = [0, 1, 2]; safeLanes.splice(cp.cLane, 1);
+  var sy = fuelY - 250;
+  spawnObstacle(lanes[safeLanes[randomNumber(0, safeLanes.length - 1)]], sy, false);
 }
 
 function spawnObstacle(x, y, isMerging) {
@@ -945,7 +1054,7 @@ function playGame(isFrozen) {
     if (roadOffset > 60) roadOffset -= 60; if (roadOffset < -60) roadOffset += 60;
 
     if (startSequencePhase === 0) {
-        fuel -= (equipped.boost === "fuelsaver" ? 0.024 : 0.04);
+        fuel -= (equipped.boost === "fuelsaver" ? 0 : 0.04);
         if (moveCooldown > 0) moveCooldown--;
 
         if ((keyWentDown("left") || keyWentDown("a")) && targetCarX > 128) { targetCarX -= 72; moveCooldown = 8; }
@@ -1014,6 +1123,7 @@ function playGame(isFrozen) {
             activeShield = false; damageFrames = 60; hitObsRef.destroy();
         } else if (equipped.boost === "secondchance" && !usedSecondChance) {
             usedSecondChance = true; damageFrames = 60; shakeFrames = 60; hitObsRef.destroy();
+            rewindToQuestionCheckpoint();
         } else {
             strikes++;
             if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
@@ -1041,7 +1151,7 @@ function playGame(isFrozen) {
                  if (cBiome === "rain" || dayPhase < 1.0) { cValue = 50; rgbColor = "255, 68, 68"; } else { cValue = 20; rgbColor = "218, 112, 214"; }
              }
              var coinsGained = (equipped.boost === "doublecoins") ? cValue * 2 : cValue;
-             score += (cValue / 10); totalCoins += coinsGained;
+             score += (cValue / 10); totalCoins = Math.min(999999, totalCoins + coinsGained); // cap at $9999.99
              saveExponentProgress(); // a discrete per-coin event (not a per-frame loop), so saving here immediately is safe - otherwise coins earned mid-run are lost if the page closes before a checkpoint
              coinPopupValue = "+$" + (coinsGained / 100).toFixed(2); coinPopupColor = rgbColor; coinPopupTimer = 60;
              coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
@@ -1078,11 +1188,16 @@ function playGame(isFrozen) {
           lastPickedAnswer = fuelOptions[pLane];
           var cleanQ = expressionString.replace(/\n/g, " "); var cleanA = String(answer).replace(/\n—\n/g, "/").replace(/\n/g, " "); var cleanP = String(fuelOptions[pLane]).replace(/\n—\n/g, "/").replace(/\n/g, " ");
           wrongAnswersList.push({ q: cleanQ, a: cleanA, picked: cleanP });
-          if (equipped.boost === "secondchance" && !usedSecondChance) { usedSecondChance = true; } else { strikes++; }
           playSound("sound://category_hits/retro_game_simple_impact_1.mp3");
-          if (strikes >= 3) gameOverReason = "3 Strikes! I'm sure your brain is exhaust-ed.";
-          shakeFrames = 30; gameState = "paused"; pauseTimer = 150;
-          coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
+          if (equipped.boost === "secondchance" && !usedSecondChance) {
+            usedSecondChance = true; shakeFrames = 30;
+            rewindToQuestionCheckpoint();
+          } else {
+            strikes++;
+            if (strikes >= 3) gameOverReason = "3 Strikes! I'm sure your brain is exhaust-ed.";
+            shakeFrames = 30; gameState = "paused"; pauseTimer = 150;
+            coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
+          }
         }
       }
     }
@@ -1564,16 +1679,20 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           // Each of these gets its own particle type/shape (not just a
           // recolored glow circle), so the trails actually look different
           // from each other, not just tinted differently.
-          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(6, 9), alpha: 1.0, dy: dy, dx: randomNumber(-6, 6) / 10, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "red") { smokeParticles.push({ type: "ember", x: px, y: py, size: randomNumber(6, 10), alpha: 1.0, dy: dy, flicker: randomNumber(0, 100) }); }
-          else if (equipped.trail === "pink") { smokeParticles.push({ type: "heart", x: px, y: py, size: randomNumber(9, 14), alpha: 1.0, dy: dy, phase: randomNumber(0, 100) }); }
-          else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "green") { smokeParticles.push({ type: "leaf", x: px, y: py, size: randomNumber(8, 12), alpha: 1.0, dy: dy, phase: randomNumber(0, 100) }); }
-          else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.6, ang: randomNumber(0, 360) }); }
+          // These slow their dy well below the car's actual speed (unlike
+          // fire/bubbles/money, tuned closer to real speed already) - at
+          // full road speed they used to fly past before their shape/motion
+          // details (zigzag, flap, twinkle, etc.) had time to register.
+          else if (equipped.trail === "blue") { smokeParticles.push({ type: "spark", c: "80,200,255,", x: px, y: py, size: randomNumber(6, 9), alpha: 1.0, dy: dy * 0.45, dx: randomNumber(-6, 6) / 10, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "red") { smokeParticles.push({ type: "ember", x: px, y: py, size: randomNumber(6, 10), alpha: 1.0, dy: dy * 0.45, flicker: randomNumber(0, 100) }); }
+          else if (equipped.trail === "pink") { smokeParticles.push({ type: "heart", x: px, y: py, size: randomNumber(9, 14), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "green") { smokeParticles.push({ type: "leaf", x: px, y: py, size: randomNumber(8, 12), alpha: 1.0, dy: dy * 0.45, phase: randomNumber(0, 100) }); }
+          else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
+          else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(7, 11), alpha: 1.0, dy: dy * 0.35, ang: randomNumber(0, 360) }); }
           else if (equipped.trail === "rainbow") {
             var rbHue = (frameCounter * 6) % 360;
-            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(8, 12), alpha: 1.0, dy: dy, ang: randomNumber(0, 360), hue: rbHue });
+            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(8, 12), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360), hue: rbHue });
           }
           else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(3, 8), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "money") {
@@ -1592,16 +1711,16 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     var p = smokeParticles[s];
     if (!isFrozen) {
         p.y += p.dy;
-        if (p.type === "spark") { p.x += p.dx; p.alpha -= 0.09; p.ang += 25; }
+        if (p.type === "spark") { p.x += p.dx; p.alpha -= 0.06; p.ang += 14; }
         else if (p.type === "fire") { p.size -= 0.24; p.alpha -= 0.05; p.x += Math.sin(frameCounter * 0.4 + p.y * 0.15) * 0.8 + p.dx; }
         else if (p.type === "glow") { p.size -= 0.15; p.alpha -= 0.06; }
-        else if (p.type === "ember") { p.alpha -= 0.045; p.x += Math.sin(frameCounter * 0.3 + p.flicker) * 0.5; }
-        else if (p.type === "heart") { p.x += Math.sin(p.phase + p.y * 0.04) * 0.8; p.alpha -= 0.045; }
-        else if (p.type === "twinkle") { p.ang += 6; p.alpha -= 0.05; }
-        else if (p.type === "leaf") { p.x += Math.sin(p.phase + p.y * 0.06) * 1.2; p.ang = Math.sin(p.phase * 0.5) * 30; p.alpha -= 0.045; }
-        else if (p.type === "diamond") { p.ang += 8; p.alpha -= 0.045; }
+        else if (p.type === "ember") { p.alpha -= 0.035; p.x += Math.sin(frameCounter * 0.3 + p.flicker) * 0.5; }
+        else if (p.type === "heart") { p.x += Math.sin(p.phase + p.y * 0.04) * 0.8; p.alpha -= 0.035; }
+        else if (p.type === "twinkle") { p.ang += 4; p.alpha -= 0.035; }
+        else if (p.type === "leaf") { p.x += Math.sin(p.phase + p.y * 0.06) * 1.2; p.ang = Math.sin(p.phase * 0.5) * 30; p.alpha -= 0.035; }
+        else if (p.type === "diamond") { p.ang += 5; p.alpha -= 0.035; }
         else if (p.type === "snowflake") { p.x += Math.sin(frameCounter * 0.08 + p.ang) * 0.4; p.ang += 2; p.alpha -= 0.03; }
-        else if (p.type === "prism") { p.ang += 12; p.alpha -= 0.045; }
+        else if (p.type === "prism") { p.ang += 7; p.alpha -= 0.035; }
         else if (p.type === "bubbles") { p.x += Math.sin(p.phase + p.y * 0.05) * 1.5; p.size += 0.05; p.alpha -= 0.04; }
         else if (p.type === "money") { p.alpha -= 0.03; p.x += p.dx; p.rot += p.rotSpeed; }
         else { p.size += 0.3; p.alpha -= 0.05; }
@@ -2327,6 +2446,35 @@ function drawWinScreen() {
   }
 }
 
+
+function drawTimeFreezeTip() {
+  fill("rgba(0, 0, 0, 0.85)"); noStroke(); rect(0, 0, 400, 450);
+
+  fill("#7fdbff"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(26);
+  text("⏱ NEW CONTROL", 200, 90);
+
+  fill("white"); textSize(18); textStyle(NORMAL);
+  text("You have Time Freeze equipped!", 200, 140);
+
+  fill("lightgray"); textSize(15);
+  text("Press SPACE or ENTER during the race\nto freeze everything for 10 seconds.\n\nIt only works once per race, so\nsave it for a close call!", 200, 220);
+
+  fill("lime"); stroke("white"); strokeWeight(3); rect(80, 340, 240, 55, 10);
+  fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(20); textStyle(BOLD);
+  text("GOT IT!", 200, 368); textStyle(NORMAL);
+
+  if ((mouseWentDown("leftButton") && mouseX > 80 && mouseX < 320 && mouseY > 340 && mouseY < 395) || keyWentDown("space") || keyWentDown("enter")) {
+    startGame();
+  }
+}
+
+function drawTimeFreezeOverlay() {
+  fill("rgba(20, 60, 90, 0.35)"); noStroke(); rect(0, 0, 400, 400);
+  fill("#eaf9ff"); stroke("#1b6ea8"); strokeWeight(3); rect(65, 165, 270, 55, 10);
+  fill("#1b6ea8"); noStroke(); textAlign(CENTER, CENTER); textSize(20); textStyle(BOLD);
+  text("⏱ TIME FROZEN! (" + Math.ceil(timeFreezeFramesLeft / 30) + "s)", 200, 193);
+  textStyle(NORMAL);
+}
 
 function drawMaxVelocityPrompt() {
   // Dark overlay
