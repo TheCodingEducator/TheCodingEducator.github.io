@@ -7,6 +7,8 @@
 var inputSprite = createSprite(-999, -999);
 inputSprite.visible = false;
 
+var exitConfirmPending = false;
+
 // ---------- MOUSE STATE ----------
 var mouseHeld = false;
 var mouseJustReleased = false;
@@ -1418,7 +1420,27 @@ function drawHUD(){
     stroke(120,70,180); strokeWeight(1); rect(5,379,56,16,6);
     fill(255); noStroke(); textSize(9); textAlign(CENTER,CENTER);
     text("MENU",33,388);
-    if(mbHov&&mouseWentDown("left")) STATE="START";
+    if(mbHov&&mouseWentDown("left")) exitConfirmPending=true;
+  }
+}
+
+function drawExitConfirmOverlay(){
+  fill(8,10,18); noStroke(); rect(0,0,400,400);
+  fill(255); textAlign(CENTER,CENTER); textSize(20);
+  text("Exit to Main Menu?",200,150);
+  fill(180,190,220); textSize(13);
+  text("Your progress this round will be lost.",200,178);
+
+  var hoverYes=(mouseX>=60&&mouseX<=190&&mouseY>=225&&mouseY<=270);
+  var hoverNo=(mouseX>=210&&mouseX<=340&&mouseY>=225&&mouseY<=270);
+  fill(hoverYes?220:180,60,60); stroke(255); strokeWeight(2); rect(60,225,130,45,10);
+  fill(hoverNo?40:20,hoverNo?190:150,hoverNo?90:70); rect(210,225,130,45,10);
+  fill(255); noStroke(); textSize(14);
+  text("YES, EXIT",125,247); text("CANCEL",275,247);
+
+  if(mouseWentDown("left")){
+    if(hoverYes){ exitConfirmPending=false; STATE="START"; }
+    else if(hoverNo){ exitConfirmPending=false; }
   }
 }
 
@@ -2692,6 +2714,8 @@ function drawGameOver(){
 
 // ---------- MAIN DRAW LOOP ----------
 function draw(){
+  if(exitConfirmPending){ drawExitConfirmOverlay(); return; }
+
   drawSprites();
 
   // Mouse tracking
@@ -2699,8 +2723,12 @@ function draw(){
   if(mouseWentDown("left")){mouseHeld=true;mouseHeldFrames=0;}
   else{mouseHeldFrames++;if(mouseHeldFrames>1&&mouseHeld){mouseJustReleased=true;mouseHeld=false;}}
 
-  // ---- ESCAPE: return to menu ----
-  if(keyWentDown("escape")&&STATE!=="START"){STATE="START";return;}
+  // ---- ESCAPE: return to menu (confirm first if a round is in progress) ----
+  if(keyWentDown("escape")&&STATE!=="START"){
+    if(STATE==="SHOWING"||STATE==="MOVING"||STATE==="FEEDBACK"){ exitConfirmPending=true; }
+    else { STATE="START"; }
+    return;
+  }
 
   // ---- TIMEOUT: 600 s auto-return to menu ----
   if((gameMode==="GENIUS"||gameMode==="GEOMETRY") &&
