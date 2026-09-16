@@ -151,6 +151,7 @@ var STATE_PRACTICE_PLAY    = "PRACTICE_PLAY";
 
 var gameState = STATE_TITLE;
 var previousState = STATE_TITLE;
+var exitConfirmPending = false;
 
 
 // ----------------------------------------------------------------
@@ -4498,7 +4499,7 @@ function drawPracticeScreen(dt) {
   var menuW = 90, menuH = 24, menuX = 8, menuY = CANVAS_H - 32;
   drawButton(menuX, menuY, menuW, menuH, "MENU", buttonHovered(menuX, menuY, menuW, menuH));
   if (buttonClicked(menuX, menuY, menuW, menuH)) {
-    gameState = STATE_TITLE;
+    exitConfirmPending = true;
   }
 
   var skillsW = 118, skillsH = 24, skillsX = CANVAS_W - 8 - skillsW, skillsY = CANVAS_H - 32;
@@ -4880,7 +4881,34 @@ function drawPauseScreen() {
     gameState = STATE_PLAYING;
   }
   if (buttonClicked(btnX, menuY, btnW, btnH)) {
+    exitConfirmPending = true;
+  }
+}
+
+function drawExitConfirmOverlay() {
+  noStroke();
+  fill(0, 0, 0, 200);
+  rect(0, 0, CANVAS_W, CANVAS_H);
+
+  var w = 260, h = 150, x = CANVAS_W / 2 - w / 2, y = CANVAS_H / 2 - h / 2;
+  drawScreenPanel(x, y, w, h);
+
+  fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
+  textAlign(CENTER, CENTER); textSize(18);
+  text("Exit to Main Menu?", CANVAS_W / 2, y + 36);
+  textSize(13);
+  text("Your current run will end.", CANVAS_W / 2, y + 62);
+
+  var btnW = 100, btnH = 34, gap = 12;
+  var yesX = CANVAS_W / 2 - btnW - gap / 2, noX = CANVAS_W / 2 + gap / 2, btnY = y + h - 50;
+  drawButton(yesX, btnY, btnW, btnH, "YES, EXIT", buttonHovered(yesX, btnY, btnW, btnH));
+  drawButton(noX, btnY, btnW, btnH, "CANCEL", buttonHovered(noX, btnY, btnW, btnH));
+
+  if (buttonClicked(yesX, btnY, btnW, btnH)) {
+    exitConfirmPending = false;
     gameState = STATE_TITLE;
+  } else if (buttonClicked(noX, btnY, btnW, btnH)) {
+    exitConfirmPending = false;
   }
 }
 
@@ -4934,6 +4962,8 @@ function draw() {
   mouseClickedEdge = computeMouseClickEdge();
 
   background(COLOR_BG[0], COLOR_BG[1], COLOR_BG[2]);
+
+  if (exitConfirmPending) { drawExitConfirmOverlay(); updateInputEdgeTracking(); return; }
 
   if (gameState === STATE_TITLE) { drawTitleScreen(); }
   else if (gameState === STATE_MODE_SELECT) { drawModeSelectScreen(); }
