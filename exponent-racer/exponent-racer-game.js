@@ -701,7 +701,16 @@ function resetQuestion() {
   var correctNumericValue = (answerFormat === "normal") ? answer : Math.pow(currentBase, currentExp);
 
   if (gameMode === "hard") {
-    if (answerFormat === "normal") { trickPool.push(answer * -1); trickPool.push(currentBase * currentExp); trickPool.push((currentBase * currentExp) * -1); }
+    if (answerFormat === "normal") {
+      trickPool.push(answer * -1); trickPool.push(currentBase * currentExp); trickPool.push((currentBase * currentExp) * -1);
+      // Powers of ten specifically invite an "off by one zero" mistake -
+      // add both directions (100 -> 10 or 1000) as extra common-mistake
+      // candidates. They join the pool above rather than replacing it, so
+      // which 2 of these ~5 candidates actually get used as wrong answers
+      // still varies question to question instead of being the same pair
+      // every time.
+      if (currentBase === 10) { trickPool.push(Math.pow(10, currentExp - 1)); trickPool.push(Math.pow(10, currentExp + 1)); }
+    }
     else if (answerFormat === "exp_fraction") { trickPool.push("-" + currentBase + formatExponent(currentExp)); trickPool.push("-1\n—\n" + currentBase + formatExponent(currentExp));
       var fakeDenom = currentBase * currentExp; if (fakeDenom === correctNumericValue) fakeDenom += (currentBase > 2 ? -1 : 1); trickPool.push("1\n—\n" + fakeDenom); }
   }
