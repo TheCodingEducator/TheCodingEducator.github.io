@@ -1979,8 +1979,19 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
 
   if (color === "dragon") {
     // A dragon head up front with horns and eyes, spiky ridge along the
-    // roof, and scaled plating - not a green rect with two dots.
+    // roof, scaled plating, and wings spread from the back. Wings are
+    // purely visual (the collision hitbox is a fixed box computed from
+    // player.x/y elsewhere, not from anything drawn here) and are kept
+    // entirely at/behind cy+10 - below the head/horns, which are the
+    // frontmost points - so they can never reach up toward the
+    // answer-choice bubbles shown above the car.
     noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 44, 26, 6);
+    fill("#164a1a");
+    beginShape(); vertex(cx - 12, cy + 14); vertex(cx - 30, cy + 10); vertex(cx - 24, cy + 22); vertex(cx - 32, cy + 26); vertex(cx - 13, cy + 30); endShape(CLOSE);
+    beginShape(); vertex(cx + 12, cy + 14); vertex(cx + 30, cy + 10); vertex(cx + 24, cy + 22); vertex(cx + 32, cy + 26); vertex(cx + 13, cy + 30); endShape(CLOSE);
+    fill("#2e7d32");
+    beginShape(); vertex(cx - 12, cy + 16); vertex(cx - 22, cy + 14); vertex(cx - 18, cy + 22); vertex(cx - 13, cy + 24); endShape(CLOSE);
+    beginShape(); vertex(cx + 12, cy + 16); vertex(cx + 22, cy + 14); vertex(cx + 18, cy + 22); vertex(cx + 13, cy + 24); endShape(CLOSE);
     fill("black"); ellipse(cx - 8, cy + 22, 8, 8); ellipse(cx + 8, cy + 22, 8, 8); ellipse(cx - 8, cy + 38, 8, 8); ellipse(cx + 8, cy + 38, 8, 8);
     fill("#1b5e20"); rect(cx - 13, cy + 6, 26, 37, 4);
     fill("#2e7d32");
