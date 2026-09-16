@@ -8,7 +8,7 @@ var finishLineY = -100, winCarAccel = 0, engineSoundPlayed = false;
 var maxVelocityPromptShown = false;
 
 // Shop & Customization Variables
-var activeShield = false, shopTab = "cars", shopScrollY = 0;
+var activeShield = false, shopTab = "cars", shopScrollY = 0, usedSecondChance = false;
 
 var unlockedItems = {
   cars: ["red"],
@@ -92,7 +92,11 @@ var shopData = {
   boosts: [
     { id: "none", name: "No Powerup", price: 500 },
     { id: "shield", name: "Forcefield", price: 500 },
-    { id: "magnet", name: "Coin Magnet", price: 500 }
+    { id: "magnet", name: "Coin Magnet", price: 500 },
+    { id: "fuelsaver", name: "Fuel Saver", price: 500 },
+    { id: "secondchance", name: "Second Chance", price: 500 },
+    { id: "timefreeze", name: "Time Freeze", price: 500 },
+    { id: "doublecoins", name: "Double Coins", price: 500 }
   ],
 };
 
@@ -421,6 +425,10 @@ function drawShopScreen() {
               if (item.id === "none") { fill("gray"); textAlign(CENTER, CENTER); textSize(20); text("X", 0, 0); }
               else if (item.id === "shield") { noFill(); stroke("cyan"); strokeWeight(4); ellipse(0, 0, 30, 30); }
               else if (item.id === "magnet") { fill("gray"); rect(-12, -12, 24, 12); fill("red"); rect(-12, 0, 10, 12); fill("blue"); rect(2, 0, 10, 12); }
+              else if (item.id === "fuelsaver") { fill("#2ecc71"); rect(-8, -12, 16, 24, 3); fill("white"); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text("+", 0, -2); textStyle(NORMAL); }
+              else if (item.id === "secondchance") { noFill(); stroke("gold"); strokeWeight(3); arc(0, 0, 28, 28, -220, 40); fill("gold"); noStroke(); textAlign(CENTER, CENTER); textSize(16); textStyle(BOLD); text("2", 0, 1); textStyle(NORMAL); }
+              else if (item.id === "timefreeze") { noFill(); stroke("#7fdbff"); strokeWeight(3); ellipse(0, 0, 26, 26); stroke("white"); strokeWeight(2); line(0, 0, 0, -9); line(0, 0, 6, 3); }
+              else if (item.id === "doublecoins") { fill("gold"); ellipse(-6, 3, 16, 16); fill("#e6b800"); noFill(); stroke("#b8860b"); strokeWeight(1.5); ellipse(6, -3, 16, 16); }
           }
           pop();
 
@@ -545,6 +553,15 @@ function drawMenuButton(x, y, w, h, color, label, sublabel) {
   else { textSize(16); textStyle(BOLD); text(label, x + w/2, y + h/2); textStyle(NORMAL); }
 }
 
+// Time Freeze adds effective seconds to the question timer (lower speed =
+// more time before the car reaches the fuel-pickup line), rather than
+// touching questionTimeLimit itself so the normal per-correct-answer
+// difficulty ramp (see the questionTimeLimit *= ... lines) is unaffected.
+function currentQuestionSpeed() {
+  var effectiveLimit = questionTimeLimit + (equipped.boost === "timefreeze" ? 1.5 : 0);
+  return 16 / effectiveLimit;
+}
+
 function startGame() {
   gameState = "play"; score = 0; correctAnswersCount = 0;
   if (gameMode === "hard") questionTimeLimit = 6; else questionTimeLimit = 8;
@@ -554,6 +571,7 @@ function startGame() {
   damageFrames = 0; dayPhase = 1.0; lightPoles = [-100, 100, 300, 500]; gameOverReason = ""; wrongAnswersList = []; strikes = 0;
   roadDecorations = []; lastSignMessage = ""; lastPickedAnswer = ""; lastQuestionString = "";
   playerWater = 0; playerSand = 0; activeShield = (equipped.boost === "shield");
+  usedSecondChance = false;
 
   roadPatches = []; for (var rp = 0; rp < 8; rp++) roadPatches.push({ x: randomNumber(110, 290), y: rp * 60, s: randomNumber(40, 90) });
   sideTrees = [];
@@ -574,7 +592,7 @@ function startGame() {
 
 
   if (gameMode === "easy") { fuel = 50; maxFuel = 50; } else { fuel = 30; maxFuel = 30; }
-  speed = 16 / questionTimeLimit; frameCounter = 0;
+  speed = currentQuestionSpeed(); frameCounter = 0;
 
   player.x = 200; player.y = 350; targetCarX = 200; targetCarY = player.y;
 
@@ -871,7 +889,7 @@ function playGame(isFrozen) {
         startTimer--;
         if (startTimer <= 0) { startSequencePhase = 2; playSound("sound://category_male_voiceover/go_male.mp3"); playSound("sound://category_background/f1_race.mp3"); }
     } else if (startSequencePhase === 2) {
-        var targetSpeed = 16 / questionTimeLimit; currentStartSpeed += 0.05;
+        var targetSpeed = currentQuestionSpeed(); currentStartSpeed += 0.05;
         if (currentStartSpeed > targetSpeed) currentStartSpeed = targetSpeed;
         startLineY += (currentStartSpeed * 5 * currentSpeedMult * dir);
         if (startLineY > 450) { startSequencePhase = 0; resetQuestion(); }
@@ -907,7 +925,7 @@ function playGame(isFrozen) {
     if (roadOffset > 60) roadOffset -= 60; if (roadOffset < -60) roadOffset += 60;
 
     if (startSequencePhase === 0) {
-        fuel -= 0.04;
+        fuel -= (equipped.boost === "fuelsaver" ? 0.024 : 0.04);
         if (moveCooldown > 0) moveCooldown--;
 
         if ((keyWentDown("left") || keyWentDown("a")) && targetCarX > 128) { targetCarX -= 72; moveCooldown = 8; }
@@ -974,6 +992,8 @@ function playGame(isFrozen) {
         playSound("sound://category_hits/retro_game_simple_impact_1.mp3");
         if (activeShield) {
             activeShield = false; damageFrames = 60; hitObsRef.destroy();
+        } else if (equipped.boost === "secondchance" && !usedSecondChance) {
+            usedSecondChance = true; damageFrames = 60; shakeFrames = 60; hitObsRef.destroy();
         } else {
             strikes++;
             if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
@@ -1000,9 +1020,10 @@ function playGame(isFrozen) {
              if (gameMode === "hard" && equipped.world === "default") {
                  if (cBiome === "rain" || dayPhase < 1.0) { cValue = 50; rgbColor = "255, 68, 68"; } else { cValue = 20; rgbColor = "218, 112, 214"; }
              }
-             score += (cValue / 10); totalCoins += cValue;
+             var coinsGained = (equipped.boost === "doublecoins") ? cValue * 2 : cValue;
+             score += (cValue / 10); totalCoins += coinsGained;
              saveExponentProgress(); // a discrete per-coin event (not a per-frame loop), so saving here immediately is safe - otherwise coins earned mid-run are lost if the page closes before a checkpoint
-             coinPopupValue = "+$" + (cValue / 100).toFixed(2); coinPopupColor = rgbColor; coinPopupTimer = 60;
+             coinPopupValue = "+$" + (coinsGained / 100).toFixed(2); coinPopupColor = rgbColor; coinPopupTimer = 60;
              coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
              playSound("sound://category_achievements/lighthearted_bonus_objective_1.mp3");
          }
@@ -1031,13 +1052,14 @@ function playGame(isFrozen) {
               else { questionTimeLimit *= 0.85; if (questionTimeLimit < 3.5) questionTimeLimit = 3.5; }
             } else { questionTimeLimit = Math.max(5, questionTimeLimit * 0.85); }
             playSound("sound://category_collect/energy_bar_recharge_4.mp3");
-            speed = 16 / questionTimeLimit; resetQuestion();
+            speed = currentQuestionSpeed(); resetQuestion();
           }
         } else {
           lastPickedAnswer = fuelOptions[pLane];
           var cleanQ = expressionString.replace(/\n/g, " "); var cleanA = String(answer).replace(/\n—\n/g, "/").replace(/\n/g, " "); var cleanP = String(fuelOptions[pLane]).replace(/\n—\n/g, "/").replace(/\n/g, " ");
           wrongAnswersList.push({ q: cleanQ, a: cleanA, picked: cleanP });
-          strikes++; playSound("sound://category_hits/retro_game_simple_impact_1.mp3");
+          if (equipped.boost === "secondchance" && !usedSecondChance) { usedSecondChance = true; } else { strikes++; }
+          playSound("sound://category_hits/retro_game_simple_impact_1.mp3");
           if (strikes >= 3) gameOverReason = "3 Strikes! I'm sure your brain is exhaust-ed.";
           shakeFrames = 30; gameState = "paused"; pauseTimer = 150;
           coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
@@ -1641,7 +1663,7 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
   }
   textStyle(NORMAL); noStroke();
 
-  if (!isFrozen && zoomFrames > 0) { zoomFrames--; if (zoomFrames === 0) speed = 16 / questionTimeLimit; }
+  if (!isFrozen && zoomFrames > 0) { zoomFrames--; if (zoomFrames === 0) speed = currentQuestionSpeed(); }
 
   fill("white"); stroke("black"); strokeWeight(2); rect(322, 360, 70, 30);
   textAlign(CENTER, CENTER); textSize(22); textStyle(BOLD);
