@@ -4965,6 +4965,13 @@ function draw() {
 
   if (exitConfirmPending) { drawExitConfirmOverlay(); updateInputEdgeTracking(); return; }
 
+  // Practice mode has no pause screen of its own (unlike the main challenge
+  // mode, where Escape already opens PAUSE - see drawPlayingScreen) - here
+  // Escape acts directly like clicking its persistent MENU button instead.
+  if (gameState === STATE_PRACTICE_PLAY && keyEdge("escape")) {
+    exitConfirmPending = true;
+  }
+
   if (gameState === STATE_TITLE) { drawTitleScreen(); }
   else if (gameState === STATE_MODE_SELECT) { drawModeSelectScreen(); }
   else if (gameState === STATE_INSTRUCTIONS) { drawInstructionsScreen(); }

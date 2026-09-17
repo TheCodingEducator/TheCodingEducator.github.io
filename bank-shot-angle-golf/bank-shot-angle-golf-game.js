@@ -2028,6 +2028,12 @@ function touchEnded() { mouseReleased(); return false; }
 // uses the on-screen keypad in bank-shot-angle-golf-mobile-controls.js,
 // which calls handleAnswerKey() directly.
 function keyPressed() {
+  // Escape acts the same as clicking the exit button - both bring up the
+  // same confirm-before-quitting overlay.
+  if (keyCode === ESCAPE && gameState === 'PLAYING' && !confirmExitOpen) {
+    confirmExitOpen = true;
+    return false;
+  }
   if (explainOpen) {
     if (keyCode === ENTER || keyCode === RETURN || key === ' ') { explainOpen = false; playSound('click'); }
     return false;

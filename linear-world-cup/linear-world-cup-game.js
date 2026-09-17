@@ -2885,6 +2885,12 @@ function draw() {
     return;
   }
 
+  // Escape acts the same as clicking the MENU button - both bring up the
+  // same confirm-before-quitting overlay (drawn from drawMenuButton() below).
+  if (!exitConfirmPending && keyWentDown("escape")) {
+    exitConfirmPending = true;
+  }
+
   gameClockSeconds += 50 / 60;
 
   if (screenState !== "celebrate") {

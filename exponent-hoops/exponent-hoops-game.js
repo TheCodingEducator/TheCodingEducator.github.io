@@ -107,6 +107,12 @@ function renderWorld() {
 function draw() {
   if (exitConfirmPending) { drawExitConfirmOverlay(); return; }
 
+  // Escape acts the same as clicking the MENU button, wherever one is on
+  // screen - both go through the same confirm-before-quitting overlay.
+  if (keyWentDown("escape") && gameState !== "title" && gameState !== "instructions_2p") {
+    exitConfirmPending = true;
+  }
+
   if (shakeTimer > 0) { camera.x = 200 + randomNumber(-8, 8); camera.y = 200 + randomNumber(-8, 8); shakeTimer--; }
   else { camera.x = 200; camera.y = 200; }
 

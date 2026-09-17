@@ -101,6 +101,12 @@ function draw() {
 
   if (exitConfirmPending) { drawExitConfirmOverlay(); return; }
 
+  // Escape acts the same as clicking the in-play Menu button - both go
+  // through the same confirm-before-quitting overlay.
+  if (keyWentDown("escape") && gameState !== "menu") {
+    exitConfirmPending = true;
+  }
+
   if (gameState === "menu") {
     drawMenu();
   } else if (gameState === "game") {
