@@ -151,6 +151,38 @@
   .teaching-notes li strong {
     color: var(--text);
   }
+  .reset-progress {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .reset-progress h2 {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .reset-progress p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .reset-progress-btn {
+    background: transparent;
+    border: 1px solid #7a3030;
+    color: #e0a0a0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .reset-progress-btn:hover {
+    background: rgba(220,80,80,0.12);
+    border-color: #b04848;
+    color: #ffb3b3;
+  }
   .sr-only {
     position: absolute;
     width: 1px;
@@ -252,6 +284,12 @@
   </ul>
 </section>
 
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases your saved coins, owned skins, equipped skin, streak, and best times for Let's Get to the Point on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+</section>
+
 <script src="lets-get-to-the-point-shim.js"></script>
 <script src="lets-get-to-the-point-game.js"></script>
 <script src="lets-get-to-the-point-hook.js"></script>
@@ -276,6 +314,29 @@
   }
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    var ok = confirm("Reset your Let's Get to the Point progress? This erases your saved coins, owned skins, equipped skin, streak, and best times on this device. This cannot be undone.");
+    if (!ok) return;
+    ['lgttp_coins', 'lgttp_owned_skins', 'lgttp_skin', 'lgttp_streak', 'lgttp_hs_genius', 'lgttp_hs_geometry', 'lgttp_cheat_used'].forEach(function (k) {
+      localStorage.removeItem(k);
+    });
+    // The game also saves on tab-hide/unload as a safety net against losing
+    // progress earned right before closing the tab - reload() triggers that
+    // same unload path, so without also resetting these in-memory globals
+    // here, that safety net would immediately re-save the old values right
+    // over the top of the localStorage keys just cleared above.
+    if (typeof coins !== 'undefined') {
+      coins = 0;
+      ownedSkins = [0];
+      currentSkinIdx = 0;
+      currentStreak = 0;
+      hsGenius = 0;
+      hsGeometry = 0;
+      cheatCoinsUsed = false;
+    }
+    location.reload();
+  });
 </script>
 </body>
 </html>
