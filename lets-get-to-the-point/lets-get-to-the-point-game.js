@@ -8,11 +8,83 @@ var inputSprite = createSprite(-999, -999);
 inputSprite.visible = false;
 
 var exitConfirmPending = false;
+var timeoutPopupState = "none"; // "none" | "stillThere" | "expired"
 
 // ---------- MOUSE STATE ----------
 var mouseHeld = false;
 var mouseJustReleased = false;
 var mouseHeldFrames = 999;
+
+// ---------- TOUCH CONTROLS (mobile) ----------
+// All real movement/rotation/submit input funnels through keyDown()/
+// keyWentDown() calls scattered across the tracing-paper, geometry, and
+// translate/reflect handlers below. Rather than duplicate that logic for
+// touch, an on-screen D-pad + action button just drive the SAME held/
+// pressed helpers those handlers already call - so touch is a second input
+// source feeding the existing controls, not a separate code path.
+var IS_TOUCH_DEVICE = (typeof window !== "undefined") &&
+  (('ontouchstart' in window) || (navigator && navigator.maxTouchPoints > 0));
+var touchDirState = { left: false, right: false, up: false, down: false };
+var touchDirPrev  = { left: false, right: false, up: false, down: false };
+var touchActionNow = false, touchActionPrev = false;
+
+var DPAD_CX = 40, DPAD_CY = 290, DPAD_CELL = 26;
+var DPAD_RECTS = {
+  up:    { x: DPAD_CX - DPAD_CELL/2, y: DPAD_CY - DPAD_CELL*1.5, w: DPAD_CELL, h: DPAD_CELL },
+  down:  { x: DPAD_CX - DPAD_CELL/2, y: DPAD_CY + DPAD_CELL/2,   w: DPAD_CELL, h: DPAD_CELL },
+  left:  { x: DPAD_CX - DPAD_CELL*1.5, y: DPAD_CY - DPAD_CELL/2, w: DPAD_CELL, h: DPAD_CELL },
+  right: { x: DPAD_CX + DPAD_CELL/2,   y: DPAD_CY - DPAD_CELL/2, w: DPAD_CELL, h: DPAD_CELL }
+};
+var ACTION_BTN = { x: 365, y: 290, r: 30 };
+
+function inRect(px, py, r) { return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
+function inCircle(px, py, c) { var dx = px - c.x, dy = py - c.y; return (dx*dx + dy*dy) <= c.r*c.r; }
+
+function updateTouchControls() {
+  var pressed = mouseIsPressed;
+  var px = pressed ? mouseX : -9999, py = pressed ? mouseY : -9999;
+  touchDirPrev.left = touchDirState.left; touchDirPrev.right = touchDirState.right;
+  touchDirPrev.up = touchDirState.up; touchDirPrev.down = touchDirState.down;
+  touchDirState.left  = inRect(px, py, DPAD_RECTS.left);
+  touchDirState.right = inRect(px, py, DPAD_RECTS.right);
+  touchDirState.up    = inRect(px, py, DPAD_RECTS.up);
+  touchDirState.down  = inRect(px, py, DPAD_RECTS.down);
+  touchActionPrev = touchActionNow;
+  touchActionNow = inCircle(px, py, ACTION_BTN);
+}
+function heldLeft()  { return keyDown("left")||keyDown("a")||touchDirState.left; }
+function heldRight() { return keyDown("right")||keyDown("d")||touchDirState.right; }
+function heldUp()    { return keyDown("up")||keyDown("w")||touchDirState.up; }
+function heldDown()  { return keyDown("down")||keyDown("s")||touchDirState.down; }
+function pressedLeft()  { return keyWentDown("left")||keyWentDown("a")||(touchDirState.left && !touchDirPrev.left); }
+function pressedRight() { return keyWentDown("right")||keyWentDown("d")||(touchDirState.right && !touchDirPrev.right); }
+function pressedUp()    { return keyWentDown("up")||keyWentDown("w")||(touchDirState.up && !touchDirPrev.up); }
+function pressedDown()  { return keyWentDown("down")||keyWentDown("s")||(touchDirState.down && !touchDirPrev.down); }
+function touchActionWentDown() { return touchActionNow && !touchActionPrev; }
+
+function drawTouchControls(showDpad, showAction) {
+  if (showDpad) {
+    noStroke();
+    fill(touchDirState.up    ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.up.x, DPAD_RECTS.up.y, DPAD_RECTS.up.w, DPAD_RECTS.up.h, 5);
+    fill(touchDirState.down  ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.down.x, DPAD_RECTS.down.y, DPAD_RECTS.down.w, DPAD_RECTS.down.h, 5);
+    fill(touchDirState.left  ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.left.x, DPAD_RECTS.left.y, DPAD_RECTS.left.w, DPAD_RECTS.left.h, 5);
+    fill(touchDirState.right ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.right.x, DPAD_RECTS.right.y, DPAD_RECTS.right.w, DPAD_RECTS.right.h, 5);
+    fill(20, 25, 45, 160); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD);
+    text("▲", DPAD_RECTS.up.x+DPAD_CELL/2, DPAD_RECTS.up.y+DPAD_CELL/2);
+    text("▼", DPAD_RECTS.down.x+DPAD_CELL/2, DPAD_RECTS.down.y+DPAD_CELL/2);
+    text("◀", DPAD_RECTS.left.x+DPAD_CELL/2, DPAD_RECTS.left.y+DPAD_CELL/2);
+    text("▶", DPAD_RECTS.right.x+DPAD_CELL/2, DPAD_RECTS.right.y+DPAD_CELL/2);
+    textStyle(NORMAL);
+  }
+  if (showAction) {
+    noStroke();
+    fill(touchActionNow ? "rgba(90,220,140,0.75)" : "rgba(90,220,140,0.45)");
+    ellipse(ACTION_BTN.x, ACTION_BTN.y, ACTION_BTN.r*2, ACTION_BTN.r*2);
+    fill(255); textAlign(CENTER, CENTER); textSize(11); textStyle(BOLD);
+    text("TAP TO\nCONFIRM", ACTION_BTN.x, ACTION_BTN.y);
+    textStyle(NORMAL);
+  }
+}
 
 // ---------- GRID SETTINGS ----------
 var CELL = 30;
@@ -144,12 +216,15 @@ var SKIN_PRICE = 3;
 var coins = 0;
 var ownedSkins = [0]; // skin 0 is always owned
 var currentStreak = 0; // consecutive correct answers, non-H2H modes; resets on a miss
+var cheatCoinsUsed = false;
 function loadCoinsAndSkins() {
   try {
     var c = localStorage.getItem('lgttp_coins');
     if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) coins=n; }
     var o = localStorage.getItem('lgttp_owned_skins');
     if (o!==null) { var arr=JSON.parse(o); if (Array.isArray(arr)) ownedSkins=arr; }
+    var cc = localStorage.getItem('lgttp_cheat_used');
+    if (cc!==null) cheatCoinsUsed = (cc==='true');
     // The streak persists across page reloads too, same as coins/skins -
     // it only ever breaks on an actual wrong answer, never on a mode
     // switch or a fresh visit.
@@ -172,6 +247,7 @@ function saveCoinsAndSkins() {
     localStorage.setItem('lgttp_streak', String(currentStreak));
     localStorage.setItem('lgttp_hs_genius', String(hsGenius));
     localStorage.setItem('lgttp_hs_geometry', String(hsGeometry));
+    localStorage.setItem('lgttp_cheat_used', String(cheatCoinsUsed));
   } catch (e) {}
 }
 // Safety net: flush whatever's in memory the instant the tab is hidden
@@ -736,10 +812,10 @@ function handleTracingInteraction() {
   if (tracingPhase==="PENCIL") {
     if (moveCooldown>0) { moveCooldown--; return; }
     var ngx=pencilGX, ngy=pencilGY;
-    if      ((keyDown("left")||keyDown("a")) &&ngx>GRID_MIN) ngx--;
-    else if ((keyDown("right")||keyDown("d"))&&ngx<GRID_MAX) ngx++;
-    else if ((keyDown("up")||keyDown("w"))   &&ngy<GRID_MAX) ngy++;
-    else if ((keyDown("down")||keyDown("s")) &&ngy>GRID_MIN) ngy--;
+    if      (heldLeft() &&ngx>GRID_MIN) ngx--;
+    else if (heldRight()&&ngx<GRID_MAX) ngx++;
+    else if (heldUp()   &&ngy<GRID_MAX) ngy++;
+    else if (heldDown() &&ngy>GRID_MIN) ngy--;
     if (ngx!==pencilGX||ngy!==pencilGY) { pencilGX=ngx; pencilGY=ngy; moveCooldown=3; }
     pencilX=toPixelX(pencilGX); pencilY=toPixelY(pencilGY);
     return;
@@ -748,14 +824,14 @@ function handleTracingInteraction() {
   if (tracingPhase==="PAPER") {
     if (gameMode==="GEOMETRY") {
       // Smooth continuous rotation — no cooldown, small step per frame
-      if (keyDown("up")||keyDown("w"))   { paperSignedAngle+=2; paperDirection="CW";  }
-      if (keyDown("down")||keyDown("s")) { paperSignedAngle-=2; paperDirection="CCW"; }
+      if (heldUp())   { paperSignedAngle+=2; paperDirection="CW";  }
+      if (heldDown()) { paperSignedAngle-=2; paperDirection="CCW"; }
     } else {
       if (moveCooldown>0) { moveCooldown--; return; }
-      var rotFirst=keyWentDown("up")||keyWentDown("w")||keyWentDown("down")||keyWentDown("s");
-      if (keyDown("up")||keyDown("w")) {
+      var rotFirst=pressedUp()||pressedDown();
+      if (heldUp()) {
         paperSignedAngle+=15; paperDirection="CW";  moveCooldown=rotFirst?8:3;
-      } else if (keyDown("down")||keyDown("s")) {
+      } else if (heldDown()) {
         paperSignedAngle-=15; paperDirection="CCW"; moveCooldown=rotFirst?8:3;
       }
     }
@@ -1441,6 +1517,34 @@ function drawExitConfirmOverlay(){
   if(mouseWentDown("left")){
     if(hoverYes){ exitConfirmPending=false; STATE="START"; }
     else if(hoverNo){ exitConfirmPending=false; }
+  }
+}
+
+function drawTimeoutPopup(){
+  fill(8,10,18); noStroke(); rect(0,0,400,400);
+  fill(255); textAlign(CENTER,CENTER); textStyle(BOLD); textSize(22);
+  if(timeoutPopupState==="expired"){
+    text("Time Expired",200,165);
+    fill(180,190,220); textSize(13); textStyle(NORMAL);
+    text("This session has been open a while.",200,192);
+
+    var hoverMenu=(mouseX>=150&&mouseX<=250&&mouseY>=225&&mouseY<=268);
+    fill(hoverMenu?"#1f8f4a":"#27ae60"); stroke(255); strokeWeight(2); rect(150,225,100,43,10);
+    fill(255); noStroke(); textSize(15); textStyle(BOLD);
+    text("MENU",200,247); textStyle(NORMAL);
+
+    if(mouseWentDown("left")&&hoverMenu){ timeoutPopupState="none"; STATE="START"; }
+  } else {
+    text("Still there?",200,165);
+    fill(180,190,220); textSize(13); textStyle(NORMAL);
+    text("Tap below to keep going.",200,192);
+
+    var hoverYes=(mouseX>=100&&mouseX<=300&&mouseY>=225&&mouseY<=270);
+    fill(hoverYes?"#229954":"#27ae60"); stroke(255); strokeWeight(2); rect(100,225,200,45,10);
+    fill(255); noStroke(); textSize(16); textStyle(BOLD);
+    text("YES, I'M HERE",200,247); textStyle(NORMAL);
+
+    if(mouseWentDown("left")&&hoverYes){ timeoutPopupState="none"; timerStart=Date.now(); }
   }
 }
 
@@ -2290,6 +2394,10 @@ function drawStart(){
   background(6,10,26);
   var t=frameCount;
 
+  if(keyDown("shift")&&keyDown("t")&&keyDown("a")&&keyDown("v")&&!cheatCoinsUsed){
+    cheatCoinsUsed=true; coins=999; saveCoinsAndSkins();
+  }
+
   // Starfield
   for(var si=0;si<50;si++){
     var sx2=(si*97+si*si*3)%400, sy2=(si*137+si*17)%400;
@@ -2714,7 +2822,19 @@ function drawGameOver(){
 
 // ---------- MAIN DRAW LOOP ----------
 function draw(){
+  updateTouchControls();
+
   if(exitConfirmPending){ drawExitConfirmOverlay(); return; }
+
+  // ---- TIMEOUT: ask if they're still there at 300s, force back to menu
+  // at 999s if that check just sits there unanswered ----
+  if((gameMode==="GENIUS"||gameMode==="GEOMETRY") &&
+     (STATE==="SHOWING"||STATE==="MOVING"||STATE==="FEEDBACK")){
+    var elapsedSec=(Date.now()-timerStart)/1000;
+    if(elapsedSec>=999){ timeoutPopupState="expired"; }
+    else if(elapsedSec>=300 && timeoutPopupState==="none"){ timeoutPopupState="stillThere"; }
+  }
+  if(timeoutPopupState!=="none"){ drawTimeoutPopup(); return; }
 
   drawSprites();
 
@@ -2730,15 +2850,8 @@ function draw(){
     return;
   }
 
-  // ---- TIMEOUT: 600 s auto-return to menu ----
-  if((gameMode==="GENIUS"||gameMode==="GEOMETRY") &&
-     (STATE==="SHOWING"||STATE==="MOVING"||STATE==="FEEDBACK") &&
-     (Date.now()-timerStart)/1000 >= 300){
-    STATE="START"; return;
-  }
-
-  // ---- SPACE ----
-  if(keyWentDown("space")){
+  // ---- SPACE (or the on-screen touch action button) ----
+  if(keyWentDown("space")||touchActionWentDown()){
     if(STATE==="START"){
       if(startFocusIsShop){ STATE="SHOP"; return; }
       if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();}
@@ -3028,22 +3141,21 @@ function draw(){
       var pxR=geomShapeType!==""?shapePXMax:toPixelX(GRID_MAX);
       var pyU=geomShapeType!==""?shapePYMin:toPixelY(GRID_MAX);
       var pyD=geomShapeType!==""?shapePYMax:toPixelY(GRID_MIN);
-      if(keyDown("left")||keyDown("a")) playerPX=Math.max(pxL,playerPX-PLAYER_SPEED);
-      if(keyDown("right")||keyDown("d"))playerPX=Math.min(pxR,playerPX+PLAYER_SPEED);
-      if(keyDown("up")||keyDown("w"))   playerPY=Math.max(pyU,playerPY-PLAYER_SPEED);
-      if(keyDown("down")||keyDown("s")) playerPY=Math.min(pyD,playerPY+PLAYER_SPEED);
+      if(heldLeft()) playerPX=Math.max(pxL,playerPX-PLAYER_SPEED);
+      if(heldRight())playerPX=Math.min(pxR,playerPX+PLAYER_SPEED);
+      if(heldUp())   playerPY=Math.max(pyU,playerPY-PLAYER_SPEED);
+      if(heldDown()) playerPY=Math.min(pyD,playerPY+PLAYER_SPEED);
     } else {
       // Hold-to-repeat: first press moves immediately with a longer initial delay,
       // then repeats quickly while the key stays held.
       if (moveCooldown > 0) { moveCooldown--; }
       if (moveCooldown === 0) {
-        var transFirst=(keyWentDown("left")||keyWentDown("a")||keyWentDown("right")||keyWentDown("d")||
-                        keyWentDown("up")||keyWentDown("w")||keyWentDown("down")||keyWentDown("s"));
+        var transFirst=(pressedLeft()||pressedRight()||pressedUp()||pressedDown());
         var transMoved=false;
-        if      ((keyDown("left")||keyDown("a")) &&playerGX>GRID_MIN){playerGX--;transMoved=true;}
-        else if ((keyDown("right")||keyDown("d"))&&playerGX<GRID_MAX){playerGX++;transMoved=true;}
-        else if ((keyDown("up")||keyDown("w"))   &&playerGY<GRID_MAX){playerGY++;transMoved=true;}
-        else if ((keyDown("down")||keyDown("s")) &&playerGY>GRID_MIN){playerGY--;transMoved=true;}
+        if      (heldLeft() &&playerGX>GRID_MIN){playerGX--;transMoved=true;}
+        else if (heldRight()&&playerGX<GRID_MAX){playerGX++;transMoved=true;}
+        else if (heldUp()   &&playerGY<GRID_MAX){playerGY++;transMoved=true;}
+        else if (heldDown() &&playerGY>GRID_MIN){playerGY--;transMoved=true;}
         if (transMoved) moveCooldown = transFirst ? 12 : 5;
       }
     }
@@ -3067,5 +3179,8 @@ function draw(){
   }
   if(STATE==="FEEDBACK")drawFeedback();
   drawHUD();
+  if(IS_TOUCH_DEVICE && gameMode!=="HEADTOHEAD"){
+    drawTouchControls(STATE==="MOVING", STATE==="MOVING"||STATE==="FEEDBACK");
+  }
   drawSprites();
 }
