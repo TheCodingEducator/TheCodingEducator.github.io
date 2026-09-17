@@ -401,7 +401,7 @@ function drawStartScreen() {
     // Best score in Maximum Velocity - an endless/survival mode with no
     // win condition, so a high score is the natural progress to chase.
     noStroke(); fill("white"); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD);
-    text("Best: " + hardHighScore, 290, 270);
+    text("Best Score: " + hardHighScore, 290, 270);
     textStyle(NORMAL);
   }
 
