@@ -15,77 +15,6 @@ var mouseHeld = false;
 var mouseJustReleased = false;
 var mouseHeldFrames = 999;
 
-// ---------- TOUCH CONTROLS (mobile) ----------
-// All real movement/rotation/submit input funnels through keyDown()/
-// keyWentDown() calls scattered across the tracing-paper, geometry, and
-// translate/reflect handlers below. Rather than duplicate that logic for
-// touch, an on-screen D-pad + action button just drive the SAME held/
-// pressed helpers those handlers already call - so touch is a second input
-// source feeding the existing controls, not a separate code path.
-var IS_TOUCH_DEVICE = (typeof window !== "undefined") &&
-  (('ontouchstart' in window) || (navigator && navigator.maxTouchPoints > 0));
-var touchDirState = { left: false, right: false, up: false, down: false };
-var touchDirPrev  = { left: false, right: false, up: false, down: false };
-var touchActionNow = false, touchActionPrev = false;
-
-var DPAD_CX = 40, DPAD_CY = 290, DPAD_CELL = 26;
-var DPAD_RECTS = {
-  up:    { x: DPAD_CX - DPAD_CELL/2, y: DPAD_CY - DPAD_CELL*1.5, w: DPAD_CELL, h: DPAD_CELL },
-  down:  { x: DPAD_CX - DPAD_CELL/2, y: DPAD_CY + DPAD_CELL/2,   w: DPAD_CELL, h: DPAD_CELL },
-  left:  { x: DPAD_CX - DPAD_CELL*1.5, y: DPAD_CY - DPAD_CELL/2, w: DPAD_CELL, h: DPAD_CELL },
-  right: { x: DPAD_CX + DPAD_CELL/2,   y: DPAD_CY - DPAD_CELL/2, w: DPAD_CELL, h: DPAD_CELL }
-};
-var ACTION_BTN = { x: 365, y: 290, r: 30 };
-
-function inRect(px, py, r) { return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
-function inCircle(px, py, c) { var dx = px - c.x, dy = py - c.y; return (dx*dx + dy*dy) <= c.r*c.r; }
-
-function updateTouchControls() {
-  var pressed = mouseIsPressed;
-  var px = pressed ? mouseX : -9999, py = pressed ? mouseY : -9999;
-  touchDirPrev.left = touchDirState.left; touchDirPrev.right = touchDirState.right;
-  touchDirPrev.up = touchDirState.up; touchDirPrev.down = touchDirState.down;
-  touchDirState.left  = inRect(px, py, DPAD_RECTS.left);
-  touchDirState.right = inRect(px, py, DPAD_RECTS.right);
-  touchDirState.up    = inRect(px, py, DPAD_RECTS.up);
-  touchDirState.down  = inRect(px, py, DPAD_RECTS.down);
-  touchActionPrev = touchActionNow;
-  touchActionNow = inCircle(px, py, ACTION_BTN);
-}
-function heldLeft()  { return keyDown("left")||keyDown("a")||touchDirState.left; }
-function heldRight() { return keyDown("right")||keyDown("d")||touchDirState.right; }
-function heldUp()    { return keyDown("up")||keyDown("w")||touchDirState.up; }
-function heldDown()  { return keyDown("down")||keyDown("s")||touchDirState.down; }
-function pressedLeft()  { return keyWentDown("left")||keyWentDown("a")||(touchDirState.left && !touchDirPrev.left); }
-function pressedRight() { return keyWentDown("right")||keyWentDown("d")||(touchDirState.right && !touchDirPrev.right); }
-function pressedUp()    { return keyWentDown("up")||keyWentDown("w")||(touchDirState.up && !touchDirPrev.up); }
-function pressedDown()  { return keyWentDown("down")||keyWentDown("s")||(touchDirState.down && !touchDirPrev.down); }
-function touchActionWentDown() { return touchActionNow && !touchActionPrev; }
-
-function drawTouchControls(showDpad, showAction) {
-  if (showDpad) {
-    noStroke();
-    fill(touchDirState.up    ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.up.x, DPAD_RECTS.up.y, DPAD_RECTS.up.w, DPAD_RECTS.up.h, 5);
-    fill(touchDirState.down  ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.down.x, DPAD_RECTS.down.y, DPAD_RECTS.down.w, DPAD_RECTS.down.h, 5);
-    fill(touchDirState.left  ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.left.x, DPAD_RECTS.left.y, DPAD_RECTS.left.w, DPAD_RECTS.left.h, 5);
-    fill(touchDirState.right ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"); rect(DPAD_RECTS.right.x, DPAD_RECTS.right.y, DPAD_RECTS.right.w, DPAD_RECTS.right.h, 5);
-    fill(20, 25, 45, 160); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD);
-    text("▲", DPAD_RECTS.up.x+DPAD_CELL/2, DPAD_RECTS.up.y+DPAD_CELL/2);
-    text("▼", DPAD_RECTS.down.x+DPAD_CELL/2, DPAD_RECTS.down.y+DPAD_CELL/2);
-    text("◀", DPAD_RECTS.left.x+DPAD_CELL/2, DPAD_RECTS.left.y+DPAD_CELL/2);
-    text("▶", DPAD_RECTS.right.x+DPAD_CELL/2, DPAD_RECTS.right.y+DPAD_CELL/2);
-    textStyle(NORMAL);
-  }
-  if (showAction) {
-    noStroke();
-    fill(touchActionNow ? "rgba(90,220,140,0.75)" : "rgba(90,220,140,0.45)");
-    ellipse(ACTION_BTN.x, ACTION_BTN.y, ACTION_BTN.r*2, ACTION_BTN.r*2);
-    fill(255); textAlign(CENTER, CENTER); textSize(11); textStyle(BOLD);
-    text("TAP TO\nCONFIRM", ACTION_BTN.x, ACTION_BTN.y);
-    textStyle(NORMAL);
-  }
-}
-
 // ---------- GRID SETTINGS ----------
 var CELL = 30;
 var ORIGIN_X = 200;
@@ -812,10 +741,10 @@ function handleTracingInteraction() {
   if (tracingPhase==="PENCIL") {
     if (moveCooldown>0) { moveCooldown--; return; }
     var ngx=pencilGX, ngy=pencilGY;
-    if      (heldLeft() &&ngx>GRID_MIN) ngx--;
-    else if (heldRight()&&ngx<GRID_MAX) ngx++;
-    else if (heldUp()   &&ngy<GRID_MAX) ngy++;
-    else if (heldDown() &&ngy>GRID_MIN) ngy--;
+    if      ((keyDown("left")||keyDown("a")) &&ngx>GRID_MIN) ngx--;
+    else if ((keyDown("right")||keyDown("d"))&&ngx<GRID_MAX) ngx++;
+    else if ((keyDown("up")||keyDown("w"))   &&ngy<GRID_MAX) ngy++;
+    else if ((keyDown("down")||keyDown("s")) &&ngy>GRID_MIN) ngy--;
     if (ngx!==pencilGX||ngy!==pencilGY) { pencilGX=ngx; pencilGY=ngy; moveCooldown=3; }
     pencilX=toPixelX(pencilGX); pencilY=toPixelY(pencilGY);
     return;
@@ -824,14 +753,14 @@ function handleTracingInteraction() {
   if (tracingPhase==="PAPER") {
     if (gameMode==="GEOMETRY") {
       // Smooth continuous rotation — no cooldown, small step per frame
-      if (heldUp())   { paperSignedAngle+=2; paperDirection="CW";  }
-      if (heldDown()) { paperSignedAngle-=2; paperDirection="CCW"; }
+      if (keyDown("up")||keyDown("w"))   { paperSignedAngle+=2; paperDirection="CW";  }
+      if (keyDown("down")||keyDown("s")) { paperSignedAngle-=2; paperDirection="CCW"; }
     } else {
       if (moveCooldown>0) { moveCooldown--; return; }
-      var rotFirst=pressedUp()||pressedDown();
-      if (heldUp()) {
+      var rotFirst=keyWentDown("up")||keyWentDown("w")||keyWentDown("down")||keyWentDown("s");
+      if (keyDown("up")||keyDown("w")) {
         paperSignedAngle+=15; paperDirection="CW";  moveCooldown=rotFirst?8:3;
-      } else if (heldDown()) {
+      } else if (keyDown("down")||keyDown("s")) {
         paperSignedAngle-=15; paperDirection="CCW"; moveCooldown=rotFirst?8:3;
       }
     }
@@ -2822,8 +2751,6 @@ function drawGameOver(){
 
 // ---------- MAIN DRAW LOOP ----------
 function draw(){
-  updateTouchControls();
-
   if(exitConfirmPending){ drawExitConfirmOverlay(); return; }
 
   // ---- TIMEOUT: ask if they're still there at 300s, force back to menu
@@ -2851,7 +2778,7 @@ function draw(){
   }
 
   // ---- SPACE (or the on-screen touch action button) ----
-  if(keyWentDown("space")||touchActionWentDown()){
+  if(keyWentDown("space")){
     if(STATE==="START"){
       if(startFocusIsShop){ STATE="SHOP"; return; }
       if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();}
@@ -3141,21 +3068,22 @@ function draw(){
       var pxR=geomShapeType!==""?shapePXMax:toPixelX(GRID_MAX);
       var pyU=geomShapeType!==""?shapePYMin:toPixelY(GRID_MAX);
       var pyD=geomShapeType!==""?shapePYMax:toPixelY(GRID_MIN);
-      if(heldLeft()) playerPX=Math.max(pxL,playerPX-PLAYER_SPEED);
-      if(heldRight())playerPX=Math.min(pxR,playerPX+PLAYER_SPEED);
-      if(heldUp())   playerPY=Math.max(pyU,playerPY-PLAYER_SPEED);
-      if(heldDown()) playerPY=Math.min(pyD,playerPY+PLAYER_SPEED);
+      if(keyDown("left")||keyDown("a")) playerPX=Math.max(pxL,playerPX-PLAYER_SPEED);
+      if(keyDown("right")||keyDown("d"))playerPX=Math.min(pxR,playerPX+PLAYER_SPEED);
+      if(keyDown("up")||keyDown("w"))   playerPY=Math.max(pyU,playerPY-PLAYER_SPEED);
+      if(keyDown("down")||keyDown("s")) playerPY=Math.min(pyD,playerPY+PLAYER_SPEED);
     } else {
       // Hold-to-repeat: first press moves immediately with a longer initial delay,
       // then repeats quickly while the key stays held.
       if (moveCooldown > 0) { moveCooldown--; }
       if (moveCooldown === 0) {
-        var transFirst=(pressedLeft()||pressedRight()||pressedUp()||pressedDown());
+        var transFirst=(keyWentDown("left")||keyWentDown("a")||keyWentDown("right")||keyWentDown("d")||
+                        keyWentDown("up")||keyWentDown("w")||keyWentDown("down")||keyWentDown("s"));
         var transMoved=false;
-        if      (heldLeft() &&playerGX>GRID_MIN){playerGX--;transMoved=true;}
-        else if (heldRight()&&playerGX<GRID_MAX){playerGX++;transMoved=true;}
-        else if (heldUp()   &&playerGY<GRID_MAX){playerGY++;transMoved=true;}
-        else if (heldDown() &&playerGY>GRID_MIN){playerGY--;transMoved=true;}
+        if      ((keyDown("left")||keyDown("a")) &&playerGX>GRID_MIN){playerGX--;transMoved=true;}
+        else if ((keyDown("right")||keyDown("d"))&&playerGX<GRID_MAX){playerGX++;transMoved=true;}
+        else if ((keyDown("up")||keyDown("w"))   &&playerGY<GRID_MAX){playerGY++;transMoved=true;}
+        else if ((keyDown("down")||keyDown("s")) &&playerGY>GRID_MIN){playerGY--;transMoved=true;}
         if (transMoved) moveCooldown = transFirst ? 12 : 5;
       }
     }
@@ -3179,8 +3107,5 @@ function draw(){
   }
   if(STATE==="FEEDBACK")drawFeedback();
   drawHUD();
-  if(IS_TOUCH_DEVICE && gameMode!=="HEADTOHEAD"){
-    drawTouchControls(STATE==="MOVING", STATE==="MOVING"||STATE==="FEEDBACK");
-  }
   drawSprites();
 }
