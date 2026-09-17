@@ -91,26 +91,27 @@ var shopData = {
     { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
     { id: "blue", name: "Spark Trail", price: 300 }, { id: "red", name: "Ember Trail", price: 300 },
     { id: "pink", name: "Heart Trail", price: 300 }, { id: "purple", name: "Twinkle Trail", price: 300 },
-    { id: "bubbles", name: "Bubbles", price: 500 }, { id: "money", name: "Money Trail", price: 500 },
+    { id: "bubbles", name: "Bubbles", price: 500 },
     { id: "gold", name: "Diamond Trail", price: 500 }, { id: "ice", name: "Snowflake Trail", price: 500 },
-    { id: "rainbow", name: "Rainbow Trail", price: 1000 }
+    { id: "rainbow", name: "Rainbow Trail", price: 1000 }, { id: "money", name: "Money Trail", price: 1000 }
   ],
-  // Priced by how much of an edge each actually gives in a run. Electric
-  // is priced lowest of all - per feedback, fuel almost never actually
-  // runs out in practice, so removing that risk entirely isn't worth much.
-  // Time Freeze and Shield are single-use saves but a full 10-second
-  // stop-the-world beats a single hit absorbed, so it's priced above
-  // Shield. Second Chance protects against the same things Shield does
-  // (plus wrong answers) but only comes up on the rarer "already about to
-  // fail" moment, so per feedback it's priced just under Shield. Magnet
-  // and Double Coins never prevent a loss - they're pure economy/QoL.
+  // No Powerup always sits first regardless of price, since it's the
+  // "none of these" baseline option, not something being price-compared.
+  // Everything else after it is priced by how much of an edge it actually
+  // gives in a run. Electric is priced lowest of all - per feedback, fuel
+  // almost never actually runs out in practice, so removing that risk
+  // entirely isn't worth much. Second Chance protects against the same
+  // things Shield does (plus wrong answers) but only comes up on the
+  // rarer "already about to fail" moment, so it's priced below Shield/
+  // Time Freeze. Magnet and Double Coins never prevent a loss - they're
+  // pure economy/QoL.
   boosts: [
-    { id: "fuelsaver", name: "Electric (No Fuel)", price: 200 },
     { id: "none", name: "No Powerup", price: 500 },
+    { id: "fuelsaver", name: "Electric (No Fuel)", price: 200 },
     { id: "doublecoins", name: "Double Coins", price: 500 },
     { id: "magnet", name: "Coin Magnet", price: 600 },
     { id: "secondchance", name: "Second Chance", price: 700 },
-    { id: "shield", name: "Forcefield", price: 800 },
+    { id: "shield", name: "Forcefield", price: 1000 },
     { id: "timefreeze", name: "Time Freeze", price: 1000 }
   ],
 };
@@ -337,8 +338,8 @@ function draw() {
   else if (gameState === "skillSelect") drawSkillSelectScreen();
   else if (gameState === "shop") drawShopScreen();
   else if (gameState === "play") {
-      // Check if we hit 75 points on easy mode to trigger the popup
-      if (score >= 75 && gameMode === "easy" && !maxVelocityPromptShown) {
+      // Check if we hit 100 points on easy mode to trigger the popup
+      if (score >= 100 && gameMode === "easy" && !maxVelocityPromptShown) {
           maxVelocityPromptShown = true;
           gameState = "maxVelocityPrompt";
           playSound("sound://category_achievements/puzzle_game_secret_unlock_01.mp3");
@@ -394,7 +395,7 @@ function drawStartScreen() {
   var hardLocked = !hasUnlockedHardMode;
 
   drawMenuButton(40, 200, 140, 60, "#27ae60", "STREET RACING");
-  if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", "LOCKED", "(Score 75+ in\nStreet Racing)");
+  if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", "LOCKED", "(Score 100+ in\nStreet Racing)");
   else {
     drawMenuButton(220, 200, 140, 60, "#e74c3c", "MAXIMUM\nVELOCITY");
     // Best score in Maximum Velocity - an endless/survival mode with no
@@ -1131,10 +1132,10 @@ function playGame(isFrozen) {
         if (score >= 150) dayPhase = Math.max(0, dayPhase - 0.005);
     }
 
-    if (gameMode === "easy" && score >= 75) {
+    if (gameMode === "easy" && score >= 100) {
       var justUnlockedHard = false;
       for (var i = 0; i < 6; i++) { if (skillStates[i] && !unlockedHardSkills[i]) { unlockedHardSkills[i] = true; hasUnlockedHardMode = true; justUnlockedHard = true; } }
-      // This block re-runs every frame once score crosses 75 (the guards
+      // This block re-runs every frame once score crosses 100 (the guards
       // above just skip re-setting already-true values) - only save when
       // something actually changed, not 30 times a second for the rest
       // of the run.
