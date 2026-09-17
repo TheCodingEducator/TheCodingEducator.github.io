@@ -78,12 +78,12 @@ var CLASSIC_CAR_COLORS = ["red", "blue", "green", "purple", "orange", "pink", "y
 var shopData = {
   cars: [
     { id: "classic", name: "Classic Colors", price: 0, isColorPicker: true },
-    { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 },
-    { id: "ghost", name: "Ghost Car", price: 1000 }, { id: "robot", name: "Robot", price: 1000 },
-    { id: "alien", name: "UFO", price: 1000 }, { id: "dragon", name: "Dragon", price: 1000 },
-    { id: "bird", name: "Bird", price: 1000 }, { id: "swervingtruck", name: "Swerving Truck", price: 1000 },
-    { id: "plane", name: "Crop Duster", price: 1000 }, { id: "motorcycle", name: "Motorcycle", price: 1000 },
-    { id: "vintage", name: "Vintage Car", price: 1000 }, { id: "supercar", name: "Supercar", price: 1000 }
+    { id: "ghost", name: "Ghost Car", price: 300 }, { id: "robot", name: "Robot", price: 300 },
+    { id: "alien", name: "UFO", price: 300 }, { id: "dragon", name: "Dragon", price: 300 },
+    { id: "bird", name: "Bird", price: 300 }, { id: "swervingtruck", name: "Swerving Truck", price: 300 },
+    { id: "plane", name: "Crop Duster", price: 300 }, { id: "motorcycle", name: "Motorcycle", price: 300 },
+    { id: "vintage", name: "Vintage Car", price: 300 }, { id: "supercar", name: "Supercar", price: 300 },
+    { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 }
   ],
 
   // Ordered cheapest-first / most-expensive-last within each shop tab.
