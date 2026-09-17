@@ -2423,28 +2423,34 @@ function drawStart(){
     var bx2=startX+mi*(bw+gap), by2=cardTop;
     var cx=bx2+bw/2;
     var sel=(gameMode===m.id);
+    // Suppressed once DOWN has moved keyboard focus to the Shop bar, so the
+    // previously-selected mode card fully drops its "selected" look (glow,
+    // brightened body, lit-up PLAY button) instead of still reading as
+    // selected while the Shop also shows its own focus ring - only one
+    // thing should look focused at a time.
+    var selVisual=sel&&!startFocusIsShop;
     var hov=(mouseX>=bx2&&mouseX<=bx2+bw&&mouseY>=by2&&mouseY<=by2+bh);
     if(hov) startFocusIsShop=false;
     var p2=(sin(t*3)+1)*0.5;
 
     // Card glow
-    if(sel){
+    if(selVisual){
       fill(m.r,m.g,m.b,Math.floor(18+p2*32)); noStroke();
       rect(bx2-6,by2-6,bw+12,bh+12,18);
     }
 
     // Card body
-    var bR=sel?Math.min(255,m.r+50):hov?Math.min(255,m.r+25):m.r;
-    var bG=sel?Math.min(255,m.g+50):hov?Math.min(255,m.g+25):m.g;
-    var bB=sel?Math.min(255,m.b+50):hov?Math.min(255,m.b+25):m.b;
+    var bR=selVisual?Math.min(255,m.r+50):hov?Math.min(255,m.r+25):m.r;
+    var bG=selVisual?Math.min(255,m.g+50):hov?Math.min(255,m.g+25):m.g;
+    var bB=selVisual?Math.min(255,m.b+50):hov?Math.min(255,m.b+25):m.b;
     fill(bR,bG,bB);
-    stroke(sel?255:hov?200:110,sel?255:hov?180:85,sel?220:hov?90:55);
-    strokeWeight(sel?3:hov?2:1);
+    stroke(selVisual?255:hov?200:110,selVisual?255:hov?180:85,selVisual?220:hov?90:55);
+    strokeWeight(selVisual?3:hov?2:1);
     rect(bx2,by2,bw,bh,14);
 
     // Gold keyboard-focus border - only on the mode cards while focus
     // hasn't moved down to the Shop bar (see startFocusIsShop)
-    if(sel&&!startFocusIsShop){
+    if(selVisual){
       noFill(); stroke(255,220,60,Math.floor(130+p2*125));
       strokeWeight(3); rect(bx2+3,by2+3,bw-6,bh-6,12);
     }
@@ -2474,17 +2480,17 @@ function drawStart(){
     line(bx2+18,by2+106,bx2+bw-18,by2+106);
 
     // Feature lines — shrink to fit inside card edges
-    fill(sel?255:215,sel?250:235,255); noStroke(); textAlign(CENTER,CENTER);
+    fill(selVisual?255:215,selVisual?250:235,255); noStroke(); textAlign(CENTER,CENTER);
     fitText(m.f1, cx, by2+124, bw-12, 11);
     fitText(m.f2, cx, by2+142, bw-12, 11);
 
     // Icon area — glowing circles + large symbol
     var iconY=by2+213;
-    fill(m.ir,m.ig,m.ib,Math.floor(sel?20+p2*20:10)); noStroke();
+    fill(m.ir,m.ig,m.ib,Math.floor(selVisual?20+p2*20:10)); noStroke();
     ellipse(cx,iconY,92,92);
-    fill(m.ir,m.ig,m.ib,Math.floor(sel?42+p2*32:22)); noStroke();
+    fill(m.ir,m.ig,m.ib,Math.floor(selVisual?42+p2*32:22)); noStroke();
     ellipse(cx,iconY,60,60);
-    fill(m.ir,m.ig,m.ib,Math.floor(sel?185+p2*70:105));
+    fill(m.ir,m.ig,m.ib,Math.floor(selVisual?185+p2*70:105));
     noStroke(); textAlign(CENTER,CENTER);
     textSize(m.icon==="VS"?36:52);
     text(m.icon,cx,iconY+(m.icon==="VS"?2:4));
@@ -2500,14 +2506,14 @@ function drawStart(){
     }
 
     // PLAY button
-    var pA=sel?Math.floor(190+p2*65):hov?155:85;
+    var pA=selVisual?Math.floor(190+p2*65):hov?155:85;
     fill(255,220,60,pA); noStroke();
     rect(bx2+12,by2+bh-46,bw-24,28,10);
-    if(sel){
+    if(selVisual){
       noFill(); stroke(255,255,255,Math.floor(80+p2*80));
       strokeWeight(1); rect(bx2+14,by2+bh-44,bw-28,24,8);
     }
-    fill(sel?10:35); noStroke(); textSize(13); textAlign(CENTER,CENTER);
+    fill(selVisual?10:35); noStroke(); textSize(13); textAlign(CENTER,CENTER);
     text("PLAY",cx,by2+bh-32);
 
     if(hov&&mouseWentDown("left")){
