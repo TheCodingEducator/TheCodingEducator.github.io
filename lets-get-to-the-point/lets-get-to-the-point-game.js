@@ -845,9 +845,7 @@ function drawReflectionDistances() {
       // label above
       var midX1 = constrain((sxPX + axPX) / 2, LBL_MIN_X+28, LBL_MAX_X+54-28);
       var lbY1 = constrain(syPY-15, LBL_MIN_Y, LBL_MAX_Y);
-      fill(0,0,0,170); noStroke(); rect(midX1-28, lbY1-7, 56, 14, 4);
-      fill(80,210,255); textSize(9); textAlign(CENTER,CENTER); noStroke();
-      text(sDist + " unit" + (sDist!==1?"s":""), midX1, lbY1);
+      drawTag(midX1, lbY1, sDist + " unit" + (sDist!==1?"s":""), 80,210,255);
     }
 
     // --- Axis → player (dynamic, green), only when player has left the axis ---
@@ -861,9 +859,7 @@ function drawReflectionDistances() {
       // label below
       var midX2 = constrain((axPX + pxPX) / 2, LBL_MIN_X+28, LBL_MAX_X+54-28);
       var lbY2 = constrain(pyPY+15, LBL_MIN_Y, LBL_MAX_Y);
-      fill(0,0,0,170); noStroke(); rect(midX2-28, lbY2-7, 56, 14, 4);
-      fill(80,255,170); textSize(9); textAlign(CENTER,CENTER); noStroke();
-      text(pDist + " unit" + (pDist!==1?"s":""), midX2, lbY2);
+      drawTag(midX2, lbY2, pDist + " unit" + (pDist!==1?"s":""), 80,255,170);
     }
   }
 
@@ -882,9 +878,7 @@ function drawReflectionDistances() {
       // label to the right
       var midY1 = constrain((syPY2 + axPY) / 2, LBL_MIN_Y-7, LBL_MAX_Y+7);
       var boxX1 = constrain(sxPX2+6, LBL_MIN_X, LBL_MAX_X);
-      fill(0,0,0,170); noStroke(); rect(boxX1, midY1-7, 54, 14, 4);
-      fill(80,210,255); textSize(9); textAlign(LEFT,CENTER); noStroke();
-      text(sDist2 + " unit" + (sDist2!==1?"s":""), boxX1+4, midY1);
+      drawTag(boxX1+27, midY1, sDist2 + " unit" + (sDist2!==1?"s":""), 80,210,255);
     }
 
     // --- Axis → player (dynamic, green) ---
@@ -898,9 +892,7 @@ function drawReflectionDistances() {
       // label to the left
       var midY2 = constrain((axPY + pyPY2) / 2, LBL_MIN_Y-7, LBL_MAX_Y+7);
       var boxX2 = constrain(pxPX2-60, LBL_MIN_X, LBL_MAX_X);
-      fill(0,0,0,170); noStroke(); rect(boxX2, midY2-7, 54, 14, 4);
-      fill(80,255,170); textSize(9); textAlign(RIGHT,CENTER); noStroke();
-      text(pDist2 + " unit" + (pDist2!==1?"s":""), boxX2+48, midY2);
+      drawTag(boxX2+27, midY2, pDist2 + " unit" + (pDist2!==1?"s":""), 80,255,170);
     }
   }
 }
@@ -1036,9 +1028,7 @@ function drawTranslationHelper() {
     var lbY=constrain(syPY+(cyPY>syPY?-14:14), LBL_MIN_Y, LBL_MAX_Y);
     var hLabel=isAlgebraic ? ("x "+(dxU>0?"+ ":"- ")+Math.abs(dxU))
                            : ((Math.abs(dxU)===1?"1 unit":Math.abs(dxU)+" units")+(dxU>0?" right":" left"));
-    fill(0,0,0,160); noStroke(); rect(midHX-30,lbY-8,60,16,4);
-    fill(80,200,255); textSize(9); textAlign(CENTER,CENTER); noStroke();
-    text(hLabel,midHX,lbY);
+    drawTag(midHX, lbY, hLabel, 80,200,255);
   }
 
   // Vertical leg
@@ -1051,9 +1041,7 @@ function drawTranslationHelper() {
     var lbX=constrain(cxPX+(cxPX<300?34:-34), LBL_MIN_X, LBL_MAX_X);
     var vLabel=isAlgebraic ? ("y "+(dyU>0?"+ ":"- ")+Math.abs(dyU))
                            : ((Math.abs(dyU)===1?"1 unit":Math.abs(dyU)+" units")+(dyU>0?" up":" down"));
-    fill(0,0,0,160); noStroke(); rect(lbX-30,midVY-8,60,16,4);
-    fill(80,255,160); textSize(9); textAlign(CENTER,CENTER); noStroke();
-    text(vLabel,lbX,midVY);
+    drawTag(lbX, midVY, vLabel, 80,255,160);
   }
 }
 
@@ -1080,8 +1068,7 @@ function drawTracingPaper() {
       }
     var spx=toPixelX(pencilGX),spy=toPixelY(pencilGY);
     fill(255,220,60,60); noStroke(); ellipse(spx,spy,24,24);
-    fill(255,220,60); textSize(9); textAlign(CENTER,BOTTOM); noStroke();
-    text("("+pencilGX+","+pencilGY+")",spx,spy-18);
+    drawTag(spx, spy-24, "("+pencilGX+","+pencilGY+")", 255,220,60);
     drawPencil(pencilX,pencilY);
     // Ends well above the bottom instruction bar (376-400) - it used to
     // reach into that bar's territory and visually collide with its
@@ -1478,6 +1465,53 @@ function drawTimeoutPopup(){
 }
 
 // ---------- DRAW HELPERS ----------
+
+// ---------- LABEL COLLISION AVOIDANCE ----------
+// Several markers on the grid (start point, current point, target,
+// translation/reflection distance callouts) can all land on or near the
+// same spot, especially early in a translation/reflection when the player
+// hasn't moved far from the start point yet - their little black-background
+// coordinate/distance tags used to just draw on top of each other and
+// become unreadable. resetLabelPlacement() clears the list of tags placed
+// this frame; placeLabelPos() nudges a requested tag position to the
+// nearest nearby spot that doesn't overlap any tag already placed this
+// frame, trying progressively farther offsets until it finds a clear one.
+var frameLabelRects = [];
+function resetLabelPlacement(){ frameLabelRects = []; }
+function labelRectsOverlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+function placeLabelPos(cx, cy, w, h){
+  var step=h+3;
+  var candidates=[
+    {x:0,y:0},
+    {x:0,y:step},{x:0,y:-step},{x:w+4,y:0},{x:-(w+4),y:0},
+    {x:w+4,y:step},{x:-(w+4),y:step},{x:w+4,y:-step},{x:-(w+4),y:-step},
+    {x:0,y:step*2},{x:0,y:-step*2},{x:w+4,y:step*2},{x:-(w+4),y:step*2},
+    {x:0,y:step*3},{x:0,y:-step*3}
+  ];
+  for (var i=0;i<candidates.length;i++){
+    var tx=cx+candidates[i].x, ty=cy+candidates[i].y;
+    var box={x:tx-w/2, y:ty-h/2, w:w, h:h};
+    var collide=false;
+    for (var j=0;j<frameLabelRects.length;j++){
+      if (labelRectsOverlap(box, frameLabelRects[j])) { collide=true; break; }
+    }
+    if (!collide){ frameLabelRects.push(box); return {x:tx, y:ty}; }
+  }
+  // Every candidate collided - draw at the original spot rather than
+  // searching forever; still counts as "placed" so later tags avoid it.
+  frameLabelRects.push({x:cx-w/2, y:cy-h/2, w:w, h:h});
+  return {x:cx, y:cy};
+}
+// A small black-background coordinate/distance tag, centered at (cx,cy),
+// automatically nudged clear of any other tag already drawn this frame.
+function drawTag(cx, cy, txt, r, g, b){
+  var w=txt.length*6+14, h=15;
+  var pos=placeLabelPos(cx, cy, w, h);
+  fill(0,0,0,180); noStroke(); rect(pos.x-w/2, pos.y-h/2, w, h, 4);
+  fill(r,g,b); textSize(9); textAlign(CENTER,CENTER); noStroke();
+  text(txt, pos.x, pos.y);
+}
+
 function drawStartMarker(){
   if (geomShapeType!==""&&gameMode==="GEOMETRY") {
     // Show shape at start position (dim outline + per-vertex rings)
@@ -1491,15 +1525,13 @@ function drawStartMarker(){
     for(var i=0;i<n;i++){
       var c=SHAPE_COLORS[i%4];
       noFill(); stroke(c[0],c[1],c[2],90); strokeWeight(1); ellipse(pv[i].x,pv[i].y,24,24);
-      fill(c[0],c[1],c[2],160); noStroke(); textSize(9); textAlign(CENTER,BOTTOM);
-      text("("+(startGX+all[i].ox)+", "+(startGY+all[i].oy)+")",pv[i].x,pv[i].y-14);
+      drawTag(pv[i].x, pv[i].y-20, "("+(startGX+all[i].ox)+", "+(startGY+all[i].oy)+")", c[0],c[1],c[2]);
     }
     return;
   }
   var px=toPixelX(startGX),py=toPixelY(startGY);
   noFill(); stroke(150,180,255); strokeWeight(1); ellipse(px,py,28,28);
-  fill(150,180,255); noStroke(); textSize(9); textAlign(CENTER,BOTTOM);
-  text("("+startGX+", "+startGY+")",px,py-16);
+  drawTag(px, py-22, "("+startGX+", "+startGY+")", 150,180,255);
 }
 
 function drawFaceAt(px,py,fr,fg,fb,label){
@@ -1514,12 +1546,9 @@ function drawFaceAt(px,py,fr,fg,fb,label){
     line(px+cos(a1)*8,py+2+sin(a1)*6,px+cos(a2)*8,py+2+sin(a2)*6);
   }
   // Coord label
-  var tw=label.length*6+8;
   var labelAbove=(py-38>66);
-  var tagY=labelAbove?py-38:py+26;
-  var textY=labelAbove?py-25:py+39;
-  fill(0,0,0); noStroke(); rect(px-tw/2,tagY,tw,14,4);
-  fill(80,220,255); textSize(9); textAlign(CENTER,BOTTOM); text(label,px,textY);
+  var tagCY=labelAbove?py-31:py+33;
+  drawTag(px, tagCY, label, 80,220,255);
 }
 
 // Draws the equipped skin's face plus its own extra flourish (see the
@@ -1650,12 +1679,9 @@ function drawSkinnedFace(px, py, skin, label) {
 
   // ---- Coordinate label (same as drawFaceAt) - skipped when label is empty ----
   if (label) {
-    var tw=label.length*6+8;
     var labelAbove=(py-38>66);
-    var tagY=labelAbove?py-38:py+26;
-    var textY=labelAbove?py-25:py+39;
-    fill(0,0,0); noStroke(); rect(px-tw/2,tagY,tw,14,4);
-    fill(80,220,255); textSize(9); textAlign(CENTER,BOTTOM); text(label,px,textY);
+    var tagCY=labelAbove?py-31:py+33;
+    drawTag(px, tagCY, label, 80,220,255);
   }
 }
 
@@ -1689,16 +1715,14 @@ function drawTarget(){
     for(var i=0;i<n;i++){
       var c=SHAPE_COLORS[i%4];
       noFill(); stroke(c[0],c[1],c[2]); strokeWeight(2); ellipse(pv[i].x,pv[i].y,30+pulse,30+pulse);
-      fill(c[0],c[1],c[2]); noStroke(); textSize(9); textAlign(CENTER,BOTTOM);
-      text("("+(targetGX+all[i].ox)+", "+(targetGY+all[i].oy)+")",pv[i].x,pv[i].y-16);
+      drawTag(pv[i].x, pv[i].y-22, "("+(targetGX+all[i].ox)+", "+(targetGY+all[i].oy)+")", c[0],c[1],c[2]);
     }
     return;
   }
   var px=toPixelX(targetGX),py=toPixelY(targetGY);
   var pulse=abs(sin(frameCount*0.1))*8;
   noFill(); stroke(255,220,0); strokeWeight(2); ellipse(px,py,30+pulse,30+pulse);
-  fill(255,220,0); noStroke(); textSize(9); textAlign(CENTER,BOTTOM);
-  text("("+targetGX+", "+targetGY+")",px,py-16);
+  drawTag(px, py-24, "("+targetGX+", "+targetGY+")", 255,220,0);
 }
 
 function drawLockedMarker(){
@@ -2762,6 +2786,13 @@ function draw(){
     else if(elapsedSec>=300 && timeoutPopupState==="none"){ timeoutPopupState="stillThere"; }
   }
   if(timeoutPopupState!=="none"){ drawTimeoutPopup(); return; }
+
+  // Cleared exactly once per real frame, regardless of which STATE branch
+  // below ends up running - every drawTag() call this frame checks against
+  // (and adds to) this same list, so labels drawn from different STATE
+  // branches (SHOWING, ANSWER_DEMO/ROTATION_DEMO, the main MOVING/FEEDBACK
+  // render) never collide with stale entries left over from a previous frame.
+  resetLabelPlacement();
 
   drawSprites();
 
