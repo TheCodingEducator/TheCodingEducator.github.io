@@ -640,7 +640,7 @@ function drawControlsUI() {
   fill("rgba(0, 0, 0, 0.85)"); noStroke(); rect(0, 360, 400, 40);
   if (gameMode === "1P") {
     fill("#1d428a"); stroke("white"); strokeWeight(1.5); rect(15, 365, 150, 30, 5);
-    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("MOVE", 90, 385);
+    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("ARROWS: Move", 90, 385);
 
     fill("#c0392b"); stroke("white"); strokeWeight(1.5); rect(235, 365, 150, 30, 5);
     fill("white"); noStroke(); text("SPACE/ENTER : Shoot", 310, 385); textStyle(NORMAL);
