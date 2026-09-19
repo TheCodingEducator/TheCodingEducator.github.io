@@ -535,6 +535,22 @@
     }
     .fullscreen-btn:hover, .fullscreen-btn:focus-visible { background: #f1f5f9; border-color: #cbd5e1; }
 
+    /* Fallback for browsers/devices (e.g. some managed Chromebooks) that
+       block or silently fail the real Fullscreen API - a CSS-only
+       "maximize" mode that mimics it without needing browser permission. */
+    .game-frame.pseudo-fullscreen {
+      position: fixed; top: 0; left: 0; z-index: 9999;
+      width: 100vw; height: 100vh; background: #f8fafc;
+    }
+    .pseudo-fullscreen-exit-btn {
+      position: fixed; top: 12px; left: 12px; z-index: 10000; display: none;
+      align-items: center; gap: 6px;
+      padding: 6px 12px; background: white; border: 1px solid #e2e8f0; border-radius: 999px;
+      color: #1e293b; font: 700 13px 'Inter', -apple-system, sans-serif; cursor: pointer;
+    }
+    .pseudo-fullscreen-exit-btn.visible { display: inline-flex; }
+    .pseudo-fullscreen-exit-btn:hover, .pseudo-fullscreen-exit-btn:focus-visible { background: #f1f5f9; border-color: #cbd5e1; }
+
     .ccss-widget { position: relative; }
     .ccss-toggle {
       display: inline-flex; align-items: center; gap: 6px;
@@ -584,6 +600,7 @@
   <a class="site-back-link" href="../index.html">&larr; All games</a>
   <div class="topbar-right">
     <button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
+    <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" onclick="exitPseudoFullscreen()">&#10021; Exit Fullscreen</button>
     <div class="ccss-widget">
       <button class="ccss-toggle" onclick="toggleCcssPanel()" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
       <div id="ccss-panel" class="ccss-panel hidden">
@@ -1980,12 +1997,41 @@
       }
     });
 
+    function enterPseudoFullscreen() {
+      document.querySelector('.game-frame').classList.add('pseudo-fullscreen');
+      document.getElementById('pseudo-fullscreen-exit-btn').classList.add('visible');
+      updateFullscreenBtn();
+    }
+    function exitPseudoFullscreen() {
+      document.querySelector('.game-frame').classList.remove('pseudo-fullscreen');
+      document.getElementById('pseudo-fullscreen-exit-btn').classList.remove('visible');
+      updateFullscreenBtn();
+    }
     function toggleFullscreen() {
       var el = document.querySelector('.game-frame');
-      var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+      var isFs = document.fullscreenElement || document.webkitFullscreenElement || el.classList.contains('pseudo-fullscreen');
       if (!isFs) {
+        // Some devices (notably managed school Chromebooks) expose
+        // requestFullscreen but block it via policy, causing it to throw or
+        // silently reject instead of entering fullscreen. Fall back to a
+        // CSS-only pseudo-fullscreen whenever that happens so the button
+        // always does something.
         var req = el.requestFullscreen || el.webkitRequestFullscreen;
-        if (req) req.call(el);
+        var launched = false;
+        if (req && document.fullscreenEnabled !== false) {
+          try {
+            var result = req.call(el);
+            launched = true;
+            if (result && typeof result.catch === 'function') {
+              result.catch(function () { enterPseudoFullscreen(); });
+            }
+          } catch (e) {
+            launched = false;
+          }
+        }
+        if (!launched) enterPseudoFullscreen();
+      } else if (el.classList.contains('pseudo-fullscreen')) {
+        exitPseudoFullscreen();
       } else {
         var exit = document.exitFullscreen || document.webkitExitFullscreen;
         if (exit) exit.call(document);
@@ -1993,7 +2039,8 @@
     }
     function updateFullscreenBtn() {
       var btn = document.getElementById('fullscreen-btn');
-      var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      var el = document.querySelector('.game-frame');
+      var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || (el && el.classList.contains('pseudo-fullscreen')));
       btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
     }
     document.addEventListener('fullscreenchange', updateFullscreenBtn);
