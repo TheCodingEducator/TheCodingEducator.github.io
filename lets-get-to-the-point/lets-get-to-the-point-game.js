@@ -134,7 +134,19 @@ var PLAYER_SKINS = [
   { name:"Robot Silver",   r:190, g:200, b:210, style:"robot"      },
   { name:"Alien Green",    r:110, g:220, b:110, style:"alien"      },
   { name:"Cool Shades",    r:210, g:180, b:130, style:"sunglasses" },
-  { name:"Rainbow Burst",  r:255, g:255, b:255, style:"rainbow"    }
+  { name:"Rainbow Burst",  r:255, g:255, b:255, style:"rainbow"    },
+  { name:"Cosmic Nebula",  r:90,  g:60,  b:160, style:"galaxy"     },
+  { name:"Tiger Stripes",  r:255, g:150, b:40,  style:"stripes"    },
+  { name:"Panda Pal",      r:250, g:250, b:250, style:"panda"      },
+  { name:"Shadow Ninja",   r:55,  g:55,  b:65,  style:"ninja"      },
+  { name:"Mystic Wizard",  r:130, g:90,  b:200, style:"wizard"     },
+  { name:"Space Cadet",    r:225, g:230, b:240, style:"astronaut"  },
+  { name:"Salty Pirate",   r:205, g:160, b:100, style:"pirate"     },
+  { name:"Count Dracula",  r:75,  g:25,  b:35,  style:"vampire"    },
+  { name:"Magic Unicorn",  r:255, g:225, b:245, style:"unicorn"    },
+  { name:"Little Devil",   r:210, g:30,  b:30,  style:"devil"      },
+  { name:"Guardian Angel", r:255, g:255, b:250, style:"angel"      },
+  { name:"Silly Clown",    r:255, g:90,  b:110, style:"clown"      }
 ];
 var SKIN_PRICE = 3;
 
@@ -1578,10 +1590,17 @@ function drawSkinnedFace(px, py, skin, label) {
     }
   }
   if (style==="galaxy") {
+    // Twinkling stars scattered just outside the face's own edge, at a
+    // few different radii/sizes so they read as a starfield rather than
+    // a single ring sitting exactly on the circle boundary (which would
+    // be half-covered by the base fill drawn right after this).
     noStroke();
-    for (var gi=0; gi<8; gi++){
-      var ga=gi*45+frameCount;
-      fill(255,255,255,150); ellipse(px+cos(ga)*15,py+sin(ga)*15,2,2);
+    for (var gi=0; gi<10; gi++){
+      var ga=gi*36+frameCount*0.6;
+      var gr=18+((gi*7)%9);
+      var gtw=(sin(frameCount*5+gi*2)+1)/2;
+      fill(255,255,255,Math.floor(90+gtw*140));
+      ellipse(px+cos(ga)*gr,py+sin(ga)*gr,1.5+gtw*1.5,1.5+gtw*1.5);
     }
   }
   if (style==="rainbow") {
@@ -1650,6 +1669,29 @@ function drawSkinnedFace(px, py, skin, label) {
     stroke(30,30,80); strokeWeight(1); noFill();
     for(var smi=0;smi<10;smi++){ var sma1=25+(130/10)*smi, sma2=25+(130/10)*(smi+1);
       line(px+cos(sma1)*5,py+1.5+sin(sma1)*3.5,px+cos(sma2)*5,py+1.5+sin(sma2)*3.5); }
+  } else if (style==="panda") {
+    // Big round black eye patches instead of small default dots
+    fill(20,20,25); ellipse(px-6,py-3,9,10); ellipse(px+6,py-3,9,10);
+    fill(255); ellipse(px-6,py-4,3,3); ellipse(px+6,py-4,3,3);
+    fill(20,20,25); ellipse(px-6,py-4.5,1.6,1.6); ellipse(px+6,py-4.5,1.6,1.6);
+    stroke(30,30,80); strokeWeight(1); noFill();
+    for(var pdi=0;pdi<10;pdi++){ var pda1=25+(130/10)*pdi, pda2=25+(130/10)*(pdi+1);
+      line(px+cos(pda1)*5,py+1.5+sin(pda1)*3.5,px+cos(pda2)*5,py+1.5+sin(pda2)*3.5); }
+  } else if (style==="ninja") {
+    // A dark mask covers the lower face, just narrow eye slits visible.
+    // Given a light stroke of its own so its edge still reads clearly
+    // even on a skin whose base color is already dark.
+    fill(15,15,18); stroke(120,120,135); strokeWeight(1); rect(px-9,py-1,18,15,6);
+    stroke(255,255,255,220); strokeWeight(1.5); noFill();
+    line(px-6,py-3,px-2,py-3); line(px+2,py-3,px+6,py-3);
+  } else if (style==="pirate") {
+    // One normal eye, the other under a patch with a strap across the face
+    fill(30,30,80); ellipse(px-3.5,py-2.5,3,3); fill(255); ellipse(px-3,py-3,1,1);
+    fill(20,20,20); ellipse(px+4,py-2.5,7,7);
+    stroke(20,20,20); strokeWeight(2); line(px-6,py-6,px+7,py-1);
+    stroke(30,30,80); strokeWeight(1); noFill();
+    for(var pri=0;pri<10;pri++){ var pra1=25+(130/10)*pri, pra2=25+(130/10)*(pri+1);
+      line(px+cos(pra1)*5,py+1.5+sin(pra1)*3.5,px+cos(pra2)*5,py+1.5+sin(pra2)*3.5); }
   } else {
     fill(30,30,80);
     ellipse(px-3.5,py-2.5,3,3); ellipse(px+3.5,py-2.5,3,3);
@@ -1675,6 +1717,93 @@ function drawSkinnedFace(px, py, skin, label) {
     triangle(px-4,py-17, px,py-26, px+4,py-17);
     triangle(px+4,py-17, px+9,py-24, px+9,py-15);
     rect(px-9,py-15,18,4,1);
+  }
+  if (style==="panda") {
+    // Round ears peeking out from behind the top corners of the head -
+    // given a light stroke so they stay visible against a dark background
+    // too, not just against the (usually pale) face.
+    fill(20,20,25); stroke(150,150,160); strokeWeight(1);
+    ellipse(px-11,py-12,10,10); ellipse(px+11,py-12,10,10);
+  }
+  if (style==="ninja") {
+    // Headband with knotted tails flicking off to the side
+    fill(180,30,30); stroke(120,15,15); strokeWeight(1);
+    rect(px-11,py-14,22,5,2); noStroke();
+    triangle(px+11,py-13, px+19,py-8, px+11,py-9);
+    triangle(px+11,py-9, px+18,py-2, px+10,py-5);
+  }
+  if (style==="pirate") {
+    // Triangular bandana knotted at the back
+    fill(150,30,30); stroke(100,15,15); strokeWeight(1);
+    triangle(px-11,py-13, px+11,py-13, px,py-24);
+    rect(px-11,py-15,22,4,2); noStroke();
+    triangle(px+11,py-14, px+18,py-9, px+11,py-10);
+  }
+  if (style==="wizard") {
+    // Tall pointed hat, slightly tipped, with a small star
+    fill(70,40,130); stroke(40,20,80); strokeWeight(1);
+    rect(px-11,py-15,22,4,2);
+    triangle(px-8,py-14, px+8,py-14, px-1,py-34);
+    fill(255,215,0); noStroke(); textAlign(CENTER,CENTER); textSize(7);
+    text("★", px-1, py-22);
+  }
+  if (style==="astronaut") {
+    // A glass helmet dome (with a highlight streak) and a small antenna
+    noFill(); stroke(200,220,255,200); strokeWeight(2);
+    ellipse(px,py,34,34);
+    noStroke(); fill(255,255,255,60);
+    arc(px,py,30,30,200,260);
+    stroke(180,180,190); strokeWeight(2); line(px+9,py-13,px+9,py-20);
+    noStroke(); fill(255,60,60); ellipse(px+9,py-21,4,4);
+  }
+  if (style==="vampire") {
+    // Two small fangs below the mouth, and a widow's-peak hairline
+    fill(255); noStroke();
+    triangle(px-3,py+4, px-1,py+4, px-2,py+8);
+    triangle(px+1,py+4, px+3,py+4, px+2,py+8);
+    fill(Math.max(fr-70,0),Math.max(fg-70,0),Math.max(fb-70,0));
+    triangle(px-6,py-15, px+6,py-15, px,py-9);
+  }
+  if (style==="unicorn") {
+    // A spiral-striped horn and a flowing rainbow mane tuft
+    fill(255,250,230); stroke(230,210,150); strokeWeight(1);
+    triangle(px-3,py-14, px+3,py-14, px,py-27);
+    stroke(255,200,220); strokeWeight(1.5); noFill();
+    line(px-2,py-16,px+1,py-20); line(px-1,py-19,px+2,py-23);
+    var maneColors=[[255,120,150],[255,190,110],[255,240,120],[150,230,150],[130,190,255]];
+    noStroke();
+    for(var uni=0;uni<5;uni++){
+      fill(maneColors[uni][0],maneColors[uni][1],maneColors[uni][2]);
+      ellipse(px+10+uni*1.2, py-8+uni*4, 6,6);
+    }
+  }
+  if (style==="devil") {
+    // Curved horns with a warm highlighted edge - dark fill reads against
+    // a bright face, the bright stroke reads against the dark background
+    // outside it, so the shape stays visible over either one.
+    fill(40,5,5); stroke(255,140,90); strokeWeight(1.2);
+    triangle(px-9,py-12, px-3,py-25, px-5,py-6);
+    triangle(px+9,py-12, px+3,py-25, px+5,py-6);
+    noStroke(); fill(Math.max(fr-70,0),Math.max(fg-70,0),Math.max(fb-70,0));
+    triangle(px-3,py+7, px+3,py+7, px,py+13);
+  }
+  if (style==="angel") {
+    // Soft wings to either side and a thin halo ring
+    fill(255,255,255,230); stroke(220,220,240); strokeWeight(1);
+    ellipse(px-16,py-2,14,20); ellipse(px+16,py-2,14,20);
+    noFill(); stroke(255,240,150,220); strokeWeight(2);
+    ellipse(px,py-21,20,7);
+  }
+  if (style==="clown") {
+    // A rainbow tuft of hair across the top and a big red nose
+    var clownColors=[[255,80,80],[255,180,60],[255,240,80],[100,220,120],[100,180,255]];
+    noStroke();
+    for(var cli=0;cli<5;cli++){
+      fill(clownColors[cli][0],clownColors[cli][1],clownColors[cli][2]);
+      ellipse(px-14+cli*7, py-14, 8,8);
+    }
+    fill(255,40,40); stroke(180,20,20); strokeWeight(1);
+    ellipse(px,py+2,7,7);
   }
 
   // ---- Coordinate label (same as drawFaceAt) - skipped when label is empty ----
@@ -2246,6 +2375,8 @@ function drawSkillSelect() {
 
 // ---------- SKIN SELECT SCREEN (cosmetics — all free/unlocked) ----------
 var shopMsg = "", shopMsgTimer = 0; // brief "not enough coins" feedback
+var SKINS_PER_PAGE = 12; // 3 cols x 4 rows per page
+var shopPage = 0; // scrolls right/left through PLAYER_SKINS one page at a time
 
 function drawShop() {
   background(10, 15, 38);
@@ -2259,11 +2390,20 @@ function drawShop() {
   drawCoinLabel(200, 46, coins, 14);
   textAlign(CENTER,CENTER);
 
+  var totalPages=Math.ceil(PLAYER_SKINS.length/SKINS_PER_PAGE);
+  if (shopPage>totalPages-1) shopPage=totalPages-1;
+  if (shopPage<0) shopPage=0;
+  var pageStart=shopPage*SKINS_PER_PAGE;
+  var pageEnd=Math.min(PLAYER_SKINS.length,pageStart+SKINS_PER_PAGE);
+
   var cols=3, cardW=104, cardH=62, gapX=6, gapY=6;
   var gridW=cols*cardW+(cols-1)*gapX, startX=(400-gridW)/2, startY=64;
-  for (var i=0;i<PLAYER_SKINS.length;i++) {
+  var gridH=4*cardH+3*gapY, gridMidY=startY+gridH/2;
+
+  for (var i=pageStart;i<pageEnd;i++) {
     var sk=PLAYER_SKINS[i];
-    var col=i%cols, row=Math.floor(i/cols);
+    var li=i-pageStart;
+    var col=li%cols, row=Math.floor(li/cols);
     var bx=startX+col*(cardW+gapX), by=startY+row*(cardH+gapY);
     var owned=(ownedSkins.indexOf(i)!==-1);
     var sel=(i===currentSkinIdx);
@@ -2292,6 +2432,34 @@ function drawShop() {
       if (owned) { equipSkin(i); }
       else if (!buySkin(i)) { shopMsg="Not enough coins!"; shopMsgTimer=60; }
     }
+  }
+
+  // ---- SCROLL ARROWS — more characters live off to the right; a left
+  // arrow appears once you've scrolled away from the first page ----
+  if (totalPages>1) {
+    var arrR=16;
+    if (shopPage<totalPages-1) {
+      var raX=startX+gridW+20, raY=gridMidY;
+      var raHov=(dist(mouseX,mouseY,raX,raY)<=arrR);
+      fill(raHov?[70,90,180]:[35,45,90]); stroke(120,150,255); strokeWeight(2);
+      ellipse(raX,raY,arrR*2,arrR*2);
+      fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(16);
+      text("▶", raX+1, raY+1);
+      if (raHov && mouseWentDown("left")) shopPage++;
+    }
+    if (shopPage>0) {
+      var laX=startX-20, laY=gridMidY;
+      var laHov=(dist(mouseX,mouseY,laX,laY)<=arrR);
+      fill(laHov?[70,90,180]:[35,45,90]); stroke(120,150,255); strokeWeight(2);
+      ellipse(laX,laY,arrR*2,arrR*2);
+      fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(16);
+      text("◀", laX-1, laY+1);
+      if (laHov && mouseWentDown("left")) shopPage--;
+    }
+    fill(140,170,255); noStroke(); textSize(8); textAlign(CENTER,CENTER);
+    text("Page "+(shopPage+1)+"/"+totalPages, 200, startY-4);
+    if (keyWentDown("right")&&shopPage<totalPages-1) shopPage++;
+    if (keyWentDown("left")&&shopPage>0) shopPage--;
   }
 
   if (shopMsgTimer>0) {
