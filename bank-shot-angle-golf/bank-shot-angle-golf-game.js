@@ -1202,6 +1202,34 @@ function updateAngleReveal() {
 }
 
 var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
+
+// The route a CORRECT answer would have taken, cut off at the same point as
+// the real line (bounce + TRAIL_AFTER_BOUNCE_PX). Built by running the real
+// physics on a scratch ball, so it matches what a correct shot really does.
+function simulateCorrectTrail(shot) {
+  var from = shot.launchFrom || { x: ball.x, y: ball.y };
+  var b = { x: from.x, y: from.y, vx: shot.aimDir.x * shot.power, vy: shot.aimDir.y * shot.power };
+  var pending = {
+    type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
+    resolvedAngle: shot.correctAnswer, correct: true, bendDeg: 0,
+    launchFrom: from, triggerDist: shot.triggerDist, applied: false
+  };
+  var walls = allWalls();
+  var pts = [{ x: b.x, y: b.y }];
+  var after = 0;
+  for (var frame = 0; frame < 2000; frame++) {
+    if (mag(b.vx, b.vy) < MIN_STOP_SPEED) break;
+    stepBallOneFrame(b, pending, walls, hole.bushes, hole.zones, true);
+    var last = pts[pts.length - 1];
+    var step = dist(b.x, b.y, last.x, last.y);
+    if (step > 3) {
+      pts.push({ x: b.x, y: b.y });
+      if (pending.applied) after += step;
+    }
+    if (after >= TRAIL_AFTER_BOUNCE_PX) break;
+  }
+  return pts;
+}
 function updateTrail() {
   var ri = resolvedInfo;
   if (!ri || ri.trailDone) return;
@@ -1218,6 +1246,21 @@ function updateTrail() {
 function drawTrail() {
   var ri = resolvedInfo;
   if (!ri || ri.trail.length < 1) return;
+  if (ri.intendedTrail && ri.intendedTrail.length > 1) {
+    // What a correct answer would have done - dashed green under the real line
+    push();
+    drawingContext.setLineDash([4, 7]);
+    noFill();
+    stroke('#4dff4d');
+    strokeWeight(4);
+    strokeCap(ROUND);
+    strokeJoin(ROUND);
+    beginShape();
+    for (var j = 0; j < ri.intendedTrail.length; j++) vertex(ri.intendedTrail[j].x, ri.intendedTrail[j].y);
+    endShape();
+    drawingContext.setLineDash([]);
+    pop();
+  }
   push();
   noFill();
   stroke(ri.correct ? '#4dff4d' : '#e63946');
@@ -1855,7 +1898,8 @@ function submitAnswer() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
+    intendedTrail: correct ? null : simulateCorrectTrail(pendingShot)
   };
   if (!correct) { explainOpen = true; explainOpenedAt = millis(); }
 }
@@ -2037,7 +2081,8 @@ function triggerTimeoutChaos() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
+    intendedTrail: simulateCorrectTrail(pendingShot)
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
