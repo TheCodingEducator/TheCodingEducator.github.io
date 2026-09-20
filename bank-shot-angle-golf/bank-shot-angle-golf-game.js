@@ -1171,8 +1171,9 @@ function drawBall() {
 
 // Only a short slice of the ball's route is drawn: a line from the moment it is
 // hit, through the bounce, and a little way past it so the angle is clear -
-// then it stops growing. The solved angle appears at the bounce and stays
-// until the ball stops.
+// then it stops growing. The solved angle (arcs, numbers, equation) appears the
+// instant the ball is hit and stays until the ball stops. `revealed` below only
+// marks the bounce, which is what starts the trail's "a little past it" countdown.
 var ANGLE_REVEAL_STRAIGHT_PX = 60;
 var ANGLE_REVEAL_BOUNCE_RAD = 0.21; // ~12 degrees of sudden direction change = a bounce
 function updateAngleReveal() {
@@ -1202,6 +1203,7 @@ function updateAngleReveal() {
 }
 
 var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
+var WRONG_WEDGE_R = 76;   // radius of the red wedge for the answer the player typed
 
 // The route a CORRECT answer would have taken, cut off at the same point as
 // the real line (bounce + TRAIL_AFTER_BOUNCE_PX). Built by running the real
@@ -1284,7 +1286,7 @@ function drawTrail() {
 // so it reads as a little marker, not a second copy of the big
 // zoomed-in diagram.
 function drawVertexAngleMarker() {
-  if (!resolvedInfo || !resolvedInfo.revealed) return;
+  if (!resolvedInfo) return;
   var totalDeg = resolvedInfo.type === 'WALL' ? 90 : 180;
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
   var totalEnd = resolvedInfo.sweepSign * totalDeg;
@@ -1312,6 +1314,20 @@ function drawVertexAngleMarker() {
   arc(0, 0, r * 2, r * 2, kLo, kHi);
   stroke('#4dff4d');
   arc(0, 0, r * 2, r * 2, uLo, uHi);
+
+  // A wrong answer also gets its own red wedge outline, starting from the same
+  // shared ray and sweeping the number of degrees the player actually typed.
+  if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
+    var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
+    stroke('#e63946');
+    var wLo = min(knownEnd, wrongEnd), wHi = max(knownEnd, wrongEnd);
+    noStroke();
+    fill(230, 57, 70, 60);
+    arc(0, 0, WRONG_WEDGE_R * 2, WRONG_WEDGE_R * 2, wLo, wHi, PIE);
+    noFill();
+    stroke('#e63946');
+    arc(0, 0, WRONG_WEDGE_R * 2, WRONG_WEDGE_R * 2, wLo, wHi);
+  }
 
   // Same right-angle bracket the live question diagram uses for a
   // complementary pair - without it, a 90deg wedge and a wider one
@@ -1342,7 +1358,7 @@ function drawVertexAngleMarker() {
 // shows the number they were actually judged against, stacked further
 // out along the same offset direction so the two labels never overlap.
 function drawResolvedAngleLabels() {
-  if (!resolvedInfo || !resolvedInfo.revealed) return;
+  if (!resolvedInfo) return;
   var d = resolvedInfo.offsetDir;
   noStroke();
   textAlign(CENTER, CENTER);
@@ -1357,7 +1373,10 @@ function drawResolvedAngleLabels() {
   text(correctLabel, cx, cy);
 
   if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
-    var wx = resolvedInfo.point.x + d.x * 62, wy = resolvedInfo.point.y + d.y * 62;
+    // Centered in the middle of the red wedge: halfway between its two rays,
+    // measured in the same frame the arcs are drawn in (baseAngle + sweep).
+    var wrongMid = resolvedInfo.baseAngle + resolvedInfo.sweepSign * (resolvedInfo.known + resolvedInfo.typed / 2);
+    var wx = resolvedInfo.point.x + cos(wrongMid) * (WRONG_WEDGE_R * 0.85), wy = resolvedInfo.point.y + sin(wrongMid) * (WRONG_WEDGE_R * 0.85);
     var wrongLabel = resolvedInfo.typed + '°';
     fill(0, 0, 0, 150);
     text(wrongLabel, wx + 1.5, wy + 1.5);
@@ -2158,7 +2177,7 @@ function drawHUD() {
 // answer gets its own full explanation via drawExplainModal instead
 // of a shrunk-down version of this.
 function drawEquation() {
-  if (!resolvedInfo || !resolvedInfo.correct || !resolvedInfo.revealed) return;
+  if (!resolvedInfo || !resolvedInfo.correct) return;
   var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
   noStroke();
   textAlign(CENTER, CENTER);
