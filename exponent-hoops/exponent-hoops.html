@@ -248,7 +248,7 @@
 <body>
 <a class="back-link" href="../index.html">&larr; All games</a>
 <button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
-<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" onclick="exitPseudoFullscreen()">&#10021; Exit Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" onclick="exitFullscreenAny()">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Exponent Hoops</h1>
 <p class="sr-only">A basketball shooting game where you solve exponent rules to score. Play solo against a computer defender, or head-to-head with a friend. Controls: WASD or arrow keys to move, space or enter to shoot or answer questions, mouse to click menu buttons.</p>
 
@@ -321,11 +321,25 @@
       if (exit) exit.call(document);
     }
   }
+  function exitFullscreenAny() {
+    var el = document.getElementById('game-canvas-slot');
+    if (el.classList.contains('pseudo-fullscreen')) { exitPseudoFullscreen(); return; }
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+  function syncExitBtn(isFs) {
+    var eb = document.getElementById('pseudo-fullscreen-exit-btn');
+    var slot = document.getElementById('game-canvas-slot');
+    if (!eb || !slot) return;
+    if (isFs) { if (eb.parentNode !== slot) slot.appendChild(eb); eb.classList.add('visible'); }
+    else { eb.classList.remove('visible'); }
+  }
   function updateFullscreenBtn() {
     var btn = document.getElementById('fullscreen-btn');
     var el = document.getElementById('game-canvas-slot');
     var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || (el && el.classList.contains('pseudo-fullscreen')));
     btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+    syncExitBtn(isFs);
   }
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
