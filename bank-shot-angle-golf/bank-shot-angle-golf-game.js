@@ -324,8 +324,10 @@ function gameDraw() {
   drawCup();
   if (!confirmExitOpen && !explainOpen) updatePhysics();
   updateAngleReveal();
+  updateTrail();
   drawVertexAngleMarker();
   drawResolvedAngleLabels();
+  drawTrail();
   drawBall();
   drawAimPreview();
   drawLiveAngleDiagram();
@@ -1164,17 +1166,18 @@ function drawBall() {
   ellipse(ball.x - BALL_R * 0.35, ball.y - BALL_R * 0.35, BALL_R * 0.7 * scale, BALL_R * 0.7 * scale);
 }
 
-// The ball's route is never drawn. The solved angle only appears once the
-// ball has actually reached its wall (or, for a straight shot, has rolled a
-// short way), and stays until the ball stops.
+// Only a short slice of the ball's route is drawn: a line from the moment it is
+// hit, through the bounce, and a little way past it so the angle is clear -
+// then it stops growing. The solved angle appears at the bounce and stays
+// until the ball stops.
 var ANGLE_REVEAL_STRAIGHT_PX = 60;
 var ANGLE_REVEAL_BOUNCE_RAD = 0.21; // ~12 degrees of sudden direction change = a bounce
 function updateAngleReveal() {
   if (!resolvedInfo || resolvedInfo.revealed) return;
-  // A correct wall shot is scripted to bounce off the puzzle wall itself
-  // (pendingShot.applied flips the moment that happens), so wait for that
-  // exact wall instead of any rail the ball happens to graze on the way.
-  var correctWallShot = resolvedInfo.type === 'WALL' && resolvedInfo.correct && pendingShot;
+  // A correct shot (wall or straight) is scripted to reach its vertex on the
+  // course (pendingShot.applied flips the moment that happens), so wait for that
+  // exact point instead of any rail the ball happens to graze on the way.
+  var correctWallShot = resolvedInfo.correct && pendingShot;
   if (correctWallShot) {
     if (pendingShot.applied) resolvedInfo.revealed = true;
     return;
@@ -1193,6 +1196,36 @@ function updateAngleReveal() {
   if (straightOrChaos && dist(ball.x, ball.y, resolvedInfo.revealFrom.x, resolvedInfo.revealFrom.y) >= ANGLE_REVEAL_STRAIGHT_PX) {
     resolvedInfo.revealed = true;
   }
+}
+
+var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
+function updateTrail() {
+  var ri = resolvedInfo;
+  if (!ri || ri.trailDone) return;
+  var last = ri.trail[ri.trail.length - 1];
+  var step = dist(ball.x, ball.y, last.x, last.y);
+  if (step > 3) {
+    ri.trail.push({ x: ball.x, y: ball.y });
+    if (ri.revealed) ri.afterReveal += step;
+  }
+  if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
+}
+
+// Green for a correct answer, red for a wrong one (or a Hero-mode timeout).
+function drawTrail() {
+  var ri = resolvedInfo;
+  if (!ri || ri.trail.length < 1) return;
+  push();
+  noFill();
+  stroke(ri.correct ? '#4dff4d' : '#e63946');
+  strokeWeight(4);
+  strokeCap(ROUND);
+  strokeJoin(ROUND);
+  beginShape();
+  for (var i = 0; i < ri.trail.length; i++) vertex(ri.trail[i].x, ri.trail[i].y);
+  if (!ri.trailDone) vertex(ball.x, ball.y);
+  endShape();
+  pop();
 }
 
 // A small non-filled version of the live question diagram's arcs (see
@@ -1818,7 +1851,8 @@ function submitAnswer() {
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
-    revealed: false, revealFrom: { x: ball.x, y: ball.y }
+    revealed: false, revealFrom: { x: ball.x, y: ball.y },
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0
   };
   if (!correct) explainOpen = true;
 }
@@ -1999,7 +2033,8 @@ function triggerTimeoutChaos() {
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
-    revealed: false, revealFrom: { x: ball.x, y: ball.y }
+    revealed: false, revealFrom: { x: ball.x, y: ball.y },
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
