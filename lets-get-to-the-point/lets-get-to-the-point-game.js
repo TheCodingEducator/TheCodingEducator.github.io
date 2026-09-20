@@ -144,8 +144,8 @@ var PLAYER_SKINS = [
   { name:"Salty Pirate",   r:205, g:160, b:100, style:"pirate"     },
   { name:"Count Dracula",  r:75,  g:25,  b:35,  style:"vampire"    },
   { name:"Magic Unicorn",  r:255, g:225, b:245, style:"unicorn"    },
-  { name:"Little Devil",   r:210, g:30,  b:30,  style:"devil"      },
-  { name:"Guardian Angel", r:255, g:255, b:250, style:"angel"      },
+  { name:"Brave Knight",   r:235, g:190, b:150, style:"knight"     },
+  { name:"Busy Bee",       r:255, g:210, b:40,  style:"bee"        },
   { name:"Silly Clown",    r:255, g:90,  b:110, style:"clown"      }
 ];
 var SKIN_PRICE = 3;
@@ -1777,22 +1777,26 @@ function drawSkinnedFace(px, py, skin, label) {
       ellipse(px+10+uni*1.2, py-8+uni*4, 6,6);
     }
   }
-  if (style==="devil") {
-    // Curved horns with a warm highlighted edge - dark fill reads against
-    // a bright face, the bright stroke reads against the dark background
-    // outside it, so the shape stays visible over either one.
-    fill(40,5,5); stroke(255,140,90); strokeWeight(1.2);
-    triangle(px-9,py-12, px-3,py-25, px-5,py-6);
-    triangle(px+9,py-12, px+3,py-25, px+5,py-6);
-    noStroke(); fill(Math.max(fr-70,0),Math.max(fg-70,0),Math.max(fb-70,0));
-    triangle(px-3,py+7, px+3,py+7, px,py+13);
+  if (style==="knight") {
+    // Steel helmet dome over the top of the face (eyes stay visible below
+    // the visor line), with a red plume
+    fill(150,155,170); stroke(225,228,240); strokeWeight(1.5);
+    arc(px,py-5,32,32,180,360,CHORD);
+    stroke(60,60,75); strokeWeight(2); line(px-15,py-5,px+15,py-5);
+    fill(220,40,50); stroke(140,20,30); strokeWeight(1);
+    triangle(px-3,py-20, px+3,py-20, px+9,py-31);
+    triangle(px-3,py-20, px+3,py-20, px+2,py-29);
   }
-  if (style==="angel") {
-    // Soft wings to either side and a thin halo ring
-    fill(255,255,255,230); stroke(220,220,240); strokeWeight(1);
-    ellipse(px-16,py-2,14,20); ellipse(px+16,py-2,14,20);
-    noFill(); stroke(255,240,150,220); strokeWeight(2);
-    ellipse(px,py-21,20,7);
+  if (style==="bee") {
+    // Translucent wings, antennae, and black stripes across the top/bottom
+    fill(190,235,255,200); stroke(150,200,235); strokeWeight(1);
+    ellipse(px-11,py-19,9,14); ellipse(px+11,py-19,9,14);
+    stroke(30,30,30); strokeWeight(1.5); noFill();
+    line(px-4,py-14,px-8,py-24); line(px+4,py-14,px+8,py-24);
+    noStroke(); fill(30,30,30);
+    ellipse(px-8,py-25,3.5,3.5); ellipse(px+8,py-25,3.5,3.5);
+    stroke(30,30,30); strokeWeight(3);
+    line(px-10,py-11,px+10,py-11); line(px-12,py+9,px+12,py+9);
   }
   if (style==="clown") {
     // A rainbow tuft of hair across the top and a big red nose
