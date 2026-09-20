@@ -1013,6 +1013,45 @@ function drawGeomShape(basePX, basePY, showLabels) {
   }
 }
 
+// Translation colors: horizontal (x) part is red, vertical (y) part is
+// green - the same colors the on-grid arrows/labels use, so the challenge
+// text and what's drawn as the player moves visibly match.
+var TRANS_X_COL = [255,110,110], TRANS_Y_COL = [80,255,160];
+
+// Splits a translation challenge's text into colored pieces. Returns null
+// for anything that isn't a translation, so callers fall back to plain text.
+function translationLabelParts(label, baseCol) {
+  var m = /^(Translate: \()(x [+-] \d+)(, )(y [+-] \d+)(\))$/.exec(label) ||
+          /^(Translate )(\d+ units? (?:left|right))( and )(\d+ units? (?:up|down))()$/.exec(label);
+  if (!m) return null;
+  return [
+    {t:m[1], c:baseCol}, {t:m[2], c:TRANS_X_COL}, {t:m[3], c:baseCol},
+    {t:m[4], c:TRANS_Y_COL}, {t:m[5], c:baseCol}
+  ];
+}
+
+// Drop-in for fitText(challengeLabel, ...): centered, shrunk to fit, with
+// translation labels drawn in their x/y colors.
+function drawChallengeLabel(str, cx, y, maxW, maxSize, baseCol) {
+  var parts = (curCh() && curCh().type==="translate") ? translationLabelParts(str, baseCol) : null;
+  if (!parts) { fill(baseCol[0],baseCol[1],baseCol[2]); fitText(str,cx,y,maxW,maxSize); return; }
+  var sz = maxSize, total;
+  do {
+    textSize(sz); total = 0;
+    for (var i=0;i<parts.length;i++) total += textWidth(parts[i].t);
+    if (total<=maxW || sz<=7) break;
+    sz--;
+  } while (true);
+  textAlign(LEFT,CENTER);
+  var x = cx - total/2;
+  for (var j=0;j<parts.length;j++) {
+    fill(parts[j].c[0],parts[j].c[1],parts[j].c[2]);
+    text(parts[j].t, x, y);
+    x += textWidth(parts[j].t);
+  }
+  textAlign(CENTER,CENTER);
+}
+
 // ---------- TRANSLATION HELPER (GENIUS / PRACTICE mode) ----------
 function drawTranslationHelper() {
   var ch=curCh();
@@ -1032,15 +1071,15 @@ function drawTranslationHelper() {
 
   // Horizontal leg
   if (dxU!==0) {
-    stroke(80,200,255,180); strokeWeight(2); line(sxPX,syPY,cxPX,syPY);
+    stroke(255,90,90,190); strokeWeight(2); line(sxPX,syPY,cxPX,syPY);
     var ax=dxU>0?cxPX-6:cxPX+6;
-    fill(80,200,255,200); noStroke();
+    fill(255,90,90,210); noStroke();
     triangle(cxPX,syPY,ax,syPY-4,ax,syPY+4);
     var midHX=constrain((sxPX+cxPX)/2, LBL_MIN_X, LBL_MAX_X);
     var lbY=constrain(syPY+(cyPY>syPY?-14:14), LBL_MIN_Y, LBL_MAX_Y);
     var hLabel=isAlgebraic ? ("x "+(dxU>0?"+ ":"- ")+Math.abs(dxU))
                            : ((Math.abs(dxU)===1?"1 unit":Math.abs(dxU)+" units")+(dxU>0?" right":" left"));
-    drawTag(midHX, lbY, hLabel, 80,200,255);
+    drawTag(midHX, lbY, hLabel, 255,110,110);
   }
 
   // Vertical leg
@@ -1366,7 +1405,7 @@ function drawHUD(){
   fill(20,35,90); noStroke(); rect(8,28,384,28,6);
   fill(255,255,255); textAlign(CENTER,CENTER);
   if (gameMode!=="HEADTOHEAD") {
-    fitText(challengeLabel,200,43,250,13);
+    drawChallengeLabel(challengeLabel,200,43,250,13,[255,255,255]);
     drawCoinLabel(30, 43, coins, 12);
     if (currentStreak>=2) {
       noStroke(); textAlign(CENTER,CENTER);
@@ -1381,7 +1420,7 @@ function drawHUD(){
       coinPopup--;
     }
   } else {
-    fitText(challengeLabel,200,43,364,13);
+    drawChallengeLabel(challengeLabel,200,43,364,13,[255,255,255]);
   }
 
   // Practice mastery bar - the one extra row hudHeight() makes room for
@@ -3207,7 +3246,7 @@ function draw(){
       fitText("Move the whole figure!",200,scY+42,sbw,22);
     else
       fitText("Start: ("+startGX+", "+startGY+")",200,scY+42,sbw,22);
-    fill(200,230,255); fitText(challengeLabel,200,scY+100,sbw,17);
+    drawChallengeLabel(challengeLabel,200,scY+100,sbw,17,[200,230,255]);
     fill(160,200,255);
     if(isRotation(curCh()))fitText("Place pencil at center, then rotate!",200,scY+152,sbw,14);
     else if(geomShapeType!==""&&gameMode==="GEOMETRY")fitText("Apply the translation to all vertices",200,scY+152,sbw,14);
