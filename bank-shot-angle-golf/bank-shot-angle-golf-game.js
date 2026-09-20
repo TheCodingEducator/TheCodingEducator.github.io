@@ -1203,7 +1203,15 @@ function updateAngleReveal() {
 }
 
 var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
-var WRONG_WEDGE_R = 76;   // radius of the red wedge for the answer the player typed
+// The red wedge for the answer the player typed is sized so its number always
+// sits fully inside it: a narrow angle needs a longer wedge before its width
+// can hold the label, so the label radius grows as the typed angle shrinks.
+function wrongWedgeSize(typedDeg) {
+  var halfW = 30; // half the label's width in px, plus a little padding
+  var half = max(6, min(typedDeg, 179)) / 2 * Math.PI / 180;
+  var labelR = constrain(halfW / Math.sin(half), 60, 150);
+  return { labelR: labelR, wedgeR: labelR + 18 };
+}
 
 // The route a CORRECT answer would have taken, cut off at the same point as
 // the real line (bounce + TRAIL_AFTER_BOUNCE_PX). Built by running the real
@@ -1323,10 +1331,11 @@ function drawVertexAngleMarker() {
     var wLo = min(knownEnd, wrongEnd), wHi = max(knownEnd, wrongEnd);
     noStroke();
     fill(230, 57, 70, 60);
-    arc(0, 0, WRONG_WEDGE_R * 2, WRONG_WEDGE_R * 2, wLo, wHi, PIE);
+    var wSize = wrongWedgeSize(resolvedInfo.typed);
+    arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
     noFill();
     stroke('#e63946');
-    arc(0, 0, WRONG_WEDGE_R * 2, WRONG_WEDGE_R * 2, wLo, wHi);
+    arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi);
   }
 
   // Same right-angle bracket the live question diagram uses for a
@@ -1376,7 +1385,8 @@ function drawResolvedAngleLabels() {
     // Centered in the middle of the red wedge: halfway between its two rays,
     // measured in the same frame the arcs are drawn in (baseAngle + sweep).
     var wrongMid = resolvedInfo.baseAngle + resolvedInfo.sweepSign * (resolvedInfo.known + resolvedInfo.typed / 2);
-    var wx = resolvedInfo.point.x + cos(wrongMid) * (WRONG_WEDGE_R * 0.85), wy = resolvedInfo.point.y + sin(wrongMid) * (WRONG_WEDGE_R * 0.85);
+    var wLabelR = wrongWedgeSize(resolvedInfo.typed).labelR;
+    var wx = resolvedInfo.point.x + cos(wrongMid) * wLabelR, wy = resolvedInfo.point.y + sin(wrongMid) * wLabelR;
     var wrongLabel = resolvedInfo.typed + '°';
     fill(0, 0, 0, 150);
     text(wrongLabel, wx + 1.5, wy + 1.5);
@@ -2251,7 +2261,18 @@ function drawExplainDiagram(cx, cy, r, info) {
   pop();
 }
 
-var EXPLAIN_BOX = { w: 600, h: 660 };
+var EXPLAIN_BOX_W = 600;
+// Every y below is measured from the top of the box, spaced evenly so the box is
+// only as tall as its content (algebra questions have one extra equation line).
+function explainLayout() {
+  var alg = !!(resolvedInfo && resolvedInfo.algebra);
+  var diagR = 165, diagCY = 300;
+  var eqY = diagCY + 54;
+  var typedY = eqY + (alg ? 82 : 46);
+  var btnY = typedY + 36;
+  var boxH = btnY + EXPLAIN_BTN.h + 34;
+  return { w: EXPLAIN_BOX_W, h: boxH, diagR: diagR, diagCY: diagCY, eqY: eqY, typedY: typedY, btnY: btnY };
+}
 var EXPLAIN_BTN = { w: 220, h: 56 };
 
 // Opened the instant a typed answer turns out wrong (see submitAnswer,
@@ -2262,7 +2283,7 @@ var EXPLAIN_BTN = { w: 220, h: 56 };
 // (see the updatePhysics guard in gameDraw) until "Got It" is clicked.
 function drawExplainModal() {
   if (!resolvedInfo) { explainOpen = false; return; }
-  var b = EXPLAIN_BOX;
+  var L = explainLayout(), b = L;
   var bx = width / 2 - b.w / 2, by = height / 2 - b.h / 2;
 
   noStroke();
@@ -2292,9 +2313,9 @@ function drawExplainModal() {
   text('These two angles are ' + relWord + ' - together they always', width / 2, by + 82);
   text('add up to ' + sum + '°.', width / 2, by + 106);
 
-  drawExplainDiagram(width / 2, by + 285, 155, resolvedInfo);
+  drawExplainDiagram(width / 2, by + L.diagCY, L.diagR, resolvedInfo);
 
-  var eqY = by + 480;
+  var eqY = by + L.eqY;
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   if (resolvedInfo.algebra) {
@@ -2315,10 +2336,10 @@ function drawExplainModal() {
   if (resolvedInfo.typed !== null) {
     fill(230, 130, 130);
     textSize(15);
-    text('You answered ' + resolvedInfo.typed + '° instead.', width / 2, eqY + (resolvedInfo.algebra ? 74 : 42));
+    text('You answered ' + resolvedInfo.typed + '° instead.', width / 2, by + L.typedY);
   }
 
-  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 84;
+  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + L.btnY;
   var waitMs = EXPLAIN_DELAY_MS - (millis() - explainOpenedAt);
   fill(waitMs > 0 ? '#5a6a5c' : '#3ea158');
   rect(btnX, btnY, btn.w, btn.h, 12);
@@ -2331,9 +2352,9 @@ function drawExplainModal() {
 }
 
 function explainModalHit(mx, my) {
-  var b = EXPLAIN_BOX;
+  var L = explainLayout(), b = L;
   var bx = width / 2 - b.w / 2, by = height / 2 - b.h / 2;
-  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 84;
+  var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + L.btnY;
   return mx > btnX && mx < btnX + btn.w && my > btnY && my < btnY + btn.h;
 }
 
