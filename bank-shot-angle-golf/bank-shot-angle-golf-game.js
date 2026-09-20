@@ -43,7 +43,7 @@ var THEMES = {
   classicGreen: {
     label: 'Classic Green',
     icon: '⛳',
-    fairwayA: '#3ea158', fairwayB: '#379150',
+    fairwayA: '#3f9a55', fairwayB: '#66c277',
     rough: '#256b39',
     wall: '#8a5a34', wallHi: '#b9855a',
     bush: '#1f6b34', bushHi: '#2f8c47',
@@ -964,17 +964,13 @@ function drawHoleBackground() {
   rect(0, 0, width, height);
   var stripeW = 34;
   fill(th.fairwayA);
-  for (i = -2; i * stripeW < width + height; i++) {
-    if (i % 2 !== 0) continue;
-    var x0 = i * stripeW;
+  // Starts far enough left that the diagonal bands (which slope down and
+  // to the right) also reach the bottom-left of the canvas; a start of -2
+  // left that whole corner unstriped, so half the course looked plain.
+  for (var si = -Math.ceil(height / stripeW) - 2; si * stripeW < width; si++) {
+    if (si % 2 !== 0) continue;
+    var x0 = si * stripeW;
     quad(x0, 0, x0 + stripeW, 0, x0 + stripeW + height, height, x0 + height, height);
-  }
-
-  // cup green: a lighter circular patch under the hole for a real
-  // mini-golf "putting green" look - practice arena has no cup at all
-  if (hole.cup) {
-    fill(255, 255, 255, 22);
-    ellipse(hole.cup.x, hole.cup.y, 130, 130);
   }
 
   drawingContext.restore();
