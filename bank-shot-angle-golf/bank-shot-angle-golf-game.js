@@ -329,6 +329,7 @@ function gameDraw() {
   updateAngleReveal();
   updateTrail();
   drawVertexAngleMarker();
+  drawGreenAngleArc();
   drawResolvedAngleLabels();
   drawTrail();
   drawBall();
@@ -1209,7 +1210,9 @@ var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
 function wrongWedgeSize(typedDeg) {
   var halfW = 30; // half the label's width in px, plus a little padding
   var half = max(6, min(typedDeg, 179)) / 2 * Math.PI / 180;
-  var labelR = constrain(halfW / Math.sin(half), 60, 150);
+  // Never closer than one label-height past the green number (which sits at
+  // GREEN_LABEL_R between the green lines), so the two never overlap.
+  var labelR = constrain(halfW / Math.sin(half), GREEN_LABEL_R + 34, 160);
   return { labelR: labelR, wedgeR: labelR + 18 };
 }
 
@@ -1236,6 +1239,7 @@ function simulateCorrectTrail(shot) {
       pts.push({ x: b.x, y: b.y });
       if (pending.applied) after += step;
     }
+    if (pending.applied && pts.bounceIdx === undefined) pts.bounceIdx = pts.length - 1;
     if (after >= TRAIL_AFTER_BOUNCE_PX) break;
   }
   return pts;
@@ -1252,11 +1256,48 @@ function updateTrail() {
   if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
 }
 
+// The angle between the two green route lines where the correct shot bounces:
+// the vertex, where each arm points, and the bisector between them (which is
+// where the green degree number sits, so it is always between the lines).
+function computeGreenArms(pts) {
+  if (!pts || pts.bounceIdx === undefined) return null;
+  var v = pts[pts.bounceIdx];
+  var inPt = pts[0], outPt = pts[pts.length - 1];
+  for (var i = pts.bounceIdx - 1; i >= 0; i--) { if (dist(v.x, v.y, pts[i].x, pts[i].y) >= 24) { inPt = pts[i]; break; } }
+  for (var j = pts.bounceIdx + 1; j < pts.length; j++) { if (dist(v.x, v.y, pts[j].x, pts[j].y) >= 24) { outPt = pts[j]; break; } }
+  var a1 = atan2(inPt.y - v.y, inPt.x - v.x);
+  var a2 = atan2(outPt.y - v.y, outPt.x - v.x);
+  var diff = ((a2 - a1) % 360 + 540) % 360 - 180; // signed, -180..180
+  if (abs(diff) < 4) return null;
+  return { v: v, a1: a1, diff: diff, mid: a1 + diff / 2 };
+}
+
+// Gold arc between the two green lines, kept close to the vertex so the green
+// number (further out along the bisector) never overlaps it.
+var GREEN_ARC_R = 26;
+var GREEN_LABEL_R = 58;
+function getGreenArms() {
+  if (!resolvedInfo) return null;
+  if (resolvedInfo.greenArms === undefined) resolvedInfo.greenArms = computeGreenArms(resolvedInfo.intendedTrail);
+  return resolvedInfo.greenArms;
+}
+function drawGreenAngleArc() {
+  var g = getGreenArms();
+  if (!g) return;
+  push();
+  noFill();
+  stroke('#e0a030');
+  strokeWeight(3.5);
+  strokeCap(ROUND);
+  arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, g.a1 + g.diff), max(g.a1, g.a1 + g.diff));
+  pop();
+}
+
 // Green for a correct answer, red for a wrong one (or a Hero-mode timeout).
 function drawTrail() {
   var ri = resolvedInfo;
   if (!ri || ri.trail.length < 1) return;
-  if (ri.intendedTrail && ri.intendedTrail.length > 1) {
+  if (!ri.correct && ri.intendedTrail && ri.intendedTrail.length > 1) {
     // What a correct answer would have done - dashed green under the real line
     push();
     drawingContext.setLineDash([4, 7]);
@@ -1349,7 +1390,9 @@ function drawResolvedAngleLabels() {
   textStyle(BOLD);
   textSize(26);
 
-  var cx = resolvedInfo.point.x + d.x * 30, cy = resolvedInfo.point.y + d.y * 30;
+  var gArms = getGreenArms();
+  var cx = gArms ? gArms.v.x + cos(gArms.mid) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
+  var cy = gArms ? gArms.v.y + sin(gArms.mid) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
   var correctLabel = resolvedInfo.correctAnswer + '°';
   fill(0, 0, 0, 150);
   text(correctLabel, cx + 1.5, cy + 1.5);
@@ -1903,7 +1946,7 @@ function submitAnswer() {
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
     trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
-    intendedTrail: correct ? null : simulateCorrectTrail(pendingShot)
+    intendedTrail: simulateCorrectTrail(pendingShot)
   };
   if (!correct) { explainOpen = true; explainOpenedAt = millis(); }
 }
