@@ -1325,53 +1325,28 @@ function drawTrail() {
   pop();
 }
 
-// A small non-filled version of the live question diagram's arcs (see
-// drawLiveAngleDiagram), right at the real vertex on the course - the
-// text labels alone (drawResolvedAngleLabels) give the number, but
-// nothing tying it to an actual angle at a glance. Gold traces the
-// known angle, green the solved one - same colors those numbers
-// already use, just now with a real arc under them instead of two
-// bare numbers floating near a point. Kept small (r=22) and unfilled
-// so it reads as a little marker, not a second copy of the big
-// zoomed-in diagram.
 function drawVertexAngleMarker() {
-  if (!resolvedInfo) return;
-  var totalDeg = resolvedInfo.type === 'WALL' ? 90 : 180;
+  // Only a wrong answer draws anything here: a shaded red wedge for the angle
+  // the player typed, starting from the same ray as the correct angle. The
+  // correct angle itself is marked by the gold arc between the green route
+  // lines (drawGreenAngleArc); the old small known/solved arcs are gone.
+  if (!resolvedInfo || resolvedInfo.typed === null || resolvedInfo.correct) return;
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
-  var totalEnd = resolvedInfo.sweepSign * totalDeg;
-  var kLo = min(0, knownEnd), kHi = max(0, knownEnd);
-  var uLo = min(knownEnd, totalEnd), uHi = max(knownEnd, totalEnd);
-  var r = 22;
+  var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
+  var wLo = min(knownEnd, wrongEnd), wHi = max(knownEnd, wrongEnd);
+  var wSize = wrongWedgeSize(resolvedInfo.typed);
 
   push();
   translate(resolvedInfo.point.x, resolvedInfo.point.y);
   rotate(resolvedInfo.baseAngle);
-
-  // No white baseline / shared-ray / right-angle lines here on purpose: only
-  // the colored arcs and wedges (and the green/red route lines) are drawn.
-  noFill();
   strokeCap(ROUND);
+  noStroke();
+  fill(230, 57, 70, 60);
+  arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
+  noFill();
   strokeWeight(2.5);
-  stroke('#e0a030');
-  arc(0, 0, r * 2, r * 2, kLo, kHi);
-  stroke('#4dff4d');
-  arc(0, 0, r * 2, r * 2, uLo, uHi);
-
-  // A wrong answer also gets its own red wedge outline, starting from the same
-  // shared ray and sweeping the number of degrees the player actually typed.
-  if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
-    var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
-    stroke('#e63946');
-    var wLo = min(knownEnd, wrongEnd), wHi = max(knownEnd, wrongEnd);
-    noStroke();
-    fill(230, 57, 70, 60);
-    var wSize = wrongWedgeSize(resolvedInfo.typed);
-    arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
-    noFill();
-    stroke('#e63946');
-    arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi);
-  }
-
+  stroke('#e63946');
+  arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi);
   pop();
 }
 
