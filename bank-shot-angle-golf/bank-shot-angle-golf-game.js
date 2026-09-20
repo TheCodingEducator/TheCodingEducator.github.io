@@ -248,6 +248,9 @@ var confirmExitOpen = false;
 // than its own snapshot, since both are set together at the same
 // moment and share the same lifecycle.
 var explainOpen = false;
+var explainOpenedAt = 0;
+var EXPLAIN_DELAY_MS = 3000; // after a wrong answer, the explanation can't be dismissed right away
+function explainReady() { return millis() - explainOpenedAt >= EXPLAIN_DELAY_MS; }
 
 // Set the instant a wrong answer resolves (see submitAnswer) and cleared
 // the instant the resulting shot comes to rest (see updatePhysics'
@@ -1854,7 +1857,7 @@ function submitAnswer() {
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
     trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0
   };
-  if (!correct) explainOpen = true;
+  if (!correct) { explainOpen = true; explainOpenedAt = millis(); }
 }
 
 // ---------------------------------------------------------------
@@ -1894,7 +1897,7 @@ function drawScreenFlash() {
 // ---------------------------------------------------------------
 function mousePressed() {
   if (explainOpen) {
-    if (explainModalHit(mouseX, mouseY)) { explainOpen = false; playSound('click'); }
+    if (explainReady() && explainModalHit(mouseX, mouseY)) { explainOpen = false; playSound('click'); }
     return;
   }
   if (confirmExitOpen) {
@@ -1980,7 +1983,7 @@ function keyPressed(ev) {
     return false;
   }
   if (explainOpen) {
-    if (keyCode === ENTER || keyCode === RETURN || key === ' ') { explainOpen = false; playSound('click'); }
+    if (explainReady() && (keyCode === ENTER || keyCode === RETURN || key === ' ')) { explainOpen = false; playSound('click'); }
     return false;
   }
   if (gameState === 'HOLE_COMPLETE') {
@@ -2252,13 +2255,14 @@ function drawExplainModal() {
   }
 
   var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + b.h - 84;
-  fill('#3ea158');
+  var waitMs = EXPLAIN_DELAY_MS - (millis() - explainOpenedAt);
+  fill(waitMs > 0 ? '#5a6a5c' : '#3ea158');
   rect(btnX, btnY, btn.w, btn.h, 12);
   noStroke();
-  fill(255);
+  fill(waitMs > 0 ? 200 : 255);
   textSize(19);
   textStyle(BOLD);
-  text('Got It', width / 2, btnY + btn.h / 2 + 1);
+  text(waitMs > 0 ? 'Read this... ' + ceil(waitMs / 1000) : 'Got It', width / 2, btnY + btn.h / 2 + 1);
   textStyle(NORMAL);
 }
 
