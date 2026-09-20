@@ -1445,7 +1445,7 @@ function drawHUD(){
     // MENU button always visible — shift hint text right so it doesn't overlap
     var hintCX = 235;
     if(gameMode==="HEADTOHEAD"){
-      text(h2hOnCircle()?"Hold keys to slide around the circle  |  P1: Space   P2: Enter":"P1: WASD + Space   |   P2: Arrows + Enter",200,388);
+      text(h2hOnCircle()?"UP = CCW   DOWN = CW  |  P1: W/S + Space   P2: Arrows + Enter":"P1: WASD + Space   |   P2: Arrows + Enter",200,388);
     } else if(isRotation(ch)&&tracingPhase==="PAPER"){
       if(gameMode!=="GEOMETRY") text("UP=CCW  DOWN=CW  |  SPACE: submit",hintCX,388);
       else text("SPACE: submit answer",hintCX,388);
@@ -2397,8 +2397,8 @@ function drawH2HIntro() {
   var lines=[
     "1. A point and a challenge appear on the grid.",
     "2. Race to move YOUR point to the correct spot.",
-    "    (Rotations: hold your keys to slide your",
-    "    point around the yellow circle.)",
+    "    (Rotations: hold UP = CCW or DOWN = CW to",
+    "    slide around the yellow circle. W/S or arrows.)",
     "3. Very close? Press your submit key.",
     "4. First player to submit the right spot wins",
     "    the round. Best 2 out of 3 wins the match!"
@@ -3391,10 +3391,12 @@ function draw(){
   if(STATE==="MOVING"){
     if(gameMode==="HEADTOHEAD"&&h2hOnCircle()){
       // Rotation rounds: each player's point can only ride the yellow
-      // circle. Hold right/up (or D/W) to spin counterclockwise, left/down
-      // (or A/S) to spin clockwise.
-      var p2Spin=((keyDown("right")||keyDown("up"))?1:0)-((keyDown("left")||keyDown("down"))?1:0);
-      var p1Spin=((keyDown("d")||keyDown("w"))?1:0)-((keyDown("a")||keyDown("s"))?1:0);
+      // circle. ONLY up/down rotate it (W/S for P1, up/down arrows for
+      // P2): UP = counterclockwise, DOWN = clockwise, same as the tracing
+      // paper. Left/right deliberately do nothing so students never
+      // confuse left/right with CW/CCW.
+      var p2Spin=(keyDown("up")?1:0)-(keyDown("down")?1:0);
+      var p1Spin=(keyDown("w")?1:0)-(keyDown("s")?1:0);
       if(p2Spin) { var n2=h2hSpin(p2GX,p2GY,p2Spin); p2GX=n2.x; p2GY=n2.y; }
       if(p1Spin) { var n1=h2hSpin(p1GX,p1GY,p1Spin); p1GX=n1.x; p1GY=n1.y; }
     } else if(gameMode==="HEADTOHEAD"){
