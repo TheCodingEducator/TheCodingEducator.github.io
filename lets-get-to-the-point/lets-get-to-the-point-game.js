@@ -2579,7 +2579,7 @@ function drawStart(){
      icon:"◆", ir:140, ig:255, ib:180,
      r:0,  g:150, b:65},
     {id:"HEADTOHEAD", tier:"HEAD TO",   name:"Head!",
-     tag1:"Head-to-head!",    tag2:"2 players, 1 PC!",
+     tag1:"2 players battle", tag2:"on the same computer!",
      f1:"Fastest one wins!",  f2:"Best 2 out of 3",
      icon:"VS", ir:255, ig:160, ib:160,
      r:160,g:25,  b:25}
