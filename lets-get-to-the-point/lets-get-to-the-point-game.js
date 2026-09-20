@@ -102,8 +102,8 @@ var shapePXMin = 0, shapePXMax = 400, shapePYMin = 0, shapePYMax = 400;
 var SHAPE_COLORS = [[255,220,50],[80,160,255],[255,80,120],[80,255,160]];
 
 // Head-To-Head
-var p1GX = 0, p1GY = 0;  // arrows + Enter, red
-var p2GX = 0, p2GY = 0;  // WASD   + Space, blue
+var p1GX = 0, p1GY = 0;  // WASD   + Space, red
+var p2GX = 0, p2GY = 0;  // arrows + Enter, blue
 var p1wins = 0, p2wins = 0;
 var roundWinner = 0;      // 0=none 1=P1 2=P2
 
@@ -1445,7 +1445,7 @@ function drawHUD(){
     // MENU button always visible — shift hint text right so it doesn't overlap
     var hintCX = 235;
     if(gameMode==="HEADTOHEAD"){
-      text("P1: Arrows + Enter   |   P2: WASD + Space",200,388);
+      text("P1: WASD + Space   |   P2: Arrows + Enter",200,388);
     } else if(isRotation(ch)&&tracingPhase==="PAPER"){
       if(gameMode!=="GEOMETRY") text("UP=CCW  DOWN=CW  |  SPACE: submit",hintCX,388);
       else text("SPACE: submit answer",hintCX,388);
@@ -2325,6 +2325,72 @@ function drawFeedback(){
   fill(200,220,255); fitText("SPACE to continue",cx,cardY+178,bw,15);
 }
 
+// ---------- HEAD-TO-HEAD INTRO POPUP ----------
+// Shown every time Head-to-Head is picked from the menu, before the match
+// starts, so nobody launches it alone by accident.
+var h2hIntroFrame = 0;
+function beginModeFromMenu() {
+  if (gameMode==="HEADTOHEAD") { h2hIntroFrame=frameCount; STATE="H2H_INTRO"; }
+  else resetGame();
+}
+
+function drawH2HIntro() {
+  background(10,15,38);
+  stroke(25,35,70); strokeWeight(1);
+  for(var gx=0;gx<=400;gx+=30) line(gx,0,gx,400);
+  for(var gy=0;gy<=400;gy+=30) line(0,gy,400,gy);
+
+  // Panel + header
+  fill(20,12,22); stroke(220,70,70); strokeWeight(3); rect(12,8,376,384,16);
+  fill(170,30,30); noStroke(); rect(12,8,376,56,16); rect(12,40,376,24);
+  fill(255); textAlign(CENTER,CENTER); textStyle(BOLD);
+  fitText("HEAD-TO-HEAD: 2 PLAYERS!",200,26,350,21);
+  textStyle(NORMAL); fill(255,225,225); fitText("A two-player battle - you can't play this one alone",200,50,350,11);
+
+  // The big, can't-miss requirement
+  fill(60,45,0); stroke(255,220,60); strokeWeight(3); rect(24,74,352,62,12);
+  var pulse=(sin(frameCount*5)+1)/2;
+  noFill(); stroke(255,220,60,Math.floor(60+pulse*160)); strokeWeight(2); rect(20,70,360,70,14);
+  fill(255,225,80); noStroke(); textStyle(BOLD);
+  fitText("BEFORE YOU START:",200,90,330,13);
+  fill(255); fitText("Make sure 2 players are ready",200,109,330,16);
+  fitText("at THIS SAME computer!",200,127,330,16);
+  textStyle(NORMAL);
+
+  // Controls for each player
+  fill(60,14,14); stroke(255,100,100); strokeWeight(2); rect(24,148,170,50,10);
+  fill(15,20,65); stroke(100,160,255); rect(206,148,170,50,10);
+  noStroke(); textStyle(BOLD);
+  fill(255,120,120); fitText("PLAYER 1",109,163,150,13);
+  fill(120,170,255); fitText("PLAYER 2",291,163,150,13);
+  textStyle(NORMAL); fill(255);
+  fitText("W A S D + SPACE",109,183,155,12);
+  fitText("Arrow keys + ENTER",291,183,155,12);
+
+  // Instructions
+  fill(0,220,255); textStyle(BOLD); fitText("HOW TO PLAY",200,214,300,13); textStyle(NORMAL);
+  var lines=[
+    "1. A point and a challenge appear on the grid.",
+    "2. Race to move YOUR point to the correct spot.",
+    "3. Standing on it? Press your submit key.",
+    "4. The first player to submit the right spot",
+    "    wins the round.",
+    "5. Best 2 out of 3 rounds wins the match!"
+  ];
+  fill(225,235,255); textAlign(LEFT,CENTER); textSize(11);
+  for(var li=0;li<lines.length;li++) text(lines[li],32,234+li*16);
+  textAlign(CENTER,CENTER);
+
+  var startNow=drawButton(50,342,150,34,"START GAME",0,140,60);
+  var goBack=drawButton(215,342,135,34,"BACK",60,30,100);
+  var canKey=(frameCount-h2hIntroFrame)>3;
+  if(startNow||(canKey&&(keyWentDown("space")||keyWentDown("enter")))) resetGame();
+  else if(goBack) STATE="START";
+  fill(160,180,230); noStroke(); textSize(9); textAlign(CENTER,CENTER);
+  text("Press SPACE or ENTER to start  |  ESC to go back",200,384);
+  drawSprites();
+}
+
 // ---------- SKILL SELECT SCREEN ----------
 function drawSkillSelect() {
   background(10, 15, 38);
@@ -2732,7 +2798,7 @@ function drawStart(){
       if(gameMode==="PRACTICE"){
         skillTranslations=true; skillRotations=true; skillReflections=true;
         skillFocusIdx=0; STATE="SKILL_SELECT";
-      } else { resetGame(); }
+      } else { beginModeFromMenu(); }
     }
   }
 
@@ -3029,7 +3095,7 @@ function draw(){
   if(keyWentDown("space")){
     if(STATE==="START"){
       if(startFocusIsShop){ STATE="SHOP"; return; }
-      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();}
+      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{beginModeFromMenu();}
       return;
     }
     if(STATE==="SKILL_SELECT"){
@@ -3042,10 +3108,10 @@ function draw(){
     if(STATE==="MOVING"){
       var ch=curCh();
       if(gameMode==="HEADTOHEAD"){
-        // P2 submits with Space
-        if(p2GX===targetGX&&p2GY===targetGY){
-          roundWinner=2; p2wins++;
-          feedbackCorrect=true; lockedGX=p2GX; lockedGY=p2GY;
+        // P1 (WASD) submits with Space
+        if(p1GX===targetGX&&p1GY===targetGY){
+          roundWinner=1; p1wins++;
+          feedbackCorrect=true; lockedGX=p1GX; lockedGY=p1GY;
           playSound(correctSoundFor(ch));
           STATE="FEEDBACK";
         }
@@ -3110,13 +3176,13 @@ function draw(){
     if(STATE==="WIN"||STATE==="GAMEOVER"||STATE==="SPEED_RESULT"){ if(gameMode==="PRACTICE"){skillFocusIdx=0;STATE="SKILL_SELECT";}else{STATE="START";} return; }
   }
 
-  // ---- ENTER: H2H P1 submit + advance; all other modes mirror SPACE ----
+  // ---- ENTER: H2H P2 (arrows) submit + advance; all other modes mirror SPACE ----
   if(keyWentDown("enter")){
     if(gameMode==="HEADTOHEAD"){
       if(STATE==="MOVING"){
-        if(p1GX===targetGX&&p1GY===targetGY){
-          roundWinner=1; p1wins++;
-          feedbackCorrect=true; lockedGX=p1GX; lockedGY=p1GY;
+        if(p2GX===targetGX&&p2GY===targetGY){
+          roundWinner=2; p2wins++;
+          feedbackCorrect=true; lockedGX=p2GX; lockedGY=p2GY;
           playSound(correctSoundFor(curCh()));
           STATE="FEEDBACK";
         }
@@ -3128,7 +3194,7 @@ function draw(){
       // Non-H2H: Enter acts like Space
       if(STATE==="START"){
       if(startFocusIsShop){ STATE="SHOP"; return; }
-      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{resetGame();}
+      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{beginModeFromMenu();}
       return;
     }
       if(STATE==="SKILL_SELECT"){
@@ -3219,6 +3285,7 @@ function draw(){
   // Early exits
   if(STATE==="START"){drawStart();return;}
   if(STATE==="SHOP"){drawShop();return;}
+  if(STATE==="H2H_INTRO"){drawH2HIntro();return;}
   if(STATE==="SKILL_SELECT"){drawSkillSelect();return;}
   if(STATE==="SPEED_RESULT"){drawSpeedResult();return;}
   if(STATE==="WIN"){drawWin();return;}
@@ -3297,16 +3364,16 @@ function draw(){
   var c=curCh();
   if(STATE==="MOVING"){
     if(gameMode==="HEADTOHEAD"){
-      // P1: arrow keys (keyWentDown for grid-locked)
-      if(keyWentDown("left") &&p1GX>GRID_MIN)p1GX--;
-      if(keyWentDown("right")&&p1GX<GRID_MAX)p1GX++;
-      if(keyWentDown("up")   &&p1GY<GRID_MAX)p1GY++;
-      if(keyWentDown("down") &&p1GY>GRID_MIN)p1GY--;
-      // P2: WASD
-      if(keyWentDown("a")&&p2GX>GRID_MIN)p2GX--;
-      if(keyWentDown("d")&&p2GX<GRID_MAX)p2GX++;
-      if(keyWentDown("w")&&p2GY<GRID_MAX)p2GY++;
-      if(keyWentDown("s")&&p2GY>GRID_MIN)p2GY--;
+      // P2: arrow keys (keyWentDown for grid-locked)
+      if(keyWentDown("left") &&p2GX>GRID_MIN)p2GX--;
+      if(keyWentDown("right")&&p2GX<GRID_MAX)p2GX++;
+      if(keyWentDown("up")   &&p2GY<GRID_MAX)p2GY++;
+      if(keyWentDown("down") &&p2GY>GRID_MIN)p2GY--;
+      // P1: WASD
+      if(keyWentDown("a")&&p1GX>GRID_MIN)p1GX--;
+      if(keyWentDown("d")&&p1GX<GRID_MAX)p1GX++;
+      if(keyWentDown("w")&&p1GY<GRID_MAX)p1GY++;
+      if(keyWentDown("s")&&p1GY>GRID_MIN)p1GY--;
     } else if(isRotation(c)){
       // Rotations always use the tracing paper — regardless of mode
       handleTracingInteraction();
