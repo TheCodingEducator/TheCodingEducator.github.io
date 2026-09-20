@@ -1445,7 +1445,7 @@ function drawHUD(){
     // MENU button always visible — shift hint text right so it doesn't overlap
     var hintCX = 235;
     if(gameMode==="HEADTOHEAD"){
-      text("P1: WASD + Space   |   P2: Arrows + Enter",200,388);
+      text(h2hOnCircle()?"Hold keys to slide around the circle  |  P1: Space   P2: Enter":"P1: WASD + Space   |   P2: Arrows + Enter",200,388);
     } else if(isRotation(ch)&&tracingPhase==="PAPER"){
       if(gameMode!=="GEOMETRY") text("UP=CCW  DOWN=CW  |  SPACE: submit",hintCX,388);
       else text("SPACE: submit answer",hintCX,388);
@@ -2325,6 +2325,31 @@ function drawFeedback(){
   fill(200,220,255); fitText("SPACE to continue",cx,cardY+178,bw,15);
 }
 
+// ---------- HEAD-TO-HEAD ROTATION CIRCLE ----------
+// On rotation rounds a player's point is confined to the yellow circle
+// (centered on the rotation center, through the start point) and can be
+// anywhere on it, not just grid intersections. Submitting only wins when
+// the point is very close to the correct answer.
+var H2H_SPIN_DEG = 3;        // degrees per frame while a spin key is held
+var H2H_WIN_DIST = 0.4;      // grid units from the target that still counts
+
+function h2hOnCircle() {
+  var ch=curCh();
+  return gameMode==="HEADTOHEAD" && ch && isRotation(ch);
+}
+function h2hSpin(gx, gy, dir) {
+  var ch=curCh();
+  var r=Math.sqrt(Math.pow(startGX-ch.cx,2)+Math.pow(startGY-ch.cy,2));
+  var a=Math.atan2(gy-ch.cy, gx-ch.cx)+dir*H2H_SPIN_DEG*Math.PI/180;
+  return { x: ch.cx+r*Math.cos(a), y: ch.cy+r*Math.sin(a) };
+}
+function h2hAtTarget(gx, gy) {
+  if (!h2hOnCircle()) return gx===targetGX && gy===targetGY;
+  return Math.sqrt(Math.pow(gx-targetGX,2)+Math.pow(gy-targetGY,2)) <= H2H_WIN_DIST;
+}
+// Whole numbers print as-is; in-between positions on the circle get 1 decimal
+function h2hFmt(v) { var r=Math.round(v*10)/10; return String(r); }
+
 // ---------- HEAD-TO-HEAD INTRO POPUP ----------
 // Shown every time Head-to-Head is picked from the menu, before the match
 // starts, so nobody launches it alone by accident.
@@ -2372,10 +2397,11 @@ function drawH2HIntro() {
   var lines=[
     "1. A point and a challenge appear on the grid.",
     "2. Race to move YOUR point to the correct spot.",
-    "3. Standing on it? Press your submit key.",
-    "4. The first player to submit the right spot",
-    "    wins the round.",
-    "5. Best 2 out of 3 rounds wins the match!"
+    "    (Rotations: hold your keys to slide your",
+    "    point around the yellow circle.)",
+    "3. Very close? Press your submit key.",
+    "4. First player to submit the right spot wins",
+    "    the round. Best 2 out of 3 wins the match!"
   ];
   fill(225,235,255); textAlign(LEFT,CENTER); textSize(11);
   for(var li=0;li<lines.length;li++) text(lines[li],32,234+li*16);
@@ -3109,9 +3135,9 @@ function draw(){
       var ch=curCh();
       if(gameMode==="HEADTOHEAD"){
         // P1 (WASD) submits with Space
-        if(p1GX===targetGX&&p1GY===targetGY){
+        if(h2hAtTarget(p1GX,p1GY)){
           roundWinner=1; p1wins++;
-          feedbackCorrect=true; lockedGX=p1GX; lockedGY=p1GY;
+          feedbackCorrect=true; lockedGX=targetGX; lockedGY=targetGY;
           playSound(correctSoundFor(ch));
           STATE="FEEDBACK";
         }
@@ -3180,9 +3206,9 @@ function draw(){
   if(keyWentDown("enter")){
     if(gameMode==="HEADTOHEAD"){
       if(STATE==="MOVING"){
-        if(p2GX===targetGX&&p2GY===targetGY){
+        if(h2hAtTarget(p2GX,p2GY)){
           roundWinner=2; p2wins++;
-          feedbackCorrect=true; lockedGX=p2GX; lockedGY=p2GY;
+          feedbackCorrect=true; lockedGX=targetGX; lockedGY=targetGY;
           playSound(correctSoundFor(curCh()));
           STATE="FEEDBACK";
         }
@@ -3363,7 +3389,15 @@ function draw(){
   // MOVING — input
   var c=curCh();
   if(STATE==="MOVING"){
-    if(gameMode==="HEADTOHEAD"){
+    if(gameMode==="HEADTOHEAD"&&h2hOnCircle()){
+      // Rotation rounds: each player's point can only ride the yellow
+      // circle. Hold right/up (or D/W) to spin counterclockwise, left/down
+      // (or A/S) to spin clockwise.
+      var p2Spin=((keyDown("right")||keyDown("up"))?1:0)-((keyDown("left")||keyDown("down"))?1:0);
+      var p1Spin=((keyDown("d")||keyDown("w"))?1:0)-((keyDown("a")||keyDown("s"))?1:0);
+      if(p2Spin) { var n2=h2hSpin(p2GX,p2GY,p2Spin); p2GX=n2.x; p2GY=n2.y; }
+      if(p1Spin) { var n1=h2hSpin(p1GX,p1GY,p1Spin); p1GX=n1.x; p1GY=n1.y; }
+    } else if(gameMode==="HEADTOHEAD"){
       // P2: arrow keys (keyWentDown for grid-locked)
       if(keyWentDown("left") &&p2GX>GRID_MIN)p2GX--;
       if(keyWentDown("right")&&p2GX<GRID_MAX)p2GX++;
@@ -3415,8 +3449,8 @@ function draw(){
   // a lingering ring here would just be redundant clutter on top of that.
   if(STATE==="FEEDBACK"){ if(feedbackCorrect) drawTarget(); drawLockedMarker(); }
   if(gameMode==="HEADTOHEAD"){
-    drawFaceAt(toPixelX(p1GX),toPixelY(p1GY),255,80,80,"P1 ("+p1GX+","+p1GY+")");
-    drawFaceAt(toPixelX(p2GX),toPixelY(p2GY),80,160,255,"P2 ("+p2GX+","+p2GY+")");
+    drawFaceAt(toPixelX(p1GX),toPixelY(p1GY),255,80,80,"P1 ("+h2hFmt(p1GX)+","+h2hFmt(p1GY)+")");
+    drawFaceAt(toPixelX(p2GX),toPixelY(p2GY),80,160,255,"P2 ("+h2hFmt(p2GX)+","+h2hFmt(p2GY)+")");
   } else if(!isRotation(c)||tracingPhase!=="PAPER"){
     drawPlayer();
   }
