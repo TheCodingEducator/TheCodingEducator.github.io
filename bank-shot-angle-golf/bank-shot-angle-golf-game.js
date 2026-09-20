@@ -1306,17 +1306,10 @@ function drawVertexAngleMarker() {
   translate(resolvedInfo.point.x, resolvedInfo.point.y);
   rotate(resolvedInfo.baseAngle);
 
+  // No white baseline / shared-ray / right-angle lines here on purpose: only
+  // the colored arcs and wedges (and the green/red route lines) are drawn.
   noFill();
   strokeCap(ROUND);
-  stroke(255, 255, 255, 190);
-  strokeWeight(1.5);
-  line(resolvedInfo.type === 'WALL' ? -9 : -r * 1.15, 0, r * 1.15, 0);
-
-  // The one ray the two angles actually share - without it, the gold
-  // and green arcs just look like two separate curves near each other
-  // instead of two angles meeting edge-to-edge at the same line.
-  line(0, 0, cos(knownEnd) * r * 1.15, sin(knownEnd) * r * 1.15);
-
   strokeWeight(2.5);
   stroke('#e0a030');
   arc(0, 0, r * 2, r * 2, kLo, kHi);
@@ -1338,24 +1331,6 @@ function drawVertexAngleMarker() {
     arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi);
   }
 
-  // Same right-angle bracket the live question diagram uses for a
-  // complementary pair - without it, a 90deg wedge and a wider one
-  // aren't visually distinguishable at a glance, and the whole point
-  // of "complementary" is that these two specifically fill a square
-  // corner. Supplementary already reads as its own thing: the baseline
-  // above spans both directions through the vertex (a real straight
-  // line), and the two arcs together sweep a full 180deg semicircle
-  // over it - no separate marker needed to say "this is a straight
-  // line," the line itself already shows that.
-  if (totalDeg === 90) {
-    noFill();
-    stroke(255, 255, 255, 230);
-    strokeWeight(1.5);
-    var m = 7;
-    beginShape();
-    vertex(m, 0); vertex(m, m * resolvedInfo.sweepSign); vertex(0, m * resolvedInfo.sweepSign);
-    endShape();
-  }
   pop();
 }
 
