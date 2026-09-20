@@ -262,13 +262,6 @@ var chaosShakeMag = 0;
 var preShotPos = { x: 0, y: 0 };
 var sinkAnim = 0;              // 0..1
 
-// Yellow trail tracing the ball's whole route for the current stroke,
-// so the geometry the player just solved stays visible as it plays
-// out, not just as a diagram that vanishes the instant the ball moves.
-// Cleared at the start of every new stroke (see submitAnswer/
-// triggerTimeoutChaos) and kept until the ball comes to rest.
-var trail = [];
-var intendedPath = null;       // ghost route the correct answer would have taken, shown alongside the real one
 
 // The resolved-question readout shown next to the vertex while the
 // ball rolls - the correct angle always, plus the player's own wrong
@@ -276,7 +269,7 @@ var intendedPath = null;       // ghost route the correct answer would have take
 // live off pendingShot) because pendingShot itself goes null the
 // instant a Hero-mode timeout fires (see triggerTimeoutChaos), and
 // this needs to keep showing what the correct answer WAS regardless.
-// Same lifecycle as trail/intendedPath above.
+// Kept until the ball comes to rest. Nothing of it is drawn until `revealed` flips true (see updateAngleReveal) - the ball's route itself is never drawn.
 var resolvedInfo = null;       // { correctAnswer, typed, correct, point, offsetDir }
 
 // Camera zoom: eases toward the live question's real point while a
@@ -330,10 +323,9 @@ function gameDraw() {
   drawBushes();
   drawCup();
   if (!confirmExitOpen && !explainOpen) updatePhysics();
-  drawIntendedPath();
+  updateAngleReveal();
   drawVertexAngleMarker();
   drawResolvedAngleLabels();
-  drawTrail();
   drawBall();
   drawAimPreview();
   drawLiveAngleDiagram();
@@ -728,8 +720,6 @@ function startHole(idx) {
   pendingShot = null;
   answerText = '';
   answerLocked = false;
-  trail = [];
-  intendedPath = null;
   resolvedInfo = null;
   explainOpen = false;
   holeBlockedThisStroke = false;
@@ -1159,31 +1149,6 @@ function drawBlockingPole(h) {
   ellipse(h.x - 2, top - 2, (poleW + 4) * 0.4, (poleW + 4) * 0.4);
 }
 
-// Traces the ball's whole route for the shot in progress, so the
-// bank/straight geometry the player just solved stays visible as it
-// actually plays out rather than vanishing the moment the ball moves.
-function drawTrail() {
-  if (trail.length >= 2) {
-    push();
-    noFill();
-    // Bright green once the answer's been resolved correctly, red for a
-    // wrong answer OR a Hero-mode timeout (chaos clears pendingShot
-    // entirely, so no pendingShot at all during ROLLING reads as the
-    // same kind of miss) - the trail color itself becomes the
-    // at-a-glance verdict, not just the toast/flash that already faded
-    // by the time the ball is still rolling.
-    stroke(pendingShot && pendingShot.correct === true ? '#4dff4d' : '#e63946');
-    strokeWeight(4);
-    strokeCap(ROUND);
-    strokeJoin(ROUND);
-    beginShape();
-    for (var i = 0; i < trail.length; i++) vertex(trail[i].x, trail[i].y);
-    vertex(ball.x, ball.y);
-    endShape();
-    pop();
-  }
-}
-
 function drawBall() {
   if (holePhase === 'SUNK') {
     sinkAnim = min(1, sinkAnim + 0.06);
@@ -1199,74 +1164,35 @@ function drawBall() {
   ellipse(ball.x - BALL_R * 0.35, ball.y - BALL_R * 0.35, BALL_R * 0.7 * scale, BALL_R * 0.7 * scale);
 }
 
-// Builds the real "supposed to go" ghost route right after an answer
-// resolves, by actually RUNNING the shot with a correct answer on a
-// scratch ball through stepBallOneFrame() - the exact same physics
-// code real gameplay uses (see updatePhysics), not a geometric
-// approximation of it. A straight-line reflection model was tried
-// first and matched well for one bounce, but compounds real error
-// over a multi-bounce corridor and can't see hills/water/bushes at
-// all - after several bounces (common in this game's tighter zigzag
-// holes) it could diverge by dozens of pixels from where the ball
-// actually goes, or miss a "stuck in a corner" jitter entirely.
-// Running the identical simulation twice - once silently here, once
-// for real as the player watches - means the two are guaranteed to
-// agree by construction, for as many bounces as the shot actually
-// takes, not just the first one.
-function simulateShotPath(shot) {
-  var b = { x: shot.launchFrom.x, y: shot.launchFrom.y, vx: shot.aimDir.x * shot.power, vy: shot.aimDir.y * shot.power };
-  var pending = {
-    type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
-    resolvedAngle: shot.correctAnswer, correct: true, bendDeg: 0,
-    launchFrom: shot.launchFrom, triggerDist: shot.triggerDist, applied: false
-  };
-  var walls = allWalls();
-  var points = [{ x: b.x, y: b.y }];
-  var bouncePoints = [];
-  for (var frame = 0; frame < 2000; frame++) {
-    var speed = mag(b.vx, b.vy);
-    if (speed < MIN_STOP_SPEED) break;
-    var wasApplied = pending.applied;
-    stepBallOneFrame(b, pending, walls, hole.bushes, hole.zones, true);
-    if (pending.applied && !wasApplied) bouncePoints.push({ x: b.x, y: b.y });
-    var last = points[points.length - 1];
-    if (dist(b.x, b.y, last.x, last.y) > 3) points.push({ x: b.x, y: b.y });
+// The ball's route is never drawn. The solved angle only appears once the
+// ball has actually reached its wall (or, for a straight shot, has rolled a
+// short way), and stays until the ball stops.
+var ANGLE_REVEAL_STRAIGHT_PX = 60;
+var ANGLE_REVEAL_BOUNCE_RAD = 0.21; // ~12 degrees of sudden direction change = a bounce
+function updateAngleReveal() {
+  if (!resolvedInfo || resolvedInfo.revealed) return;
+  // A correct wall shot is scripted to bounce off the puzzle wall itself
+  // (pendingShot.applied flips the moment that happens), so wait for that
+  // exact wall instead of any rail the ball happens to graze on the way.
+  var correctWallShot = resolvedInfo.type === 'WALL' && resolvedInfo.correct && pendingShot;
+  if (correctWallShot) {
+    if (pendingShot.applied) resolvedInfo.revealed = true;
+    return;
   }
-  points.push({ x: b.x, y: b.y });
-  return { points: points, bouncePoints: bouncePoints };
-}
-
-function drawIntendedPath() {
-  if (!intendedPath || intendedPath.points.length < 2) return;
-  // On a correct answer this ghost path exactly overlays the real
-  // trail (same route, by definition), so drawing it too is pure
-  // redundant clutter across the whole course - skip it entirely and
-  // let the real green trail alone carry the correct angle. It only
-  // earns its keep on a wrong answer, where it's the ONLY place the
-  // correct path is still visible at all (the real trail has already
-  // diverged onto the player's own wrong angle) - colored the same
-  // bright green as a correct trail there, marking it unmistakably as
-  // "this was the right one" instead of a neutral, unexplained white.
-  if (resolvedInfo && resolvedInfo.correct === true) return;
-  push();
-  drawingContext.setLineDash([3, 6]);
-  strokeCap(ROUND);
-  noFill();
-  stroke(77, 255, 77, 210);
-  strokeWeight(2.5);
-  beginShape();
-  for (var i = 0; i < intendedPath.points.length; i++) vertex(intendedPath.points[i].x, intendedPath.points[i].y);
-  endShape();
-  drawingContext.setLineDash([]);
-  pop();
-  noStroke();
-  fill(77, 255, 77, 210);
-  for (i = 0; i < intendedPath.bouncePoints.length; i++) {
-    var p = intendedPath.bouncePoints[i];
-    ellipse(p.x, p.y, 7, 7);
+  if (mag(ball.vx, ball.vy) > 0.5) {
+    var heading = Math.atan2(ball.vy, ball.vx);
+    if (resolvedInfo.lastHeading !== undefined) {
+      var turn = Math.abs(Math.atan2(Math.sin(heading - resolvedInfo.lastHeading), Math.cos(heading - resolvedInfo.lastHeading)));
+      if (turn > ANGLE_REVEAL_BOUNCE_RAD) { resolvedInfo.revealed = true; return; }
+    }
+    resolvedInfo.lastHeading = heading;
   }
-  var last = intendedPath.points[intendedPath.points.length - 1];
-  ellipse(last.x, last.y, 8, 8);
+  // A straight-line shot (or a Hero-mode timeout's wild shot) never bounces
+  // off the puzzle wall, so it reveals after rolling a short way instead.
+  var straightOrChaos = !pendingShot || pendingShot.type !== 'WALL';
+  if (straightOrChaos && dist(ball.x, ball.y, resolvedInfo.revealFrom.x, resolvedInfo.revealFrom.y) >= ANGLE_REVEAL_STRAIGHT_PX) {
+    resolvedInfo.revealed = true;
+  }
 }
 
 // A small non-filled version of the live question diagram's arcs (see
@@ -1279,7 +1205,7 @@ function drawIntendedPath() {
 // so it reads as a little marker, not a second copy of the big
 // zoomed-in diagram.
 function drawVertexAngleMarker() {
-  if (!resolvedInfo) return;
+  if (!resolvedInfo || !resolvedInfo.revealed) return;
   var totalDeg = resolvedInfo.type === 'WALL' ? 90 : 180;
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
   var totalEnd = resolvedInfo.sweepSign * totalDeg;
@@ -1337,7 +1263,7 @@ function drawVertexAngleMarker() {
 // shows the number they were actually judged against, stacked further
 // out along the same offset direction so the two labels never overlap.
 function drawResolvedAngleLabels() {
-  if (!resolvedInfo) return;
+  if (!resolvedInfo || !resolvedInfo.revealed) return;
   var d = resolvedInfo.offsetDir;
   noStroke();
   textAlign(CENTER, CENTER);
@@ -1420,17 +1346,12 @@ function updatePhysics() {
       holePhase = 'AIMING';
       rollAlgebraSeed();
       pendingShot = null;
-      trail = [];
-      intendedPath = null;
       resolvedInfo = null;
       holeBlockedThisStroke = false;
     }
     return;
   }
 
-  if (trail.length === 0 || dist(ball.x, ball.y, trail[trail.length - 1].x, trail[trail.length - 1].y) > 4) {
-    trail.push({ x: ball.x, y: ball.y });
-  }
 
   stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones, false, holeBlockedThisStroke);
   checkHoleComplete();
@@ -1438,11 +1359,7 @@ function updatePhysics() {
 
 // One frame's worth of ball motion: zone forces, then substepped
 // movement with collision resolution, then friction. Pulled out of
-// updatePhysics() so simulateShotPath() (see below) can run the exact
-// same code on a scratch ball/pendingShot to build the "intended path"
-// ghost line - not an approximation of the real physics, the same
-// deterministic math running twice, so the two are guaranteed to
-// match instead of just usually agreeing.
+// updatePhysics().
 function stepBallOneFrame(b, pending, walls, bushes, zones, silent, poleActive) {
   for (var i = 0; i < zones.length; i++) {
     var z = zones[i];
@@ -1483,20 +1400,14 @@ function stepBallOneFrame(b, pending, walls, bushes, zones, silent, poleActive) 
 
     collideWalls(b, pending, walls, silent);
     collideBushes(b, bushes);
-    // Only real gameplay passes poleActive=true (see updatePhysics) - the
-    // ghost "intended path" simulation (simulateShotPath) always assumes
-    // the correct answer, and the pole only exists because THIS stroke's
-    // answer was wrong, so the ghost must run without it.
+    // Only real gameplay passes poleActive=true (see updatePhysics): the
+    // pole only exists because THIS stroke's answer was wrong.
     if (poleActive && hole.cup) collidePole(b, hole.cup);
 
-    // A pendingShot resolving (wall bounce or straight-line bend) is
-    // the exact instant the trail/intended-path comparison matters
-    // most - stop this frame's remaining substeps right there instead
-    // of quietly continuing on the NEW direction for the rest of the
-    // frame's travel budget, or the ball's rendered/sampled position
-    // would already be several px past the real corner by the time
-    // anything draws it, making the yellow trail look rounded off from
-    // the dashed line's sharp bend instead of tracking it exactly.
+    // A pendingShot resolving (wall bounce or straight-line bend) ends
+    // this frame's remaining substeps right there instead of quietly
+    // continuing on the NEW direction for the rest of the frame's travel
+    // budget, so the ball is never drawn past the real corner.
     if (pending && pending.applied && !wasApplied) break;
   }
 
@@ -1547,8 +1458,7 @@ function collideWalls(b, pending, walls, silent) {
 // Returns true if the ball was actually touching this wall (and
 // resolves the bounce - either the pending shot's own override, once,
 // or a normal reflection) so collideWalls() can stop right there when
-// it matters. `silent` skips the bounce sound - set by
-// simulateShotPath()'s scratch run, which must never make noise.
+// it matters. `silent` skips the bounce sound.
 function resolveWallCollision(b, pending, w, silent) {
   var closest = closestPointOnSegment(b.x, b.y, w.x1, w.y1, w.x2, w.y2);
   var dx = b.x - closest.x, dy = b.y - closest.y;
@@ -1901,15 +1811,14 @@ function submitAnswer() {
   nextStroke();
   playSound('hit');
   playSound(correct ? 'correct' : 'wrong');
-  trail = [{ x: ball.x, y: ball.y }];
-  intendedPath = simulateShotPath(pendingShot);
   var baseSweep = shotBaseAngleAndSweep(pendingShot);
   resolvedInfo = {
     correctAnswer: pendingShot.correctAnswer, typed: typed, correct: correct,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
-    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign
+    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
+    revealed: false, revealFrom: { x: ball.x, y: ball.y }
   };
   if (!correct) explainOpen = true;
 }
@@ -2089,7 +1998,8 @@ function triggerTimeoutChaos() {
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
-    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign
+    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
+    revealed: false, revealFrom: { x: ball.x, y: ball.y }
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
@@ -2109,8 +2019,6 @@ function triggerTimeoutChaos() {
   nextStroke();
   playSound('chaos');
   triggerScreenFlash('#e63946', false);
-  trail = [{ x: ball.x, y: ball.y }];
-  intendedPath = null;
 
   setTimeout(function () {
     chaosShakeMag = 0;
@@ -2161,13 +2069,13 @@ function drawHUD() {
 
 // The actual arithmetic behind a correct answer, shown big and bold
 // across the HUD bar (between the hole/mode readouts on either side)
-// for as long as the ball keeps rolling, in the same bright green as
-// the correct trail/label - this is the reward for getting it right,
+// once the angle is revealed, in the same bright green as
+// the correct angle label - this is the reward for getting it right,
 // so it's sized to be unmissable rather than a small readout. A wrong
 // answer gets its own full explanation via drawExplainModal instead
 // of a shrunk-down version of this.
 function drawEquation() {
-  if (!resolvedInfo || !resolvedInfo.correct) return;
+  if (!resolvedInfo || !resolvedInfo.correct || !resolvedInfo.revealed) return;
   var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
   noStroke();
   textAlign(CENTER, CENTER);
