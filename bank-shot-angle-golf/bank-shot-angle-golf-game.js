@@ -2023,7 +2023,13 @@ function touchEnded() { mouseReleased(); return false; }
 // Desktop keyboard: digits, backspace, enter for the answer box. Mobile
 // uses the on-screen keypad in bank-shot-angle-golf-mobile-controls.js,
 // which calls handleAnswerKey() directly.
-function keyPressed() {
+function keyPressed(ev) {
+  // Returning false below cancels a key's default action, which would also
+  // swallow browser shortcuts (Ctrl+R / Ctrl+Shift+R hard refresh, F5, etc).
+  // Let any Ctrl/Cmd/Alt combo and function key through untouched.
+  if ((ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) ||
+      keyIsDown(CONTROL) || keyIsDown(91) || keyIsDown(93) || keyIsDown(224) ||
+      (keyCode >= 112 && keyCode <= 123)) return true;
   // Escape acts the same as clicking the exit button - both bring up the
   // same confirm-before-quitting overlay.
   if (keyCode === ESCAPE && gameState === 'PLAYING' && !confirmExitOpen) {
