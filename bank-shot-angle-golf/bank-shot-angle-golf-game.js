@@ -1203,36 +1203,6 @@ function updateAngleReveal() {
 }
 var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
 
-// Where the wrong answer's red number goes: out along the middle of the angle
-// the player typed, far enough that the number sits inside that angle.
-function wrongWedgeSize(info) {
-  var typed = info.typed;
-  var mid = info.baseAngle + info.sweepSign * (info.known + typed / 2); // world degrees
-  var halfSpan = typed / 2;
-  var scales = [1, 0.75, 0.55]; // a very narrow wedge gets a smaller number rather than a giant wedge
-  var best = null;
-  for (var si = 0; si < scales.length && !best; si++) {
-    var sc = scales[si], boxW = 60 * sc, boxH = 30 * sc;
-    // Slide the label outward along the wedge's middle until every corner of its
-    // box is inside the wedge's angle, whichever way the wedge happens to point
-    // (the text is wider than tall, so a sideways wedge needs more room). Never
-    // closer than one label-height past the green number (GREEN_LABEL_R), so the
-    // two never overlap.
-    var maxR = si === scales.length - 1 ? 340 : 200; // only the smallest size may run long
-    for (var labelR = GREEN_LABEL_R + 34; labelR < maxR; labelR += 4) {
-      var cx = cos(mid) * labelR, cy = sin(mid) * labelR, ok = true;
-      for (var k = 0; k < 4; k++) {
-        var px = cx + (k % 2 ? boxW : -boxW) / 2, py = cy + (k < 2 ? boxH : -boxH) / 2;
-        var off = ((atan2(py, px) - mid) % 360 + 540) % 360 - 180;
-        if (abs(off) > halfSpan - 1.5) { ok = false; break; }
-      }
-      if (ok) { best = { labelR: labelR, scale: sc, boxW: boxW, boxH: boxH }; break; }
-    }
-  }
-  if (!best) best = { labelR: 340, scale: scales[scales.length - 1], boxW: 33, boxH: 16.5 };
-  return { labelR: best.labelR, mid: mid, scale: best.scale };
-}
-
 // The route a CORRECT answer would have taken, cut off at the same point as
 // the real line (bounce + TRAIL_AFTER_BOUNCE_PX). Built by running the real
 // physics on a scratch ball, so it matches what a correct shot really does.
@@ -1297,8 +1267,8 @@ function computeGreenArms(pts) {
 
 // Gold arc between the two green lines, kept close to the vertex so the green
 // number (further out along the bisector) never overlaps it.
-var GREEN_ARC_R = 26;
-var GREEN_LABEL_R = 58;
+var GREEN_ARC_R = 44;  // big enough to leave room inside for the red number, which sits on the vertex
+var GREEN_LABEL_R = 84;
 function getGreenArms() {
   if (!resolvedInfo) return null;
   if (resolvedInfo.greenArms === undefined) resolvedInfo.greenArms = computeGreenArms(resolvedInfo.intendedTrail);
@@ -1373,18 +1343,15 @@ function drawResolvedAngleLabels() {
   text(correctLabel, cx, cy);
 
   if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
-    // Centered in the middle of the red wedge: halfway between its two rays,
-    // measured in the same frame the arcs are drawn in (baseAngle + sweep).
-    var wSizeL = wrongWedgeSize(resolvedInfo);
-    var wrongMid = wSizeL.mid;
-    var wLabelR = wSizeL.labelR;
-    var wx = resolvedInfo.point.x + cos(wrongMid) * wLabelR, wy = resolvedInfo.point.y + sin(wrongMid) * wLabelR;
+    // The wrong answer's number sits right on the vertex - the spot on the wall
+    // where the angle is made - with the gold arc and green number around it.
+    var vx = gArms ? gArms.v.x : resolvedInfo.point.x, vy = gArms ? gArms.v.y : resolvedInfo.point.y;
     var wrongLabel = resolvedInfo.typed + '°';
-    textSize(26 * wSizeL.scale);
+    textSize(26);
     fill(0, 0, 0, 150);
-    text(wrongLabel, wx + 1.5, wy + 1.5);
+    text(wrongLabel, vx + 1.5, vy + 1.5);
     fill('#e63946');
-    text(wrongLabel, wx, wy);
+    text(wrongLabel, vx, vy);
   }
   textStyle(NORMAL);
 }
