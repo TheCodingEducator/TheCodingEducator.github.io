@@ -1270,7 +1270,7 @@ function computeGreenArms(pts) {
   var a2 = atan2(outPt.y - v.y, outPt.x - v.x);
   var diff = ((a2 - a1) % 360 + 540) % 360 - 180; // signed, -180..180
   if (abs(diff) < 4) return null;
-  return { v: v, a1: a1, diff: diff, mid: a1 + diff / 2 };
+  return { v: v, a1: a1, diff: diff, mid: a1 + diff / 2, s: diff >= 0 ? 1 : -1 };
 }
 
 // Gold arc between the two green lines, kept close to the vertex so the green
@@ -1282,15 +1282,35 @@ function getGreenArms() {
   if (resolvedInfo.greenArms === undefined) resolvedInfo.greenArms = computeGreenArms(resolvedInfo.intendedTrail);
   return resolvedInfo.greenArms;
 }
+// The number shown at the wall is the angle between the route's incoming line
+// and the wall's normal (the line that splits the bounce in half). So the gold
+// arc always starts on the incoming route line and sweeps EXACTLY that many
+// degrees toward the normal - it can never disagree with the number. For a
+// wrong answer the number is the one the student typed, and a red dashed line is
+// drawn at that many degrees from the incoming line: the other side of the
+// angle their answer creates.
+function shownAngleDeg() {
+  return (resolvedInfo.typed !== null && !resolvedInfo.correct) ? resolvedInfo.typed : resolvedInfo.correctAnswer;
+}
+var OTHER_LINE_LEN = 96;
 function drawGreenAngleArc() {
   var g = getGreenArms();
   if (!g) return;
+  var span = shownAngleDeg();
+  var a2 = g.a1 + g.s * span;
   push();
   noFill();
+  strokeCap(ROUND);
+  if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
+    stroke('#e63946');
+    strokeWeight(4);
+    drawingContext.setLineDash([4, 7]);
+    line(g.v.x, g.v.y, g.v.x + cos(a2) * OTHER_LINE_LEN, g.v.y + sin(a2) * OTHER_LINE_LEN);
+    drawingContext.setLineDash([]);
+  }
   stroke('#e0a030');
   strokeWeight(3.5);
-  strokeCap(ROUND);
-  arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, g.a1 + g.diff), max(g.a1, g.a1 + g.diff));
+  arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
   pop();
 }
 
@@ -1331,8 +1351,9 @@ function drawResolvedAngleLabels() {
   // green; a wrong answer shows only the angle the player typed, in red.
   var wrong = resolvedInfo.typed !== null && !resolvedInfo.correct;
   var gArms = getGreenArms();
-  var cx = gArms ? gArms.v.x + cos(gArms.mid) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
-  var cy = gArms ? gArms.v.y + sin(gArms.mid) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
+  var lblAng = gArms ? gArms.a1 + gArms.s * shownAngleDeg() / 2 : 0; // middle of the arc
+  var cx = gArms ? gArms.v.x + cos(lblAng) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
+  var cy = gArms ? gArms.v.y + sin(lblAng) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
   var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
   fill(0, 0, 0, 150);
   text(label, cx + 1.5, cy + 1.5);
