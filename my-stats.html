@@ -281,8 +281,20 @@ var piggy = {
   bestHard: localStorage.getItem('piggybank_best_hard') !== null ? readNum('piggybank_best_hard', null) : null
 };
 
-var gamesPlayedCount = [lgttp.played, exprace.played, laser.played, piggy.played].filter(Boolean).length;
-var hasAnyBestTime = lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 || piggy.bestEasy !== null || piggy.bestHard !== null || laser.highScore > 0;
+// ---- Bridge Builder Runner ----
+// Runners unlock at these best distances (in meters) - the same thresholds the game itself uses.
+var BRIDGE_RUNNER_UNLOCKS = [0, 150, 400, 800];
+var bridge = {
+  played: localStorage.getItem('bridgerunner_best_meters') !== null,
+  bestMeters: readNum('bridgerunner_best_meters', 0),
+  bestLevel: readNum('bridgerunner_best_level', 1),
+  bestBridges: readNum('bridgerunner_best_bridges', 0),
+  bestStreak: readNum('bridgerunner_best_streak', 0)
+};
+var bridgeRunnerCount = BRIDGE_RUNNER_UNLOCKS.filter(function (m) { return bridge.bestMeters >= m; }).length;
+
+var gamesPlayedCount = [lgttp.played, exprace.played, laser.played, piggy.played, bridge.played].filter(Boolean).length;
+var hasAnyBestTime = lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 || piggy.bestEasy !== null || piggy.bestHard !== null || laser.highScore > 0 || bridge.bestMeters > 0;
 var totalCoinsCombined = lgttp.coins + exprace.coins;
 var lgttpSkinCount = (lgttp.ownedSkins || [0]).length;
 var laserSkinCount = (laser.unlockedSkins || [0]).length;
@@ -295,7 +307,7 @@ var laserSkinCount = (laser.unlockedSkins || [0]).length;
 var BADGES = [
   { icon: "🎮", name: "First Steps", desc: "Play any game once", earned: gamesPlayedCount >= 1 },
   { icon: "🕹️", name: "Multi-Gamer", desc: "Save progress in 2+ games", earned: gamesPlayedCount >= 2 },
-  { icon: "🏆", name: "Completionist", desc: "Save progress in all 4 tracked games", earned: gamesPlayedCount >= 4 },
+  { icon: "🏆", name: "Completionist", desc: "Save progress in all 5 tracked games", earned: gamesPlayedCount >= 5 },
   { icon: "⏱️", name: "Personal Best", desc: "Record a best time or high score", earned: hasAnyBestTime },
   { icon: "🔥", name: "Streak Starter", desc: "Reach a streak of 3 in Let's Get to the Point", earned: lgttp.streak >= 3 },
   { icon: "🌟", name: "Streak Master", desc: "Reach a streak of 10", earned: lgttp.streak >= 10 },
@@ -304,7 +316,10 @@ var BADGES = [
   { icon: "🧠", name: "Hard Mode Hero", desc: "Unlock Hard Mode in Exponent Racer", earned: exprace.hardMode },
   { icon: "💎", name: "Laser Legend", desc: "Unlock 3+ laser skins", earned: laserSkinCount >= 3 },
   { icon: "🐷", name: "Penny Pincher", desc: "Set a best time in Piggy Bank Math", earned: piggy.bestEasy !== null || piggy.bestHard !== null },
-  { icon: "📐", name: "Point Master", desc: "Set a best time in Genius or Geometry mode", earned: lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 }
+  { icon: "📐", name: "Point Master", desc: "Set a best time in Genius or Geometry mode", earned: lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 },
+  { icon: "🌉", name: "Bridge Builder", desc: "Finish a run in Bridge Builder Runner", earned: bridge.played },
+  { icon: "🏃", name: "Marathon Runner", desc: "Run 300+ meters in one Bridge Builder Runner run", earned: bridge.bestMeters >= 300 },
+  { icon: "📏", name: "Scale Master", desc: "Reach level 4 in Bridge Builder Runner", earned: bridge.bestLevel >= 4 }
 ];
 
 var badgesHtml = BADGES.map(function (b) {
@@ -366,6 +381,18 @@ if (piggy.played) {
 }
 gamesHtml += '<a class="play-link" href="piggy-bank-math/piggy-bank-math.html">Play &rarr;</a></div>';
 
+gamesHtml += '<div class="game-card"><h3>🌉 Bridge Builder Runner</h3>';
+if (bridge.played) {
+  gamesHtml += statRow('Best Distance', bridge.bestMeters + ' m');
+  gamesHtml += statRow('Highest Level', bridge.bestLevel + ' / 4');
+  gamesHtml += statRow('Most Bridges in a Run', bridge.bestBridges);
+  gamesHtml += statRow('Best Streak', bridge.bestStreak);
+  gamesHtml += statRow('Runners Unlocked', bridgeRunnerCount + ' / ' + BRIDGE_RUNNER_UNLOCKS.length);
+} else {
+  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
+}
+gamesHtml += '<a class="play-link" href="bridge-builder-runner/bridge-builder-runner.html">Play &rarr;</a></div>';
+
 document.getElementById('games').innerHTML = gamesHtml;
 
 // ---------------------------------------------------------------
@@ -377,7 +404,7 @@ document.getElementById('games').innerHTML = gamesHtml;
 function resetAllProgress() {
   var ok = confirm("This will erase all saved coins, streaks, unlocks, and best times for every game on this device. This can't be undone. Continue?");
   if (!ok) return;
-  var prefixes = ['lgttp_', 'exprace_', 'laserheist_', 'piggybank_'];
+  var prefixes = ['lgttp_', 'exprace_', 'laserheist_', 'piggybank_', 'bridgerunner_'];
   var keysToRemove = [];
   for (var i = 0; i < localStorage.length; i++) {
     var k = localStorage.key(i);
