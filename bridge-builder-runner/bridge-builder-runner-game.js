@@ -370,7 +370,7 @@ const SKINS = [
 const KEY = {
   bestMeters: 'bridgerunner_best_meters', bestLevel: 'bridgerunner_best_level',
   bestBridges: 'bridgerunner_best_bridges', bestStreak: 'bridgerunner_best_streak',
-  skin: 'bridgerunner_skin', muted: 'bridgerunner_muted'
+  skin: 'bridgerunner_skin', muted: 'bridgerunner_muted', checkpoints: 'bridgerunner_checkpoints'
 };
 let best = store.get(KEY.bestMeters, 0), skinIdx = store.get(KEY.skin, 0), muted = store.get(KEY.muted, false);
 if (skinIdx >= SKINS.length || SKINS[skinIdx].need > best) skinIdx = 0;
@@ -384,6 +384,37 @@ function saveRunStats() {
   if (G.level > store.get(KEY.bestLevel, 1)) store.set(KEY.bestLevel, G.level);
   if (G.solved > store.get(KEY.bestBridges, 0)) store.set(KEY.bestBridges, G.solved);
   if (G.bestStreak > store.get(KEY.bestStreak, 0)) store.set(KEY.bestStreak, G.bestStreak);
+}
+// Level checkpoints: the first time (most recently) each level was reached - level, distance, and bridges built.
+// Shown on the title screen, the pause menu and the game-over screen as places a new run can start from.
+let checkpoints = {};
+(function loadCheckpoints() {
+  const raw = store.get(KEY.checkpoints, {});
+  for (let lv = 2; lv <= MAX_LEVEL; lv++) {
+    const c = raw && raw[lv];
+    if (c && Number.isFinite(c.px) && Number.isFinite(c.solved)) checkpoints[lv] = { level: lv, px: c.px, solved: c.solved, wrong: c.wrong || 0, bestStreak: c.bestStreak || 0 };
+  }
+})();
+function saveCheckpoint(cp) {
+  if (window.bridgeRunnerResetting) return;
+  checkpoints[cp.level] = cp; store.set(KEY.checkpoints, checkpoints);
+}
+// Fills `el` with a row of "Level N · X m" buttons (level 1 = a fresh start at 0 m; levels not reached yet are locked).
+// Clicking one starts a new run there; `beforeStart` runs first (used by the pause menu to close itself).
+function renderStarts(el, head, beforeStart) {
+  el.innerHTML = `<p class="startsHead">${head}</p><div class="starts">` +
+    Array.from({ length: MAX_LEVEL }, (_, i) => {
+      const lv = i + 1, c = checkpoints[lv];
+      if (lv === 1) return `<button type="button" class="btn alt start" data-lv="1">Level 1 · 0 m</button>`;
+      return c ? `<button type="button" class="btn alt start" data-lv="${lv}">Level ${lv} · ${Math.floor(c.px / 30)} m</button>`
+               : `<span class="start locked" title="Reach level ${lv} in a run to unlock this start">🔒 Level ${lv}</span>`;
+    }).join('') + `</div>`;
+  el.onclick = e => {
+    const b = e.target.closest('button[data-lv]'); if (!b) return;
+    const lv = +b.dataset.lv;
+    if (beforeStart) beforeStart();
+    startGame(lv === 1 ? undefined : checkpoints[lv]);
+  };
 }
 addEventListener('pagehide', saveRunStats);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveRunStats(); });
@@ -401,7 +432,6 @@ function newWorld(menu, cp) {
     jumpBuf: 0, airJumps: 0, stumble: 0, inv: 0, crashed: false, shake: 0,
     lives: 3, streak: 0, bestStreak: cp ? cp.bestStreak : 0, solved: cp ? cp.solved : 0, wrong: cp ? cp.wrong : 0,
     level: lv, theme: cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, dist: 0, missed: [],
-    checkpoints: [],                                                    // one entry per level reached this run (see onBridgeBuilt)
     platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
       : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, lv)],
     pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, hint: false, tipT: 0
@@ -475,12 +505,10 @@ function ensureNext() {
   }
 }
 
-// startGame()            = a brand-new run from level 1
-// startGame(cp, earlier) = continue from a level reached earlier: same level and distance, 3 fresh hearts.
-//                          `earlier` = the checkpoints up to and including cp, so those levels stay available if you lose again.
-function startGame(cp, earlier) {
+// startGame()   = a brand-new run from level 1
+// startGame(cp) = start from a saved level checkpoint: same level and distance, 3 fresh hearts.
+function startGame(cp) {
   G = newWorld(false, cp);
-  G.checkpoints = earlier ? earlier.slice() : [];
   G.tipT = cp ? 0 : 4;
   $('menu').classList.add('hidden'); $('over').classList.add('hidden');
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
@@ -534,6 +562,7 @@ function buildMenu() {
     b.onclick = () => { if (locked) return; skinIdx = i; store.set(KEY.skin, i); buildMenu(); };
     box.appendChild(b);
   });
+  renderStarts($('menuStarts'), '📍 Or start from a level you\'ve reached:');
 }
 
 /* ===================== PROBLEM FLOW ===================== */
@@ -600,8 +629,8 @@ function onBridgeBuilt() {
     G.theme = Math.floor(G.solved / 6) % THEMES.length;
     if (G.theme !== oldTheme || G.level !== oldLevel)                // platforms ahead get the new theme's obstacles at the new density
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
-    if (G.level !== oldLevel)                                        // remember where each new level was reached, so a lost run can continue from here
-      G.checkpoints.push({ level: G.level, px: G.px, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
+    if (G.level !== oldLevel)                                        // remember where each new level was reached, so any later run can start from here
+      saveCheckpoint({ level: G.level, px: G.px, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
     const up = G.level !== oldLevel ? ` · Level ${G.level}: faster + more obstacles!` : '';
     toast((b.P.type === 'scale' ? `Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`
       : `${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`) + up, 'good'); sfx.good();
@@ -658,16 +687,7 @@ function gameOver() {
   $('ovReview').innerHTML = uniq.length ? `<p style="text-align:left;font-weight:800;margin-bottom:2px">📝 Missed:</p><div class="review">` +
     uniq.map(P => `<div>${stepsHTML(P)} <span style="color:#c33">${P.timedOut ? '⏱' : '❌ ' + ansText(P, P.userAns)}</span></div>`).join('') + `</div>`
     : `<p>🎉 No missed math problems!${G.crashed ? ' Watch out for obstacles next time.' : ''}</p>`;
-  // one button per level reached this run (level 1 is just "Run again"): same level, same distance, fresh hearts
-  const list = G.checkpoints.slice();
-  $('ovContinue').innerHTML = list.length
-    ? `<p style="font-weight:800;margin:10px 0 2px">↩ Or continue where you unlocked a level:</p>` +
-      list.map((c, i) => `<button type="button" class="btn alt" data-cp="${i}">Level ${c.level} · ${Math.floor(c.px / 30)} m</button>`).join('')
-    : '';
-  $('ovContinue').onclick = e => {
-    const b = e.target.closest('button[data-cp]'); if (!b) return;
-    const i = +b.dataset.cp; buildMenu(); startGame(list[i], list.slice(0, i + 1));
-  };
+  renderStarts($('ovContinue'), '↩ Or continue where you unlocked a level:');      // same level, same distance, fresh hearts
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
   $('over').classList.remove('hidden');
 }
@@ -1065,6 +1085,7 @@ let last = performance.now();
 let paused = false;                                        // the Menu button pauses everything (timer, runner, bridge)
 function setPaused(v) {
   paused = v; $('pause').classList.toggle('hidden', !v);
+  if (v) renderStarts($('pauseStarts'), '📍 Restart from:', () => { setPaused(false); buildMenu(); });
   $('menuBtn').textContent = v ? '✕ Close' : '☰ Menu';
   last = performance.now();
 }

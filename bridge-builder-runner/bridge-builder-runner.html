@@ -308,7 +308,11 @@
   #bbr .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:10px 0; }
   #bbr .stats div { background:#f4f7ff; border-radius:12px; padding:8px; text-align:center; font-size:14px; color:var(--ink); }
   #bbr .stats b { display:block; font-size:24px; color:var(--accent); }
-  #bbr #ovContinue .btn { display:block; width:100%; margin:6px 0; font-size:17px; padding:9px 14px; }
+  #bbr .startsHead { font-weight:800; margin:10px 0 6px; font-size:14px; color:var(--ink); }
+  #bbr .starts { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:6px; }
+  #bbr .start { font-size:15px; padding:8px 13px; border-radius:12px; font-weight:800; font-family:inherit; }
+  #bbr #pause .start { display:inline-block; width:auto; margin:0; }
+  #bbr .start.locked { background:#eef1ff; color:#8c94b8; border:2px dashed #c5cbe8; cursor:help; }
 
   /* Teacher view (?levels) - same look as the game, but shown as a normal page */
   #lv { max-width:1000px; margin:0 auto; padding:64px 16px 32px; color:#1d2340; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; }
@@ -367,6 +371,7 @@
         <h2>&#9208; Paused</h2>
         <button class="btn" id="btnResume">&#9654; Resume</button>
         <button class="btn alt" id="btnRestart">&#128260; Restart run</button>
+        <div id="pauseStarts"></div>
         <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
         <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Title screen</button>
       </div></div>
@@ -380,6 +385,7 @@
            <b>Get it wrong:</b> the bridge is built the wrong size, you fall down the hole and lose a &#10084;&#65039;. Lose all three and the run is over &mdash; the farther you get, the better!</p>
         <div class="skins" id="skins"></div>
         <button class="btn" id="btnStart">Start Running!</button>
+        <div id="menuStarts"></div>
         <p style="font-size:13px;color:var(--muted)">Best distance: <b id="mBest">0</b> m &middot; Runners unlock as your best distance grows</p>
       </div></div>
 
@@ -444,7 +450,7 @@
     <li><strong>Mistakes become worked examples.</strong> After a wrong answer, the same two figures come back with every side labeled and a color-matched curved arrow on each side showing the multiplication (or division) by the scale factor - a picture of the calculation, not a wall of text.</li>
     <li><strong>An action game around the math.</strong> Between puzzles the student runs about ten seconds, jumping rocks, logs, cones, and low-flying birds and drones, using a double jump and floating platforms. Every four correct answers the runner speeds up and the obstacles get denser, so success in the math is rewarded with a harder, faster run.</li>
     <li><strong>Timed, but forgiving.</strong> Each question has a countdown that tightens slightly on later levels, and a Hint button reminds students of the method without giving the answer. A Menu button (or the Esc key) pauses the whole game at any time, including mid-question.</li>
-    <li><strong>Level checkpoints, so one bad run isn't a setback.</strong> Each time a student reaches a new level, the game remembers the level and the distance. When the run ends, they can pick "Level 2 &middot; 473 m" (or any level they reached) and continue from the start of that level with the same distance and bridge count and three fresh hearts, instead of starting over from level 1. That keeps students practicing at the level that challenges them rather than re-doing material they have already shown they can handle.</li>
+    <li><strong>Level checkpoints, so one bad run isn't a setback.</strong> Each time a student reaches a new level, the game remembers the level and the distance. The title screen, the pause menu, and the end-of-run screen all list every level with the distance a new run would start at - for example "Level 2 &middot; 473 m" - with levels not yet reached shown locked. Picking one starts at the beginning of that level with the same distance and bridge count and three fresh hearts, instead of starting over from level 1. These checkpoints are saved in the student's own browser. That keeps students practicing at the level that challenges them rather than re-doing material they have already shown they can handle.</li>
     <li><strong>Low-stakes and replayable.</strong> No accounts and unlimited runs. Three hearts per run, a saved personal best distance, and runners to unlock as that best grows - all stored only in the student's own browser.</li>
   </ul>
 </section>
