@@ -1353,11 +1353,11 @@ function drawTrail() {
 }
 
 function drawVertexAngleMarker() {
-  // Only a wrong answer draws anything here, and it mirrors how the correct
-  // (green) angle is drawn: two dashed lines from the vertex, a small arc at
-  // the vertex, and the number between the lines. The rays are the shared ray
-  // and the ray the typed number of degrees away; the correct angle itself is
-  // marked by the gold arc between the green route lines (drawGreenAngleArc).
+  // Only a wrong answer draws anything here: a light red wedge, a small red arc
+  // at the vertex, and (in drawResolvedAngleLabels) the number inside it. No
+  // extra red lines - the ball's own red route line is the only red line.
+  // The correct angle is marked by the gold arc between the green route lines
+  // (drawGreenAngleArc).
   if (!resolvedInfo || resolvedInfo.typed === null || resolvedInfo.correct) return;
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
   var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
@@ -1373,11 +1373,6 @@ function drawVertexAngleMarker() {
   arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
   noFill();
   stroke('#e63946');
-  strokeWeight(4);
-  drawingContext.setLineDash([4, 7]);
-  line(0, 0, cos(wLo) * wSize.wedgeR, sin(wLo) * wSize.wedgeR);
-  line(0, 0, cos(wHi) * wSize.wedgeR, sin(wHi) * wSize.wedgeR);
-  drawingContext.setLineDash([]);
   strokeWeight(3.5);
   arc(0, 0, WRONG_ARC_R * 2, WRONG_ARC_R * 2, wLo, wHi);
   pop();
