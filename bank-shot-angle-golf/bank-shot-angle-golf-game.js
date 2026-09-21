@@ -1295,6 +1295,7 @@ function computeGreenArms(pts) {
 // Gold arc between the two green lines, kept close to the vertex so the green
 // number (further out along the bisector) never overlaps it.
 var GREEN_ARC_R = 26;
+var WRONG_ARC_R = 36; // the red angle's small arc at the vertex, just outside the gold one
 var GREEN_LABEL_R = 58;
 function getGreenArms() {
   if (!resolvedInfo) return null;
@@ -1346,10 +1347,11 @@ function drawTrail() {
 }
 
 function drawVertexAngleMarker() {
-  // Only a wrong answer draws anything here: a shaded red wedge for the angle
-  // the player typed, starting from the same ray as the correct angle. The
-  // correct angle itself is marked by the gold arc between the green route
-  // lines (drawGreenAngleArc); the old small known/solved arcs are gone.
+  // Only a wrong answer draws anything here, and it mirrors how the correct
+  // (green) angle is drawn: two dashed lines from the vertex, a small arc at
+  // the vertex, and the number between the lines. The rays are the shared ray
+  // and the ray the typed number of degrees away; the correct angle itself is
+  // marked by the gold arc between the green route lines (drawGreenAngleArc).
   if (!resolvedInfo || resolvedInfo.typed === null || resolvedInfo.correct) return;
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
   var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
@@ -1361,12 +1363,17 @@ function drawVertexAngleMarker() {
   rotate(resolvedInfo.baseAngle);
   strokeCap(ROUND);
   noStroke();
-  fill(230, 57, 70, 60);
+  fill(230, 57, 70, 45);
   arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
   noFill();
-  strokeWeight(2.5);
   stroke('#e63946');
-  arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi);
+  strokeWeight(4);
+  drawingContext.setLineDash([4, 7]);
+  line(0, 0, cos(wLo) * wSize.wedgeR, sin(wLo) * wSize.wedgeR);
+  line(0, 0, cos(wHi) * wSize.wedgeR, sin(wHi) * wSize.wedgeR);
+  drawingContext.setLineDash([]);
+  strokeWeight(3.5);
+  arc(0, 0, WRONG_ARC_R * 2, WRONG_ARC_R * 2, wLo, wHi);
   pop();
 }
 
