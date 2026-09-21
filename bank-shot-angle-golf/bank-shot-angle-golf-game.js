@@ -49,6 +49,26 @@ var THEMES = {
     bush: '#1f6b34', bushHi: '#2f8c47',
     water: '#2f7bdb', waterHi: '#6db2ff',
     sky: '#0e2a17'
+  },
+  nightLinks: {
+    label: 'Night Links',
+    icon: '🌙',
+    fairwayA: '#2f6f8a', fairwayB: '#3f8aa8',
+    rough: '#123241',
+    wall: '#6b7c93', wallHi: '#a3b3c9',
+    bush: '#1c4b46', bushHi: '#2b6d63',
+    water: '#3a5fd0', waterHi: '#7d9bff',
+    sky: '#08161f'
+  },
+  autumnOrchard: {
+    label: 'Autumn Orchard',
+    icon: '🍂',
+    fairwayA: '#b07a2c', fairwayB: '#cf9a45',
+    rough: '#6b4a1f',
+    wall: '#4a3020', wallHi: '#7a5238',
+    bush: '#8a3b1a', bushHi: '#b5541f',
+    water: '#3f8f9e', waterHi: '#88d3df',
+    sky: '#24160a'
   }
 };
 
@@ -204,7 +224,86 @@ function buildClassicGreenCourse() {
   };
 }
 
-var COURSES = [buildClassicGreenCourse()];
+// Course 2: Night Links - straight runs, diagonals and hairpins, on a dark
+// moonlit palette.
+function buildNightLinksCourse() {
+  return {
+    key: 'nightLinks', theme: THEMES.nightLinks,
+    holes: [
+      // 1: one long straight lane with a bush blocking the middle
+      makeHole(3, [{ x: 350, y: 620 }, { x: 350, y: 190 }], 62,
+        [{ x: 350, y: 400, r: 16 }], []),
+      // 2: an L with a hill pushing toward the turn
+      makeHole(3, [{ x: 110, y: 610 }, { x: 110, y: 210 }, { x: 580, y: 210 }], [55, 55, 70],
+        [], [{ type: 'hill', x: 80, y: 360, w: 60, h: 80, dirDeg: 270, strength: 0.03 }]),
+      // 3: a diagonal lane - every wall meets the ball at an unusual angle
+      makeHole(3, [{ x: 120, y: 620 }, { x: 570, y: 200 }], 58,
+        [], []),
+      // 4: a dogleg with a bush and a pond in the fairway
+      makeHole(4, [{ x: 580, y: 620 }, { x: 580, y: 420 }, { x: 130, y: 420 }, { x: 130, y: 180 }], 52,
+        [{ x: 350, y: 420, r: 18 }],
+        [{ type: 'water', x: 420, y: 400, w: 70, h: 40, dirDeg: 180, strength: 0.024 }]),
+      // 5: a U-turn - up, across, and back down to a far cup
+      makeHole(4, [{ x: 130, y: 620 }, { x: 130, y: 200 }, { x: 370, y: 200 }, { x: 370, y: 560 }, { x: 600, y: 560 }], 46,
+        [{ x: 250, y: 200, r: 14 }], [{ type: 'hill', x: 345, y: 380, w: 50, h: 60, dirDeg: 90, strength: 0.03 }]),
+      // 6: a Z that doubles back across the course
+      makeHole(5, [{ x: 110, y: 620 }, { x: 110, y: 470 }, { x: 590, y: 470 }, { x: 590, y: 300 }, { x: 110, y: 300 }, { x: 110, y: 170 }], 46,
+        [{ x: 350, y: 470, r: 14 }],
+        [{ type: 'water', x: 300, y: 285, w: 120, h: 30, dirDeg: 0, strength: 0.024 }]),
+      // 7: a five-leg zigzag, tight corridor
+      makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 540 }, { x: 330, y: 540 }, { x: 330, y: 420 }, { x: 100, y: 420 }, { x: 100, y: 300 }, { x: 330, y: 300 }, { x: 330, y: 170 }, { x: 600, y: 170 }], 38,
+        [], []),
+      // 8: an S-curve
+      makeHole(4, [{ x: 350, y: 630 }, { x: 350, y: 470 }, { x: 150, y: 470 }, { x: 150, y: 320 }, { x: 550, y: 320 }, { x: 550, y: 170 }], 44,
+        [{ x: 250, y: 470, r: 12 }], [{ type: 'hill', x: 330, y: 300, w: 60, h: 40, dirDeg: 0, strength: 0.03 }]),
+      // 9: the finale - a winding route with hazards
+      makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 500 }, { x: 200, y: 500 }, { x: 200, y: 380 }, { x: 500, y: 380 }, { x: 500, y: 260 }, { x: 150, y: 260 }, { x: 150, y: 170 }], 40,
+        [{ x: 400, y: 500, r: 12 }, { x: 300, y: 260, r: 12 }],
+        [{ type: 'water', x: 340, y: 365, w: 80, h: 30, dirDeg: 0, strength: 0.024 }])
+    ]
+  };
+}
+
+// Course 3: Autumn Orchard - mirrored openings, a V-shaped hole, a spiral and
+// hairpins, on a warm autumn palette.
+function buildAutumnOrchardCourse() {
+  return {
+    key: 'autumnOrchard', theme: THEMES.autumnOrchard,
+    holes: [
+      // 1: the classic L, mirrored
+      makeHole(3, [{ x: 600, y: 620 }, { x: 600, y: 250 }, { x: 150, y: 250 }], [52, 52, 70],
+        [], [{ type: 'hill', x: 570, y: 420, w: 60, h: 80, dirDeg: 90, strength: 0.03 }]),
+      // 2: a diagonal lane the other way
+      makeHole(3, [{ x: 580, y: 620 }, { x: 140, y: 220 }], 58,
+        [{ x: 360, y: 420, r: 14 }], []),
+      // 3: a loop that turns back on itself
+      makeHole(4, [{ x: 350, y: 620 }, { x: 350, y: 400 }, { x: 130, y: 400 }, { x: 130, y: 180 }, { x: 350, y: 180 }], 50,
+        [{ x: 240, y: 400, r: 14 }], [{ type: 'water', x: 105, y: 280, w: 50, h: 60, dirDeg: 90, strength: 0.024 }]),
+      // 4: a narrow straight with two bushes in the lane
+      makeHole(3, [{ x: 350, y: 620 }, { x: 350, y: 170 }], 40,
+        [{ x: 350, y: 470, r: 16 }, { x: 350, y: 300, r: 16 }], []),
+      // 5: down, across and up again
+      makeHole(4, [{ x: 120, y: 620 }, { x: 120, y: 430 }, { x: 300, y: 430 }, { x: 300, y: 620 }, { x: 520, y: 620 }, { x: 520, y: 200 }], 44,
+        [], [{ type: 'hill', x: 490, y: 400, w: 60, h: 60, dirDeg: 270, strength: 0.03 }]),
+      // 6: a spiral in toward the cup
+      makeHole(5, [{ x: 110, y: 620 }, { x: 110, y: 180 }, { x: 590, y: 180 }, { x: 590, y: 560 }, { x: 260, y: 560 }, { x: 260, y: 340 }], 46,
+        [{ x: 350, y: 180, r: 14 }],
+        [{ type: 'water', x: 570, y: 350, w: 40, h: 90, dirDeg: 90, strength: 0.024 }]),
+      // 7: a V - down to the middle and back up
+      makeHole(4, [{ x: 110, y: 180 }, { x: 350, y: 610 }, { x: 590, y: 180 }], 46,
+        [], []),
+      // 8: three hairpins
+      makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 520 }, { x: 130, y: 520 }, { x: 130, y: 420 }, { x: 590, y: 420 }, { x: 590, y: 320 }, { x: 130, y: 320 }, { x: 130, y: 170 }], 38,
+        [{ x: 360, y: 420, r: 12 }], []),
+      // 9: a wide finale with a bush and a pond
+      makeHole(4, [{ x: 350, y: 630 }, { x: 350, y: 300 }, { x: 560, y: 300 }, { x: 560, y: 170 }], 70,
+        [{ x: 350, y: 450, r: 20 }],
+        [{ type: 'water', x: 420, y: 270, w: 80, h: 50, dirDeg: 0, strength: 0.024 }])
+    ]
+  };
+}
+
+var COURSES = [buildClassicGreenCourse(), buildNightLinksCourse(), buildAutumnOrchardCourse()];
 
 // ---------------------------------------------------------------
 // State
@@ -1260,7 +1359,7 @@ function updateTrail() {
 // The angle between the two green route lines where the correct shot bounces:
 // the vertex, where each arm points, and the bisector between them (which is
 // where the green degree number sits, so it is always between the lines).
-function computeGreenArms(pts) {
+function computeGreenArms(pts, normalAng) {
   if (!pts || pts.bounceIdx === undefined) return null;
   var v = pts[pts.bounceIdx];
   var inPt = pts[0], outPt = pts[pts.length - 1];
@@ -1269,8 +1368,17 @@ function computeGreenArms(pts) {
   var a1 = atan2(inPt.y - v.y, inPt.x - v.x);
   var a2 = atan2(outPt.y - v.y, outPt.x - v.x);
   var diff = ((a2 - a1) % 360 + 540) % 360 - 180; // signed, -180..180
-  if (abs(diff) < 4) return null;
-  return { v: v, a1: a1, diff: diff, mid: a1 + diff / 2, s: diff >= 0 ? 1 : -1 };
+  // Which side of the incoming line the wall's normal (the bounce's bisector)
+  // lies on. A near head-on bounce makes the in and out lines almost coincide,
+  // so the measured `diff` can be ~0 and can't say - the known normal always can.
+  var s;
+  if (normalAng !== undefined && normalAng !== null) {
+    var toN = ((normalAng - a1) % 360 + 540) % 360 - 180;
+    s = toN >= 0 ? 1 : -1;
+  } else {
+    s = diff >= 0 ? 1 : -1;
+  }
+  return { v: v, a1: a1, diff: diff, mid: a1 + diff / 2, s: s };
 }
 
 // Gold arc between the two green lines, kept close to the vertex so the green
@@ -1291,7 +1399,9 @@ function getGreenArms() {
       var a1 = wrongShot ? ri.launchAngle : ri.aimAngle;
       ri.greenArms = { v: ri.point, a1: a1, diff: -ri.sweepSign * 180, mid: a1 - ri.sweepSign * 90, s: -ri.sweepSign };
     } else {
-      ri.greenArms = computeGreenArms(ri.intendedTrail);
+      // A correct wall shot bounces off the question wall, whose normal is known.
+      var nAng = (ri.type === 'WALL' && ri.correct && ri.offsetDir) ? atan2(ri.offsetDir.y, ri.offsetDir.x) : null;
+      ri.greenArms = computeGreenArms(ri.intendedTrail, nAng);
     }
   }
   return ri.greenArms;
