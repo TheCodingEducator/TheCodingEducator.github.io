@@ -328,7 +328,6 @@ function gameDraw() {
   if (!confirmExitOpen && !explainOpen) updatePhysics();
   updateAngleReveal();
   updateTrail();
-  drawVertexAngleMarker();
   drawGreenAngleArc();
   drawResolvedAngleLabels();
   drawTrail();
@@ -1202,10 +1201,10 @@ function updateAngleReveal() {
     resolvedInfo.revealed = true;
   }
 }
-
 var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
-// The red wedge for the answer the player typed is sized so its number always
-// sits fully inside it (see the corner test below).
+
+// Where the wrong answer's red number goes: out along the middle of the angle
+// the player typed, far enough that the number sits inside that angle.
 function wrongWedgeSize(info) {
   var typed = info.typed;
   var mid = info.baseAngle + info.sweepSign * (info.known + typed / 2); // world degrees
@@ -1231,9 +1230,7 @@ function wrongWedgeSize(info) {
     }
   }
   if (!best) best = { labelR: 340, scale: scales[scales.length - 1], boxW: 33, boxH: 16.5 };
-  // The outline also has to enclose the box radially: farthest corner + margin.
-  var reach = best.labelR + sqrt(best.boxW * best.boxW + best.boxH * best.boxH) / 2 + 6;
-  return { labelR: best.labelR, wedgeR: reach, mid: mid, scale: best.scale, boxW: best.boxW, boxH: best.boxH };
+  return { labelR: best.labelR, mid: mid, scale: best.scale };
 }
 
 // The route a CORRECT answer would have taken, cut off at the same point as
@@ -1348,27 +1345,6 @@ function drawTrail() {
   for (var i = 0; i < ri.trail.length; i++) vertex(ri.trail[i].x, ri.trail[i].y);
   if (!ri.trailDone) vertex(ball.x, ball.y);
   endShape();
-  pop();
-}
-
-function drawVertexAngleMarker() {
-  // Only a wrong answer draws anything here: a light red wedge, with the number
-  // (drawResolvedAngleLabels) inside it. No red arc and no extra red lines - the
-  // ball's own red route line is the only red line. The correct angle is marked
-  // by the gold arc between the green route lines (drawGreenAngleArc).
-  if (!resolvedInfo || resolvedInfo.typed === null || resolvedInfo.correct) return;
-  var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
-  var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
-  var wLo = min(knownEnd, wrongEnd), wHi = max(knownEnd, wrongEnd);
-  var wSize = wrongWedgeSize(resolvedInfo);
-
-  push();
-  translate(resolvedInfo.point.x, resolvedInfo.point.y);
-  rotate(resolvedInfo.baseAngle);
-  strokeCap(ROUND);
-  noStroke();
-  fill(230, 57, 70, 45);
-  arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
   pop();
 }
 
@@ -1859,8 +1835,8 @@ function handleAnswerKey(k) {
   if (answerText.length < 3) answerText += k;
 }
 
-// Shared by drawLiveAngleDiagram and resolvedInfo's own vertex-arc
-// marker (drawVertexAngleMarker) - both need the same "which direction
+// Shared by drawLiveAngleDiagram and the green-angle helpers -
+// both need the same "which direction
 // is the 0deg baseline, which way does the known angle sweep" derived
 // from a shot object, so this is the one place that math lives.
 function shotBaseAngleAndSweep(shot) {
