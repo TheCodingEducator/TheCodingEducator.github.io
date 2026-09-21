@@ -1353,6 +1353,9 @@ function updateTrail() {
     ri.trail.push({ x: ball.x, y: ball.y });
     if (ri.revealed) ri.afterReveal += step;
   }
+  // Remember how much of the route existed when it first bounced (wrong answers
+  // only draw the route up to that point - see drawTrail).
+  if (ri.revealed && ri.trailCut === undefined) ri.trailCut = ri.trail.length;
   if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
 }
 
@@ -1432,7 +1435,7 @@ function drawGreenAngleArc() {
     line(g.v.x, g.v.y, g.v.x + cos(a2) * OTHER_LINE_LEN, g.v.y + sin(a2) * OTHER_LINE_LEN);
     drawingContext.setLineDash([]);
   }
-  stroke('#e0a030');
+  stroke(resolvedInfo.typed !== null && !resolvedInfo.correct ? '#e63946' : '#e0a030');
   strokeWeight(3.5);
   arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
   pop();
@@ -1442,6 +1445,27 @@ function drawGreenAngleArc() {
 function drawTrail() {
   var ri = resolvedInfo;
   if (!ri || ri.trail.length < 1) return;
+  var wrong = ri.typed !== null && !ri.correct;
+  var pts = ri.trail, live = !ri.trailDone;
+  if (wrong) {
+    // A wrong answer draws ONE red line: the route in to the vertex, and no
+    // further (the angle it makes is drawn by drawGreenAngleArc).
+    var g = getGreenArms();
+    if (ri.type === 'STRAIGHT') {
+      // No bounce on a straight shot - the line just leaves the vertex.
+      var len = 0, cut = pts.length;
+      for (var k = 1; k < pts.length; k++) {
+        len += dist(pts[k].x, pts[k].y, pts[k - 1].x, pts[k - 1].y);
+        if (len >= OTHER_LINE_LEN) { cut = k + 1; break; }
+      }
+      live = live && cut >= pts.length;
+      pts = pts.slice(0, cut);
+    } else if (ri.trailCut !== undefined) {
+      pts = pts.slice(0, ri.trailCut);
+      if (g) pts = pts.concat([{ x: g.v.x, y: g.v.y }]);
+      live = false;
+    }
+  }
   push();
   noFill();
   stroke(ri.correct ? '#4dff4d' : '#e63946');
@@ -1449,8 +1473,8 @@ function drawTrail() {
   strokeCap(ROUND);
   strokeJoin(ROUND);
   beginShape();
-  for (var i = 0; i < ri.trail.length; i++) vertex(ri.trail[i].x, ri.trail[i].y);
-  if (!ri.trailDone) vertex(ball.x, ball.y);
+  for (var i = 0; i < pts.length; i++) vertex(pts[i].x, pts[i].y);
+  if (live) vertex(ball.x, ball.y);
   endShape();
   pop();
 }
