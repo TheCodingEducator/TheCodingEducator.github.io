@@ -1463,7 +1463,7 @@ function drawObstacle(c, x) {
       ctx.fillStyle = '#7a8f3a'; ctx.beginPath(); ctx.ellipse(x + 24, G0 - 16, 22, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 24, G0 - 31); ctx.lineTo(x + 24, G0 - 16); ctx.moveTo(x + 10, G0 - 22); ctx.lineTo(x + 38, G0 - 22); ctx.stroke();
       ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 20, G0 - 30); ctx.lineTo(x + 20, G0 - 70); ctx.stroke();
-      rr(x - 50, G0 - 108, 140, 38, 6, '#fff'); txt('PROTECTED', x + 20, G0 - 89, 23, '#0d7a3c'); break; }
+      rr(x - 52, G0 - 136, 144, 64, 6, '#fff'); txt('PROTECTED', x + 20, G0 - 118, 22, '#0d7a3c'); txt('WILDLIFE', x + 20, G0 - 92, 22, '#0d7a3c'); break; }
     case 'frog': {                                                      // an endangered red-eyed tree frog, hopping toward you
       const hop = Math.abs(Math.sin(T * 5 + c.x * .01)) * 8;
       const E = (ex, ey, rx, ry, f) => { ctx.fillStyle = f; ctx.beginPath(); ctx.ellipse(ex, ey, rx, ry, 0, 0, 7); ctx.fill(); if (f !== null) ctx.stroke(); };
@@ -1840,7 +1840,7 @@ function drawTitleObs(g, type, cx, y) {
     g.fillStyle = '#c9a26a'; for (const lx of [-16, -6, 8, 18]) { g.beginPath(); g.roundRect(cx + lx - 3, y - 8, 7, 8, 2); g.fill(); g.stroke(); }
     g.beginPath(); g.ellipse(cx - 26, y - 15, 7, 5, 0, 0, 7); g.fill(); g.stroke();
     g.fillStyle = '#7a8f3a'; g.beginPath(); g.ellipse(cx, y - 16, 22, 15, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
-    g.beginPath(); g.moveTo(cx, y - 70); g.lineTo(cx, y - 30); g.stroke(); sign('PROTECTED', cx, y - 82, 132);
+    g.beginPath(); g.moveTo(cx, y - 68); g.lineTo(cx, y - 30); g.stroke(); box(cx - 70, y - 128, 140, 60, 6, '#fff'); g.fillStyle = '#0d7a3c'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('PROTECTED', cx, y - 111); g.fillText('WILDLIFE', cx, y - 85);
   }
   g.restore();
 }
