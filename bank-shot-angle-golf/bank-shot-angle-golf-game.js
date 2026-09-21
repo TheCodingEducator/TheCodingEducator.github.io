@@ -1257,6 +1257,7 @@ function simulateCorrectTrail(shot) {
     var step = dist(b.x, b.y, last.x, last.y);
     if (step > 3) {
       pts.push({ x: b.x, y: b.y });
+      pts.pathLen = (pts.pathLen || 0) + step;
       if (pending.applied) after += step;
     }
     if (pending.applied && pts.bounceIdx === undefined) pts.bounceIdx = pts.length - 1;
@@ -1271,9 +1272,14 @@ function updateTrail() {
   var step = dist(ball.x, ball.y, last.x, last.y);
   if (step > 3) {
     ri.trail.push({ x: ball.x, y: ball.y });
+    ri.trailLen += step;
     if (ri.revealed) ri.afterReveal += step;
   }
-  if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
+  // A wrong answer's red line stops at the same length as the green (correct)
+  // line - i.e. only as far as the angle is created - instead of running on to
+  // wherever the wrong shot eventually bounces.
+  var limit = (!ri.correct && ri.intendedTrail && ri.intendedTrail.pathLen) ? ri.intendedTrail.pathLen : null;
+  if (limit !== null ? ri.trailLen >= limit : ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
 }
 
 // The angle between the two green route lines where the correct shot bounces:
@@ -1949,7 +1955,7 @@ function submitAnswer() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0, trailLen: 0,
     intendedTrail: simulateCorrectTrail(pendingShot)
   };
   if (!correct) { explainOpen = true; explainOpenedAt = millis(); }
@@ -2132,7 +2138,7 @@ function triggerTimeoutChaos() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0, trailLen: 0,
     intendedTrail: simulateCorrectTrail(pendingShot)
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
