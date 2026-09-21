@@ -442,7 +442,7 @@ const CHARACTERS = [
   // ---- Politician ----
   { id: 'politician', role: 1, name: 'Politician', price: 10, tag: 'Gets the funding approved.', look: { torso: '#2b3a67', legs: '#1c2547', hair: '#b9b9c4', tie: '#d92b2b' } },
   { id: 'politicianA', role: 1, name: 'Mayor', price: 15, tag: 'A sash and a flag for the big day.', look: { torso: '#2b3a67', legs: '#1c2547', hair: '#7b5a3a', tie: '#d92b2b', sash: '#e8b02a', props: ['flag'] } },
-  { id: 'politicianB', role: 1, name: 'Ribbon Cutter', price: 20, tag: 'Opens the bridge with giant scissors.', look: { torso: '#3b3b46', legs: '#25252e', hair: '#b9b9c4', tie: '#2e86c1', props: ['scissors', 'badge'] } },
+  { id: 'politicianB', role: 1, name: 'State Representative', price: 20, tag: 'Gets the bridge funding bill passed.', look: { torso: '#3b3b46', legs: '#25252e', hair: '#b9b9c4', tie: '#2e86c1', props: ['clip', 'badge'] } },
   { id: 'politicianC', role: 1, name: 'Campaigner', price: 25, tag: 'Rallies the town with a megaphone.', look: { torso: '#e8e8ee', vest: '#3a5f9c', legs: '#3b3b46', hair: '#5b3a1a', tie: '#d92b2b', props: ['megaphone'] } },
   // ---- Architect ----
   { id: 'architect', role: 2, name: 'Architect', price: 20, tag: 'Designs the bridge on a blue blueprint first.', look: { torso: '#3b3b46', legs: '#26262e', hat: 'beret', hatc: '#7b3fa0', glasses: 'round', props: ['roll'] } },
