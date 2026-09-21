@@ -338,8 +338,8 @@ function draw() {
   else if (gameState === "skillSelect") drawSkillSelectScreen();
   else if (gameState === "shop") drawShopScreen();
   else if (gameState === "play") {
-      // Check if we hit 100 points on easy mode to trigger the popup
-      if (score >= 100 && gameMode === "easy" && !maxVelocityPromptShown) {
+      // (The Maximum Velocity unlock popup used to appear at 100 points; the mode is now unlocked only by FINISHING Street Racing, so it is shown on the win screen instead.)
+      if (false && score >= 100 && gameMode === "easy" && !maxVelocityPromptShown) {
           maxVelocityPromptShown = true;
           gameState = "maxVelocityPrompt";
           playSound("sound://category_achievements/puzzle_game_secret_unlock_01.mp3");
@@ -359,7 +359,7 @@ function draw() {
   else if (gameState === "timeFreezeTip") drawTimeFreezeTip();
   else if (gameState === "maxVelocityPrompt") drawMaxVelocityPrompt();
   else if (gameState === "paused") drawPausedScreen();
-  else if (gameState === "rewinding") drawRewindEffect();
+  else if (gameState === "rewinding" || gameState === "rewindingLegacy") drawRewindEffect();
   else if (gameState === "over") drawGameOver();
   else if (gameState === "unlockPopup") drawUnlockPopup();
   else if (gameState === "winSequence") drawWinSequence();
@@ -395,7 +395,7 @@ function drawStartScreen() {
   var hardLocked = !hasUnlockedHardMode;
 
   drawMenuButton(40, 200, 140, 60, "#27ae60", "STREET RACING");
-  if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", "LOCKED", "(Score 100+ in\nStreet Racing)");
+  if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", "LOCKED", "(Finish Street\nRacing first)");
   else {
     drawMenuButton(220, 200, 140, 60, "#e74c3c", "MAXIMUM\nVELOCITY");
     // Best score in Maximum Velocity - an endless/survival mode with no
@@ -1132,15 +1132,7 @@ function playGame(isFrozen) {
         if (score >= 150) dayPhase = Math.max(0, dayPhase - 0.005);
     }
 
-    if (gameMode === "easy" && score >= 100) {
-      var justUnlockedHard = false;
-      for (var i = 0; i < 6; i++) { if (skillStates[i] && !unlockedHardSkills[i]) { unlockedHardSkills[i] = true; hasUnlockedHardMode = true; justUnlockedHard = true; } }
-      // This block re-runs every frame once score crosses 100 (the guards
-      // above just skip re-setting already-true values) - only save when
-      // something actually changed, not 30 times a second for the rest
-      // of the run.
-      if (justUnlockedHard) saveExponentProgress();
-    }
+    // (Maximum Velocity and its skills are now unlocked only by FINISHING Street Racing - see the win check below - not by reaching a score.)
 
     roadOffset += (activeSpeed * 5 * currentSpeedMult * dir);
     if (roadOffset > 60) roadOffset -= 60; if (roadOffset < -60) roadOffset += 60;
@@ -1271,6 +1263,9 @@ function playGame(isFrozen) {
       if (pLane !== -1) {
        if (fuelOptions[pLane] === answer) { score += 10; fuel = Math.min(fuel + 25, maxFuel); correctAnswersCount++;
           if (score >= 200 && gameMode === "easy") {
+            // Completing Street Racing is what unlocks Maximum Velocity, plus the Maximum Velocity version of every skill played in this run.
+            hasUnlockedHardMode = true;
+            for (var uh = 0; uh < 6; uh++) { if (skillStates[uh]) unlockedHardSkills[uh] = true; }
             gameState = "winSequence"; finishLineY = -100; winCarAccel = 0; engineSoundPlayed = false; speed = 2;
             saveExponentProgress();
             playSound("sound://category_background/f1_race.mp3");
@@ -1790,12 +1785,14 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
           else if (equipped.trail === "purple") { smokeParticles.push({ type: "twinkle", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
           else if (equipped.trail === "gold") { smokeParticles.push({ type: "diamond", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.45, ang: randomNumber(0, 360) }); }
           else if (equipped.trail === "ice") { smokeParticles.push({ type: "snowflake", x: px, y: py, size: randomNumber(10, 16), alpha: 1.0, dy: dy * 0.35, ang: randomNumber(0, 360) }); }
-          else if (equipped.trail === "rainbow" && frameCounter % 12 === 0) {
-            // Tiny color-cycling dots instead of the busier triangle ribbon,
-            // and only spawned on every other emission tick, per feedback
-            // that the triangles were too visually intense.
-            var rbHue = (frameCounter * 6) % 360;
-            smokeParticles.push({ type: "prism", x: px, y: py, size: randomNumber(6, 9), alpha: 1.0, dy: dy * 0.45, hue: rbHue });
+          else if (equipped.trail === "rainbow" && frameCounter % 2 === 0) {
+            // Color-cycling dots, emitted often, in a mix of sizes (tiny specks up to big beads) with a little sideways drift
+            // so the trail looks full and lively instead of evenly spaced.
+            var rbCount = randomNumber(1, 2);
+            for (var rbi = 0; rbi < rbCount; rbi++) {
+              smokeParticles.push({ type: "prism", x: px + randomNumber(-4, 4), y: py + randomNumber(-6, 6), size: randomNumber(3, 15), alpha: 1.0, dy: dy * randomNumber(35, 60) / 100,
+                dx: randomNumber(-8, 8) / 10, hue: (frameCounter * 6 + randomNumber(0, 120)) % 360 });
+            }
           }
           else if (equipped.trail === "bubbles") { smokeParticles.push({ type: "bubbles", x: px, y: py, size: randomNumber(5, 11), alpha: 0.9, dy: dy * 0.6, phase: randomNumber(0, 100) }); }
           else if (equipped.trail === "money") {
@@ -1822,7 +1819,7 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
         else if (p.type === "twinkle") { p.ang += 4; p.alpha -= 0.035; }
         else if (p.type === "diamond") { p.ang += 5; p.alpha -= 0.035; }
         else if (p.type === "snowflake") { p.x += Math.sin(frameCounter * 0.08 + p.ang) * 0.4; p.ang += 2; p.alpha -= 0.03; }
-        else if (p.type === "prism") { p.hue = (p.hue + 4) % 360; p.alpha -= 0.035; }
+        else if (p.type === "prism") { p.hue = (p.hue + 4) % 360; p.alpha -= 0.035; p.x += p.dx || 0; }
         else if (p.type === "bubbles") { p.x += Math.sin(p.phase + p.y * 0.05) * 1.5; p.size += 0.05; p.alpha -= 0.04; }
         else if (p.type === "money") { p.alpha -= 0.03; p.x += p.dx; p.rot += p.rotSpeed; }
         else { p.size += 0.3; p.alpha -= 0.05; }
@@ -1947,9 +1944,14 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
   stroke("black"); strokeWeight(2); fill("white"); rect(-2, -2, 404, 47);
   fill("black"); noStroke(); textAlign(LEFT, CENTER); textSize(20); text("Score: " + score, 10, 23);
   stroke("black"); strokeWeight(1); fill("black"); rect(310, 10, 80, 25);
-  if (fuel > 25) fill("lime"); else if (fuel > 10) fill("yellow"); else { if (Math.floor(frameCounter / 4) % 2 === 0) fill("red"); else fill("white"); }
-  rect(310, 10, (fuel / maxFuel) * 80, 25);
-  noStroke(); fill("black"); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text("FUEL", 350, 24); textStyle(NORMAL);
+  var electricCar = (equipped.boost === "fuelsaver");                          // Electric never uses fuel: a full charge, shown as a lightning bolt
+  if (electricCar) fill("lime"); else if (fuel > 25) fill("lime"); else if (fuel > 10) fill("yellow"); else { if (Math.floor(frameCounter / 4) % 2 === 0) fill("red"); else fill("white"); }
+  rect(310, 10, electricCar ? 80 : (fuel / maxFuel) * 80, 25);
+  if (electricCar) {
+    stroke("black"); strokeWeight(1.5); fill("#ffe14a");
+    beginShape(); vertex(354, 11); vertex(343, 24); vertex(350, 24); vertex(346, 34); vertex(362, 20); vertex(354, 20); vertex(359, 11); endShape(CLOSE);
+    noStroke();
+  } else { noStroke(); fill("black"); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text("FUEL", 350, 24); textStyle(NORMAL); }
   noStroke(); fill("black"); textAlign(CENTER, CENTER);
 
   if (expressionString.indexOf("Identify:") === 0) { textSize(18); drawSupText(expressionString, 200, 23); }
@@ -2519,7 +2521,7 @@ function drawWinScreen() {
     fill("cyan");
     textSize(16);
     textStyle(BOLD);
-    text("Try MAXIMUM VELOCITY for bigger rewards!", 200, 255);
+    text("MAXIMUM VELOCITY UNLOCKED - try it!", 200, 255);
     textStyle(NORMAL);
   }
 
@@ -2676,3 +2678,105 @@ function drawMaxVelocityPrompt() {
     try { playSound("sound://category_achievements/peaceful_win_1.mp3"); } catch (err) {}
   });
 })();
+
+
+// ---------- SECOND CHANCE: REAL REWIND ----------
+// While a run is in progress the game keeps a rolling record of the last 3 seconds (90 frames): where the car was, every
+// obstacle, the question and its answer choices, the road, the scenery... and the state of the game's random-number generator.
+// When Second Chance triggers, those frames are played BACKWARDS on screen (2x speed) so the player watches the last few
+// seconds un-happen, and then play resumes from the start of that window with everything exactly where it was. Because the
+// random numbers are restored too, obstacles behave exactly as they did the first time - the player just has a chance to do
+// something different.
+var RW_MAX_FRAMES = 90;
+var RW_VARS = ["score", "totalCoins", "fuel", "maxFuel", "questionTimeLimit", "speed", "roadOffset", "frameCounter", "moveCooldown", "strikes",
+  "finishLineY", "winCarAccel", "activeShield", "timeFreezeFramesLeft", "usedTimeFreeze", "startSequencePhase", "startTimer", "startLineY",
+  "currentStartSpeed", "playerWater", "playerSand", "roadPatches", "lightningFrames", "lightningPath", "stormPhase", "coinPopupTimer",
+  "coinPopupValue", "coinPopupColor", "correctAnswersCount", "base", "exponent", "answer", "expressionString", "explanationString",
+  "fuelOptions", "fuelY", "zoomFrames", "shakeFrames", "damageFrames", "dayPhase", "lightPoles", "oldBiome", "newBiome", "biomeTransitionY",
+  "currentScoreMilestone", "roadDecorations", "spawnSignNext", "lastSignMessage", "lastPickedAnswer", "lastQuestionString", "pauseTimer",
+  "targetCarX", "targetCarY", "coinActive", "cLane", "correctNumericValue", "wrongAnswersList", "sideTrees", "smokeParticles"];
+var rwHistory = [], rwFrames = [], rwIdx = -1, rwTotal = 0;
+var RW_SPRITE_KEYS = ["x", "y", "width", "height", "velocityX", "velocityY", "targetX", "intentX", "signalTimer", "isMerging", "hasSwerved",
+  "swerveCooldown", "water", "sand", "obsType", "carColor"];
+
+function rwClone(v) { return (v !== null && typeof v === "object") ? JSON.parse(JSON.stringify(v)) : v; }
+
+function rwCapture() {
+  var s = { rng: _rngS, v: {}, obs: [], px: player.x, py: player.y, cx: coinSprite.x, cy: coinSprite.y, cvx: coinSprite.velocityX };
+  for (var i = 0; i < RW_VARS.length; i++) { var k = RW_VARS[i]; if (typeof window[k] !== "undefined") s.v[k] = rwClone(window[k]); }
+  for (var o = 0; o < obstacles.length; o++) {
+    var ob = obstacles.get(o), d = {};
+    for (var j = 0; j < RW_SPRITE_KEYS.length; j++) d[RW_SPRITE_KEYS[j]] = ob[RW_SPRITE_KEYS[j]];
+    s.obs.push(d);
+  }
+  return s;
+}
+
+function rwApply(s) {
+  _rngS = s.rng;
+  for (var k in s.v) window[k] = rwClone(s.v[k]);
+  player.x = s.px; player.y = s.py;
+  coinSprite.x = s.cx; coinSprite.y = s.cy; coinSprite.velocityX = s.cvx;
+  obstacles.destroyEach();
+  for (var i = 0; i < s.obs.length; i++) {
+    var d = s.obs[i], ob = createSprite(d.x, d.y, d.width, d.height);
+    for (var j = 0; j < RW_SPRITE_KEYS.length; j++) ob[RW_SPRITE_KEYS[j]] = d[RW_SPRITE_KEYS[j]];
+    ob.visible = false; obstacles.add(ob);
+  }
+}
+
+// called by the draw() wrapper (exponent-racer-hook.js) at the start of every frame
+window._rwRecord = function () {
+  if (gameState !== "play" || exitConfirmPending) return;
+  rwHistory.push(rwCapture());
+  if (rwHistory.length > RW_MAX_FRAMES) rwHistory.shift();
+};
+
+// starting a new run (or leaving to the menu) forgets the old recording
+var rwLastFrameCounter = -1;
+
+function triggerSecondChanceRewind() {
+  if (rwHistory.length < 8) {                                       // not enough recorded yet: fall back to the old jump-to-question-start
+    var fromX = player.x, fromY = player.y, fromFuelY = fuelY;
+    rewindToQuestionCheckpoint();
+    rewindAnim = { t: 0, total: 50, fromX: fromX, fromY: fromY, toX: player.x, toY: player.y, fromFuelY: fromFuelY, toFuelY: fuelY };
+    gameState = "rewindingLegacy";
+    return;
+  }
+  rwFrames = rwHistory; rwHistory = []; rwIdx = rwFrames.length - 1; rwTotal = rwFrames.length;
+  smokeParticles = []; coinActive = false;
+  gameState = "rewinding";
+}
+
+function drawRewindEffect() {
+  if (gameState === "rewindingLegacy") { drawLegacyRewind(); return; }
+  for (var n = 0; n < 2 && rwIdx >= 0; n++) rwApply(rwFrames[rwIdx--]);       // two recorded frames per screen frame = 2x rewind
+  playGame(true);                                                             // draw the restored moment (no game logic runs)
+
+  // VHS-rewind look on top of the scene
+  fill("rgba(40,70,190,0.22)"); noStroke(); rect(0, 0, 400, 400);
+  stroke("rgba(255,255,255,0.06)"); strokeWeight(1);
+  for (var yy = 0; yy < 400; yy += 4) line(0, yy, 400, yy);
+  noStroke();
+  fill("rgba(0,0,0,0.55)"); rect(0, 46, 400, 34);
+  var pulse = 0.65 + 0.35 * Math.sin(frameCount * 0.6);
+  fill("rgba(255,255,255," + pulse + ")"); textAlign(CENTER, CENTER); textSize(22); textStyle(BOLD);
+  text("⏪ REWINDING  " + (Math.max(0, rwIdx + 1) / 30).toFixed(1) + "s", 200, 63);
+  fill("gold"); textSize(15); text("SECOND CHANCE!", 200, 92);
+  textStyle(NORMAL);
+  fill("rgba(255,255,255,0.25)"); rect(40, 388, 320, 6, 3);
+  fill("gold"); rect(40, 388, 320 * (rwTotal ? Math.max(0, rwIdx + 1) / rwTotal : 0), 6, 3);
+
+  if (rwIdx < 0) { rwFrames = []; gameState = "play"; }                       // everything is back where it was: play on
+}
+
+// the old short "tween back to the question start" cinematic, kept only as a fallback for the very first seconds of a run
+function drawLegacyRewind() {
+  rewindAnim.t++;
+  var frac = Math.min(1, rewindAnim.t / rewindAnim.total);
+  background("#0a0a12"); fill("#181820"); noStroke(); rect(100, 0, 200, 400);
+  var ease = 1 - Math.pow(1 - frac, 3), curX = rewindAnim.fromX + (rewindAnim.toX - rewindAnim.fromX) * ease, curY = rewindAnim.fromY + (rewindAnim.toY - rewindAnim.fromY) * ease;
+  push(); translate(curX, curY); drawVehicle(0, 0, "car", equipped.car, true, "", false, 0, 0); pop();
+  fill("gold"); textAlign(CENTER, CENTER); textSize(30); textStyle(BOLD); text("SECOND CHANCE!", 200, 200); textStyle(NORMAL);
+  if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
+}

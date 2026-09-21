@@ -7,8 +7,20 @@ function setup() {
   var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
     (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
   createCanvas(400, 400).parent('game-canvas-slot');
-  pixelDensity(isTouch ? Math.min(2, displayDensity()) : Math.min(4, displayDensity())); // renders into a sharper-than-400x400 backing buffer so the canvas stays crisp when CSS stretches it up to 700px (desktop) or fullscreen, but never beyond what the actual screen can show or above 2x on touch devices - see bank-shot-angle-golf-shim.js for the same fix (Piggy Bank Math ran laggy on phones until this was capped)
-  frameRate(30); // Game Lab's default frame rate; the game's speed constants were tuned against it
+  pixelDensity(Math.min(2, displayDensity())); // renders into a sharper-than-400x400 backing buffer so the canvas stays crisp when CSS stretches it up to 700px (desktop) or fullscreen, but never beyond what the actual screen can show or above 2x on touch devices - see bank-shot-angle-golf-shim.js for the same fix (Piggy Bank Math ran laggy on phones until this was capped)
+  // The game's speed constants were tuned for Game Lab's 30 frames per second. p5's own frameRate(30) throttle can pace frames
+  // unevenly (some 33 ms, some 50 ms), which feels laggy, so instead p5 is paused and redraw() is called from our own timer,
+  // which carries the leftover time forward so frames land on an even 30 per second.
+  noLoop();
+  (function () {
+    var STEP = 1000 / 30, acc = 0, last = performance.now();
+    function tick(now) {
+      requestAnimationFrame(tick);
+      acc += Math.min(100, now - last); last = now;
+      if (acc >= STEP - 3) { acc = Math.min(acc - STEP, STEP); redraw(); }
+    }
+    requestAnimationFrame(tick);
+  })();
   angleMode(DEGREES); // Game Lab uses degrees everywhere (rotate(), arc() angles), unlike plain p5.js's radians default
 }
 // Per-frame bookkeeping (sprite velocity, input edge-detection) is wired up
@@ -19,8 +31,17 @@ var oldBgColor = [0, 128, 0];
 var newBgColor = [0, 128, 0];
 
 // ---- randomNumber(min, max): inclusive integer random, Game Lab style ----
+// Uses a small seeded generator (mulberry32) instead of Math.random(), so its state can be saved and restored:
+// Second Chance rewinds the game and replays the last 3 seconds with exactly the same "random" events as before.
+var _rngS = (Math.random() * 4294967296) >>> 0;
+function _rng() {
+  _rngS = (_rngS + 0x6D2B79F5) | 0;
+  var t = Math.imul(_rngS ^ (_rngS >>> 15), 1 | _rngS);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 function randomNumber(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(_rng() * (max - min + 1)) + min;
 }
 
 // ---- Minimal sprite/group system ----
