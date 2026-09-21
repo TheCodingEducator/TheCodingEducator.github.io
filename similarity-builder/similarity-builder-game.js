@@ -955,7 +955,7 @@ function startSolve() {
   if (P.level === 4) txt += ` <span style="color:#5b6485">Same tick marks = same length.</span>`;
   $('pPrompt').innerHTML = txt;
   $('pairWrap').innerHTML = pairSVG(P, false);
-  $('ansLbl').textContent = P.type === 'scale' ? 'Scale factor ×' : '? =';
+  $('ansLbl').textContent = P.type === 'scale' ? 'k =' : '? =';
   $('ansUnit').style.display = P.type === 'scale' ? 'none' : '';
   $('hintBox').classList.add('hidden');
   $('btnHint').disabled = false;
@@ -1742,7 +1742,7 @@ const TITLE_SHAPES = [
 ];
 const TITLE_KS = [2, 3, 4, 3, 2];
 const titleCv = $('titleCv'), tg = titleCv.getContext('2d');
-let titleRaf = 0, titleT = 0, titleLast = 0;
+let titleRaf = 0, titleT = 0, titleLast = 0, titleChar = null;         // titleChar: a different random crew member each time the title screen opens
 const easeIO = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
 function titlePoly(g, pts, ox, oy, s, rot) {
   g.beginPath();
@@ -1866,10 +1866,11 @@ function drawTitle() {
   tg.globalAlpha = Math.max(0, Math.min(1, (470 - cone) / 40, (cone + 200) / 60));
   drawTitleObs(tg, TITLE_OBS[Math.floor(t * 260 / 760) % TITLE_OBS.length], cone, GY);          // a different obstacle each time round
   tg.fillStyle = 'rgba(0,0,0,.25)'; tg.beginPath(); tg.globalAlpha = 1; tg.ellipse(RX, GY + 3, Math.max(6, 22 - jh / 4), 5, 0, 0, 7); tg.fill();
-  drawChar(tg, RX, GY - jh, currentChar(), { ph: t * 14, running: jh < 2, air: jh >= 2 });
+  drawChar(tg, RX, GY - jh, titleChar || currentChar(), { ph: t * 14, running: jh < 2, air: jh >= 2 });
 }
 function startTitleAnim() {
   if (titleRaf) return;
+  titleChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
   titleLast = performance.now();
   const loop = now => { titleRaf = requestAnimationFrame(loop); const dt = Math.min(.05, (now - titleLast) / 1000); titleLast = now; titleT += dt; try { drawTitle(); } catch (e) {} };
   titleRaf = requestAnimationFrame(loop);
@@ -1942,27 +1943,34 @@ addEventListener('keydown', e => {
     if (vis('feedback')) { e.preventDefault(); if (!e.repeat && cardAge > 350) $('btnNext').click(); return; }
     if (vis('over')) { e.preventDefault(); if (!e.repeat && cardAge > 700) $('btnAgain').click(); return; }
   }
-  // Menu screen: 1 = Bridge Run, 2 = Practice, 3 = Shop.  Practice screen: 1-5 tick/untick a question type, Enter starts.
-  if (screen === 'menu' && !vis('shop')) {
-    if (e.key === '1') { e.preventDefault(); $('btnStart').click(); return; }
-    if (e.key === '2') { e.preventDefault(); $('btnPractice').click(); return; }
-    if (e.key === '3') { e.preventDefault(); $('btnShop').click(); return; }
-  }
-  if (screen === 'practice' && !vis('shop')) {
-    const k = +e.key, cards = document.querySelectorAll('#ptypes .ptype');
-    if (k >= 1 && k <= cards.length) { e.preventDefault(); cards[k - 1].click(); return; }
-    if (enter && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); $('btnPracStart').click(); return; }
-  }
-  // arrow keys move between the buttons of whichever screen or card is open (Tab works too)
+  // Arrow keys jump to the nearest button in that direction (Tab works too); Enter / Space press the focused button
   if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.code) && (screen !== 'play' || vis('shop') || vis('pause') || vis('over') || vis('feedback'))) {
     const ov = ['shop', 'pause', 'over', 'feedback', 'practice', 'menu'].map($).find(el => !el.classList.contains('hidden'));
     if (ov) {
-      const btns = [...ov.querySelectorAll('button:not(:disabled)')].filter(b => b.offsetParent !== null), at = btns.indexOf(document.activeElement);
-      if (btns.length) { e.preventDefault(); const dir = (e.code === 'ArrowRight' || e.code === 'ArrowDown') ? 1 : -1; btns[(at + dir + btns.length) % btns.length].focus(); }
-      return;
+      e.preventDefault();
+      const btns = [...ov.querySelectorAll('button:not(:disabled)')].filter(b => b.offsetParent !== null), cur = document.activeElement;
+      if (!btns.length) return;
+      if (!btns.includes(cur)) { btns[0].focus(); return; }
+      const c = cur.getBoundingClientRect(), dir = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[e.code];
+      let best = null, bestScore = Infinity;
+      for (const b of btns) {
+        if (b === cur) continue;
+        const r = b.getBoundingClientRect();
+        // distance along the pressed direction (from edge to edge), and how far off to the side the button is
+        const along = dir[0] ? (dir[0] > 0 ? r.left - c.right : c.left - r.right) : (dir[1] > 0 ? r.top - c.bottom : c.top - r.bottom);
+        const centerAlong = dir[0] ? (r.left + r.width / 2 - (c.left + c.width / 2)) * dir[0] : (r.top + r.height / 2 - (c.top + c.height / 2)) * dir[1];
+        if (along < 0 || centerAlong <= 2) continue;                                // not in that direction (it has to be past the edge of this button)
+        const overlap = dir[0] ? Math.min(c.bottom, r.bottom) - Math.max(c.top, r.top) : Math.min(c.right, r.right) - Math.max(c.left, r.left);
+        const side = overlap > 0 ? 0 : (dir[0] ? Math.min(Math.abs(r.top - c.bottom), Math.abs(c.top - r.bottom)) : Math.min(Math.abs(r.left - c.right), Math.abs(c.left - r.right)));
+        const cross = dir[0] ? Math.abs((r.top + r.height / 2) - (c.top + c.height / 2)) : Math.abs((r.left + r.width / 2) - (c.left + c.width / 2));
+        const score = Math.max(0, along) + side * 3 + cross * .4 + (overlap > 0 ? 0 : 40);       // buttons in the same row / column win
+        if (score < bestScore) { bestScore = score; best = b; }
+      }
+      if (best) best.focus();
     }
+    return;
   }
-  if (screen !== 'play') return;
+  if (screen !== 'play') return;  if (screen !== 'play') return;
   if (paused) return;
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
   const isJumpKey = ['Space', 'ArrowUp', 'KeyW', 'Enter', 'NumpadEnter'].includes(e.code) || e.key === 'Enter';

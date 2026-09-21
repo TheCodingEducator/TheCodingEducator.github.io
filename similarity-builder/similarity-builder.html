@@ -353,6 +353,7 @@
   #sb .tile .startsHead { font-size:12.5px; }
   #sb .tile .start { font-size:13px; padding:6px 9px; }
   #sb .tile .skin { font-size:12px; padding:4px 8px; }
+  #sb #pPrompt { font-size:clamp(20px,3.6vw,26px); font-weight:800; text-align:center; margin:4px 0 8px; line-height:1.25; }
   #sb .kbd { display:inline-block; min-width:22px; padding:0 6px; margin-left:6px; border-radius:6px; background:rgba(255,255,255,.28); font-size:.8em; line-height:1.5; }
   #sb .kbdHint { font-size:12.5px; color:var(--muted); margin:8px 0 0; text-align:center; }
   #sb button:focus-visible { outline:4px solid #1d2340; outline-offset:2px; box-shadow:0 0 0 7px #ffd23f; }
@@ -459,22 +460,22 @@
           <div class="tile">
             <h3>&#127939; Bridge Run</h3>
             <p>Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn coins &mdash; the farther the better.</p>
-            <button class="btn" id="btnStart">Start Running! <span class="kbd">1</span></button>
+            <button class="btn" id="btnStart">Start Running!</button>
             <div id="menuStarts"></div>
           </div>
           <div class="tile">
             <h3>&#127891; Practice</h3>
             <p><b>No obstacles, no hearts.</b> Choose exactly which kinds of questions you want to work on &mdash; as many as you like.</p>
-            <button class="btn alt" id="btnPractice">Choose questions <span class="kbd">2</span></button>
+            <button class="btn alt" id="btnPractice">Choose questions</button>
           </div>
           <div class="tile">
             <h3>&#128717; Crew Shop</h3>
             <p>Spend the coins you earn from correct answers to hire a bridge-building crew, then run as them.</p>
-            <button class="btn ghost" id="btnShop" style="font-size:17px">Open the Shop <span class="kbd">3</span></button>
+            <button class="btn ghost" id="btnShop" style="font-size:17px">Open the Shop</button>
           </div>
         </div>
         <button class="btn ghost" id="btnMenuBack">&larr; Title screen</button>
-        <p class="kbdHint">Keyboard: <b>1</b> <b>2</b> <b>3</b> pick a tile &middot; arrow keys move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
+        <p class="kbdHint">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
       </div></div>
 
       <!-- Practice setup -->
@@ -555,7 +556,7 @@
     <li><strong>A title screen and a menu.</strong> The game opens on an animated title screen where a small figure is dilated into a larger similar one - dashed rays through matching corners and a "&times; 3" or "&divide; 3" pill - while the runner hops obstacles. Play leads to the Menu screen, the one place to start a Bridge Run, open Practice, or visit the Crew Shop.</li>
     <li><strong>Shaped holes.</strong> About half of the gaps are holes in the ground cut in the exact outline of the figure, upside down, so the figure's flat base is the bridge deck at ground level and the rest of the figure hangs down into the hole. The picture slides down to show the whole hole while the student works. A correct answer makes the figure fit its hole exactly; a wrong one leaves a gap or snaps. If time runs out, no bridge is built at all and the runner walks off the edge.</li>
     <li><strong>Moves, not just jumps.</strong> From level 2 on, longer challenges ask the student to change where they are: hop onto a high platform to get over a long wall of red tape, double-jump to a very high platform to cross a long stretch of unstable soil, stay low under a very long power line or storm cloud, or time a row of loose pipes. There is no ceiling, so a high double jump can go right off the top of the screen. Every layout always has a way through.</li>
-    <li><strong>Keyboard-friendly.</strong> The whole game can be played without a mouse: Enter or Space starts, jumps, and carries on past the "Oops" and end-of-run cards; the number keys pick tiles on the Menu and question types in Practice; the arrow keys and Tab move between buttons; Esc goes back or pauses.</li>
+    <li><strong>Keyboard-friendly.</strong> The whole game can be played without a mouse: Enter or Space starts, jumps, and carries on past the "Oops" and end-of-run cards; the arrow keys move to the nearest button in that direction (Tab works too); Esc goes back or pauses.</li>
     <li><strong>Missed questions come back as pictures.</strong> The end-of-run and Practice summary cards show each missed question as the two labeled figures with the scale-factor arrow, next to the answer that was typed and the right answer.</li>
     <li><strong>Timed, but forgiving.</strong> Each question has a countdown that tightens slightly on later levels, and a Hint button reminds students of the method without giving the answer. A Menu button (or the Esc key) pauses the whole game at any time, including mid-question.</li>
     <li><strong>Level checkpoints, so one bad run isn't a setback.</strong> A new level unlocks every 1000 m (level 2 at 1000 m, level 3 at 2000 m, level 4 at 3000 m). Each time a student reaches one, the game remembers the level and the distance. The Menu screen and the end-of-run screen both list every level with the distance a new run would start at - for example "Level 2 &middot; 473 m" - with levels not yet reached shown locked. Picking one starts at the beginning of that level with the same distance and bridge count and three fresh hearts, instead of starting over from level 1. These checkpoints are saved in the student's own browser. That keeps students practicing at the level that challenges them rather than re-doing material they have already shown they can handle.</li>
