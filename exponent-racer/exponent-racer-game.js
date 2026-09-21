@@ -251,6 +251,7 @@ function drawSupText(str, x, y, hAlign, vAlign, circleType, circleStroke, circle
     text(seg.text, cursorX, segY);
     layout[s].left = cursorX;
     layout[s].centerY = (vAlign === TOP) ? (segY + layout[s].size * TOP_ALIGN_CENTER_OFFSET_RATIO) : segY;
+    if (seg.isSup) layout[s].centerY -= layout[s].size * 0.065;   // the raised digits' ink sits a touch above the text position - centre the circle on the ink itself
     cursorX += layout[s].width;
   }
 
@@ -270,18 +271,26 @@ function drawSupText(str, x, y, hAlign, vAlign, circleType, circleStroke, circle
     var baseCenterX = baseSeg.left + baseSeg.width / 2;
     var expCenterX = expSeg.left + expSeg.width / 2;
 
+    // Circles hug the digits: sized from each digit's actual ink height and width plus a small even margin, so it is clear
+    // exactly which number is circled (the base circle stops right at the base, the exponent circle sits only around the exponent).
+    var PAD = 4;
+    function digitCircle(seg, cx, dW) {
+      var inkH = seg.size * DIGIT_INK_HEIGHT_RATIO + PAD * 2;
+      var inkW = Math.max(seg.width, seg.size * DIGIT_INK_HEIGHT_RATIO) + PAD * 2 + (dW || 0);
+      ellipse(cx, seg.centerY, inkW, inkH);
+    }
     if (circleType === "B") {
-      ellipse(baseCenterX, baseSeg.centerY, baseSeg.width * 1.5, baseSeg.size * 1.05);
+      digitCircle(baseSeg, baseCenterX - 0.5, -1);        // trimmed on the right so it does not run into the exponent
     } else if (circleType === "E") {
-      ellipse(expCenterX, expSeg.centerY, expSeg.width * 1.7, expSeg.size * 1.3);
+      digitCircle(expSeg, expCenterX);
     } else if (circleType === "P") {
+      // one ellipse just big enough to enclose both digits (base at lower left, raised exponent at upper right)
       var baseInkHalf = (baseSeg.size * DIGIT_INK_HEIGHT_RATIO) / 2;
       var expInkHalf = (expSeg.size * DIGIT_INK_HEIGHT_RATIO) / 2;
-      var top = expSeg.centerY - expInkHalf;
-      var bottom = baseSeg.centerY + baseInkHalf;
-      var pCenterX = startX + totalWidth / 2;
-      var pCenterY = (top + bottom) / 2;
-      ellipse(pCenterX, pCenterY, totalWidth * 1.2, (bottom - top) * 1.25);
+      var top = expSeg.centerY - expInkHalf - PAD;
+      var bottom = baseSeg.centerY + baseInkHalf + PAD;
+      var left = baseSeg.left - PAD, right = expSeg.left + expSeg.width + PAD;
+      ellipse((left + right) / 2, (top + bottom) / 2, (right - left) * 1.3, (bottom - top) * 1.3);
     }
     pop();
   }
@@ -2056,6 +2065,7 @@ function drawPausedScreen() {
 
   var topY = 55; var bottomY = 340;
   var h1 = 30; var h2 = 22; var h3_left = 20 + (pickedIsFraction ? 54 : 22); var h3_right = 20 + (correctIsFraction ? 54 : 22); var h3 = Math.max(h3_left, h3_right);
+  var vExtra = (pIsVocab || cIsVocab) ? 12 : 0; h3 += vExtra;   // circled base/exponent/power answers sit lower so their circles never touch the "Your Answer" / "Correct Answer" labels
   var h4 = explanationString.split('\n').length * 18; if (explanationString.indexOf("A negative exponent flips") === 0) h4 = 80;
   var h5 = 14;
   var totalContentHeight = h1 + h2 + h3 + h4 + h5; var gap = (bottomY - topY - totalContentHeight) / 4;
@@ -2073,14 +2083,14 @@ function drawPausedScreen() {
   if (pickedIsFraction) {
     var pParts = pAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(pParts[0], 100, leftY, CENTER, TOP); stroke("white"); strokeWeight(2); line(90, leftY + 22, 110, leftY + 22); noStroke(); drawSupText(pParts[1], 100, leftY + 35, CENTER, TOP); leftY += 60;
   } else if (pIsVocab) {
-    fill("white"); textSize(22); drawSupText(pAns, 100, leftY, CENTER, TOP, pCircleType); noStroke(); leftY += 30;
+    fill("white"); textSize(22); drawSupText(pAns, 100, leftY + vExtra, CENTER, TOP, pCircleType); noStroke(); leftY += 30;
   } else { fill("white"); textSize(22); drawSupText(pAns, 100, leftY, CENTER, TOP); leftY += 30; }
 
   fill("lime"); textSize(18); textStyle(BOLD); text("Correct Answer:", 300, rightY); textStyle(NORMAL); rightY += 20;
   if (correctIsFraction) {
     var cParts = cAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(cParts[0], 300, rightY, CENTER, TOP); stroke("white"); strokeWeight(2); line(290, rightY + 22, 310, rightY + 22); noStroke(); drawSupText(cParts[1], 300, rightY + 35, CENTER, TOP); rightY += 60;
   } else if (cIsVocab) {
-    fill("white"); textSize(22); drawSupText(cAns, 300, rightY, CENTER, TOP, cCircleType); noStroke(); rightY += 30;
+    fill("white"); textSize(22); drawSupText(cAns, 300, rightY + vExtra, CENTER, TOP, cCircleType); noStroke(); rightY += 30;
   } else { fill("white"); textSize(22); drawSupText(cAns, 300, rightY, CENTER, TOP); rightY += 30; }
 
   currentY += h3 + gap;

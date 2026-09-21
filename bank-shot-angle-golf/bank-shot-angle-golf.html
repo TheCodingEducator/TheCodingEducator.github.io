@@ -331,6 +331,15 @@
   }
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // Escape must not leave fullscreen: while in real fullscreen, ask the browser (Chrome/Edge Keyboard Lock) to hand Escape to the page.
+  // Players leave with the Exit Fullscreen button; (the browser itself still allows holding Escape for about 2 seconds as a safety exit).
+  document.addEventListener('fullscreenchange', function () {
+    try {
+      if (!navigator.keyboard) return;
+      if (document.fullscreenElement) navigator.keyboard.lock(['Escape']).catch(function () {});
+      else navigator.keyboard.unlock();
+    } catch (e) {}
+  });
 </script>
 </body>
 </html>

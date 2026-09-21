@@ -17,7 +17,17 @@ function setup() {
     function tick(now) {
       requestAnimationFrame(tick);
       acc += Math.min(100, now - last); last = now;
-      if (acc >= STEP - 3) { acc = Math.min(acc - STEP, STEP); redraw(); }
+      if (acc >= STEP - 3) { acc = Math.min(acc - STEP, STEP); fitDensity(); redraw(); }
+    }
+    // Keep the picture sharp: the backing buffer gets enough pixels for the size the canvas is actually shown at (CSS size x screen
+    // scaling), rather than a fixed 1x-2x - on a normal monitor a 400px buffer stretched to about 700px or fullscreen looked fuzzy.
+    // Capped at 3x (2x on touch devices) so it never costs much speed.
+    var dens = 0, lastCss = 0;
+    function fitDensity() {
+      var c = document.querySelector('canvas'); if (!c) return;
+      var css = c.clientWidth; if (!css || css === lastCss) return; lastCss = css;
+      var want = Math.min(isTouch ? 2 : 3, Math.max(1, Math.ceil(css * (window.devicePixelRatio || 1) / 400 - 0.05)));
+      if (want !== dens) { dens = want; pixelDensity(want); }
     }
     requestAnimationFrame(tick);
   })();

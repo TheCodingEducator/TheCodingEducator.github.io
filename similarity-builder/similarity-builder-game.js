@@ -1774,6 +1774,14 @@ function drawRunner() {
 
 function draw() {
   const T = themeNow();
+  // keep the picture sharp: the canvas buffer gets enough pixels for the size it is really shown at (capped at 3x), and everything is
+  // still drawn in 960x540 units
+  const cssW = cv.clientWidth;
+  if (cssW) {
+    const k = Math.min(3, Math.max(1, Math.ceil(cssW * (window.devicePixelRatio || 1) / W - 0.05)));
+    if (cv.width !== W * k) { cv.width = W * k; cv.height = H * k; }
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+  }
   ctx.save();
   if (G.shake > 0) ctx.translate((Math.random() - .5) * 8, (Math.random() - .5) * 8);
   drawSky(T);
