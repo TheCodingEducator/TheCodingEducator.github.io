@@ -135,14 +135,14 @@ const SHAPES = {
 /* ---- LEVEL SETTINGS (edit these!) ----
    Level 1: find the SCALE FACTOR between two dilated figures (triangles and rectangles only, scale factor 1-3)
    Level 2: multiply OR divide to find a missing side (bigger or smaller figure)   scale factor 2-4, small numbers
-   Level 3: multiply OR divide, figure rotated/reflected                          scale factor 2-5, bigger friendly numbers (multiples of 5 and 10)
+   Level 3: multiply OR divide, figure rotated/reflected                          scale factor 2-5, friendly numbers (multiples of 5, biggest side 100)
    Level 4: like level 3, but some sides are NOT labeled - use tick marks / the shape's name (square, rhombus, rectangle...) */
 const MAX_LEVEL = 4;
 const K_BY_LEVEL = [[1, 2, 3], [2, 3, 4], [2, 3, 4, 5], [2, 3, 4, 5]];
 const TYPE_BY_LEVEL = [['scale'], ['up', 'down'], ['up', 'down'], ['up', 'down']];
-const UNIT_BY_LEVEL = [[1], [1], [5, 10], [5, 10]];                     // every side is multiplied by one of these
+const UNIT_BY_LEVEL = [[1], [1], [5], [5, 10]];                        // every side is multiplied by one of these
 const MAX_SMALL_SIDE = [10, 12, Infinity, Infinity];                    // keeps the numbers easy on the early levels
-const MAX_BIG_SIDE = [40, 48, 250, 250];
+const MAX_BIG_SIDE = [40, 48, 100, 250];
 // which shapes can appear at each level (a name listed twice shows up twice as often)
 const SHAPES_BY_LEVEL = [
   ['tri', 'rect'],
@@ -391,13 +391,19 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 let G = null;
 const keys = {};
 
-function newWorld(menu) {
+// cp (optional) = a checkpoint {level, px, solved, wrong, bestStreak} saved when that level was reached: the new run
+// starts at that level, at that distance, with the same bridges-built count, and with a fresh set of 3 hearts.
+function newWorld(menu, cp) {
+  const lv = cp ? cp.level : 1, x0 = cp ? cp.px : 60;
+  const runLen = Math.round(4000 * SPEED_BY_LEVEL[lv - 1]);           // the same ~11 s of quiet running the very first level gets
   return {
-    state: menu ? 'menu' : 'run', t: 0, cam: 0, px: menu ? 0 : 60, py: GROUND, vy: 0, onGround: true,
+    state: menu ? 'menu' : 'run', t: 0, cam: 0, px: menu ? 0 : x0, py: GROUND, vy: 0, onGround: true,
     jumpBuf: 0, airJumps: 0, stumble: 0, inv: 0, crashed: false, shake: 0,
-    lives: 3, streak: 0, bestStreak: 0, solved: 0, wrong: 0,
-    level: 1, theme: 0, dist: 0, missed: [],
-    platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true } : makePlatform(-400, 3600, true)],
+    lives: 3, streak: 0, bestStreak: cp ? cp.bestStreak : 0, solved: cp ? cp.solved : 0, wrong: cp ? cp.wrong : 0,
+    level: lv, theme: cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, dist: 0, missed: [],
+    checkpoints: [],                                                    // one entry per level reached this run (see onBridgeBuilt)
+    platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
+      : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, lv)],
     pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, hint: false, tipT: 0
   };
 }
@@ -423,7 +429,8 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
   p.obs = kept.slice();
   const [gMin, gMax] = SPACING_BY_LEVEL[level - 1];
   // nothing appears for the first 3 seconds: the first obstacle enters the screen after ~3.1 s (start x=60, speed 330 px/s, screen shows 720 px ahead)
-  let x = kept.length ? kept[kept.length - 1].x + rnd(gMin, gMax) : Math.max(p.s + (first ? 2200 : 340), keepX === null ? 0 : keepX + 40);
+  // (faster levels cover the same 720 px sooner, so the quiet start is stretched by the level's speed to stay a full 3 s)
+  let x = kept.length ? kept[kept.length - 1].x + rnd(gMin, gMax) : Math.max(p.s + (first ? Math.round(2200 * SPEED_BY_LEVEL[level - 1]) : 340), keepX === null ? 0 : keepX + 40);
   let lastFly = kept.length ? !!kept[kept.length - 1].fly : false;
   const fresh = [];
   while (x < p.e - 300) {
@@ -468,12 +475,17 @@ function ensureNext() {
   }
 }
 
-function startGame() {
-  G = newWorld(false);
-  G.tipT = 4;
+// startGame()            = a brand-new run from level 1
+// startGame(cp, earlier) = continue from a level reached earlier: same level and distance, 3 fresh hearts.
+//                          `earlier` = the checkpoints up to and including cp, so those levels stay available if you lose again.
+function startGame(cp, earlier) {
+  G = newWorld(false, cp);
+  G.checkpoints = earlier ? earlier.slice() : [];
+  G.tipT = cp ? 0 : 4;
   $('menu').classList.add('hidden'); $('over').classList.add('hidden');
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
-  audioInit(); toast('Run! Jump obstacles — a crash costs a ❤️', '');
+  audioInit();
+  toast(cp ? `Level ${cp.level} · continuing from ${Math.floor(cp.px / 30)} m` : 'Run! Jump obstacles — a crash costs a ❤️', '');
 }
 
 /* ===================== AUDIO ===================== */
@@ -588,6 +600,8 @@ function onBridgeBuilt() {
     G.theme = Math.floor(G.solved / 6) % THEMES.length;
     if (G.theme !== oldTheme || G.level !== oldLevel)                // platforms ahead get the new theme's obstacles at the new density
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
+    if (G.level !== oldLevel)                                        // remember where each new level was reached, so a lost run can continue from here
+      G.checkpoints.push({ level: G.level, px: G.px, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
     const up = G.level !== oldLevel ? ` · Level ${G.level}: faster + more obstacles!` : '';
     toast((b.P.type === 'scale' ? `Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`
       : `${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`) + up, 'good'); sfx.good();
@@ -644,6 +658,16 @@ function gameOver() {
   $('ovReview').innerHTML = uniq.length ? `<p style="text-align:left;font-weight:800;margin-bottom:2px">📝 Missed:</p><div class="review">` +
     uniq.map(P => `<div>${stepsHTML(P)} <span style="color:#c33">${P.timedOut ? '⏱' : '❌ ' + ansText(P, P.userAns)}</span></div>`).join('') + `</div>`
     : `<p>🎉 No missed math problems!${G.crashed ? ' Watch out for obstacles next time.' : ''}</p>`;
+  // one button per level reached this run (level 1 is just "Run again"): same level, same distance, fresh hearts
+  const list = G.checkpoints.slice();
+  $('ovContinue').innerHTML = list.length
+    ? `<p style="font-weight:800;margin:10px 0 2px">↩ Or continue where you unlocked a level:</p>` +
+      list.map((c, i) => `<button type="button" class="btn alt" data-cp="${i}">Level ${c.level} · ${Math.floor(c.px / 30)} m</button>`).join('')
+    : '';
+  $('ovContinue').onclick = e => {
+    const b = e.target.closest('button[data-cp]'); if (!b) return;
+    const i = +b.dataset.cp; buildMenu(); startGame(list[i], list.slice(0, i + 1));
+  };
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
   $('over').classList.remove('hidden');
 }
@@ -769,7 +793,7 @@ function update(dt) {
 
 /* ===================== DRAWING ===================== */
 function hash(n) { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); }
-function themeNow() { return THEMES[G.theme]; }
+function themeNow() { return THEMES[G.theme] || THEMES[0]; }         // (never let an odd theme value stop the drawing)
 
 function drawSky(T) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -1062,7 +1086,7 @@ addEventListener('keydown', e => {
 });
 $('stage').addEventListener('pointerdown', e => { audioInit(); jump(); });
 $('jumpBtn').addEventListener('pointerdown', e => { e.stopPropagation(); audioInit(); jump(); });
-$('btnStart').onclick = startGame;
+$('btnStart').onclick = () => startGame();          // (an arrow, so the click event isn't passed in as a checkpoint)
 $('btnAgain').onclick = () => { buildMenu(); startGame(); };
 $('btnBuild').onclick = () => submit();
 $('btnNext').onclick = respawn;
@@ -1122,7 +1146,7 @@ function buildLevelsPage() {
   const NOTE = [
     'Both figures show all their sides. Small numbers.',
     'Scale factor is given; the missing side is spotlighted. Mixes multiplying and dividing. Small numbers.',
-    'No arrows and no scale factor shown: all sides of both shapes are given except the missing one, so you find the factor yourself. Big figure is always turned (90°, 180° or 270°) and sometimes flipped. Numbers are multiples of 5 or 10.',
+    'No arrows and no scale factor shown: all sides of both shapes are given except the missing one, so you find the factor yourself. Big figure is always turned (90°, 180° or 270°) and sometimes flipped. Numbers are multiples of 5 (biggest side 100).',
     'Like level 3, but equal sides are only labeled once (tick marks show which are equal). Uses the shape name: square, rectangle, rhombus…'
   ];
   for (let lv = 1; lv <= MAX_LEVEL; lv++) {
@@ -1155,5 +1179,5 @@ requestAnimationFrame(frame);
 }
 
 // small hook (used for automated checks and by the Reset Progress button to avoid re-saving)
-window.BBR = { step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame, solutionHTML, figSVG, fmt };
+window.BBR = { step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
 })();

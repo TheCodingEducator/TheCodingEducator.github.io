@@ -308,6 +308,7 @@
   #bbr .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:10px 0; }
   #bbr .stats div { background:#f4f7ff; border-radius:12px; padding:8px; text-align:center; font-size:14px; color:var(--ink); }
   #bbr .stats b { display:block; font-size:24px; color:var(--accent); }
+  #bbr #ovContinue .btn { display:block; width:100%; margin:6px 0; font-size:17px; padding:9px 14px; }
 
   /* Teacher view (?levels) - same look as the game, but shown as a normal page */
   #lv { max-width:1000px; margin:0 auto; padding:64px 16px 32px; color:#1d2340; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; }
@@ -411,8 +412,9 @@
       <div id="over" class="overlay hidden"><div class="card center">
         <h2 id="ovTitle">&#127937; Run over!</h2>
         <div class="stats" id="ovStats"></div>
-        <div id="ovReview"></div>
+        <div id="ovContinue"></div>
         <button class="btn" id="btnAgain">Run again</button>
+        <div id="ovReview"></div>
       </div></div>
     </div>
   </div>
@@ -435,13 +437,14 @@
   <h2>Teaching Notes for Educators</h2>
   <p>Bridge Builder Runner is built around one skill: given two similar figures, find the scale factor and use it to find an unknown side length. Every gap in the canyon is one of these problems, and the answer the student types is literally the size the bridge gets built at - so the math decides whether the runner crosses or falls.</p>
   <ul>
-    <li><strong>Four levels that build the skill step by step.</strong> Level 1 asks only for the scale factor between two dilated shapes (1 to 3, triangles and rectangles). Level 2 gives the factor and mixes multiplying and dividing to find a missing side (factors 2 to 4, seven shape types, small numbers) with the missing side spotlighted. Level 3 removes every hint - no arrows and no scale factor shown, just both shapes' side lengths with one missing - so students must find the factor themselves from a visible pair, on shapes that are turned and flipped, with bigger numbers (multiples of 5 and 10). Level 4 adds the reasoning step: only one number is shown for each group of equal sides, so students use tick marks and what they know about squares, rectangles, parallelograms, rhombuses, and isosceles and equilateral triangles to work out the sides that aren't labeled.</li>
+    <li><strong>Four levels that build the skill step by step.</strong> Level 1 asks only for the scale factor between two dilated shapes (1 to 3, triangles and rectangles). Level 2 gives the factor and mixes multiplying and dividing to find a missing side (factors 2 to 4, seven shape types, small numbers) with the missing side spotlighted. Level 3 removes every hint - no arrows and no scale factor shown, just both shapes' side lengths with one missing - so students must find the factor themselves from a visible pair, on shapes that are turned and flipped, with round numbers (multiples of 5, nothing bigger than 100). Level 4 adds the reasoning step: only one number is shown for each group of equal sides, so students use tick marks and what they know about squares, rectangles, parallelograms, rhombuses, and isosceles and equilateral triangles to work out the sides that aren't labeled.</li>
     <li><strong>Correct sides are color-matched.</strong> Corresponding sides share a color across the two figures, including after the bigger figure is rotated or flipped, so students match sides by position in the figure instead of by where they happen to sit on the screen.</li>
     <li><strong>Whole numbers only.</strong> Every side length and scale factor is a whole number and the answer box only accepts whole numbers, keeping the focus on the proportional reasoning rather than on decimal or fraction arithmetic.</li>
     <li><strong>Right and wrong have a visible consequence.</strong> The bridge is built to the scale of the answer that was typed: a bridge that is too small buckles under the runner, one that is too large snaps in the middle, and either way the runner drops into the gap and loses a heart. It is a direct picture of what an incorrect scale factor does to a figure.</li>
     <li><strong>Mistakes become worked examples.</strong> After a wrong answer, the same two figures come back with every side labeled and a color-matched curved arrow on each side showing the multiplication (or division) by the scale factor - a picture of the calculation, not a wall of text.</li>
     <li><strong>An action game around the math.</strong> Between puzzles the student runs about ten seconds, jumping rocks, logs, cones, and low-flying birds and drones, using a double jump and floating platforms. Every four correct answers the runner speeds up and the obstacles get denser, so success in the math is rewarded with a harder, faster run.</li>
     <li><strong>Timed, but forgiving.</strong> Each question has a countdown that tightens slightly on later levels, and a Hint button reminds students of the method without giving the answer. A Menu button (or the Esc key) pauses the whole game at any time, including mid-question.</li>
+    <li><strong>Level checkpoints, so one bad run isn't a setback.</strong> Each time a student reaches a new level, the game remembers the level and the distance. When the run ends, they can pick "Level 2 &middot; 473 m" (or any level they reached) and continue from the start of that level with the same distance and bridge count and three fresh hearts, instead of starting over from level 1. That keeps students practicing at the level that challenges them rather than re-doing material they have already shown they can handle.</li>
     <li><strong>Low-stakes and replayable.</strong> No accounts and unlimited runs. Three hearts per run, a saved personal best distance, and runners to unlock as that best grows - all stored only in the student's own browser.</li>
   </ul>
 </section>
