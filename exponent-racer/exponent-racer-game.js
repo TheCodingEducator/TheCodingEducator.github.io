@@ -919,6 +919,15 @@ function resetQuestion() {
     }
   }
 
+  // "10 to the power of something" questions: the ONLY wrong answers are powers of ten (10, 100, 1000 or 10,000), so the choices are all
+  // about counting zeros (off-by-one-zero mistakes) rather than random numbers.
+  if (answerFormat === "normal" && currentBase === 10 && currentExp >= 1 && pickedSkill !== 4) {
+    var tenPows = [10, 100, 1000, 10000].filter(function (v) { return v !== answer; });
+    for (var ts = tenPows.length - 1; ts > 0; ts--) { var tr = randomNumber(0, ts), tt = tenPows[ts]; tenPows[ts] = tenPows[tr]; tenPows[tr] = tt; }
+    var tenIdx = 0;
+    for (var tk = 0; tk < 3; tk++) { if (tk !== cLane) { fuelOptions[tk] = tenPows[tenIdx]; tenIdx++; } }
+  }
+
   fuelY = -350;
   var obsLimit1 = fuelY - 200, obsLimit2 = fuelY + 200;
 
@@ -1961,6 +1970,7 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
   else if (expressionString.length > 14) { textSize(19); drawSupText(expressionString, 200, 23); }
   else { textSize(24); drawSupText(expressionString, 200, 23); }
 
+  drawEquippedBoostBadge();
   noStroke(); fill("gold"); ellipse(16, 60, 16, 16); fill("yellow"); ellipse(16, 60, 10, 10);
   fill("white"); stroke("black"); strokeWeight(3); textAlign(LEFT, CENTER);
 
@@ -2599,10 +2609,13 @@ function drawTimeFreezeTip() {
 }
 
 function drawTimeFreezeOverlay() {
-  fill("rgba(20, 60, 90, 0.35)"); noStroke(); rect(0, 0, 400, 400);
-  fill("#eaf9ff"); stroke("#1b6ea8"); strokeWeight(3); rect(65, 165, 270, 55, 10);
-  fill("#1b6ea8"); noStroke(); textAlign(CENTER, CENTER); textSize(20); textStyle(BOLD);
-  text("⏱ TIME FROZEN! (" + Math.ceil(timeFreezeFramesLeft / 30) + "s)", 200, 193);
+  // A light icy tint over the scene, and the "TIME FROZEN" badge sits in the grass beside the road (x 0-95), so it never covers the
+  // question at the top or the answer choices on the road.
+  fill("rgba(20, 60, 90, 0.14)"); noStroke(); rect(0, 46, 400, 354);
+  fill("rgba(234, 249, 255, 0.95)"); stroke("#1b6ea8"); strokeWeight(3); rect(6, 150, 86, 74, 10);
+  fill("#1b6ea8"); noStroke(); textAlign(CENTER, CENTER); textStyle(BOLD);
+  textSize(15); text("⏱ TIME", 49, 168); text("FROZEN!", 49, 187);
+  textSize(20); text(Math.ceil(timeFreezeFramesLeft / 30) + "s", 49, 210);
   textStyle(NORMAL);
 }
 
@@ -2786,4 +2799,25 @@ function drawLegacyRewind() {
   push(); translate(curX, curY); drawVehicle(0, 0, "car", equipped.car, true, "", false, 0, 0); pop();
   fill("gold"); textAlign(CENTER, CENTER); textSize(30); textStyle(BOLD); text("SECOND CHANCE!", 200, 200); textStyle(NORMAL);
   if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
+}
+
+
+// The equipped powerup's Shop symbol, shown in the top-right corner just under the white HUD bar. The one-use powerups (Second Chance,
+// Forcefield, Time Freeze) disappear from here as soon as they have been used.
+function drawEquippedBoostBadge() {
+  var id = equipped.boost;
+  if (!id || id === "none") return;
+  if (id === "secondchance" && usedSecondChance) return;
+  if (id === "shield" && !activeShield) return;
+  if (id === "timefreeze" && usedTimeFreeze) return;
+  push();
+  translate(360, 68);                                              // just left of the halfway point between the road edge (x 300) and the screen edge (x 400)
+  noStroke(); fill("rgba(0,0,0,0.5)"); ellipse(0, 0, 38, 38);
+  if (id === "shield") { noFill(); stroke("cyan"); strokeWeight(4); ellipse(0, 0, 30, 30); }
+  else if (id === "magnet") { fill("gray"); rect(-12, -12, 24, 12); fill("red"); rect(-12, 0, 10, 12); fill("blue"); rect(2, 0, 10, 12); }
+  else if (id === "fuelsaver") { noStroke(); fill("#2ecc71"); beginShape(); vertex(2, -13); vertex(-7, 2); vertex(-1, 2); vertex(-3, 13); vertex(8, -3); vertex(1, -3); endShape(CLOSE); }
+  else if (id === "secondchance") { noFill(); stroke("gold"); strokeWeight(3); arc(0, 0, 28, 28, -220, 40); fill("gold"); noStroke(); textAlign(CENTER, CENTER); textSize(16); textStyle(BOLD); text("2", 0, 1); textStyle(NORMAL); }
+  else if (id === "timefreeze") { noFill(); stroke("#7fdbff"); strokeWeight(3); ellipse(0, 0, 26, 26); stroke("white"); strokeWeight(2); line(0, 0, 0, -9); line(0, 0, 6, 3); }
+  else if (id === "doublecoins") { fill("gold"); ellipse(-6, 3, 16, 16); fill("#e6b800"); noFill(); stroke("#b8860b"); strokeWeight(1.5); ellipse(6, -3, 16, 16); }
+  pop();
 }
