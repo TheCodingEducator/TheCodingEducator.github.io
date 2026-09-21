@@ -1203,28 +1203,44 @@ var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
 // The route a CORRECT answer would have taken, cut off at the same point as
 // the real line (bounce + TRAIL_AFTER_BOUNCE_PX). Built by running the real
 // physics on a scratch ball, so it matches what a correct shot really does.
-function simulateCorrectTrail(shot) {
+function simulateTrail(shot, isCorrect) {
   var from = shot.launchFrom || { x: ball.x, y: ball.y };
-  var b = { x: from.x, y: from.y, vx: shot.aimDir.x * shot.power, vy: shot.aimDir.y * shot.power };
+  var dir = isCorrect ? shot.aimDir : (shot.launchDir || shot.aimDir);
+  var b = { x: from.x, y: from.y, vx: dir.x * shot.power, vy: dir.y * shot.power };
+  // A correct shot still has its scripted bounce/bend waiting (applied=false and
+  // it flips at the vertex). A wrong shot's script is already used up at launch
+  // (see submitAnswer), so its "bounce" is just where its heading first turns.
   var pending = {
     type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
-    resolvedAngle: shot.correctAnswer, correct: true, bendDeg: 0,
-    launchFrom: from, triggerDist: shot.triggerDist, applied: false
+    resolvedAngle: isCorrect ? shot.correctAnswer : shot.resolvedAngle, correct: isCorrect,
+    bendDeg: isCorrect ? 0 : (shot.bendDeg || 0),
+    launchFrom: from, triggerDist: shot.triggerDist, applied: !isCorrect
   };
   var walls = allWalls();
   var pts = [{ x: b.x, y: b.y }];
   var after = 0;
+  var lastHeading = null;
   for (var frame = 0; frame < 2000; frame++) {
     if (mag(b.vx, b.vy) < MIN_STOP_SPEED) break;
-    stepBallOneFrame(b, pending, walls, hole.bushes, hole.zones, true);
+    stepBallOneFrame(b, pending, walls, hole.bushes, hole.zones, true, !isCorrect);
     var last = pts[pts.length - 1];
     var step = dist(b.x, b.y, last.x, last.y);
     if (step > 3) {
       pts.push({ x: b.x, y: b.y });
-      pts.pathLen = (pts.pathLen || 0) + step;
-      if (pending.applied) after += step;
+      if (pts.bounceIdx !== undefined) after += step;
     }
-    if (pending.applied && pts.bounceIdx === undefined) pts.bounceIdx = pts.length - 1;
+    if (pts.bounceIdx === undefined) {
+      if (isCorrect) {
+        if (pending.applied) pts.bounceIdx = pts.length - 1;
+      } else if (mag(b.vx, b.vy) > 0.5) {
+        var heading = Math.atan2(b.vy, b.vx);
+        if (lastHeading !== null) {
+          var turn = Math.abs(Math.atan2(Math.sin(heading - lastHeading), Math.cos(heading - lastHeading)));
+          if (turn > ANGLE_REVEAL_BOUNCE_RAD) pts.bounceIdx = pts.length - 1;
+        }
+        lastHeading = heading;
+      }
+    }
     if (after >= TRAIL_AFTER_BOUNCE_PX) break;
   }
   return pts;
@@ -1236,14 +1252,9 @@ function updateTrail() {
   var step = dist(ball.x, ball.y, last.x, last.y);
   if (step > 3) {
     ri.trail.push({ x: ball.x, y: ball.y });
-    ri.trailLen += step;
     if (ri.revealed) ri.afterReveal += step;
   }
-  // A wrong answer's red line stops at the same length as the green (correct)
-  // line - i.e. only as far as the angle is created - instead of running on to
-  // wherever the wrong shot eventually bounces.
-  var limit = (!ri.correct && ri.intendedTrail && ri.intendedTrail.pathLen) ? ri.intendedTrail.pathLen : null;
-  if (limit !== null ? ri.trailLen >= limit : ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
+  if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
 }
 
 // The angle between the two green route lines where the correct shot bounces:
@@ -1264,8 +1275,8 @@ function computeGreenArms(pts) {
 
 // Gold arc between the two green lines, kept close to the vertex so the green
 // number (further out along the bisector) never overlaps it.
-var GREEN_ARC_R = 44;  // big enough to leave room inside for the red number, which sits on the vertex
-var GREEN_LABEL_R = 84;
+var GREEN_ARC_R = 26;
+var GREEN_LABEL_R = 58;
 function getGreenArms() {
   if (!resolvedInfo) return null;
   if (resolvedInfo.greenArms === undefined) resolvedInfo.greenArms = computeGreenArms(resolvedInfo.intendedTrail);
@@ -1287,21 +1298,6 @@ function drawGreenAngleArc() {
 function drawTrail() {
   var ri = resolvedInfo;
   if (!ri || ri.trail.length < 1) return;
-  if (!ri.correct && ri.intendedTrail && ri.intendedTrail.length > 1) {
-    // What a correct answer would have done - dashed green under the real line
-    push();
-    drawingContext.setLineDash([4, 7]);
-    noFill();
-    stroke('#4dff4d');
-    strokeWeight(4);
-    strokeCap(ROUND);
-    strokeJoin(ROUND);
-    beginShape();
-    for (var j = 0; j < ri.intendedTrail.length; j++) vertex(ri.intendedTrail[j].x, ri.intendedTrail[j].y);
-    endShape();
-    drawingContext.setLineDash([]);
-    pop();
-  }
   push();
   noFill();
   stroke(ri.correct ? '#4dff4d' : '#e63946');
@@ -1330,26 +1326,18 @@ function drawResolvedAngleLabels() {
   textStyle(BOLD);
   textSize(26);
 
+  // One angle only, always in the same format: the number sits between the two
+  // route lines at the vertex. A correct answer shows the correct angle in
+  // green; a wrong answer shows only the angle the player typed, in red.
+  var wrong = resolvedInfo.typed !== null && !resolvedInfo.correct;
   var gArms = getGreenArms();
   var cx = gArms ? gArms.v.x + cos(gArms.mid) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
   var cy = gArms ? gArms.v.y + sin(gArms.mid) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
-  var correctLabel = resolvedInfo.correctAnswer + '°';
+  var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
   fill(0, 0, 0, 150);
-  text(correctLabel, cx + 1.5, cy + 1.5);
-  fill('#4dff4d');
-  text(correctLabel, cx, cy);
-
-  if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
-    // The wrong answer's number sits right on the vertex - the spot on the wall
-    // where the angle is made - with the gold arc and green number around it.
-    var vx = gArms ? gArms.v.x : resolvedInfo.point.x, vy = gArms ? gArms.v.y : resolvedInfo.point.y;
-    var wrongLabel = resolvedInfo.typed + '°';
-    textSize(26);
-    fill(0, 0, 0, 150);
-    text(wrongLabel, vx + 1.5, vy + 1.5);
-    fill('#e63946');
-    text(wrongLabel, vx, vy);
-  }
+  text(label, cx + 1.5, cy + 1.5);
+  fill(wrong ? '#e63946' : '#4dff4d');
+  text(label, cx, cy);
   textStyle(NORMAL);
 }
 
@@ -1872,6 +1860,7 @@ function submitAnswer() {
   answerLocked = true;
   ball.vx = launchDir.x * pendingShot.power;
   ball.vy = launchDir.y * pendingShot.power;
+  pendingShot.launchDir = launchDir;
   holePhase = 'ROLLING';
   nextStroke();
   playSound('hit');
@@ -1884,8 +1873,8 @@ function submitAnswer() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0, trailLen: 0,
-    intendedTrail: simulateCorrectTrail(pendingShot)
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
+    intendedTrail: simulateTrail(pendingShot, correct)
   };
   if (!correct) explainOpen = true;
 }
@@ -2067,8 +2056,8 @@ function triggerTimeoutChaos() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0, trailLen: 0,
-    intendedTrail: simulateCorrectTrail(pendingShot)
+    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
+    intendedTrail: simulateTrail(pendingShot, true)
   };
   pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
   holePhase = 'ROLLING';
