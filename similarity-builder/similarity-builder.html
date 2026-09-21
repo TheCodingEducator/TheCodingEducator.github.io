@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Similarity Builder</title>
+<meta name="description" content="Run, jump, and build bridges across canyon gaps by finding scale factors and missing side lengths of similar figures. A free, COPPA-compliant browser game for students.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Similarity Builder">
+<meta property="og:description" content="Run, jump, and build bridges across canyon gaps by finding scale factors and missing side lengths of similar figures.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thecodingeducator.github.io/similarity-builder/similarity-builder.html">
+<meta name="twitter:card" content="summary">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+     crossorigin="anonymous"></script>
+<style>
+  :root {
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #12162e;
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .reset-progress {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .reset-progress h2 {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .reset-progress p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .reset-progress-btn {
+    background: transparent;
+    border: 1px solid #7a3030;
+    color: #e0a0a0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .reset-progress-btn:hover {
+    background: rgba(220,80,80,0.12);
+    border-color: #b04848;
+    color: #ffb3b3;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .pseudo-fullscreen-exit-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10000;
+    display: none;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+  }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+  .pseudo-fullscreen-exit-btn:hover, .pseudo-fullscreen-exit-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  /* This game is a wide (16:9) scene with a heads-up display above it, so unlike the square-canvas games its
+     fullscreen modes let the whole game box (HUD + scene + pop-up menus) fill the screen and scale the scene to fit. */
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #0c0f24; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #0c0f24; width: 100vw; height: 100vh; }
+  /* Fallback for browsers/devices (e.g. some managed Chromebooks) that block
+     or silently fail the real Fullscreen API - a CSS-only "maximize" mode
+     that mimics it without needing browser permission. */
+  #game-canvas-slot.pseudo-fullscreen {
+    position: fixed; top: 0; left: 0; margin: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: #0c0f24; width: 100vw; height: 100vh;
+  }
+  #game-canvas-slot:fullscreen #sb,
+  #game-canvas-slot.pseudo-fullscreen #sb {
+    width: 100vw; height: 100vh; border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; justify-content: center;
+    --stage-w: min(100vw - 24px, calc((100vh - 84px) * 16 / 9));
+  }
+  #game-canvas-slot:-webkit-full-screen #sb {
+    width: 100vw; height: 100vh; border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; justify-content: center;
+    --stage-w: min(100vw - 24px, calc((100vh - 84px) * 16 / 9));
+  }
+  #game-canvas-slot:fullscreen #sb #hud,
+  #game-canvas-slot.pseudo-fullscreen #sb #hud { padding-left: 160px; }   /* leaves room for the site's Exit Fullscreen button */
+  #game-canvas-slot:-webkit-full-screen #sb #hud { padding-left: 160px; }
+  #game-canvas-slot:fullscreen #sb #help,
+  #game-canvas-slot.pseudo-fullscreen #sb #help { display: none; }
+  #game-canvas-slot:-webkit-full-screen #sb #help { display: none; }
+
+  /* ===== The game itself. Everything is scoped under #sb so none of it can touch the rest of the page. ===== */
+  #sb {
+    --ink:#1d2340; --card:#ffffff; --muted:#5b6485; --accent:#ff7a1a; --accent2:#2f80ed;
+    --good:#1e9e57; --bad:#e04545;
+    --stage-w: min(100%, calc((100vh - 190px) * 16 / 9));
+    position: relative; width: min(94vw, 900px); padding: 10px 12px 12px;
+    background: #12162e; color: #fff; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    font-family: "Trebuchet MS","Segoe UI",system-ui,sans-serif; -webkit-tap-highlight-color: transparent;
+  }
+  #sb * { box-sizing: border-box; }
+  #sb .hidden { display: none !important; }
+  #sb #hud { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; padding-right:112px; min-height:40px; }
+  #sb .pill { background:#232a52; border:2px solid #3a4380; border-radius:999px; padding:5px 12px; font-weight:700; font-size:15px; white-space:nowrap; }
+  #sb .pill b { color:#ffd166; }
+  #sb #menuBtn { position:absolute; top:8px; right:10px; z-index:40; cursor:pointer; border:3px solid #fff; background:#ff7a1a; color:#fff; border-radius:999px; padding:7px 15px; font-size:16px; font-weight:900; box-shadow:0 4px 0 #b4530a, 0 6px 16px rgba(0,0,0,.4); font-family:inherit; }
+  #sb #menuBtn:active { transform:translateY(2px); box-shadow:0 2px 0 #b4530a; }
+  #sb #pause { z-index:30; }
+  #sb #pause .btn { display:block; width:100%; margin:10px 0; }
+  #sb #stage { position:relative; width:var(--stage-w); margin:0 auto; border-radius:18px; overflow:hidden; border:3px solid #3a4380; background:#000; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #sb canvas { display:block; width:100%; height:auto; }
+  #sb #toast { position:absolute; left:50%; top:14px; transform:translateX(-50%); padding:8px 16px; border-radius:999px; font-weight:800; font-size:clamp(14px,2.4vw,20px); opacity:0; transition:opacity .25s; pointer-events:none; background:#fff; color:var(--ink); white-space:nowrap; max-width:96%; overflow:hidden; text-overflow:ellipsis; }
+  #sb #toast.show { opacity:1; }
+  #sb #toast.good { background:#c9f7dc; color:#0d6b38; }
+  #sb #toast.bad { background:#ffd6d6; color:#9b1c1c; }
+  #sb #jumpBtn { position:absolute; right:12px; bottom:12px; width:74px; height:74px; border-radius:50%; border:4px solid #fff; background:rgba(255,122,26,.9); color:#fff; font-weight:900; font-size:15px; display:none; touch-action:none; }
+  @media (pointer:coarse) { #sb #jumpBtn { display:block; } }
+  #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
+
+  #sb .overlay { position:absolute; inset:0; background:rgba(10,12,30,.74); display:flex; align-items:center; justify-content:center; padding:12px; z-index:10; overflow:auto; }
+  #sb .card { background:var(--card); color:var(--ink); border-radius:20px; padding:16px 18px; width:100%; max-width:640px; box-shadow:0 12px 40px rgba(0,0,0,.5); max-height:100%; overflow:auto; }
+  #sb .card h2 { margin:0 0 6px; font-size:clamp(22px,4vw,30px); color:var(--ink); letter-spacing:0; text-transform:none; }
+  #sb .card p { margin:6px 0; line-height:1.4; color:var(--ink); font-size:15px; }
+  #sb .btn { cursor:pointer; border:0; border-radius:14px; padding:11px 20px; font-size:18px; font-weight:800; color:#fff; background:var(--accent); box-shadow:0 4px 0 #b4530a; font-family:inherit; }
+  #sb .btn:active { transform:translateY(2px); box-shadow:0 2px 0 #b4530a; }
+  #sb .btn.alt { background:var(--accent2); box-shadow:0 4px 0 #1b56a8; }
+  #sb .btn.ghost { background:#eef1ff; color:var(--ink); box-shadow:0 3px 0 #c5cbe8; font-size:15px; padding:8px 14px; }
+  #sb .btn:disabled { opacity:.55; cursor:default; }
+  #sb .center { text-align:center; }
+  #sb .skins { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+  #sb .skin { border:3px solid #d4d9f2; background:#f5f7ff; border-radius:12px; padding:6px 10px; font-weight:700; font-size:13px; cursor:pointer; color:var(--ink); font-family:inherit; }
+  #sb .skin.sel { border-color:var(--accent); background:#fff1e4; }
+  #sb .skin.locked { opacity:.45; cursor:not-allowed; }
+
+  #sb .ptop { display:flex; justify-content:space-between; align-items:center; font-weight:800; gap:8px; }
+  #sb .badge { background:#eef1ff; border-radius:999px; padding:3px 10px; font-size:13px; color:var(--ink); }
+  #sb .bar { height:12px; background:#e5e8f7; border-radius:8px; overflow:hidden; margin:8px 0; }
+  #sb .bar i { display:block; height:100%; width:100%; background:var(--good); transition:background .3s; }
+  #sb .arrow { font-size:22px; color:var(--muted); }
+  #sb .answer { display:flex; align-items:center; gap:8px; margin:10px 0 6px; flex-wrap:wrap; color:var(--ink); }
+  #sb .answer label { font-weight:900; font-size:22px; }
+  #sb #ans { width:110px; font-size:26px; font-weight:800; padding:6px 10px; border-radius:12px; border:3px solid #b9c2ec; color:var(--ink); background:#fff; text-align:center; font-family:inherit; }
+  #sb #ans:focus { outline:none; border-color:var(--accent2); }
+  #sb #ans.shake { animation:sbShake .3s; }
+  @keyframes sbShake { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  #sb .hint { background:#fff7dd; border-left:5px solid #ffc83d; padding:8px 10px; border-radius:8px; font-size:15px; color:var(--ink); }
+  #sb #keypad { display:none; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
+  #sb #keypad button { font-size:22px; font-weight:800; padding:8px 0; border-radius:10px; border:2px solid #c5cbe8; background:#f5f7ff; color:var(--ink); font-family:inherit; }
+  @media (pointer:coarse) { #sb #keypad { display:grid; } }
+  #sb .chip { display:inline-block; min-width:44px; text-align:center; border:3px solid; border-radius:12px; padding:2px 10px; font-weight:900; font-size:20px; background:#fff; }
+  #sb .verdict { display:flex; align-items:center; justify-content:center; gap:12px; font-weight:900; font-size:clamp(20px,4vw,28px); margin:4px 0 8px; }
+  #sb .verdict .bad { color:var(--bad); } #sb .verdict .ok { color:var(--good); } #sb .verdict small { font-size:14px; font-weight:700; }
+  #sb .pair { width:100%; height:auto; display:block; }
+  #sb .steps { display:flex; flex-direction:column; gap:8px; align-items:center; margin:10px 0; font-size:20px; color:var(--ink); }
+  #sb #fbStorm { text-align:center; font-size:24px; margin:6px 0; }
+  #sb .review { text-align:left; font-size:14px; background:#f4f7ff; border-radius:12px; padding:8px 12px; margin:8px 0; max-height:220px; overflow:auto; color:var(--ink); }
+  #sb .review div { margin:5px 0; padding-bottom:5px; border-bottom:1px dashed #c5cbe8; }
+  #sb .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:10px 0; }
+  #sb .stats div { background:#f4f7ff; border-radius:12px; padding:8px; text-align:center; font-size:14px; color:var(--ink); }
+  #sb .stats b { display:block; font-size:24px; color:var(--accent); }
+  #sb .startsHead { font-weight:800; margin:10px 0 6px; font-size:14px; color:var(--ink); }
+  #sb .starts { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:6px; }
+  #sb .start { font-size:15px; padding:8px 13px; border-radius:12px; font-weight:800; font-family:inherit; }
+  #sb #pause .start { display:inline-block; width:auto; margin:0; }
+  #sb .coinDot { display:inline-block; width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff3a8,#f5c518 55%,#b8860b); border:1.5px solid #8a6508; vertical-align:-2px; }
+  #sb #shop { z-index:50; }
+  #sb .shopGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:6px 0 10px; }
+  #sb .shopCard { background:#f4f7ff; border:3px solid #d4d9f2; border-radius:14px; padding:8px; text-align:center; display:flex; flex-direction:column; gap:4px; }
+  #sb .shopCard.eq { border-color:var(--accent); background:#fff1e4; }
+  #sb .shopCard canvas { width:100%; max-width:110px; height:auto; align-self:center; border-radius:10px; }
+  #sb .shopName { font-weight:900; font-size:16px; color:var(--ink); }
+  #sb .shopTag { font-size:12px; color:var(--muted); line-height:1.25; min-height:30px; }
+  #sb .shopBtn { font-size:14px; padding:8px 10px; margin-top:auto; }
+  #sb #pause .shopBtn { display:block; width:100%; }
+  #sb .start.locked { background:#eef1ff; color:#8c94b8; border:2px dashed #c5cbe8; cursor:help; }
+
+  /* ---- title / menu / practice screens ---- */
+  #sb #hud, #sb #help { visibility:hidden; }
+  #sb.playing #hud, #sb.playing #help { visibility:visible; }
+  #sb #menuBtn { display:none; }
+  #sb.playing #menuBtn { display:block; }
+  #sb #title { padding:0; background:#0e1533; z-index:20; overflow:hidden; align-items:flex-start; }
+  #sb #titleCv { position:absolute; inset:0; width:100%; height:100%; }
+  #sb .titleWrap { position:relative; text-align:center; margin:3.5% auto 0; z-index:2; }
+  #sb .titleKicker { display:inline-block; background:rgba(255,255,255,.14); border:2px solid rgba(255,255,255,.35); border-radius:999px; padding:4px 14px; font-weight:800; font-size:clamp(11px,1.8vw,16px); letter-spacing:.04em; }
+  #sb .titleName { margin:6px 0 8px; font-size:clamp(34px,8.2vw,84px); line-height:1; font-weight:900; color:#fff; text-shadow:0 4px 0 #1b56a8, 0 8px 22px rgba(0,0,0,.55); letter-spacing:.01em; }
+  #sb .titleName .b { color:#ffb347; text-shadow:0 4px 0 #b4530a, 0 8px 22px rgba(0,0,0,.55); }
+  #sb .playBtn { font-size:clamp(20px,3.4vw,32px); padding:10px 44px; border:3px solid #fff; border-radius:999px; animation:sbPulse 1.6s ease-in-out infinite; }
+  @keyframes sbPulse { 50% { transform:scale(1.07); } }
+  #sb #menu, #sb #practice { z-index:15; background:rgba(10,12,30,.86); }
+  #sb .menuCard { max-width:860px; }
+  #sb .menuGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:12px 0; text-align:center; }
+  #sb .tile { background:#f4f7ff; border:3px solid #d4d9f2; border-radius:16px; padding:10px 12px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  #sb .tile h3 { margin:0; font-size:20px; color:var(--ink); }
+  #sb .tile p { font-size:13.5px; margin:2px 0 6px; }
+  #sb .tile .startsHead { font-size:12.5px; }
+  #sb .tile .start { font-size:13px; padding:6px 9px; }
+  #sb .tile .skin { font-size:12px; padding:4px 8px; }
+  #sb .pbar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; position:sticky; bottom:-16px; background:#fff; padding:8px 0 4px; box-shadow:0 -10px 10px -4px #fff; }
+  #sb .ptypes { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin:8px 0 12px; }
+  #sb .ptype { position:relative; text-align:left; display:flex; flex-direction:column; gap:3px; background:#f4f7ff; border:3px solid #d4d9f2; border-radius:14px; padding:9px 11px 8px 40px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  #sb .ptype.on { border-color:var(--accent2); background:#eaf2ff; }
+  #sb .ptype:focus-visible { outline:3px solid var(--accent); }
+  #sb .pcheck { position:absolute; left:10px; top:10px; width:22px; height:22px; border-radius:7px; border:3px solid #b9c2ec; background:#fff; color:#fff; font-weight:900; font-size:15px; line-height:16px; text-align:center; }
+  #sb .ptype.on .pcheck { background:var(--accent2); border-color:var(--accent2); }
+  #sb .plevel { font-size:11.5px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+  #sb .pname { font-weight:900; font-size:15.5px; }
+  #sb .pdesc { font-size:13px; color:var(--muted); line-height:1.3; }
+  #sb .psample { display:block; margin-top:4px; background:#fff; border-radius:10px; padding:2px; }
+  #sb .psample svg { width:100%; height:auto; display:block; }
+
+  /* Teacher view (?levels) - same look as the game, but shown as a normal page */
+  #lv { max-width:1000px; margin:0 auto; padding:64px 16px 32px; color:#1d2340; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; }
+
+  /* Rotate-device prompt: small touchscreens held upright only (the scene is wide, so it needs landscape) */
+  .rotate-prompt {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: #0f172a; color: #f1f5f9;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-hint 1.6s ease-in-out infinite; }
+  @keyframes rotate-hint { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+  .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
+  .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
+  .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
+    .rotate-prompt { display: flex; }
+  }
+</style>
+</head>
+<body>
+<div class="rotate-prompt" id="rotate-prompt" role="alert">
+  <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
+  <h2>Rotate Your Device</h2>
+  <p>Similarity Builder works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../index.html">&larr; All games</a>
+</div>
+
+<a class="back-link" href="../index.html">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" onclick="exitFullscreenAny()">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Similarity Builder</h1>
+<p class="sr-only">A runner game about similar figures. You run across a canyon, and at every gap a puzzle shows two similar shapes of different sizes: find the scale factor between them (level 1), or use the scale factor to find a missing side length by multiplying or dividing (levels 2 to 4, where the shapes get turned, flipped, and eventually only label one side out of each group of equal sides). Whatever number you answer is what the bridge gets built with - too small and it buckles, too large and it snaps, and either way you fall and lose a heart. Between puzzles, dodge obstacles that are the real-world reasons a bridge does not get built - protesters, endangered animals, lawyers who need permits, red tape, unstable soil, puddles, holes, loose pipes, and electrical lines. Each level has its own obstacles, and every one costs a heart if it touches you. Jump the ones on the ground and run under the ones overhead, and land on floating platforms. Every correct answer earns a coin to spend in the Shop on a bridge-building crew member such as a politician, architect, engineer, electrician, or safety inspector. Controls: Space, Enter, or the up arrow (or a tap) jumps, and pressing again in the air double jumps. Type whole-number answers and press Enter or the Build button. The Menu button or the Escape key pauses. From the title screen, Play opens the Menu screen, where you can start a Bridge Run, open Practice (no obstacles or hearts, with a choice of question types), or open the Shop.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
+    <div id="sb">
+      <div id="hud">
+        <span class="pill" id="hLives"></span>
+        <span class="pill" id="hCorrectPill" style="display:none">&#9989; Correct <b id="hCorrect">0</b></span>
+        <span class="pill">🔥 Streak <b id="hStreak">0</b></span>
+        <span class="pill" title="1 coin for every correct answer - spend them in the Shop"><span class="coinDot"></span> <b id="hCoins">0</b></span>
+        <span class="pill">🏃 <b id="hDist">0</b> m</span>
+      </div>
+      <div id="stage">
+        <canvas id="c" width="960" height="540"></canvas>
+        <div id="toast"></div>
+        <button id="jumpBtn">JUMP</button>
+      </div>
+      <div id="help">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; press again in the air to <b>double jump</b>. Esc or Menu pauses.</div>
+
+      <!-- Always-available menu button + pause menu -->
+      <button id="menuBtn" aria-label="Menu">&#9776; Menu</button>
+      <div id="pause" class="overlay hidden"><div class="card center" style="max-width:380px">
+        <h2>&#9208; Paused</h2>
+        <button class="btn" id="btnResume">&#9654; Resume</button>
+        <button class="btn alt" id="btnRestart">&#128260; Restart</button>
+        <button class="btn alt hidden" id="btnFinish">&#127891; Finish practice</button>
+        <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
+        <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Menu screen</button>
+      </div></div>
+
+      <!-- Crew Shop -->
+      <div id="shop" class="overlay hidden"><div class="card" style="max-width:740px">
+        <div class="ptop"><h2 style="margin:0">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot"></span> <b id="shopCoins">0</b> coins</span></div>
+        <p style="margin:6px 0 8px">Every correct answer earns 1 <span class="coinDot"></span> coin. Hire the crew that builds real bridges &mdash; then run as them!</p>
+        <div id="shopGrid" class="shopGrid"></div>
+        <div class="center"><button class="btn" id="btnShopClose">Done</button></div>
+      </div></div>
+
+      <!-- Title screen (the first thing you see) -->
+      <div id="title" class="overlay">
+        <canvas id="titleCv" width="960" height="540" aria-hidden="true"></canvas>
+        <div class="titleWrap">
+          <div class="titleKicker">&#128208; A game about similar figures</div>
+          <h2 class="titleName"><span>Similarity</span> <span class="b">Builder</span></h2>
+          <button class="btn playBtn" id="btnPlay">&#9654; Play</button>
+        </div>
+      </div>
+
+      <!-- Menu screen: the only place to start a game or open the Shop -->
+      <div id="menu" class="overlay hidden"><div class="card center menuCard">
+        <div class="ptop"><h2 style="margin:0">&#127753; Menu</h2><span class="badge"><span class="coinDot"></span> <b id="mCoins">0</b> coins &middot; Best <b id="mBest">0</b> m</span></div>
+        <div class="menuGrid">
+          <div class="tile">
+            <h3>&#127939; Bridge Run</h3>
+            <p>Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn coins &mdash; the farther the better.</p>
+            <button class="btn" id="btnStart">Start Running!</button>
+            <div id="menuStarts"></div>
+          </div>
+          <div class="tile">
+            <h3>&#127891; Practice</h3>
+            <p><b>No obstacles, no hearts.</b> Choose exactly which kinds of questions you want to work on &mdash; as many as you like.</p>
+            <button class="btn alt" id="btnPractice">Choose questions</button>
+          </div>
+          <div class="tile">
+            <h3>&#128717; Crew Shop</h3>
+            <p>Spend the coins you earn from correct answers to hire a bridge-building crew, then run as them.</p>
+            <button class="btn ghost" id="btnShop" style="font-size:17px">Open the Shop</button>
+            <div class="skins" id="skins"></div>
+          </div>
+        </div>
+        <button class="btn ghost" id="btnMenuBack">&larr; Title screen</button>
+      </div></div>
+
+      <!-- Practice setup -->
+      <div id="practice" class="overlay hidden"><div class="card" style="max-width:820px">
+        <div class="ptop"><h2 style="margin:0">&#127891; Practice</h2><span class="badge">No obstacles &middot; no hearts &middot; no timer</span></div>
+        <p style="margin:6px 0 8px">Tick <b>one or more</b> types of questions. You&rsquo;ll get a random mix of the ones you pick, and every wrong answer shows you how it works.</p>
+        <div id="ptypes" class="ptypes"></div>
+        <div class="center pbar">
+          <button class="btn ghost" id="btnPracBack">&larr; Back</button>
+          <button class="btn" id="btnPracStart">Start Practice</button>
+        </div>
+      </div></div>
+
+      <!-- Question -->
+      <div id="problem" class="overlay hidden"><div class="card">
+        <div class="ptop"><span id="pTitle"></span><span class="badge" id="pTimer"></span></div>
+        <div class="bar"><i id="barFill"></i></div>
+        <p id="pPrompt"></p>
+        <div id="pairWrap"></div>
+        <p class="hint hidden" id="hintBox"></p>
+        <div class="answer">
+          <label for="ans" id="ansLbl">? =</label>
+          <input id="ans" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Your answer (whole number)">
+          <span style="font-weight:700" id="ansUnit">ft</span>
+          <button class="btn" id="btnBuild">Build! &#127753;</button>
+          <button class="btn ghost" id="btnHint">&#128161; Hint</button>
+        </div>
+        <div id="keypad"></div>
+      </div></div>
+
+      <!-- Wrong-answer explanation -->
+      <div id="feedback" class="overlay hidden"><div class="card">
+        <h2 id="fbTitle">&#128165; The bridge failed!</h2>
+        <div id="fbBody"></div>
+        <p id="fbStorm" style="font-weight:700"></p>
+        <div class="center"><button class="btn alt" id="btnNext">Try a new bridge</button></div>
+      </div></div>
+
+      <!-- Run over -->
+      <div id="over" class="overlay hidden"><div class="card center">
+        <h2 id="ovTitle">&#127937; Run over!</h2>
+        <div class="stats" id="ovStats"></div>
+        <div id="ovContinue"></div>
+        <button class="btn" id="btnAgain">Run again</button>
+        <button class="btn ghost" id="btnOverMenu" style="margin-left:6px">&#127968; Menu</button>
+        <div id="ovReview"></div>
+      </div></div>
+    </div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.4</span>
+      <p>Understand that a two-dimensional figure is similar to another if the second can be obtained from the first by a sequence of rotations, reflections, translations, and dilations; given two similar two-dimensional figures, describe a sequence that exhibits the similarity between them.</p>
+      <p class="applies">Applies to: every level - the two shapes are always dilations of each other; levels 3-4 turn and flip the bigger shape.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.7.G.A.1</span>
+      <p>Solve problems involving scale drawings of geometric figures, including computing actual lengths and areas from a scale drawing and reproducing a scale drawing at a different scale.</p>
+      <p class="applies">Applies to: level 1 (find the scale factor) and levels 2-4 (use it to find a missing length).</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Similarity Builder is built around one skill: given two similar figures, find the scale factor and use it to find an unknown side length. Every gap in the canyon is one of these problems, and the answer the student types is literally the size the bridge gets built at - so the math decides whether the runner crosses or falls.</p>
+  <ul>
+    <li><strong>Four levels that build the skill step by step.</strong> Level 1 asks only for the scale factor between two dilated shapes (1 to 3, triangles and rectangles). Level 2 gives the factor and mixes multiplying and dividing to find a missing side (factors 2 to 4, seven shape types, small numbers) with the missing side spotlighted. Level 3 removes every hint - no arrows and no scale factor shown, just both shapes' side lengths with one missing - so students must find the factor themselves from a visible pair, on shapes that are turned and flipped, with round numbers (multiples of 5, nothing bigger than 100). Level 4 adds the reasoning step: only one number is shown for each group of equal sides, so students use tick marks and what they know about squares, rectangles, parallelograms, rhombuses, and isosceles and equilateral triangles to work out the sides that aren't labeled.</li>
+    <li><strong>Correct sides are color-matched.</strong> Corresponding sides share a color across the two figures, including after the bigger figure is rotated or flipped, so students match sides by position in the figure instead of by where they happen to sit on the screen.</li>
+    <li><strong>Whole numbers only.</strong> Every side length and scale factor is a whole number and the answer box only accepts whole numbers, keeping the focus on the proportional reasoning rather than on decimal or fraction arithmetic.</li>
+    <li><strong>Right and wrong have a visible consequence.</strong> The bridge is built to the scale of the answer that was typed: a bridge that is too small buckles under the runner, one that is too large snaps in the middle, and either way the runner drops into the gap and loses a heart. It is a direct picture of what an incorrect scale factor does to a figure.</li>
+    <li><strong>Mistakes become worked examples.</strong> After a wrong answer, the same two figures come back with every side labeled and a color-matched curved arrow on each side showing the multiplication (or division) by the scale factor - a picture of the calculation, not a wall of text.</li>
+    <li><strong>An action game around the math.</strong> Between puzzles the student runs about ten seconds, using a double jump and floating platforms. Every 1000 m the runner speeds up and the obstacles get tighter, so success in the math is rewarded with a harder, faster run.</li>
+    <li><strong>The obstacles are the real reasons bridges don't get built - and each level has its own.</strong> Instead of random hazards, students dodge what actually stands between a community and a new bridge, and every obstacle costs a heart if it touches you. Level 1 is simple things on the ground (boulders, cacti, logs, cones, an endangered tortoise). Level 2 adds taller and wider things (stumps, an endangered frog, hazmat barrels, red tape, "Private Property" fences) and the first flyer to run under. Level 3 brings wide hazards (puddles, holes, unstable soil), lawyers who want to see a permit, and low-hanging birds and electrical lines. Level 4 is big groups of protesters, loose underground pipes that burst up, and lots of overhead traffic (survey drones, an endangered falcon, storm clouds). Ground hazards are jumped, but overhead ones must be run <em>under</em>, so students read each obstacle rather than mashing the jump button. Spacing is irregular - tight clusters mixed with long breathers - and gets tighter each level, but there is always a way through (every gap leaves time to land before the next thing arrives). It opens an easy conversation about permits, the environment, safety, and why big projects take years.</li>
+    <li><strong>Coins and a crew to hire.</strong> Every correct answer earns 1 coin (wrong answers never cost coins). Coins are spent in the in-game Shop to hire the bridge-building crew as the student's runner: a Politician (funding), Architect (design), Engineer (the math and forces), Electrician (power and signals), and Safety Inspector (safe to open) - each with their own look and a short note about what that job does on a real bridge project. The characters are cosmetic, so students choose them for fun rather than for an advantage.</li>
+    <li><strong>Practice mode: pick exactly the skill you want.</strong> From the Menu screen, students (or a teacher choosing for them) can open Practice, a mode with no obstacles, no hearts, and no timer. They tick one or more question types - find the scale factor (level 1), find a side of the bigger shape, find a side of the smaller shape (level 2), the no-scale-factor turned-and-flipped questions (level 3), or the unlabeled-equal-sides questions (level 4) - and each type shows a plain-language description plus a live example. Questions then come from a random mix of the ticked types, wrong answers still show the worked example with the curved scale-factor arrows, and a summary card at the end shows accuracy and the missed questions. Students also earn coins for correct answers in Practice. Their selections are remembered on the device.</li>
+    <li><strong>A title screen and a menu.</strong> The game opens on an animated title screen where a small figure is dilated into a larger similar one - dashed rays through matching corners and a "&times; 3" or "&divide; 3" pill - while the runner hops obstacles. Play leads to the Menu screen, the one place to start a Bridge Run, open Practice, or visit the Crew Shop.</li>
+    <li><strong>Timed, but forgiving.</strong> Each question has a countdown that tightens slightly on later levels, and a Hint button reminds students of the method without giving the answer. A Menu button (or the Esc key) pauses the whole game at any time, including mid-question.</li>
+    <li><strong>Level checkpoints, so one bad run isn't a setback.</strong> A new level unlocks every 1000 m (level 2 at 1000 m, level 3 at 2000 m, level 4 at 3000 m). Each time a student reaches one, the game remembers the level and the distance. The Menu screen and the end-of-run screen both list every level with the distance a new run would start at - for example "Level 2 &middot; 473 m" - with levels not yet reached shown locked. Picking one starts at the beginning of that level with the same distance and bridge count and three fresh hearts, instead of starting over from level 1. These checkpoints are saved in the student's own browser. That keeps students practicing at the level that challenges them rather than re-doing material they have already shown they can handle.</li>
+    <li><strong>Low-stakes and replayable.</strong> No accounts and unlimited runs. Three hearts per run, a saved personal best distance, level checkpoints, coins, and the crew they have hired - all stored only in the student's own browser. Nothing is ever sent to a server, and there are no accounts, names, or other personal information, so the game is safe for students under 13 (COPPA).</li>
+  </ul>
+</section>
+
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases your saved best distance, highest level, level checkpoints, coins, and hired crew for Similarity Builder on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+</section>
+
+<script src="similarity-builder-game.js"></script>
+
+<script>
+  function enterPseudoFullscreen() {
+    document.getElementById('game-canvas-slot').classList.add('pseudo-fullscreen');
+    document.getElementById('pseudo-fullscreen-exit-btn').classList.add('visible');
+    updateFullscreenBtn();
+  }
+  function exitPseudoFullscreen() {
+    document.getElementById('game-canvas-slot').classList.remove('pseudo-fullscreen');
+    document.getElementById('pseudo-fullscreen-exit-btn').classList.remove('visible');
+    updateFullscreenBtn();
+  }
+  function toggleFullscreen() {
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = document.fullscreenElement || document.webkitFullscreenElement || el.classList.contains('pseudo-fullscreen');
+    if (!isFs) {
+      // Some devices (notably managed school Chromebooks) expose
+      // requestFullscreen but block it via policy, causing it to throw or
+      // silently reject instead of entering fullscreen. Fall back to a
+      // CSS-only pseudo-fullscreen whenever that happens so the button
+      // always does something.
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      var launched = false;
+      if (req && document.fullscreenEnabled !== false) {
+        try {
+          var result = req.call(el);
+          launched = true;
+          if (result && typeof result.catch === 'function') {
+            result.catch(function () { enterPseudoFullscreen(); });
+          }
+        } catch (e) {
+          launched = false;
+        }
+      }
+      if (!launched) enterPseudoFullscreen();
+    } else if (el.classList.contains('pseudo-fullscreen')) {
+      exitPseudoFullscreen();
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }
+  function exitFullscreenAny() {
+    var el = document.getElementById('game-canvas-slot');
+    if (el.classList.contains('pseudo-fullscreen')) { exitPseudoFullscreen(); return; }
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+  function syncExitBtn(isFs) {
+    var eb = document.getElementById('pseudo-fullscreen-exit-btn');
+    var slot = document.getElementById('game-canvas-slot');
+    if (!eb || !slot) return;
+    if (isFs) { if (eb.parentNode !== slot) slot.appendChild(eb); eb.classList.add('visible'); }
+    else { eb.classList.remove('visible'); }
+  }
+  function updateFullscreenBtn() {
+    var btn = document.getElementById('fullscreen-btn');
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || (el && el.classList.contains('pseudo-fullscreen')));
+    btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+    syncExitBtn(isFs);
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    var ok = confirm('Reset your Similarity Builder progress? This erases your saved best distance, highest level, checkpoints, coins, and hired crew on this device. This cannot be undone.');
+    if (!ok) return;
+    // The game also saves on tab-hide/unload as a safety net against losing
+    // progress earned right before closing the tab - reload() triggers that
+    // same unload path, so tell the game to skip that save, otherwise it
+    // would immediately re-save the old values right over the keys just cleared.
+    window.similarityBuilderResetting = true;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('similaritybuilder_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  });
+</script>
+</body>
+</html>

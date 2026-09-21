@@ -1,6 +1,6 @@
-// Bridge Builder Runner - game logic (math engine, level settings, runner physics, drawing, menus).
-// Loaded by bridge-builder-runner.html. Level rules are all in one place: search for "LEVEL SETTINGS".
-// A teacher-facing overview of every level with live sample questions is at bridge-builder-runner.html?levels
+// Similarity Builder - game logic (math engine, level settings, runner physics, drawing, menus).
+// Loaded by similarity-builder.html. Level rules are all in one place: search for "LEVEL SETTINGS".
+// A teacher-facing overview of every level with live sample questions is at similarity-builder.html?levels
 (() => {
 'use strict';
 const W = 960, H = 540, GROUND = 410;
@@ -151,13 +151,14 @@ const SHAPES_BY_LEVEL = [
   ['sq', 'rect', 'par', 'rhomb', 'isotri', 'equitri', 'trap']
 ];
 const SECONDS_BETWEEN_QUESTIONS = 10;                          // about how long you run (dodging obstacles) between two questions
-const SOLVED_PER_LEVEL = 4;                                  // correct answers needed to reach the next level
+const METERS_PER_LEVEL = 1000;                           // Level 2 starts at 1000 m, Level 3 at 2000 m, Level 4 at 3000 m
+const levelForMeters = m => Math.min(MAX_LEVEL, 1 + Math.floor(m / METERS_PER_LEVEL));
 
-function genProblem(level, ksOverride) {
+function genProblem(level, ksOverride, forceType) {                    // forceType (Practice mode): only make this kind of question: scale / up / down
   const L = level - 1, ks = ksOverride || K_BY_LEVEL[L], shapes = SHAPES_BY_LEVEL[L];
   for (let n = 0; n < 1500; n++) {
     const key = pick(shapes), sh = SHAPES[key], base = sh.make();
-    const type = pick(TYPE_BY_LEVEL[L]), k = pick(ks), u = pick(UNIT_BY_LEVEL[L]);
+    const type = forceType || pick(TYPE_BY_LEVEL[L]), k = pick(ks), u = pick(UNIT_BY_LEVEL[L]);
     const lensS = base.lens.map(v => v * u), lensB = lensS.map(v => v * k);          // small figure / big figure (whole numbers)
     if (Math.max(...lensS) > MAX_SMALL_SIDE[L] || Math.max(...lensB) > MAX_BIG_SIDE[L]) continue;
     const hgt = Math.max(...base.pts.map(p => p[1])) * u * k;
@@ -174,7 +175,8 @@ function genProblem(level, ksOverride) {
       if (type === 'up') showS = reps; else showB = reps;
     } else {
       ti = pick(sh.label); src = ti;
-      if (level === 3) { showS = sh.label.slice(); showB = sh.label.slice(); }          // level 3: every side of both shapes is shown except the one missing side
+      if (sh.label.some(j => j !== ti && base.lens[j] === base.lens[ti])) continue;         // another numbered side is the same length: that would give the answer away
+      if (level === 3 || level === 2) { showS = sh.label.slice(); showB = sh.label.slice(); }   // levels 2-3: every side of both shapes is numbered except the one missing side
       else if (type === 'up') showS = sh.label.slice(); else showB = sh.label.slice();
     }
     const answer = type === 'scale' ? k : type === 'up' ? lensB[ti] : lensS[ti];
@@ -187,9 +189,24 @@ function genProblem(level, ksOverride) {
       classes: sh.classes || [], ticks: level === 4
     };
   }
-  return genProblem(level, [2]);
+  return genProblem(level, [2], forceType);
 }
 const gapFor = P => P.lensB[0] * P.ppf;                     // gap width = real base length of the big bridge x pixels-per-foot
+
+// The kinds of questions Practice mode lets you pick from (choose as many as you like; they are mixed together).
+// Each one is a level's question style; level 2 is split into its two halves (multiply / divide).
+const PRACTICE_TYPES = [
+  { id: 'scale', level: 1, type: 'scale', name: 'Find the scale factor',
+    desc: 'Two similar shapes, every side labeled. Find how many times bigger the big shape is: divide a side of the big shape by the matching side of the small one. Small numbers, factors 1 to 3.' },
+  { id: 'up', level: 2, type: 'up', name: 'Find a side of the BIGGER shape',
+    desc: 'The scale factor is given. Multiply the matching side of the small shape by it. The missing side and its match are highlighted and color-matched. Factors 2 to 4.' },
+  { id: 'down', level: 2, type: 'down', name: 'Find a side of the SMALLER shape',
+    desc: 'The scale factor is given, and you know a side of the big shape. Divide it by the scale factor to get the matching side of the small shape. Factors 2 to 4.' },
+  { id: 'hard', level: 3, type: null, name: 'No scale factor shown (turned & flipped)',
+    desc: 'No arrows and no scale factor: all sides of both shapes are shown except one. Use a pair of matching sides to find the factor yourself, then multiply or divide. The big shape is turned or flipped. Numbers are multiples of 5 up to 100.' },
+  { id: 'equal', level: 4, type: null, name: 'Equal sides not labeled',
+    desc: 'Only one number is shown for each group of equal sides. Tick marks and the shape\'s name (square, rhombus, rectangle, isosceles...) tell you the rest. The big shape is turned or flipped, with bigger numbers.' }
+];
 
 const chip = (txt, col) => `<span class="chip" style="border-color:${col};color:${col}">${txt}</span>`;
 
@@ -219,7 +236,7 @@ function pairSVG(P, reveal) {
   // every other side gets a gentle arch over the top. The arches hug the shapes so they stay calm.
   const isLow = i => (pre.mids[i].ny + img.mids[i].ny) / 2 > 0.35;
   const nLow = edges.filter(isLow).length, nUp = edges.length - nLow;
-  const capH = 0, OFFY = noArrows ? 0 : capH + 22 + 20 * nUp, VH = OFFY + 190 + (nLow ? 46 + 20 * nLow : 8);
+  const capH = focus && nUp ? 46 : 0, OFFY = noArrows ? 0 : capH + 22 + 20 * nUp, VH = OFFY + 190 + (nLow ? (focus ? 70 : 46) + 20 * nLow : 8);
   const topY = Math.min(pre.top, img.top), botY = Math.max(pre.bottom, img.bottom);
   let ru = 0, rl = 0;
   const single = SHAPES[P.shape].single, big = P.level === 4 ? `Big ${single}` : 'Big', small = P.level === 4 ? `Small ${single}` : 'Small';
@@ -230,10 +247,16 @@ function pairSVG(P, reveal) {
     const col = COLORS[P.cmap[i]], m1 = pre.mids[i], m2 = img.mids[i];
     const low = isLow(i), sgn = low ? 1 : -1, rank = low ? rl++ : ru++;
     const off = focus ? 33 : (P.ticks ? 24 : 17), gap = focus ? 30 : 20;       // the arrow starts / ends just past each side's number
-    const sx = preX + m1.x + m1.nx * off, sy = OFFY + m1.y + m1.ny * off + sgn * gap, dx = imgX + m2.x + m2.nx * off, dy = OFFY + m2.y + m2.ny * off + sgn * gap;
+    let sx = preX + m1.x + m1.nx * off, sy = OFFY + m1.y + m1.ny * off + sgn * gap, dx = imgX + m2.x + m2.nx * off, dy = OFFY + m2.y + m2.ny * off + sgn * gap;
+    if (focus) {                                                                    // level 2: start right on the known number's bubble and end right on the "?" bubble
+      const B = (m, X, e) => ({ x: X + m.x + m.nx * (off + e), y: OFFY + m.y + m.ny * (off + e) });
+      const b1 = B(m1, preX, 8), b2 = B(m2, imgX, reveal ? 8 : 10), hEnd = reveal ? 34 : 30;
+      sx = b1.x; sy = b1.y + sgn * 21; dx = b2.x; dy = b2.y + sgn * (hEnd / 2 + 9);
+    }
     // lower arrows really dip: the lowest point is well below where the arrow starts and ends, then it rises to its match
     const apex = low ? Math.max(OFFY + botY + 32, (sy + dy) / 2 + 30) + rank * 20 : OFFY + topY - 32 - rank * 20;
-    const cx = (sx + dx) / 2, cy = 2 * (apex - (sy + dy) / 4);
+    const apexF = !focus ? apex : low ? Math.max(apex, Math.max(sy, dy) + 40 + rank * 20) : Math.min(apex, Math.min(sy, dy) - 40 - rank * 20);   // level 2: a real arc that rises/dips clear of both numbers, so the arrowhead lands on the "?" from above/below
+    const cx = (sx + dx) / 2, cy = 2 * (apexF - (sy + dy) / 4);
     defs += `<marker id="ah${i}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="${col}"/></marker>`;
     paths += `<path d="M${sx},${sy} Q${cx},${cy} ${dx},${dy}" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round" stroke-opacity=".9" marker-end="url(#ah${i})"/>`;
     items.push({ col, sx, sy, cx, cy, dx, dy });
@@ -308,18 +331,34 @@ function figParts(P, which, reveal) {
       const u = [a[0]-v[0], a[1]-v[1]], w = [b[0]-v[0], b[1]-v[1]];
       const lu = Math.hypot(...u), lw = Math.hypot(...w), m = 11;
       const A = [v[0]+u[0]/lu*m, v[1]+u[1]/lu*m], B = [A[0]+w[0]/lw*m, A[1]+w[1]/lw*m], C = [v[0]+w[0]/lw*m, v[1]+w[1]/lw*m];
-      out += `<path d="M${A} L${B} L${C}" fill="none" stroke="#7a84ad" stroke-width="2" opacity="${focus ? .4 : 1}"/>`;
+      out += `<path d="M${A} L${B} L${C}" fill="none" stroke="#7a84ad" stroke-width="2"/>`;
     }
   }
+  // Every side is a flat bar that stops exactly where the next side starts: the ends are cut along the corner's angle (a mitre), so
+  // nothing sticks out past a corner and there are no gaps. (Glows first, then the colored sides on top.)
+  const area = pts.reduce((s, p, i) => { const q = pts[(i + 1) % n]; return s + p[0] * q[1] - q[0] * p[1]; }, 0);
+  const nrm = pts.map((a, i) => { const b = pts[(i + 1) % n]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; return area > 0 ? [dy, -dx] : [-dy, dx]; });
+  const mit = pts.map((_, i) => {
+    const p = nrm[(i + n - 1) % n], q = nrm[i]; const d = Math.max(.4, 1 + p[0] * q[0] + p[1] * q[1]);
+    let mx = (p[0] + q[0]) / d, my = (p[1] + q[1]) / d; const l = Math.hypot(mx, my); if (l > 2.4) { mx *= 2.4 / l; my *= 2.4 / l; }   // very sharp corners: cap the point
+    return [mx, my];
+  });
+  const flat = (i, w, fill, extra) => {                                                // (glows: square ends right at the corners, so they never poke past a vertex)
+    const a = pts[i], b = pts[(i + 1) % n], h = w / 2, m = nrm[i];
+    return `<polygon points="${a[0] + m[0] * h},${a[1] + m[1] * h} ${b[0] + m[0] * h},${b[1] + m[1] * h} ${b[0] - m[0] * h},${b[1] - m[1] * h} ${a[0] - m[0] * h},${a[1] - m[1] * h}" fill="${fill}"${extra || ''}>`;
+  };
+  const bar = (i, w, fill, extra) => {
+    const a = pts[i], b = pts[(i + 1) % n], h = w / 2, ma = mit[i], mb = mit[(i + 1) % n];
+    return `<polygon points="${a[0] + ma[0] * h},${a[1] + ma[1] * h} ${b[0] + mb[0] * h},${b[1] + mb[1] * h} ${b[0] - mb[0] * h},${b[1] - mb[1] * h} ${a[0] - ma[0] * h},${a[1] - ma[1] * h}" fill="${fill}"${extra || ''}>`;
+  };
   for (let i = 0; i < n; i++) {
-    const a = pts[i], b = pts[(i + 1) % n], col = COLORS[P.cmap[i]], isT = i === P.ti;
-    const dim = focus && !isT;
+    const col = COLORS[P.cmap[i]], isT = i === P.ti;
     if (qHere && isT)                                                                  // the missing side: glowing gold
-      out += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#ffd23f" stroke-opacity=".6" stroke-width="${focus ? 22 : 15}" stroke-linecap="round"><animate attributeName="stroke-opacity" values=".25;.9;.25" dur="1.2s" repeatCount="indefinite"/></line>`;
+      out += flat(i, focus ? 22 : 15, '#ffd23f', ' fill-opacity=".6"') + `<animate attributeName="fill-opacity" values=".25;.9;.25" dur="1.2s" repeatCount="indefinite"/></polygon>`;
     else if (focus && isT)                                                             // its matching side on the other figure: soft glow in the same color
-      out += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-opacity=".3" stroke-width="20" stroke-linecap="round"/>`;
-    out += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${focus && isT ? 9 : 5}" stroke-linecap="round" opacity="${dim ? .3 : 1}"/>`;
+      out += flat(i, 20, col, ' fill-opacity=".3"') + `</polygon>`;
   }
+  for (let i = 0; i < n; i++) out += bar(i, focus && i === P.ti ? 9 : 5, COLORS[P.cmap[i]]) + `</polygon>`;
   if (P.ticks) {                                                                     // tick marks = equal sides
     let g = 0;
     P.classes.filter(c => c.length > 1).forEach(c => {
@@ -341,13 +380,13 @@ function figParts(P, which, reveal) {
     if (txt === null) continue;
     const m = mids[i], col = COLORS[P.cmap[i]], off = P.ticks ? 24 : 17;
     if (focus && i === P.ti) {                                                         // spotlighted number: a filled bubble in the side's color
-      const size = txt === '?' ? 30 : 22, w = Math.max(40, 18 + String(txt).length * size * .62), h = size + 12;
-      const lx = m.x + m.nx * (off + 8), ly = m.y + m.ny * (off + 8);
+      const size = txt === '?' ? 20 : 22, w = Math.max(txt === '?' ? 32 : 40, 18 + String(txt).length * size * .62), h = size + (txt === '?' ? 10 : 12);
+      const lx = m.x + m.nx * (off + (txt === '?' ? 10 : 8)), ly = m.y + m.ny * (off + (txt === '?' ? 10 : 8));
       out += `<rect x="${lx - w/2}" y="${ly - h/2}" width="${w}" height="${h}" rx="${h/2}" fill="${col}" stroke="#fff" stroke-width="3"/>` +
         `<text x="${lx}" y="${ly + 1}" text-anchor="middle" dominant-baseline="central" font-size="${size}" font-weight="900" fill="#fff" style="${font}">${txt}</text>`;
     } else {
       const lx = m.x + m.nx * off, ly = m.y + m.ny * off;
-      out += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${txt === '?' ? 24 : 18}" font-weight="900" fill="${col}" stroke="#fff" stroke-width="4" paint-order="stroke" opacity="${focus ? .4 : 1}" style="${font}">${txt}</text>`;
+      out += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${txt === '?' ? 24 : focus ? 21 : 18}" font-weight="900" fill="${col}" stroke="#fff" stroke-width="4" paint-order="stroke" style="${font}">${txt}</text>`;
     }
   }
   return { body: out, mids, VW, VH, top: Math.min(...pts.map(p => p[1])), bottom: Math.max(...pts.map(p => p[1])) };
@@ -359,26 +398,57 @@ const THEMES = [
   { name: 'Jungle', sky: ['#7fdcc0','#f4fbd0'], far: '#5fae7a', near: '#2f8a5a', top: '#45b04f', body: '#6b4a2b', sun: '#fffbd0' },
   { name: 'Night City', sky: ['#171b48','#7a4a8f'], far: '#3a3470', near: '#25204d', top: '#5b5b70', body: '#2d2d3a', sun: '#e8ecff', city: true }
 ];
-const SKINS = [
-  { name: 'Rookie', need: 0,    body: '#2f80ed', accent: '#1b4f9c', hat: 'cap' },
-  { name: 'Builder', need: 150,  body: '#ff9f1a', accent: '#b56600', hat: 'hard' },
-  { name: 'Ninja', need: 400, body: '#2b2b3a', accent: '#111', hat: 'band' },
-  { name: 'Royal', need: 800, body: '#9b51e0', accent: '#5b2a94', hat: 'crown' }
+// The bridge-building crew. You earn 1 coin for every correct answer and spend coins in the Shop to hire them as your runner.
+// (Looks only - every crew member runs the same.)  hat: cap | hard | hardWhite | beret | hair    extras: what they carry / wear
+const CHARACTERS = [
+  { id: 'crew',        name: 'Site Worker',      price: 0,  tag: 'Ready to build. Your starting runner.',        body: '#2f80ed', accent: '#1b4f9c', hat: 'cap',       extras: [] },
+  { id: 'politician',  name: 'Politician',       price: 10, tag: 'Gets the funding approved.',                   body: '#2b3a67', accent: '#1c2547', hat: 'hair',      extras: ['tie'] },
+  { id: 'architect',   name: 'Architect',        price: 20, tag: 'Designs the bridge on paper first.',           body: '#3b3b46', accent: '#26262e', hat: 'beret',     extras: ['tube', 'glasses'] },
+  { id: 'engineer',    name: 'Engineer',         price: 30, tag: 'Checks the math and the forces.',              body: '#ff9f1a', accent: '#7a5a20', hat: 'hard',      extras: ['clipboard', 'glasses'] },
+  { id: 'electrician', name: 'Electrician',      price: 45, tag: 'Wires up the lights and signals.',             body: '#2e6bd6', accent: '#1d3f86', hat: 'hardWhite', extras: ['bolt', 'belt'] },
+  { id: 'inspector',   name: 'Safety Inspector', price: 60, tag: 'Makes sure it is safe before it opens.',       body: '#a6e22e', accent: '#4a5a1c', hat: 'hardWhite', extras: ['stripes', 'clipboard'] }
 ];
-// Saved progress lives in this browser only (localStorage), under the "bridgerunner_" prefix - the same
+// One-time move of progress saved under the game's earlier name ("bridgerunner_...") to the "similaritybuilder_..." keys.
+// It MOVES the values (copies, then deletes the old key), so a later "Reset" can't bring old progress back.
+(function migrateOldSaveKeys() {
+  try {
+    ['best_meters', 'best_level', 'best_bridges', 'best_streak', 'muted', 'checkpoints', 'coins', 'owned', 'character', 'skin'].forEach(function (s) {
+      var oldKey = 'bridgerunner_' + s, v = localStorage.getItem(oldKey);
+      if (v === null) return;
+      if (localStorage.getItem('similaritybuilder_' + s) === null && s !== 'skin') localStorage.setItem('similaritybuilder_' + s, v);
+      localStorage.removeItem(oldKey);
+    });
+  } catch (e) {}
+})();
+// Saved progress lives in this browser only (localStorage), under the "similaritybuilder_" prefix - the same
 // per-game prefix convention every other game on the site uses, so My Stats and the reset buttons can find it.
 const KEY = {
-  bestMeters: 'bridgerunner_best_meters', bestLevel: 'bridgerunner_best_level',
-  bestBridges: 'bridgerunner_best_bridges', bestStreak: 'bridgerunner_best_streak',
-  skin: 'bridgerunner_skin', muted: 'bridgerunner_muted', checkpoints: 'bridgerunner_checkpoints'
+  bestMeters: 'similaritybuilder_best_meters', bestLevel: 'similaritybuilder_best_level',
+  bestBridges: 'similaritybuilder_best_bridges', bestStreak: 'similaritybuilder_best_streak',
+  muted: 'similaritybuilder_muted', checkpoints: 'similaritybuilder_checkpoints', practice: 'similaritybuilder_practice_types',
+  coins: 'similaritybuilder_coins', owned: 'similaritybuilder_owned', character: 'similaritybuilder_character'
 };
-let best = store.get(KEY.bestMeters, 0), skinIdx = store.get(KEY.skin, 0), muted = store.get(KEY.muted, false);
-if (skinIdx >= SKINS.length || SKINS[skinIdx].need > best) skinIdx = 0;
+let best = store.get(KEY.bestMeters, 0), muted = store.get(KEY.muted, false);
+let coins = Math.max(0, Math.floor(Number(store.get(KEY.coins, 0)) || 0));
+let owned = (store.get(KEY.owned, ['crew']) || ['crew']).filter(id => CHARACTERS.some(c => c.id === id));
+if (!owned.includes('crew')) owned.unshift('crew');
+let charId = store.get(KEY.character, 'crew');
+if (!owned.includes(charId)) charId = 'crew';
+const currentChar = () => CHARACTERS.find(c => c.id === charId) || CHARACTERS[0];
+function addCoins(n) { coins += n; if (!window.similarityBuilderResetting) store.set(KEY.coins, coins); }
+function equipCharacter(id) { if (!owned.includes(id)) return; charId = id; store.set(KEY.character, id); }
+function buyCharacter(id) {                                    // spend coins to hire a crew member (and put them on)
+  const ch = CHARACTERS.find(c => c.id === id);
+  if (!ch || owned.includes(id) || coins < ch.price) return false;
+  coins -= ch.price; owned.push(id);
+  store.set(KEY.coins, coins); store.set(KEY.owned, owned); equipCharacter(id);
+  return true;
+}
 
 // Records this run's numbers if they beat the saved ones. Called when a run ends AND when the tab is hidden or
 // closed, so progress earned right before leaving the page is never lost.
 function saveRunStats() {
-  if (window.bridgeRunnerResetting || !G || G.state === 'menu') return;
+  if (window.similarityBuilderResetting || !G || G.state === 'menu' || G.mode !== 'run') return;   // Practice never counts toward your best distance
   const meters = Math.max(0, Math.floor(G.px / 30));
   if (meters > best) { best = meters; store.set(KEY.bestMeters, best); }
   if (G.level > store.get(KEY.bestLevel, 1)) store.set(KEY.bestLevel, G.level);
@@ -386,17 +456,17 @@ function saveRunStats() {
   if (G.bestStreak > store.get(KEY.bestStreak, 0)) store.set(KEY.bestStreak, G.bestStreak);
 }
 // Level checkpoints: the first time (most recently) each level was reached - level, distance, and bridges built.
-// Shown on the title screen, the pause menu and the game-over screen as places a new run can start from.
+// Shown on the Menu screen and the game-over screen as places a new run can start from (saves from before levels were tied to distance are moved up to their level's distance).
 let checkpoints = {};
 (function loadCheckpoints() {
   const raw = store.get(KEY.checkpoints, {});
   for (let lv = 2; lv <= MAX_LEVEL; lv++) {
     const c = raw && raw[lv];
-    if (c && Number.isFinite(c.px) && Number.isFinite(c.solved)) checkpoints[lv] = { level: lv, px: c.px, solved: c.solved, wrong: c.wrong || 0, bestStreak: c.bestStreak || 0 };
+    if (c && Number.isFinite(c.px) && Number.isFinite(c.solved)) checkpoints[lv] = { level: lv, px: Math.max(c.px, (lv - 1) * METERS_PER_LEVEL * 30), solved: c.solved, wrong: c.wrong || 0, bestStreak: c.bestStreak || 0 };
   }
 })();
 function saveCheckpoint(cp) {
-  if (window.bridgeRunnerResetting) return;
+  if (window.similarityBuilderResetting) return;
   checkpoints[cp.level] = cp; store.set(KEY.checkpoints, checkpoints);
 }
 // Fills `el` with a row of "Level N · X m" buttons (level 1 = a fresh start at 0 m; levels not reached yet are locked).
@@ -420,14 +490,17 @@ addEventListener('pagehide', saveRunStats);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveRunStats(); });
 
 let G = null;
+let curMode = 'run';                     // 'run' = Bridge Run (obstacles, 3 hearts, levels)   'practice' = no obstacles, no hearts, pick your question types
 const keys = {};
 
 // cp (optional) = a checkpoint {level, px, solved, wrong, bestStreak} saved when that level was reached: the new run
 // starts at that level, at that distance, with the same bridges-built count, and with a fresh set of 3 hearts.
-function newWorld(menu, cp) {
+function newWorld(menu, cp, mode) {
   const lv = cp ? cp.level : 1, x0 = cp ? cp.px : 60;
-  const runLen = Math.round(4000 * SPEED_BY_LEVEL[lv - 1]);           // the same ~11 s of quiet running the very first level gets
+  const practice = mode === 'practice';
+  const runLen = practice ? Math.round(PRACTICE_SECONDS * 330) : Math.round(4000 * SPEED_BY_LEVEL[lv - 1]);   // the same ~11 s of quiet running the very first level gets (Practice: a short jog)
   return {
+    mode: mode || 'run', ptypes: [], answered: 0, byType: {},
     state: menu ? 'menu' : 'run', t: 0, cam: 0, px: menu ? 0 : x0, py: GROUND, vy: 0, onGround: true,
     jumpBuf: 0, airJumps: 0, stumble: 0, inv: 0, crashed: false, shake: 0,
     lives: 3, streak: 0, bestStreak: cp ? cp.bestStreak : 0, solved: cp ? cp.solved : 0, wrong: cp ? cp.wrong : 0,
@@ -438,46 +511,114 @@ function newWorld(menu, cp) {
   };
 }
 
-// Obstacles per theme. Ground obstacles are jumped; flyers hang at head height, so DON'T jump under them.
+// Obstacles: the real-world reasons a bridge doesn't get built (plus the terrain around it).
+//   solid    = something standing on the ground: jump it.           vx = it walks toward you (px/s), so it comes at you faster
+//   zone     = a patch of ground: jump over it or you're in it.     effect: slow (puddle) | collapse (unstable soil gives way if you linger) | hurt (a hole)
+//   pipe     = a loose underground pipe that pops up out of the ground every couple of seconds: jump it while it's up
+//   fly      = hangs at head height (birds, drones, storm clouds, power lines): DON'T jump into it, just run under
 const OBS = {
-  rock: { w: 46, h: 38 }, cactus: { w: 28, h: 62 }, vulture: { fly: true },
-  log: { w: 64, h: 30 }, stump: { w: 36, h: 44 }, parrot: { fly: true },
-  cone: { w: 26, h: 38 }, barrel: { w: 38, h: 48 }, drone: { fly: true }
+  // --- standing on the ground ---
+  rock:      { kind: 'solid', w: 46, h: 38, label: 'boulder' },
+  cactus:    { kind: 'solid', w: 28, h: 62, label: 'cactus' },
+  log:       { kind: 'solid', w: 64, h: 30, label: 'fallen log' },
+  stump:     { kind: 'solid', w: 36, h: 44, label: 'tree stump' },
+  cone:      { kind: 'solid', w: 26, h: 38, label: 'road cone' },
+  barrel:    { kind: 'solid', w: 38, h: 48, label: 'hazmat barrel' },
+  redtape:   { kind: 'solid', w: 58, h: 30, label: 'red tape' },
+  fence:     { kind: 'solid', w: 26, h: 58, label: '"Private Property" fence' },
+  // --- walking toward you ---
+  protesters:{ kind: 'solid', w: 140, h: 66, vx: -70, label: 'protesters' },
+  tortoise:  { kind: 'solid', w: 46, h: 28, vx: -22, label: 'endangered tortoise' },
+  frog:      { kind: 'solid', w: 32, h: 28, vx: -30, label: 'endangered frog' },
+  lawyer:    { kind: 'solid', w: 30, h: 68, vx: -45, label: 'lawyer (needs a permit)' },
+  // --- ground hazards ---
+  puddle:    { kind: 'zone', w: 120, effect: 'hurt',     label: 'puddle',            msg: 'You splashed into a puddle!' },
+  soil:      { kind: 'zone', w: 130, effect: 'hurt',     label: 'unstable soil',     msg: 'The unstable soil gave way!' },
+  hole:      { kind: 'zone', w: 64,  effect: 'hurt',     label: 'hole in the ground', msg: 'You fell in a hole in the ground!' },
+  pipe:      { kind: 'pipe', w: 56, label: 'loose underground pipe', msg: 'A loose pipe burst out of the ground!' },
+  // --- overhead: don't jump into these ---
+  vulture:   { fly: true, label: 'vulture' },
+  parrot:    { fly: true, label: 'parrot' },
+  drone:     { fly: true, label: 'survey drone' },
+  falcon:    { fly: true, label: 'endangered falcon' },
+  storm:     { fly: true, w: 70, label: 'storm cloud (weather delay)' },
+  powerline: { fly: true, w: 180, still: true, label: 'electrical line' }
 };
-const THEME_OBS = [['rock', 'cactus', 'rock', 'vulture'], ['log', 'stump', 'log', 'parrot'], ['cone', 'barrel', 'barrel', 'drone']];
+// Every level has its OWN obstacles (none repeat on another level), and every one of them costs a heart if it touches you.
+// (A name listed twice shows up twice as often.)
+const LEVEL_OBS = [
+  ['rock', 'cactus', 'log', 'cone', 'tortoise'],                                            // 1: simple things on the ground - just jump
+  ['stump', 'frog', 'barrel', 'redtape', 'fence', 'vulture'],                               // 2: taller and wider things, plus the first flyer to duck under
+  ['puddle', 'hole', 'soil', 'lawyer', 'parrot', 'powerline'],                              // 3: wide hazards to clear, walkers, and low-hanging lines
+  ['protesters', 'protesters', 'pipe', 'pipe', 'drone', 'falcon', 'storm']                  // 4: big groups, bursting pipes, and lots of overhead traffic
+];
 const flyY = c => GROUND - 125 + Math.sin(G.t * 4 + c.x) * 8;
+const flyYOf = c => OBS[c.type].still ? GROUND - 128 : flyY(c);                   // power lines don't bob
+// a loose pipe: sits low, wobbles as a warning, shoots up, then sinks again (a 2.4 s cycle, out of step with its neighbours)
+const PIPE_CYCLE = 2.4;
+const pipeH = c => {
+  const ph = (G.t + (c.t0 || 0)) % PIPE_CYCLE;
+  return ph < 0.4 ? 0 : ph < 0.8 ? 6 : ph < 1.9 ? 6 + 42 * Math.sin(Math.PI * (ph - 0.8) / 1.1) : 0;
+};
 
-// each level: the runner is faster, and obstacles are closer together (more of them)
+// each level: the runner is faster, and the spacing gets tighter and more surprising
 const SPEED_BY_LEVEL = [1, 1.12, 1.26, 1.4];                 // × the base running speed (330 px/s)
-const SPACING_BY_LEVEL = [[400, 560], [360, 520], [330, 470], [300, 420]];   // px between obstacles (lots of them!)
+// The tightest gap between two obstacles, in seconds of running (a jump lasts 0.69 s, a double jump longer, so even the tightest is possible).
+const MIN_GAP_SEC = [.85, .75, .66, .58];
+// How the gaps are shuffled: share of TIGHT clusters, share of MEDIUM gaps (the rest are long breathers). Later levels have more clusters.
+const GAP_MIX = [[.15, .55], [.25, .50], [.35, .45], [.45, .40]];
+const COMBO_CHANCE = [0, .1, .25, .35];                      // chance that a flyer is placed right behind a ground obstacle (jump, land, then run under it)
 
+const PRACTICE_SECONDS = 3;                                  // Practice: about how long you run between two questions
+// Distance from the previous obstacle to the next one. Always random, never below what can be cleared:
+// a ground obstacle followed by a flyer leaves time to land first; a flyer followed by a ground obstacle leaves time to get past it before jumping.
+function gapAfter(prev, type, level) {
+  const spd = 330 * SPEED_BY_LEVEL[level - 1], minPx = spd * MIN_GAP_SEC[level - 1], d = OBS[type], pd = prev ? OBS[prev.type] : null;
+  const [tight, medium] = GAP_MIX[level - 1], r = Math.random();
+  const mult = r < tight ? 1 + Math.random() * .15 : r < tight + medium ? 1.35 + Math.random() * .55 : 2 + Math.random() * .8;
+  let g = minPx * mult + (pd && !pd.fly ? Math.min(pd.w || 40, 90) * .6 : 0);
+  if (pd && pd.vx) g += 110;                                                       // walkers move toward you: keep clear of whatever is in front of them
+  if (pd && pd.kind === 'zone') g += pd.w * .5;
+  if (d.fly && pd && !pd.fly) g = Math.max(g, spd * .78 + (d.w || 0) * .5);        // land from the jump before the flyer arrives
+  if (pd && pd.fly && !d.fly) g = Math.max(g, (pd.w || 0) + 28 + spd * .48);       // get past the flyer before jumping the next thing
+  if (d.fly && d.w) g += d.w * .3;                                                 // wide flyers (storms, power lines) get a bit more room
+  return g;
+}
 function fillContent(p, first, theme, level = 1, keepX = null) {
-  // keepX: when a platform ahead is re-filled (theme/level just changed), everything at x <= keepX is already on screen,
-  // so it is left exactly as it is; only what is still off-screen gets the new theme / density.
+  if (curMode === 'practice') { p.obs = []; p.floats = []; return; }        // Practice mode: a clear track - no obstacles at all
+  // keepX: when a platform ahead is re-filled (level just changed), everything at x <= keepX is already on screen,
+  // so it is left exactly as it is; only what is still off-screen gets the new level's obstacles and spacing.
   const kept = keepX === null ? [] : (p.obs || []).filter(c => c.x <= keepX);
   const keptFloats = keepX === null ? [] : (p.floats || []).filter(f => f.x <= keepX);
   p.obs = kept.slice();
-  const [gMin, gMax] = SPACING_BY_LEVEL[level - 1];
   // nothing appears for the first 3 seconds: the first obstacle enters the screen after ~3.1 s (start x=60, speed 330 px/s, screen shows 720 px ahead)
   // (faster levels cover the same 720 px sooner, so the quiet start is stretched by the level's speed to stay a full 3 s)
-  let x = kept.length ? kept[kept.length - 1].x + rnd(gMin, gMax) : Math.max(p.s + (first ? Math.round(2200 * SPEED_BY_LEVEL[level - 1]) : 340), keepX === null ? 0 : keepX + 40);
-  let lastFly = kept.length ? !!kept[kept.length - 1].fly : false;
-  const fresh = [];
-  while (x < p.e - 300) {
-    let type = pick(THEME_OBS[theme]);
-    if (OBS[type].fly && lastFly) type = THEME_OBS[theme][0];        // no back-to-back flyers
-    const d = OBS[type]; lastFly = !!d.fly;
-    const c = { x, type, fly: !!d.fly, hit: false };
-    p.obs.push(c); fresh.push(c);
-    x += rnd(gMin, gMax);
+  let prev = kept.length ? kept[kept.length - 1] : null;
+  let x = prev ? 0 : Math.max(p.s + (first ? Math.round(2200 * SPEED_BY_LEVEL[level - 1]) : 340), keepX === null ? 0 : keepX + 40);
+  const fresh = [], pool = LEVEL_OBS[level - 1], flyPool = pool.filter(t => OBS[t].fly);
+  while (true) {
+    let type = null;
+    for (let tries = 0; tries < 40 && !type; tries++) {
+      const t = pick(pool), d = OBS[t];
+      if (d.fly && prev && prev.fly) continue;                                    // no back-to-back flyers
+      if (first && !prev && d.vx) continue;                                       // nothing walks in during the quiet start
+      type = t;
+    }
+    if (!type) type = pool.find(t => !OBS[t].fly);
+    // later levels: sometimes a flyer right behind a ground obstacle - jump, land, then run under it
+    if (prev && !prev.fly && !OBS[prev.type].vx && flyPool.length && Math.random() < COMBO_CHANCE[level - 1]) type = pick(flyPool);
+    if (prev) x = prev.x + gapAfter(prev, type, level);
+    if (x >= p.e - 300) break;
+    const c = { x, type, fly: !!OBS[type].fly, hit: false, t0: Math.random() * PIPE_CYCLE };
+    p.obs.push(c); fresh.push(c); prev = c;
   }
   // floating platforms: you can land on them (from above) and run along them to hop over a ground obstacle.
-  // They only sit over ground obstacles, never near a flyer. Height 105-125 px: reachable with one jump, easy with a double jump.
+  // They only sit over ground obstacles that stay put, never near a flyer. Height 105-125 px: reachable with one jump, easy with a double jump.
   p.floats = keptFloats;
   const flyers = p.obs.filter(c => c.fly);
   fresh.forEach(c => {
-    if (c.fly || Math.random() > 0.7) return;
-    const w = OBS[c.type].w + 100 + rnd(0, 60), fx = c.x - 50 - rnd(0, 20);
+    if (c.fly || OBS[c.type].vx || Math.random() > 0.7) return;
+    const w = (OBS[c.type].w || 40) + 100 + rnd(0, 60), fx = c.x - 50 - rnd(0, 20);
     if (flyers.some(f => f.x > fx - 90 && f.x < fx + w + 90)) return;
     p.floats.push({ x: fx, w, h: pick([105, 115, 125]) });
   });
@@ -497,23 +638,55 @@ function setGap(p, w) {                                     // resize a gap and 
 function ensureNext() {
   const p = G.platforms[G.pi];
   if (G.pi === G.platforms.length - 1 && G.px > p.e - 1100) {
-    p.problem = genProblem(G.level);                         // the puzzle decides how wide the gap is
+    p.problem = nextProblem();                               // the puzzle decides how wide the gap is
     p.gapW = gapFor(p.problem);
     const s = p.e + p.gapW;
-    const runLen = Math.round(SECONDS_BETWEEN_QUESTIONS * 330 * SPEED_BY_LEVEL[G.level - 1] * (0.9 + Math.random() * 0.2));   // time to dodge before the next question
+    const secs = G.mode === 'practice' ? PRACTICE_SECONDS : SECONDS_BETWEEN_QUESTIONS;
+    const runLen = Math.round(secs * 330 * SPEED_BY_LEVEL[G.level - 1] * (0.9 + Math.random() * 0.2));   // time to dodge before the next question
     G.platforms.push(makePlatform(s, s + runLen, false, G.theme, G.level));
   }
 }
 
-// startGame()   = a brand-new run from level 1
+// the next question: Bridge Run follows your level; Practice picks at random from the question types you chose
+function nextProblem() {
+  if (G.mode === 'practice') { const t = pick(G.ptypes); return genProblem(t.level, undefined, t.type); }
+  return genProblem(G.level);
+}
+
+/* ---- screens: title -> menu -> (Bridge Run | Practice setup | Shop) ---- */
+let screen = 'title';                                                  // title | menu | practice | play
+function showScreen(name) {
+  screen = name;
+  $('title').classList.toggle('hidden', name !== 'title');
+  $('menu').classList.toggle('hidden', name !== 'menu');
+  $('practice').classList.toggle('hidden', name !== 'practice');
+  $('sb').classList.toggle('playing', name === 'play');                // the ☰ Menu / pause button only shows while you're actually playing
+  if (name === 'title') startTitleAnim(); else stopTitleAnim();
+}
+function hidePlayOverlays() {
+  ['over', 'feedback', 'problem', 'pause', 'shop'].forEach(id => $(id).classList.add('hidden'));
+}
+// back to the Menu screen (from the pause menu or the end-of-run screen)
+function toMenu() {
+  setPaused(false); G = newWorld(true); curMode = 'run';
+  hidePlayOverlays(); buildMenu(); showScreen('menu');
+}
+// startGame()   = a brand-new Bridge Run from level 1
 // startGame(cp) = start from a saved level checkpoint: same level and distance, 3 fresh hearts.
 function startGame(cp) {
-  G = newWorld(false, cp);
+  curMode = 'run'; G = newWorld(false, cp);
   G.tipT = cp ? 0 : 4;
-  $('menu').classList.add('hidden'); $('over').classList.add('hidden');
-  $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
+  hidePlayOverlays(); showScreen('play');
   audioInit();
   toast(cp ? `Level ${cp.level} · continuing from ${Math.floor(cp.px / 30)} m` : 'Run! Jump obstacles — a crash costs a ❤️', '');
+}
+// Practice: no obstacles, no hearts, no timer. `types` = the PRACTICE_TYPES entries the player picked.
+function startPractice(types) {
+  curMode = 'practice'; G = newWorld(false, undefined, 'practice'); G.ptypes = types.slice();
+  G.tipT = 0;
+  hidePlayOverlays(); showScreen('play');
+  audioInit();
+  toast('Practice: no obstacles, no hearts — take your time!', '');
 }
 
 /* ===================== AUDIO ===================== */
@@ -547,23 +720,100 @@ function toast(msg, cls) {
 }
 function updateHUD() {
   if (!G) return;
+  const practice = G.mode === 'practice';
+  $('hLives').style.display = practice ? 'none' : '';                                   // Practice has no hearts...
+  $('hCorrectPill').style.display = practice ? '' : 'none';                             // ...so it shows how many you got right instead
   $('hLives').textContent = '❤️'.repeat(G.lives) + '🖤'.repeat(Math.max(0, 3 - G.lives));
+  $('hCorrect').textContent = G.solved;
+  $('menuBtn').style.visibility = G.state === 'over' ? 'hidden' : '';                     // the end-of-run card has its own Menu button
   $('hStreak').textContent = G.streak;
+  $('hCoins').textContent = coins;
   $('hDist').textContent = Math.max(0, Math.floor(G.px / 30));
 }
+// the Menu screen: Bridge Run, Practice, and the Shop live here (and only here)
 function buildMenu() {
   $('mBest').textContent = Math.floor(best);
-  const box = $('skins'); box.innerHTML = '';
-  SKINS.forEach((s, i) => {
+  $('mCoins').textContent = coins; $('hCoins').textContent = coins;
+  const box = $('skins'); box.innerHTML = '';                        // your runner: tap any crew member you've hired (hire more in the Shop)
+  CHARACTERS.filter(c => owned.includes(c.id)).forEach(ch => {
     const b = document.createElement('button');
-    const locked = s.need > best;
-    b.className = 'skin' + (i === skinIdx ? ' sel' : '') + (locked ? ' locked' : '');
-    b.textContent = locked ? `🔒 ${s.name} (${s.need} m)` : s.name;
-    b.onclick = () => { if (locked) return; skinIdx = i; store.set(KEY.skin, i); buildMenu(); };
+    b.type = 'button'; b.className = 'skin' + (ch.id === charId ? ' sel' : ''); b.textContent = ch.name;
+    b.onclick = () => { equipCharacter(ch.id); buildMenu(); };
     box.appendChild(b);
   });
   renderStarts($('menuStarts'), '📍 Or start from a level you\'ve reached:');
 }
+
+/* ===================== PRACTICE SETUP ===================== */
+// which question types are ticked is remembered between visits
+let practicePicked = (() => { const s = store.get(KEY.practice, null); return Array.isArray(s) ? s.filter(id => PRACTICE_TYPES.some(t => t.id === id)) : ['scale']; })();
+function renderPractice() {
+  const grid = $('ptypes'); grid.innerHTML = '';
+  PRACTICE_TYPES.forEach(t => {
+    const on = practicePicked.includes(t.id);
+    const card = document.createElement('button'); card.type = 'button';
+    card.className = 'ptype' + (on ? ' on' : ''); card.setAttribute('role', 'checkbox'); card.setAttribute('aria-checked', on ? 'true' : 'false');
+    let sample = ''; try { sample = pairSVG(genProblem(t.level, undefined, t.type), false); } catch (e) {}      // a live example of this kind of question
+    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel">Level ${t.level}</span>` +
+      `<span class="pname">${t.name}</span><span class="pdesc">${t.desc}</span><span class="psample" aria-hidden="true">${sample}</span>`;
+    card.onclick = () => {
+      practicePicked = practicePicked.includes(t.id) ? practicePicked.filter(id => id !== t.id) : practicePicked.concat(t.id);
+      store.set(KEY.practice, practicePicked); renderPracticeState();
+      card.classList.toggle('on', practicePicked.includes(t.id)); card.setAttribute('aria-checked', practicePicked.includes(t.id) ? 'true' : 'false');
+      card.querySelector('.pcheck').textContent = practicePicked.includes(t.id) ? '✓' : '';
+    };
+    grid.appendChild(card);
+  });
+  renderPracticeState();
+}
+function renderPracticeState() {
+  const n = practicePicked.length, b = $('btnPracStart');
+  b.disabled = n === 0;
+  b.textContent = n === 0 ? 'Pick at least one type' : `Start Practice (${n} type${n > 1 ? 's' : ''})`;
+}
+function openPractice() { hidePlayOverlays(); renderPractice(); showScreen('practice'); }
+// the summary card when you finish Practice (it re-uses the end-of-run card)
+function finishPractice() {
+  const total = G.solved + G.wrong, acc = total ? Math.round(G.solved / total * 100) : 0;
+  $('ovTitle').textContent = '🎓 Practice summary';
+  $('ovStats').innerHTML = `<div><b>${total}</b>Questions answered</div><div><b>${G.solved}</b>Correct</div>` +
+    `<div><b>${acc}%</b>Accuracy</div><div><b>${G.bestStreak}</b>Best streak</div>`;
+  const uniq = G.missed.slice(-4);
+  $('ovReview').innerHTML = uniq.length ? `<p style="text-align:left;font-weight:800;margin-bottom:2px">📝 Missed:</p><div class="review">` +
+    uniq.map(P => `<div>${stepsHTML(P)} <span style="color:#c33">${P.timedOut ? '⏱' : '❌ ' + ansText(P, P.userAns)}</span></div>`).join('') + `</div>`
+    : `<p>${total ? '🎉 No missed questions!' : 'No questions answered yet.'}</p>`;
+  $('ovContinue').innerHTML = ''; $('btnAgain').textContent = 'Practice again';
+  G.state = 'over'; setPaused(false);
+  $('feedback').classList.add('hidden'); $('problem').classList.add('hidden'); $('pause').classList.add('hidden');
+  $('over').classList.remove('hidden');
+}
+
+/* ===================== SHOP ===================== */
+function renderShop() {
+  $('shopCoins').textContent = coins;
+  const grid = $('shopGrid'); grid.innerHTML = '';
+  CHARACTERS.forEach(ch => {
+    const has = owned.includes(ch.id), eq = ch.id === charId;
+    const card = document.createElement('div'); card.className = 'shopCard' + (eq ? ' eq' : '') + (has ? '' : ' locked');
+    const cv = document.createElement('canvas'); cv.width = 110; cv.height = 132; cv.setAttribute('aria-hidden', 'true');
+    const g = cv.getContext('2d'), grd = g.createLinearGradient(0, 0, 0, 132); grd.addColorStop(0, '#dff1ff'); grd.addColorStop(1, '#f6e7c8');
+    g.fillStyle = grd; g.fillRect(0, 0, 110, 132); g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(55, 122, 22, 5, 0, 0, 7); g.fill();
+    drawChar(g, 55, 120, ch, { ph: 1.1, running: true });
+    card.appendChild(cv);
+    const nm = document.createElement('div'); nm.className = 'shopName'; nm.textContent = ch.name; card.appendChild(nm);
+    const tg = document.createElement('div'); tg.className = 'shopTag'; tg.textContent = ch.tag; card.appendChild(tg);
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn shopBtn';
+    if (eq) { btn.textContent = '✔ Running as'; btn.disabled = true; btn.classList.add('ghost'); }
+    else if (has) { btn.textContent = 'Select'; btn.classList.add('alt'); btn.onclick = () => { equipCharacter(ch.id); renderShop(); buildMenu(); }; }
+    else {
+      btn.textContent = `Hire · ${ch.price} coins`; btn.disabled = coins < ch.price;
+      btn.onclick = () => { if (buyCharacter(ch.id)) { sfx.good(); renderShop(); buildMenu(); } };
+    }
+    card.appendChild(btn); grid.appendChild(card);
+  });
+}
+function openShop() { renderShop(); $('shop').classList.remove('hidden'); }
+function closeShop() { $('shop').classList.add('hidden'); buildMenu(); }
 
 /* ===================== PROBLEM FLOW ===================== */
 const TIME_BY_LEVEL = [45, 40, 36, 33];        // seconds to answer, by level
@@ -572,12 +822,15 @@ function answerTime() { return TIME_BY_LEVEL[G.level - 1]; }
 function startSolve() {
   G.state = 'solve';
   const gp = G.platforms[G.pi];
-  G.problem = gp.problem || genProblem(G.level); gp.problem = null;
+  G.problem = gp.problem || nextProblem(); gp.problem = null;
   G.timeTotal = G.timeLeft = answerTime();
   G.hint = false;
   const P = G.problem;
   const bn = SHAPES[P.shape].bridge;
-  $('pTitle').textContent = `Level ${G.level}`;
+  const practice = G.mode === 'practice';
+  $('pTitle').textContent = practice ? `Practice · Level ${P.level}` : `Level ${G.level}`;
+  $('barFill').parentElement.style.display = practice ? 'none' : '';        // Practice is untimed
+  $('pTimer').style.display = practice ? 'none' : '';
   $('pTimer').textContent = '';
   const single = SHAPES[P.shape].single;
   const prompts = {
@@ -619,19 +872,23 @@ function submit(timedOut) {
   G.state = 'build'; sfx.build();
 }
 
+function advanceLevel(lv) {
+  G.level = lv;
+  for (let i = G.pi; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
+  saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
+  sfx.good(); toast(`🎉 Level ${lv} at ${(lv - 1) * METERS_PER_LEVEL} m: faster + new obstacles!`, 'good');
+}
 function onBridgeBuilt() {
   const p = G.platforms[G.pi], b = p.bridge;
   if (b.ok) {
     p.bridged = true;
     G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.solved++;
-    const oldTheme = G.theme, oldLevel = G.level;
-    G.level = Math.min(MAX_LEVEL, 1 + Math.floor(G.solved / SOLVED_PER_LEVEL));
+    const oldTheme = G.theme;
     G.theme = Math.floor(G.solved / 6) % THEMES.length;
-    if (G.theme !== oldTheme || G.level !== oldLevel)                // platforms ahead get the new theme's obstacles at the new density
+    if (G.mode === 'run' && G.theme !== oldTheme)                                          // platforms ahead get the new scenery
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
-    if (G.level !== oldLevel)                                        // remember where each new level was reached, so any later run can start from here
-      saveCheckpoint({ level: G.level, px: G.px, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
-    const up = G.level !== oldLevel ? ` · Level ${G.level}: faster + more obstacles!` : '';
+    addCoins(1); sfx.coin();                                          // 1 coin for every correct answer
+    const up = ' · +1 coin';
     toast((b.P.type === 'scale' ? `Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`
       : `${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`) + up, 'good'); sfx.good();
     G.state = 'run';
@@ -643,9 +900,11 @@ function onBridgeBuilt() {
 // the moment the runner drops into the hole: lose a heart
 function applyFail() {
   const P = G.problem;
-  G.lives--; G.streak = 0; G.wrong++;
+  G.streak = 0; G.wrong++;
   G.missed.push(P);
   sfx.bad(); G.shake = .3;
+  if (G.mode === 'practice') { toast('Not quite — see how it works, then try the next one', 'bad'); return; }   // Practice: no hearts to lose
+  G.lives--;
   toast(G.lives > 0 ? 'Down the hole! −1 ❤️' : 'Down the hole!', 'bad');
 }
 // after falling out of sight, the runner is carried back up to the ledge
@@ -660,7 +919,7 @@ function showFeedback() {
   G.state = 'feedback';
   $('fbTitle').textContent = '💥 Oops!';
   $('fbBody').innerHTML = solutionHTML(P);
-  $('fbStorm').innerHTML = '❤️'.repeat(G.lives) + '🖤'.repeat(3 - G.lives);
+  $('fbStorm').innerHTML = G.mode === 'practice' ? '' : '❤️'.repeat(G.lives) + '🖤'.repeat(3 - G.lives);
   $('btnNext').textContent = 'Try a new bridge ➜';
   $('feedback').classList.remove('hidden');
 }
@@ -669,7 +928,7 @@ function respawn() {
   const p = G.platforms[G.pi];
   p.bridge = null; p.bridged = false;
   G.px = p.e - 70; G.py = GROUND; G.vy = 0; G.onGround = true;
-  const P = genProblem(G.level); p.problem = P; setGap(p, gapFor(P));      // a new puzzle means a new gap width
+  const P = nextProblem(); p.problem = P; setGap(p, gapFor(P));            // a new puzzle means a new gap width
   $('feedback').classList.add('hidden');
   startSolve();
 }
@@ -679,7 +938,7 @@ function gameOver() {
   const total = G.solved + G.wrong, acc = total ? Math.round(G.solved / total * 100) : 0;
   const meters = Math.max(0, Math.floor(G.px / 30)), newBest = meters > best;
   saveRunStats();                                       // best distance, highest level, most bridges, best streak
-  $('ovTitle').textContent = G.crashed ? '💥 You crashed out!' : '🏁 Run over!';
+  $('ovTitle').textContent = G.crashed ? '💥 You crashed out!' : '🏁 Run over!'; $('btnAgain').textContent = 'Run again';
   $('ovStats').innerHTML =
     `<div><b>${meters} m</b>Distance ${newBest ? '🏆 New best!' : ''}</div><div><b>${best} m</b>Best distance</div>` +
     `<div><b>${G.solved}</b>Bridges built</div><div><b>${acc}%</b>Accuracy · best streak ${G.bestStreak}</div>`;
@@ -736,21 +995,50 @@ function update(dt) {
         for (let i = 0; i < 10; i++) G.particles.push({ x: G.px + (Math.random() - .5) * 20, y: G.py - 4, vx: (Math.random() - .5) * 200, vy: 60 + Math.random() * 100, life: .35, color: '#fff' });
       }
     }
+    // things that walk toward you (protesters, lawyers, endangered animals) start moving once they're on screen
+    for (const q of G.platforms) for (const c of q.obs) {
+      const vx = OBS[c.type].vx;
+      if (vx && !c.hit && c.x - G.cam < W + 200 && c.x - G.cam > -150) c.x += vx * dt;
+    }
     // obstacles: a crash costs a heart, then you get a moment of invincibility
     if (G.inv > 0) G.inv -= dt;
-    else for (const c of p.obs) {
-      if (c.hit) continue;
+    const grounded = G.py >= GROUND - 4;                              // feet on the ground (not up on a floating platform or in the air)
+    for (const c of p.obs) {
       const d = OBS[c.type];
-      const hit = c.fly
-        ? Math.abs(G.px - c.x) < 28 && (G.py - 92) < flyY(c) + 14 && G.py > flyY(c) - 14
-        : G.px + 10 > c.x && G.px - 10 < c.x + d.w && G.py > GROUND - d.h + 4;
-      if (hit) {
+      if (c.hit && d.kind !== 'zone') continue;
+      let hurt = false, ex = c.x + (d.w || 0) / 2, ey = GROUND - 20;
+      if (d.fly) {
+        const y = flyYOf(c), half = d.w ? d.w / 2 + 12 : 28;
+        hurt = Math.abs(G.px - c.x) < half && (G.py - 92) < y + 14 && G.py > y - 14; ex = c.x; ey = y;
+      } else if (d.kind === 'zone') {
+        const inside = grounded && G.px + 6 > c.x && G.px - 6 < c.x + d.w;
+        if (inside && !c.hit) {
+          if (d.effect === 'slow') {                                    // puddle: you slip and lose speed
+            G.stumble = Math.max(G.stumble, .3);
+            if (!c.warned) { c.warned = true; toast(d.msg, 'bad'); }
+            if (Math.random() < .6) G.particles.push({ x: G.px, y: GROUND, vx: (Math.random() - .5) * 160, vy: -120 - Math.random() * 120, life: .4, color: '#7fc8ff' });
+          } else if (d.effect === 'collapse') {                         // unstable soil: keep running slowly on it and it gives way
+            G.stumble = Math.max(G.stumble, .3); c.sink = (c.sink || 0) + dt; G.shake = Math.max(G.shake, .05);
+            if (!c.warned) { c.warned = true; toast('Unstable soil! Jump off it!', 'bad'); }
+            if (c.sink > 0.55) { hurt = true; c.collapsed = true; }
+          } else if (d.effect === 'hurt') hurt = true;                  // a hole in the ground
+        } else if (d.effect === 'collapse' && !c.collapsed) c.sink = 0;
+        ey = GROUND + 6;
+      } else if (d.kind === 'pipe') {
+        const h = pipeH(c);
+        hurt = h > 16 && G.px + 10 > c.x && G.px - 10 < c.x + d.w && G.py > GROUND - h + 4; ey = GROUND - h / 2;
+      } else {
+        hurt = G.px + 10 > c.x && G.px - 10 < c.x + d.w && G.py > GROUND - d.h + 4; ey = GROUND - d.h / 2;
+      }
+      if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
-        sfx.hit(); sfx.bad(); burst(c.fly ? c.x - G.cam : c.x + d.w / 2 - G.cam, c.fly ? flyY(c) : GROUND - d.h / 2, '#ff8a5c', 18);
-        toast(G.lives > 0 ? `Crash into the ${c.type}! −1 ❤️` : 'Crashed out!', 'bad');
+        sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
+        toast(G.lives > 0 ? `${d.msg || 'You ran into the ' + d.label + '!'} −1 ❤️` : 'Crashed out!', 'bad');
         if (G.lives <= 0) { G.crashed = true; gameOver(); return; }
       }
     }
+    // every 1000 m is a new level: faster runner, that level's own obstacles, tighter spacing, and a saved checkpoint to restart from
+    if (G.mode === 'run') { const lv = levelForMeters(Math.floor(G.px / 30)); if (lv > G.level) advanceLevel(lv); }
     // move to next platform when we've crossed onto it
     const nx = G.platforms[G.pi + 1];
     if (nx && G.px > nx.s + 20) G.pi++;
@@ -772,7 +1060,7 @@ function update(dt) {
       b.collapsed = true; sfx.hit(); G.shake = .4;
       burst(p.e + trigger - G.cam, GROUND, '#c98a4b', 26);
     }
-  } else if (G.state === 'solve') {
+  } else if (G.state === 'solve' && G.mode === 'run') {                   // (Practice has no timer)
     G.timeLeft -= dt;
     const f = clamp(G.timeLeft / G.timeTotal, 0, 1);
     $('barFill').style.width = (f * 100) + '%';
@@ -869,7 +1157,7 @@ function drawBridge(p, T) {
   const dl = b.len * deckP;
   const done = beamP >= 1;
   const paint = () => {
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'round';                 // beams end exactly at their joints (no overshoot)
   // deck planks
   if (dl > 1) {
     ctx.fillStyle = '#8a4b2a'; ctx.fillRect(x0, GROUND - 2, dl, 12);
@@ -931,11 +1219,20 @@ function drawBridge(p, T) {
   }
 }
 
+// draws one obstacle. x = its left edge on screen (flyers: their centre). c.x keeps changing for the ones that walk.
 function drawObstacle(c, x) {
-  const G0 = GROUND, ol = '#3b2a1a';
-  ctx.save(); if (c.hit) ctx.globalAlpha = .4;
-  ctx.lineWidth = 3; ctx.strokeStyle = ol; ctx.lineJoin = 'round';
+  const G0 = GROUND, ol = '#3b2a1a', T = G.t, d = OBS[c.type];
+  ctx.save(); if (c.hit && d.kind !== 'zone' && d.kind !== 'pipe') ctx.globalAlpha = .4;
+  ctx.lineWidth = 3; ctx.strokeStyle = ol; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   const rr = (a, b, w, h, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(a, b, w, h, r); ctx.fill(); ctx.stroke(); };
+  const txt = (s, tx, ty, size, col) => { ctx.fillStyle = col || '#222'; ctx.font = `900 ${size}px Trebuchet MS, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, tx, ty); };
+  const person = (px, h, body, head, walk, phase) => {                 // a little walking person, feet on the ground at px
+    const s = walk ? Math.sin(T * 9 + phase) : 0;
+    ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(px, G0 - h * .4); ctx.lineTo(px + s * 5, G0); ctx.moveTo(px, G0 - h * .4); ctx.lineTo(px - s * 5, G0); ctx.stroke();
+    ctx.fillStyle = body; ctx.strokeStyle = ol; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(px - 8, G0 - h * .78, 16, h * .42, 5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = head; ctx.beginPath(); ctx.arc(px, G0 - h * .86, 7, 0, 7); ctx.fill(); ctx.stroke();
+  };
   switch (c.type) {
     case 'rock':
       ctx.fillStyle = '#9a8676'; ctx.beginPath(); ctx.moveTo(x, G0); ctx.lineTo(x + 5, G0 - 24); ctx.lineTo(x + 20, G0 - 38); ctx.lineTo(x + 38, G0 - 29); ctx.lineTo(x + 46, G0); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -955,19 +1252,106 @@ function drawObstacle(c, x) {
       ctx.fillStyle = '#fff'; ctx.fillRect(x + 7, G0 - 24, 12, 6); rr(x - 1, G0 - 6, 28, 6, 2, '#ff7a1a'); break;
     case 'barrel':
       rr(x, G0 - 48, 38, 48, 9, '#c0392b'); ctx.fillStyle = '#ffd23f'; ctx.fillRect(x + 1.5, G0 - 34, 35, 6); ctx.fillRect(x + 1.5, G0 - 16, 35, 6);
-      ctx.fillStyle = '#222'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', x + 19, G0 - 22); break;
-    case 'vulture': case 'parrot': {
-      const y = flyY(c), fl = Math.sin(G.t * 12 + c.x) * 14, col = c.type === 'vulture' ? '#3a2a2a' : '#e2334a';
+      txt('!', x + 19, G0 - 22, 14); break;
+    case 'redtape':                                                    // red tape: bureaucracy, stretched across the path
+      rr(x, G0 - 34, 6, 34, 2, '#8a8a8a'); rr(x + d.w - 6, G0 - 34, 6, 34, 2, '#8a8a8a');
+      ctx.fillStyle = '#d92b2b'; ctx.strokeStyle = '#7a1414'; ctx.lineWidth = 2;
+      for (const yy of [G0 - 32, G0 - 17]) { ctx.beginPath(); ctx.moveTo(x + 5, yy); ctx.quadraticCurveTo(x + d.w / 2, yy + 5, x + d.w - 5, yy); ctx.lineTo(x + d.w - 5, yy + 8); ctx.quadraticCurveTo(x + d.w / 2, yy + 13, x + 5, yy + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      txt('RED TAPE', x + d.w / 2, G0 - 26, 11, '#fff'); break;
+    case 'fence':                                                       // a fence around private property
+      rr(x + 9, G0 - 58, 8, 58, 2, '#8a8a8a'); ctx.strokeStyle = '#9aa0aa'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(x, G0 - 8 - i * 12); ctx.lineTo(x + d.w, G0 - 20 - i * 12); ctx.moveTo(x, G0 - 20 - i * 12); ctx.lineTo(x + d.w, G0 - 8 - i * 12); } ctx.stroke();
+      rr(x - 8, G0 - 60, 42, 16, 3, '#ffd23f'); txt('PRIVATE', x + 13, G0 - 52, 8); break;
+    case 'protesters': {                                                // a group carrying signs that walks toward you
+      const signs = ['NO!', 'STOP', 'NO WAY'], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
+      for (let i = 0; i < 3; i++) {
+        const px = x + 24 + i * 46, bob = Math.abs(Math.sin(T * 6 + i)) * 2, lift = i === 1 ? 14 : 0;
+        person(px, 66, ['#c0392b', '#2e86c1', '#27ae60'][i], '#f1c08a', true, i);
+        ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px, G0 - 40); ctx.lineTo(px, G0 - 92 - lift - bob); ctx.stroke();
+        ctx.lineWidth = 3; rr(px - 22, G0 - 132 - lift - bob, 44, 38, 5, cols[i]);                    // a big sign...
+        ctx.lineWidth = 2; ctx.strokeStyle = '#c0392b'; ctx.beginPath(); ctx.roundRect(px - 19, G0 - 129 - lift - bob, 38, 32, 3); ctx.stroke();   // ...with a red border
+        txt(signs[i], px, G0 - 113 - lift - bob, signs[i].length > 4 ? 12 : 16, '#111');              // ...and big dark letters
+      } break; }
+    case 'lawyer': {                                                    // a lawyer with a briefcase who wants to see a permit
+      person(x + 15, 68, '#555b6e', '#f1c08a', true, 0);
+      ctx.fillStyle = '#d92b2b'; ctx.beginPath(); ctx.moveTo(x + 15, G0 - 50); ctx.lineTo(x + 18, G0 - 44); ctx.lineTo(x + 15, G0 - 34); ctx.lineTo(x + 12, G0 - 44); ctx.fill();
+      rr(x + 19, G0 - 36, 14, 11, 2, '#7a4b22');
+      rr(x - 22, G0 - 108, 66, 22, 8, '#fff'); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x + 6, G0 - 88); ctx.lineTo(x + 14, G0 - 88); ctx.lineTo(x + 12, G0 - 78); ctx.fill();
+      txt('PERMIT?', x + 11, G0 - 97, 13, '#1d2340'); break; }
+    case 'tortoise': {                                                  // a protected desert tortoise crossing the trail
+      const l = Math.sin(T * 3) * 2;
+      ctx.fillStyle = '#c9a26a'; ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
+      for (const lx of [x + 8, x + 18, x + 32, x + 40]) { ctx.beginPath(); ctx.roundRect(lx - 3, G0 - 8 + (lx % 2 ? l : -l) * .3, 7, 8, 2); ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(x - 2, G0 - 15, 7, 5, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#7a8f3a'; ctx.beginPath(); ctx.ellipse(x + 24, G0 - 16, 22, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 24, G0 - 31); ctx.lineTo(x + 24, G0 - 16); ctx.moveTo(x + 10, G0 - 22); ctx.lineTo(x + 38, G0 - 22); ctx.stroke();
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 6, G0 - 30); ctx.lineTo(x + 6, G0 - 66); ctx.stroke();
+      rr(x - 54, G0 - 100, 118, 34, 5, '#fff'); txt('PROTECTED', x + 5, G0 - 83, 16, '#0d7a3c'); break; }
+    case 'frog': {                                                      // an endangered tree frog, hopping toward you
+      const hop = Math.abs(Math.sin(T * 5 + c.x * .01)) * 8;
+      ctx.fillStyle = '#5cc94f'; ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(x + 16, G0 - 12 - hop, 14, 10, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x + 26, G0 - 6 - hop * .4, 8, 5, .3, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(x + 6, G0 - 6 - hop * .4, 8, 5, -.3, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + 9, G0 - 22 - hop, 4, 0, 7); ctx.arc(x + 21, G0 - 22 - hop, 4, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(x + 9, G0 - 22 - hop, 1.6, 0, 7); ctx.arc(x + 21, G0 - 22 - hop, 1.6, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 32, G0 - 4); ctx.lineTo(x + 32, G0 - 60); ctx.stroke();
+      rr(x - 32, G0 - 94, 132, 34, 5, '#fff'); txt('ENDANGERED', x + 34, G0 - 77, 16, '#0d7a3c'); break; }
+    case 'puddle': {                                                    // standing water
+      const w = d.w; ctx.fillStyle = 'rgba(70,150,230,.85)'; ctx.strokeStyle = 'rgba(20,70,140,.9)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 4, w / 2, 8, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(x + w * (.25 + i * .25), G0 + 4, 10 + Math.sin(T * 3 + i) * 3, 3, 0, 0, 7); ctx.stroke(); } break; }
+    case 'soil': {                                                      // unstable soil: cracks, and it shakes when you linger on it
+      const w = d.w, sh = c.sink ? Math.sin(T * 60) * (1 + c.sink * 4) : 0;
+      ctx.fillStyle = '#5b3a1e'; ctx.strokeStyle = '#2f1d0e'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(x, G0 - 1, w, 15, 6); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#1e1208'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i < 5; i++) { const cx0 = x + 10 + i * (w - 20) / 4; ctx.moveTo(cx0, G0 + sh * .2); ctx.lineTo(cx0 + 8, G0 + 6); ctx.lineTo(cx0 - 3, G0 + 12); }
+      ctx.stroke(); ctx.fillStyle = '#7a5230'; for (let i = 0; i < 6; i++) ctx.fillRect(x + 8 + i * (w - 16) / 5 + sh, G0 - 5 - Math.abs(Math.sin(T * 8 + i)) * (c.sink ? 5 : 1), 4, 4);
+      ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(x - 12, G0 - 46); ctx.lineTo(x - 2, G0 - 26); ctx.lineTo(x - 22, G0 - 26); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ol; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = '#6b4a2a'; ctx.beginPath(); ctx.moveTo(x - 12, G0 - 26); ctx.lineTo(x - 12, G0); ctx.stroke(); txt('!', x - 12, G0 - 34, 13); break; }
+    case 'hole': {                                                      // a hole in the ground
+      const w = d.w; ctx.fillStyle = '#0b0714'; ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 2, w / 2, 13, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 2, w / 2 - 6, 8, 0, .2, Math.PI - .2); ctx.stroke();
+      ctx.fillStyle = '#7a5230'; for (const [px, py] of [[-2, -6], [w + 2, -3], [w * .3, -12], [w * .75, -11]]) { ctx.beginPath(); ctx.arc(x + px, G0 + py + 6, 3, 0, 7); ctx.fill(); } break; }
+    case 'pipe': {                                                      // a loose pipe that pops up out of the ground
+      const h = pipeH(c);
+      ctx.fillStyle = '#5b3a1e'; ctx.strokeStyle = '#2f1d0e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + d.w / 2, G0 + 1, d.w / 2, 7, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
+      if (h > 1) {
+        ctx.lineWidth = 3; ctx.strokeStyle = ol; rr(x + 10, G0 - h, 36, h + 2, 4, '#7d8b9a'); rr(x + 6, G0 - h - 5, 44, 9, 3, '#5f6d7b');
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x + 15, G0 - h + 2, 5, Math.max(0, h - 4));
+        if (h > 14) { ctx.fillStyle = 'rgba(90,170,255,.9)'; for (let i = 0; i < 3; i++) { const dy = ((T * 90 + i * 22) % 44); ctx.beginPath(); ctx.arc(x + 14 + i * 14, G0 - h - 8 - dy * .5, 3, 0, 7); ctx.fill(); } }
+      } break; }
+    case 'vulture': case 'parrot': case 'falcon': {                     // birds (the falcon is an endangered peregrine)
+      const y = flyYOf(c), fl = Math.sin(G.t * 12 + c.x) * 14, col = { vulture: '#3a2a2a', parrot: '#e2334a', falcon: '#5f7186' }[c.type];
       ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, 17, 10, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - 6, y - 4); ctx.lineTo(x - 26, y - 6 - fl); ctx.lineTo(x - 2, y + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x + 4, y - 4); ctx.lineTo(x + 22, y - 6 - fl); ctx.lineTo(x + 8, y + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (c.type === 'falcon') { ctx.fillStyle = '#f4f1ea'; ctx.beginPath(); ctx.ellipse(x - 2, y + 3, 10, 5, 0, 0, 7); ctx.fill(); }
       ctx.fillStyle = '#ffc93c'; ctx.beginPath(); ctx.moveTo(x - 15, y - 2); ctx.lineTo(x - 26, y + 3); ctx.lineTo(x - 15, y + 5); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 9, y - 3, 2.5, 0, 7); ctx.fill(); break; }
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 9, y - 3, 2.5, 0, 7); ctx.fill();
+      if (c.type === 'falcon') { rr(x - 66, y - 62, 132, 34, 5, '#fff'); txt('ENDANGERED', x, y - 45, 16, '#0d7a3c'); } break; }
     case 'drone': {
-      const y = flyY(c);
+      const y = flyYOf(c);
       rr(x - 16, y - 8, 32, 16, 6, '#4b5578'); ctx.fillStyle = Math.sin(G.t * 10) > 0 ? '#ff4d4d' : '#701'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
       ctx.strokeStyle = '#cfd6ff'; ctx.lineWidth = 3; const r = Math.abs(Math.sin(G.t * 30)) * 10 + 8;
       ctx.beginPath(); ctx.moveTo(x - 16 - r / 2, y - 12); ctx.lineTo(x - 16 + r / 2, y - 12); ctx.moveTo(x + 16 - r / 2, y - 12); ctx.lineTo(x + 16 + r / 2, y - 12); ctx.stroke(); break; }
+    case 'storm': {                                                     // a storm cloud: weather delay
+      const y = flyYOf(c); ctx.fillStyle = '#5b6478'; ctx.strokeStyle = '#2e3446'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.ellipse(x, y, 34, 15, 0, 0, 7); ctx.ellipse(x - 20, y + 3, 18, 11, 0, 0, 7); ctx.ellipse(x + 20, y + 3, 18, 11, 0, 0, 7); ctx.ellipse(x - 6, y - 10, 16, 12, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(140,200,255,.9)'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i < 5; i++) { const dx = x - 26 + i * 13, dy = ((T * 260 + i * 37) % 44); ctx.moveTo(dx, y + 16 + dy); ctx.lineTo(dx - 3, y + 24 + dy); } ctx.stroke();
+      if (Math.sin(T * 5 + c.x) > .75) { ctx.fillStyle = '#ffe14d'; ctx.beginPath(); ctx.moveTo(x + 4, y + 10); ctx.lineTo(x - 6, y + 32); ctx.lineTo(x + 1, y + 32); ctx.lineTo(x - 5, y + 52); ctx.lineTo(x + 10, y + 26); ctx.lineTo(x + 3, y + 26); ctx.closePath(); ctx.fill(); } break; }
+    case 'powerline': {                                                 // electrical lines strung between two poles, sparking
+      const y = flyYOf(c), hw = d.w / 2, sag = 14;
+      ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x - hw, G0); ctx.lineTo(x - hw, y - 34); ctx.moveTo(x + hw, G0); ctx.lineTo(x + hw, y - 34); ctx.stroke();
+      ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - hw - 14, y - 30); ctx.lineTo(x - hw + 14, y - 30); ctx.moveTo(x + hw - 14, y - 30); ctx.lineTo(x + hw + 14, y - 30); ctx.stroke();
+      ctx.strokeStyle = '#1b1b24'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - hw, y - 28); ctx.quadraticCurveTo(x, y - 28 + sag * 2, x + hw, y - 28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - hw, y - 20); ctx.quadraticCurveTo(x, y - 20 + sag * 2, x + hw, y - 20); ctx.stroke();
+      const sp = Math.sin(T * 20 + c.x); if (sp > .4) { const sx = x + Math.sin(T * 3 + c.x) * hw * .6; ctx.strokeStyle = '#ffe14d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx, y - 6); ctx.lineTo(sx - 6, y + 4); ctx.lineTo(sx + 4, y + 6); ctx.lineTo(sx - 4, y + 16); ctx.stroke(); }
+      ctx.fillStyle = '#ffd23f'; ctx.strokeStyle = ol; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - hw, y - 96); ctx.lineTo(x - hw + 13, y - 72); ctx.lineTo(x - hw - 13, y - 72); ctx.closePath(); ctx.fill(); ctx.stroke(); txt('⚡', x - hw, y - 79, 11); break; }
   }
   ctx.restore();
 }
@@ -1014,38 +1398,63 @@ function drawWorld(T) {
   }
 }
 
-function drawRunner() {
-  const sk = SKINS[skinIdx], x = 240 + (G.px - G.cam - 240), fy = G.py;
-  const running = (G.state === 'run' || G.state === 'cross' || G.state === 'menu') && G.onGround;
-  const ph = G.t * (G.state === 'cross' ? 12 : 16) * (G.stumble > 0 ? .5 : 1);
-  const air = !G.onGround;
-  ctx.save(); ctx.translate(x, 0); ctx.lineCap = 'round';
-  if (G.inv > 0 && Math.floor(G.t * 14) % 2) ctx.globalAlpha = .35;      // blink while invincible
-  if (G.state === 'fall') ctx.translate(0, 0);
+// Draws one crew member with feet at (x, fy) on drawing context g. Used for the runner AND for the Shop previews.
+// o = { ph: leg-swing phase, running, air }
+function drawChar(g, x, fy, ch, o) {
+  const { ph = 0, running = false, air = false } = o || {}, ex = ch.extras || [];
+  g.save(); g.translate(x, 0); g.lineCap = 'round'; g.lineJoin = 'round';
+  if (ex.includes('tube')) {                                             // architect: a rolled-up set of plans on the back
+    g.save(); g.translate(-3, fy - 52); g.rotate(-.7); g.fillStyle = '#c99760'; g.strokeStyle = '#6b4a2a'; g.lineWidth = 1.5;
+    g.beginPath(); g.roundRect(-4, -24, 9, 48, 4); g.fill(); g.stroke(); g.fillStyle = '#e8d3a8'; g.fillRect(-4, -20, 9, 4); g.restore();
+  }
   // legs
-  ctx.strokeStyle = sk.accent; ctx.lineWidth = 8;
+  g.strokeStyle = ch.accent; g.lineWidth = 8;
   for (const s of [1, -1]) {
     const a = running ? Math.sin(ph) * s * .9 : (air ? s * .6 : s * .15);
-    ctx.beginPath(); ctx.moveTo(0, fy - 26); ctx.lineTo(Math.sin(a) * 18, fy - 26 + Math.cos(a) * 24); ctx.stroke();
+    g.beginPath(); g.moveTo(0, fy - 26); g.lineTo(Math.sin(a) * 18, fy - 26 + Math.cos(a) * 24); g.stroke();
   }
   // body
-  ctx.fillStyle = sk.body; ctx.beginPath(); ctx.roundRect(-13, fy - 62, 26, 38, 8); ctx.fill();
+  g.fillStyle = ch.body; g.beginPath(); g.roundRect(-13, fy - 62, 26, 38, 8); g.fill();
+  if (ex.includes('stripes')) { g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(-13, fy - 52, 26, 4); g.fillRect(-13, fy - 38, 26, 4); }   // hi-vis reflective bands
+  if (ex.includes('tie')) { g.fillStyle = '#f4f4f4'; g.beginPath(); g.moveTo(-7, fy - 62); g.lineTo(7, fy - 62); g.lineTo(0, fy - 48); g.closePath(); g.fill();
+    g.fillStyle = '#d92b2b'; g.beginPath(); g.moveTo(0, fy - 60); g.lineTo(4, fy - 54); g.lineTo(0, fy - 36); g.lineTo(-4, fy - 54); g.closePath(); g.fill(); }
+  if (ex.includes('bolt')) { g.fillStyle = '#ffd23f'; g.beginPath(); g.moveTo(3, fy - 58); g.lineTo(-6, fy - 46); g.lineTo(0, fy - 46); g.lineTo(-4, fy - 33); g.lineTo(7, fy - 49); g.lineTo(1, fy - 49); g.closePath(); g.fill(); }
+  if (ex.includes('belt')) { g.fillStyle = '#7a4b22'; g.fillRect(-13, fy - 32, 26, 5); g.fillStyle = '#b0b7c0'; g.fillRect(6, fy - 32, 5, 12); }    // tool belt
   // arms
-  ctx.strokeStyle = sk.body; ctx.lineWidth = 6;
+  g.strokeStyle = ch.body; g.lineWidth = 6;
   for (const s of [1, -1]) {
     const a = running ? -Math.sin(ph) * s * .9 : (air ? -2.2 : .2);
-    ctx.beginPath(); ctx.moveTo(0, fy - 54); ctx.lineTo(Math.sin(a) * 18, fy - 54 + Math.cos(a) * 18); ctx.stroke();
+    g.beginPath(); g.moveTo(0, fy - 54); g.lineTo(Math.sin(a) * 18, fy - 54 + Math.cos(a) * 18); g.stroke();
+  }
+  if (ex.includes('clipboard')) {
+    g.fillStyle = '#b98b5a'; g.strokeStyle = '#6b4a2a'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(9, fy - 56, 15, 19, 2); g.fill(); g.stroke();
+    g.fillStyle = '#fff'; g.fillRect(11, fy - 52, 11, 14); g.strokeStyle = '#8894ad'; g.lineWidth = 1; g.beginPath(); g.moveTo(13, fy - 48); g.lineTo(20, fy - 48); g.moveTo(13, fy - 44); g.lineTo(20, fy - 44); g.moveTo(13, fy - 40); g.lineTo(18, fy - 40); g.stroke();
   }
   // head
-  ctx.fillStyle = '#ffd9b0'; ctx.beginPath(); ctx.arc(0, fy - 74, 13, 0, 7); ctx.fill();
-  ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(5, fy - 75, 2.2, 0, 7); ctx.fill();
-  // hat
-  ctx.fillStyle = sk.accent;
-  if (sk.hat === 'cap') { ctx.beginPath(); ctx.arc(0, fy - 78, 13, Math.PI, 0); ctx.fill(); ctx.fillRect(2, fy - 80, 18, 5); }
-  else if (sk.hat === 'hard') { ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(0, fy - 79, 14, Math.PI, 0); ctx.fill(); ctx.fillRect(-16, fy - 80, 32, 5); }
-  else if (sk.hat === 'band') { ctx.fillStyle = '#e04545'; ctx.fillRect(-13, fy - 81, 26, 6); ctx.fillRect(-20, fy - 80, 8, 3); }
-  else if (sk.hat === 'crown') { ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(-12, fy - 84); ctx.lineTo(-12, fy - 98); ctx.lineTo(-6, fy - 90); ctx.lineTo(0, fy - 100); ctx.lineTo(6, fy - 90); ctx.lineTo(12, fy - 98); ctx.lineTo(12, fy - 84); ctx.closePath(); ctx.fill(); }
-  if (G.state === 'rise') {                                   // balloons carry the runner back up
+  g.fillStyle = '#ffd9b0'; g.beginPath(); g.arc(0, fy - 74, 13, 0, 7); g.fill();
+  g.fillStyle = '#222'; g.beginPath(); g.arc(5, fy - 75, 2.2, 0, 7); g.fill();
+  if (ex.includes('glasses')) { g.strokeStyle = '#222'; g.lineWidth = 1.6; g.beginPath(); g.arc(5, fy - 75, 4.5, 0, 7); g.moveTo(0.5, fy - 75); g.lineTo(-6, fy - 76); g.stroke(); }
+  // hat / hair
+  if (ch.hat === 'cap') { g.fillStyle = ch.accent; g.beginPath(); g.arc(0, fy - 78, 13, Math.PI, 0); g.fill(); g.fillRect(2, fy - 80, 18, 5); }
+  else if (ch.hat === 'hard' || ch.hat === 'hardWhite') {
+    g.fillStyle = ch.hat === 'hard' ? '#ffd23f' : '#f4f4f4'; g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(0, fy - 79, 14, Math.PI, 0); g.fill(); g.stroke(); g.fillRect(-16, fy - 80, 32, 5); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(-2, fy - 93, 4, 12);
+  }
+  else if (ch.hat === 'beret') { g.fillStyle = '#7b3fa0'; g.beginPath(); g.ellipse(-2, fy - 85, 15, 6, -.15, 0, 7); g.fill(); g.fillRect(-3, fy - 93, 3, 5); }
+  else if (ch.hat === 'hair') { g.fillStyle = '#b9b9c4'; g.beginPath(); g.arc(0, fy - 78, 13, Math.PI * 1.02, Math.PI * 1.98); g.lineTo(6, fy - 84); g.lineTo(-3, fy - 90); g.closePath(); g.fill(); }
+  g.restore();
+}
+
+function drawRunner() {
+  const ch = currentChar(), x = 240 + (G.px - G.cam - 240), fy = G.py;
+  const running = (G.state === 'run' || G.state === 'cross' || G.state === 'menu') && G.onGround;
+  const ph = G.t * (G.state === 'cross' ? 12 : 16) * (G.stumble > 0 ? .5 : 1);
+  ctx.save();
+  if (G.inv > 0 && Math.floor(G.t * 14) % 2) ctx.globalAlpha = .35;      // blink while invincible
+  drawChar(ctx, x, fy, ch, { ph, running, air: !G.onGround });
+  ctx.restore();
+  if (G.state === 'rise') {                                              // balloons carry the runner back up
+    ctx.save(); ctx.translate(x, 0);
     const cols = ['#ff5d73', '#ffd23f', '#4dd0e1'];
     cols.forEach((c, i) => {
       const bx = (i - 1) * 22 + Math.sin(G.t * 5 + i) * 4, by = fy - 165 + Math.abs(i - 1) * 10;
@@ -1054,8 +1463,8 @@ function drawRunner() {
       ctx.beginPath(); ctx.ellipse(bx, by, 17, 22, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(bx - 6, by - 8, 4, 7, -.5, 0, 7); ctx.fill();
     });
+    ctx.restore();
   }
-  ctx.restore();
   // shadow
   if (G.state !== 'fall' && support(G.px)) { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(x, GROUND + 4, Math.max(6, 18 - (GROUND - fy) * .05), 4, 0, 0, 7); ctx.fill(); }
 }
@@ -1080,12 +1489,129 @@ function draw() {
   ctx.restore();
 }
 
+/* ===================== TITLE SCREEN ANIMATION ===================== */
+// A small shape is dilated from a centre point: dashed rays run through matching corners, the big copy grows out
+// along them, and a pill shows the "x k" (then "÷ k" on the way back). Behind it: drifting similar pairs, dusk hills,
+// and the runner hopping a cone. All of it only runs while the title screen is showing.
+const TITLE_SHAPES = [
+  [[0, 0], [1.5, 0], [0, 1]],                                                        // right triangle
+  [[0, 0], [1.6, 0], [1.6, 1], [0, 1]],                                              // rectangle
+  [[0, 0], [1.8, 0], [1.3, 1], [.5, 1]],                                             // trapezoid
+  [[0, .3], [1, .3], [1, 0], [1.7, .5], [1, 1], [1, .7], [0, .7]],                   // arrow
+  [[0, .65], [0, 1], [1.6, 1], [1.6, .65], [1.1, .65], [1.1, 0], [.5, 0], [.5, .65]] // T
+];
+const TITLE_KS = [2, 3, 4, 3, 2];
+const titleCv = $('titleCv'), tg = titleCv.getContext('2d');
+let titleRaf = 0, titleT = 0, titleLast = 0;
+const easeIO = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+function titlePoly(g, pts, ox, oy, s, rot) {
+  g.beginPath();
+  pts.forEach((p, i) => {
+    let x = p[0] * s, y = p[1] * s;
+    if (rot) { const c = Math.cos(rot), sn = Math.sin(rot); [x, y] = [x * c - y * sn, x * sn + y * c]; }
+    i ? g.lineTo(ox + x, oy - y) : g.moveTo(ox + x, oy - y);
+  });
+  g.closePath();
+}
+function titlePill(g, x, y, text, col) {
+  g.font = '900 22px "Trebuchet MS",sans-serif'; const w = g.measureText(text).width + 22;
+  g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.roundRect(x - w / 2, y - 16, w, 32, 16); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + 1);
+}
+function drawTitle() {
+  const w = titleCv.clientWidth, h = titleCv.clientHeight; if (!w || !h) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (titleCv.width !== Math.round(w * dpr) || titleCv.height !== Math.round(h * dpr)) { titleCv.width = Math.round(w * dpr); titleCv.height = Math.round(h * dpr); }
+  const s = Math.min(w / 960, h / 540) * dpr, t = titleT, GY = 450;
+  tg.setTransform(1, 0, 0, 1, 0, 0);
+  // the sky fills the whole box; the scene is 960x540 units, centred sideways and sitting on the bottom
+  const sky = tg.createLinearGradient(0, 0, 0, titleCv.height); sky.addColorStop(0, '#0f1a4a'); sky.addColorStop(.55, '#31509f'); sky.addColorStop(1, '#f2955a');
+  tg.fillStyle = sky; tg.fillRect(0, 0, titleCv.width, titleCv.height);
+  tg.setTransform(s, 0, 0, s, (titleCv.width - 960 * s) / 2, titleCv.height - 540 * s);
+  const L = -1200, R = 2200;
+  // blueprint grid drifting sideways
+  tg.strokeStyle = 'rgba(255,255,255,.07)'; tg.lineWidth = 1;
+  const gx = -(t * 14) % 48;
+  tg.beginPath(); for (let x = L + gx; x < R; x += 48) { tg.moveTo(x, -900); tg.lineTo(x, GY); } for (let y = GY; y > -900; y -= 48) { tg.moveTo(L, y); tg.lineTo(R, y); } tg.stroke();
+  // sun + hills
+  tg.fillStyle = 'rgba(255,214,120,.9)'; tg.beginPath(); tg.arc(330, 320, 62, 0, 7); tg.fill();
+  [['#3a3f86', 90, .018, 8, 1], ['#2b2f6b', 55, .026, 16, 2]].forEach(([col, amp, fr, sp, ph]) => {
+    tg.fillStyle = col; tg.beginPath(); tg.moveTo(L, GY);
+    for (let x = L; x <= R; x += 24) tg.lineTo(x, GY - 40 - amp * (.5 + .5 * Math.sin((x + t * sp * 4) * fr + ph)));
+    tg.lineTo(R, GY); tg.closePath(); tg.fill();
+  });
+  // drifting similar pairs (a shape and its x2 copy)
+  for (let i = 0; i < 6; i++) {
+    const sh = TITLE_SHAPES[i % 5], sz = 16 + (i % 3) * 7, span = 1500, x = ((i * 290 + t * (16 + i * 3)) % span) - 200, y = 230 + (i * 47) % 150 + Math.sin(t * .7 + i) * 10;
+    const rot = Math.sin(t * .4 + i) * .25;
+    tg.strokeStyle = 'rgba(255,255,255,.28)'; tg.fillStyle = 'rgba(255,255,255,.06)'; tg.lineWidth = 2;
+    titlePoly(tg, sh, x, y, sz, rot); tg.fill(); tg.stroke();
+    titlePoly(tg, sh, x + sz * 2.4, y, sz * 2, rot); tg.fill(); tg.stroke();
+    tg.fillStyle = 'rgba(255,255,255,.4)'; tg.font = '800 13px "Trebuchet MS",sans-serif'; tg.textAlign = 'center'; tg.fillText('×2', x + sz * 1.6, y - sz * 2.4);
+  }
+  // ground
+  tg.fillStyle = '#1b2350'; tg.fillRect(L, GY, R - L, 400);
+  tg.fillStyle = '#5b6ac2'; tg.fillRect(L, GY, R - L, 5);
+  tg.fillStyle = 'rgba(255,255,255,.22)'; const dx = -(t * 260) % 60;
+  for (let x = L + dx; x < R; x += 60) tg.fillRect(x, GY + 34, 28, 5);
+
+  // ---- the dilation demo ----
+  const cyc = 5.5, n = Math.floor(t / cyc), ct = t % cyc, sh = TITLE_SHAPES[n % TITLE_SHAPES.length], k = TITLE_KS[n % TITLE_KS.length];
+  let grow = 0, mode = '×';
+  if (ct < .5) grow = 0; else if (ct < 2) grow = easeIO((ct - .5) / 1.5); else if (ct < 3.2) grow = 1; else if (ct < 4.7) { grow = 1 - easeIO((ct - 3.2) / 1.5); mode = '÷'; } else grow = 0;
+  if (ct >= 3.2) mode = '÷';
+  const cx = 500, u = 56, sc = 1 + (k - 1) * grow, appear = Math.min(1, t / .8);
+  tg.globalAlpha = appear;
+  // rays from the centre through each corner (drawn a little beyond the big copy)
+  tg.setLineDash([7, 7]); tg.strokeStyle = 'rgba(255,255,255,.5)'; tg.lineWidth = 1.5; tg.beginPath();
+  sh.forEach(p => { const ex = cx + p[0] * u * (sc + .25), ey = GY - p[1] * u * (sc + .25); tg.moveTo(cx, GY); tg.lineTo(ex, ey); });
+  tg.stroke(); tg.setLineDash([]);
+  // big copy (orange) then small (blue)
+  tg.fillStyle = 'rgba(255,154,60,.88)'; tg.strokeStyle = '#fff'; tg.lineWidth = 3; tg.lineJoin = 'round';
+  titlePoly(tg, sh, cx, GY, u * sc, 0); tg.fill(); tg.stroke();
+  tg.fillStyle = '#4aa3ff'; titlePoly(tg, sh, cx, GY, u, 0); tg.fill(); tg.stroke();
+  // corner dots on both copies
+  sh.forEach(p => { [1, sc].forEach((m, j) => { tg.fillStyle = j ? '#fff3d6' : '#dff0ff'; tg.beginPath(); tg.arc(cx + p[0] * u * m, GY - p[1] * u * m, 3.5, 0, 7); tg.fill(); }); });
+  tg.fillStyle = '#fff'; tg.beginPath(); tg.arc(cx, GY, 6, 0, 7); tg.fill();
+  // bottom-side lengths under the ground, joined by a curved arrow with its scale-factor pill
+  const bw = Math.max(...sh.map(p => p[0])), b0 = 3, smallMid = cx + bw * u / 2, bigMid = cx + bw * u * sc / 2, val = Math.round(b0 * sc * 10) / 10;
+  tg.fillStyle = '#dff0ff'; tg.font = '900 22px "Trebuchet MS",sans-serif'; tg.textAlign = 'center'; tg.textBaseline = 'alphabetic';
+  tg.fillText(String(b0), smallMid, GY + 30);
+  if (sc > 1.05) {
+    tg.fillStyle = '#ffd9a8'; tg.fillText(String(Math.round(val)), Math.max(bigMid, smallMid + 36), GY + 30);
+    const ax = cx + 6, bx = cx + bw * u * sc - 6;
+    if (bx - ax > 50) {
+      tg.strokeStyle = '#fff'; tg.lineWidth = 3; tg.beginPath(); tg.moveTo(ax, GY + 40); tg.quadraticCurveTo((ax + bx) / 2, GY + 84, bx, GY + 40); tg.stroke();
+      const dirx = mode === '×' ? 1 : -1, tipx = mode === '×' ? bx : ax;
+      tg.fillStyle = '#fff'; tg.beginPath(); tg.moveTo(tipx, GY + 38); tg.lineTo(tipx - 9 * dirx, GY + 44); tg.lineTo(tipx - 3 * dirx, GY + 52); tg.closePath(); tg.fill();
+      titlePill(tg, (ax + bx) / 2, GY + 72, mode + ' ' + k, mode === '×' ? '#ff7a1a' : '#2f80ed');
+    }
+  }
+  tg.globalAlpha = 1;
+
+  // ---- the runner hops a traffic cone (the world scrolls left) ----
+  const RX = 170, cone = 470 - ((t * 260) % 760), rdx = cone - RX;
+  const jh = rdx > -60 && rdx < 110 ? 78 * Math.sin(Math.PI * (110 - rdx) / 170) : 0;
+  tg.globalAlpha = Math.max(0, Math.min(1, (470 - cone) / 40, (cone + 200) / 60));
+  tg.fillStyle = '#ff7a1a'; tg.beginPath(); tg.moveTo(cone - 14, GY); tg.lineTo(cone + 14, GY); tg.lineTo(cone + 4, GY - 32); tg.lineTo(cone - 4, GY - 32); tg.closePath(); tg.fill();
+  tg.fillStyle = '#fff'; tg.fillRect(cone - 9, GY - 18, 18, 5); tg.fillStyle = '#c95a0a'; tg.fillRect(cone - 17, GY - 3, 34, 4);
+  tg.fillStyle = 'rgba(0,0,0,.25)'; tg.beginPath(); tg.globalAlpha = 1; tg.ellipse(RX, GY + 3, Math.max(6, 22 - jh / 4), 5, 0, 0, 7); tg.fill();
+  drawChar(tg, RX, GY - jh, currentChar(), { ph: t * 14, running: jh < 2, air: jh >= 2 });
+}
+function startTitleAnim() {
+  if (titleRaf) return;
+  titleLast = performance.now();
+  const loop = now => { titleRaf = requestAnimationFrame(loop); const dt = Math.min(.05, (now - titleLast) / 1000); titleLast = now; titleT += dt; try { drawTitle(); } catch (e) {} };
+  titleRaf = requestAnimationFrame(loop);
+}
+function stopTitleAnim() { cancelAnimationFrame(titleRaf); titleRaf = 0; }
+
 /* ===================== LOOP & INPUT ===================== */
 let last = performance.now();
 let paused = false;                                        // the Menu button pauses everything (timer, runner, bridge)
 function setPaused(v) {
   paused = v; $('pause').classList.toggle('hidden', !v);
-  if (v) renderStarts($('pauseStarts'), '📍 Restart from:', () => { setPaused(false); buildMenu(); });
+  if (v) $('btnFinish').classList.toggle('hidden', !(G && G.mode === 'practice'));
   $('menuBtn').textContent = v ? '✕ Close' : '☰ Menu';
   last = performance.now();
 }
@@ -1096,9 +1622,36 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+// Shop cheat (same as the other games): hold Shift and press T, A, V together while the Shop is open - once - for lots of coins
+let cheatUsed = store.get('similaritybuilder_cheat_used', false) === true;
+const cheatDown = new Set();
+addEventListener('keyup', e => cheatDown.delete(e.code));
+addEventListener('blur', () => cheatDown.clear());
+addEventListener('keydown', e => {
+  cheatDown.add(e.code);
+  if ($('shop').classList.contains('hidden') || cheatUsed) return;
+  if (e.shiftKey && ['KeyT', 'KeyA', 'KeyV'].every(k => cheatDown.has(k))) {
+    cheatUsed = true; store.set('similaritybuilder_cheat_used', true);
+    coins = 999; store.set(KEY.coins, coins);
+    sfx.good(); renderShop(); buildMenu(); toast('🪙 Max coins unlocked!', 'good');
+  }
+});
 function jump() { if (G && G.state === 'run' && !paused) G.jumpBuf = .12; }
 addEventListener('keydown', e => {
-  if (e.code === 'Escape') { e.preventDefault(); setPaused(!paused); return; }       // Esc = same as the Menu button
+  if (screen === 'title') {                                          // Enter / Space on the title screen = Play
+    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') { e.preventDefault(); audioInit(); showScreen('menu'); buildMenu(); }
+    return;
+  }
+  if (e.code === 'Escape') {
+    e.preventDefault();
+    if (!$('shop').classList.contains('hidden')) closeShop();
+    else if (screen === 'practice') showScreen('menu');
+    else if (screen === 'menu') { showScreen('title'); }
+    else if (!$('over').classList.contains('hidden')) toMenu();
+    else setPaused(!paused);                                         // while playing: same as the ☰ Menu button
+    return;
+  }
+  if (screen !== 'play') return;
   if (paused) return;
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
   const isJumpKey = ['Space', 'ArrowUp', 'KeyW', 'Enter', 'NumpadEnter'].includes(e.code) || e.key === 'Enter';
@@ -1107,8 +1660,15 @@ addEventListener('keydown', e => {
 });
 $('stage').addEventListener('pointerdown', e => { audioInit(); jump(); });
 $('jumpBtn').addEventListener('pointerdown', e => { e.stopPropagation(); audioInit(); jump(); });
+$('btnPlay').onclick = () => { audioInit(); buildMenu(); showScreen('menu'); };
+$('btnMenuBack').onclick = () => showScreen('title');
+$('btnPractice').onclick = openPractice;
+$('btnPracBack').onclick = () => showScreen('menu');
+$('btnPracStart').onclick = () => { const t = PRACTICE_TYPES.filter(p => practicePicked.includes(p.id)); if (t.length) startPractice(t); };
 $('btnStart').onclick = () => startGame();          // (an arrow, so the click event isn't passed in as a checkpoint)
-$('btnAgain').onclick = () => { buildMenu(); startGame(); };
+$('btnAgain').onclick = () => { if (G && G.mode === 'practice' && G.ptypes.length) startPractice(G.ptypes); else startGame(); };
+$('btnOverMenu').onclick = toMenu;
+$('btnFinish').onclick = () => { if (G && G.mode === 'practice') finishPractice(); };
 $('btnBuild').onclick = () => submit();
 $('btnNext').onclick = respawn;
 $('btnHint').onclick = () => {
@@ -1124,12 +1684,10 @@ $('muteBtn').onclick = () => { muted = !muted; store.set(KEY.muted, muted); mute
 muteLabel();
 $('menuBtn').onclick = () => setPaused(!paused);
 $('btnResume').onclick = () => setPaused(false);
-$('btnRestart').onclick = () => { setPaused(false); buildMenu(); startGame(); };
-$('btnTitle').onclick = () => {                                              // back to the title screen
-  setPaused(false); G = newWorld(true);
-  ['problem', 'feedback', 'over'].forEach(id => $(id).classList.add('hidden'));
-  buildMenu(); $('menu').classList.remove('hidden');
-};
+$('btnShop').onclick = openShop;                 // (Menu screen only)
+$('btnShopClose').onclick = closeShop;
+$('btnRestart').onclick = () => { const pr = G && G.mode === 'practice' ? G.ptypes : null; setPaused(false); if (pr && pr.length) startPractice(pr); else startGame(); };
+$('btnTitle').onclick = toMenu;                                              // back to the Menu screen
 (function keypad() {
   const kp = $('keypad');
   ['7','8','9','4','5','6','1','2','3','Clear','0','⌫'].forEach(k => {
@@ -1158,7 +1716,7 @@ function buildLevelsPage() {
   document.head.appendChild(st);
   const root = document.createElement('div'); root.id = 'lv';
   let h = `<h1>📋 Question levels</h1><div class="intro">Every level's rules and live sample questions (refresh the page for new samples). Settings live in the code as
-    <code>TYPE_BY_LEVEL</code>, <code>SPEED_BY_LEVEL</code>, <code>SPACING_BY_LEVEL</code>, <code>SHAPES_BY_LEVEL</code>, <code>K_BY_LEVEL</code>, <code>UNIT_BY_LEVEL</code>, <code>MAX_SMALL_SIDE</code>, <code>MAX_BIG_SIDE</code>, <code>TIME_BY_LEVEL</code> and <code>SOLVED_PER_LEVEL</code>.</div>`;
+    <code>TYPE_BY_LEVEL</code>, <code>SPEED_BY_LEVEL</code>, <code>LEVEL_OBS</code>, <code>MIN_GAP_SEC</code>, <code>GAP_MIX</code>, <code>METERS_PER_LEVEL</code>, <code>SHAPES_BY_LEVEL</code>, <code>K_BY_LEVEL</code>, <code>UNIT_BY_LEVEL</code>, <code>MAX_SMALL_SIDE</code>, <code>MAX_BIG_SIDE</code>, <code>TIME_BY_LEVEL</code> and <code>MAX_LEVEL</code>.</div>`;
   const WHAT = {
     scale: '❓ Find the SCALE FACTOR between the two figures',
     up: '✖ Find a missing side of the BIGGER figure (multiply by the scale factor)',
@@ -1173,10 +1731,10 @@ function buildLevelsPage() {
   for (let lv = 1; lv <= MAX_LEVEL; lv++) {
     const counts = {}; SHAPES_BY_LEVEL[lv - 1].forEach(s => counts[s] = (counts[s] || 0) + 1);
     const total = SHAPES_BY_LEVEL[lv - 1].length;
-    const startAt = (lv - 1) * SOLVED_PER_LEVEL;
-    h += `<div class="lvl"><h2>Level ${lv}</h2><div class="meta"><span>${lv === 1 ? 'Starts at the beginning' : `Reached after ${startAt} correct answers`}${lv === MAX_LEVEL ? ' (and stays here)' : ''}</span>` +
+    const startAt = (lv - 1) * METERS_PER_LEVEL;
+    h += `<div class="lvl"><h2>Level ${lv}</h2><div class="meta"><span>${lv === 1 ? 'Starts at the beginning' : `Reached at ${startAt} m`}${lv === MAX_LEVEL ? ' (and stays here)' : ''}</span>` +
       `<span>⏱ ${TIME_BY_LEVEL[lv - 1]} s per question</span><span>🏃 runner speed ×${SPEED_BY_LEVEL[lv - 1]}</span>` +
-      `<span>🪨 obstacles every ${SPACING_BY_LEVEL[lv - 1][0]}–${SPACING_BY_LEVEL[lv - 1][1]} px</span>${lv >= 3 ? '<span>🔄 figure rotated / flipped</span>' : ''}</div>` +
+      `<span>🪨 obstacles: ${LEVEL_OBS[lv - 1].filter((t, i, a) => a.indexOf(t) === i).map(t => OBS[t].label).join(", ")} (spacing from ${MIN_GAP_SEC[lv - 1]} s)</span>${lv >= 3 ? '<span>🔄 figure rotated / flipped</span>' : ''}</div>` +
       `<div class="tags"><b>Question:</b> ` + TYPE_BY_LEVEL[lv - 1].map(t => `<span class="tag">${WHAT[t]}</span>`).join('') + `</div>` +
       `<div class="meta">${NOTE[lv - 1]}</div>` +
       `<div class="tags"><b>Shapes:</b> ` + Object.keys(counts).map(s => `<span class="tag">${SHAPES[s].name} · ${Math.round(counts[s] / total * 100)}%</span>`).join('') + `</div>` +
@@ -1196,9 +1754,10 @@ function buildLevelsPage() {
 if (/[?&]levels/.test(location.search)) { G = newWorld(true); buildLevelsPage(); } else {
 G = newWorld(true);
 buildMenu();
+showScreen('title');                                   // the title screen is the first thing players see
 requestAnimationFrame(frame);
 }
 
 // small hook (used for automated checks and by the Reset Progress button to avoid re-saving)
-window.BBR = { step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
+window.BBR = { pairSVG, titleStep(dt) { titleT += dt; drawTitle(); }, showScreen, step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
 })();
