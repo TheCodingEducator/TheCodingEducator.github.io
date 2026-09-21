@@ -4988,3 +4988,20 @@ function draw() {
 
   updateInputEdgeTracking();
 }
+
+
+// ---------- CHEAT CODE (same combo in every game) ----------
+// Hold Shift and press T, A, V together at ANY time while the game is open: every laser skin unlocked.
+(function () {
+  var down = {};
+  addEventListener('keyup', function (e) { delete down[e.code]; });
+  addEventListener('blur', function () { down = {}; });
+  addEventListener('keydown', function (e) {
+    down[e.code] = true;
+    if (e.repeat || !e.shiftKey || !down.KeyT || !down.KeyA || !down.KeyV) return;
+    down = {};
+    unlockedSkinIndices = LASER_SKINS.map(function (s, i) { return i; });
+    saveHighScores();
+    try { playSound("sound://category_achievements/peaceful_win_1.mp3"); } catch (err) {}
+  });
+})();

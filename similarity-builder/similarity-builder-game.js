@@ -431,7 +431,7 @@ const THEMES = [
 // (Looks only - every crew member runs the same.)  Drawn from the SIDE, walking to the right.
 //   look: torso/legs/boots colors; hat (hard | cap | beret | hair | headlamp) + hatc; hair; glasses (round | square); goggles;
 //         vest + stripes; bibs; tie; belt; bolt; sash; props (held in the front hand, or worn: whistle, badge)
-const CREW_ROLES = ['Site Worker', 'Politician', 'Architect', 'Engineer', 'Electrician', 'Safety Inspector'];
+const CREW_ROLES = ['Site Worker', 'Politician', 'Architect', 'Engineer', 'Electrician', 'Safety Inspector', 'Surveyor', 'Environmental Scientist', 'Crane Operator', 'Geologist'];
 const cY = '#ffd23f', cWH = '#f4f4f4', cBL = '#2f80ed', cOR = '#ff9f1a';
 const CHARACTERS = [
   // ---- Site Worker (the free starter is the first one) ----
@@ -452,7 +452,7 @@ const CHARACTERS = [
   // ---- Engineer ----
   { id: 'engineer', role: 3, name: 'Engineer', price: 30, tag: 'Checks the math and the forces.', look: { torso: cOR, legs: '#7a5a20', hat: 'hard', hatc: cY, glasses: 'round', props: ['clip'] } },
   { id: 'engineerA', role: 3, name: 'Lab Engineer', price: 35, tag: 'Goggles and a laptop full of numbers.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cY, goggles: 1, props: ['laptop'] } },
-  { id: 'engineerB', role: 3, name: 'Surveyor', price: 40, tag: 'Measures every angle with a protractor.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
+  { id: 'engineerB', role: 3, name: 'Angle Engineer', price: 40, tag: 'Measures every angle with a protractor.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
   { id: 'engineerC', role: 3, name: 'Site Engineer', price: 45, tag: 'Vest, clipboard, and a badge.', look: { torso: cBL, vest: cOR, legs: '#25252e', hat: 'hard', hatc: cOR, props: ['clip', 'badge'] } },
   // ---- Electrician ----
   { id: 'electrician', role: 4, name: 'Electrician', price: 45, tag: 'Wires up the lights and signals.', look: { torso: '#2e6bd6', legs: '#1d3f86', hat: 'hard', hatc: cWH, bolt: 1, belt: 1 } },
@@ -463,7 +463,27 @@ const CHARACTERS = [
   { id: 'inspector', role: 5, name: 'Safety Inspector', price: 60, tag: 'Makes sure it is safe before it opens.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cWH, stripes: 1, vest: '#a6e22e', props: ['clip'] } },
   { id: 'inspectorA', role: 5, name: 'Stamp Inspector', price: 65, tag: 'Approves the bridge with a stamp.', look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['stamp'] } },
   { id: 'inspectorB', role: 5, name: 'Whistle Marshal', price: 70, tag: 'A whistle, a green cap, and an OK sign.', look: { torso: '#3b3b46', vest: '#a6e22e', stripes: 1, legs: '#25252e', hat: 'cap', hatc: '#a6e22e', props: ['whistle', 'signOK'] } },
-  { id: 'inspectorC', role: 5, name: 'OK Inspector', price: 75, tag: 'Gives the final thumbs-up sign.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cOR, glasses: 'square', stripes: 1, vest: '#a6e22e', props: ['signOK'] } }
+  { id: 'inspectorC', role: 5, name: 'OK Inspector', price: 75, tag: 'Gives the final thumbs-up sign.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cOR, glasses: 'square', stripes: 1, vest: '#a6e22e', props: ['signOK'] } },
+  // ---- Surveyor ----
+  { id: 'surveyor', role: 6, name: 'Surveyor', price: 40, tag: 'Measures the gap with a survey scope.', look: { torso: '#e8e2d0', vest: cOR, stripes: 1, legs: '#4a5a6a', hat: 'hard', hatc: cOR, props: ['tripod'] } },
+  { id: 'surveyorA', role: 6, name: 'Rod Holder', price: 45, tag: 'Holds the striped rod for the scope.', look: { torso: '#f2c21b', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'cap', hatc: '#ff8a1f', props: ['rod'] } },
+  { id: 'surveyorB', role: 6, name: 'Mapper', price: 50, tag: 'Draws the land onto a map.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cWH, glasses: 'round', props: ['map'] } },
+  { id: 'surveyorC', role: 6, name: 'Drone Pilot', price: 55, tag: 'Maps the gap from the sky.', look: { torso: '#2f80ed', legs: '#25252e', hat: 'cap', hatc: '#222222', props: ['drone'] } },
+  // ---- Environmental Scientist ----
+  { id: 'envsci', role: 7, name: 'Environmental Scientist', price: 50, tag: 'Looks for endangered animals with binoculars.', look: { torso: '#3a7d44', legs: '#5b4a3a', hat: 'sun', hatc: '#e8c778', props: ['binoculars'] } },
+  { id: 'envsciA', role: 7, name: 'Field Biologist', price: 55, tag: 'Gets a closer look with a net.', look: { torso: '#c9a26a', vest: '#6b7a3a', legs: '#4a5a1c', hat: 'cap', hatc: '#3a7d44', props: ['net'] } },
+  { id: 'envsciB', role: 7, name: 'Wildlife Ranger', price: 60, tag: 'Logs every sighting in a notebook.', look: { torso: '#6b7a3a', legs: '#5b4a3a', hat: 'ranger', hatc: '#8a6a3a', props: ['notebook'] } },
+  { id: 'envsciC', role: 7, name: 'Water Tester', price: 65, tag: 'Tests the river water in a jar.', look: { torso: '#2e86c1', legs: '#25252e', goggles: 1, props: ['jar'] } },
+  // ---- Crane Operator ----
+  { id: 'crane', role: 8, name: 'Crane Operator', price: 60, tag: 'Lifts the beams into place.', look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: cWH, props: ['joystick', 'headset'] } },
+  { id: 'craneA', role: 8, name: 'Signal Rigger', price: 65, tag: 'Guides the crane by radio.', look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cY, props: ['radio'] } },
+  { id: 'craneB', role: 8, name: 'Tower Crane Pro', price: 70, tag: 'Runs the tallest crane on site.', look: { torso: '#2f80ed', legs: '#1b4f9c', hat: 'hard', hatc: cOR, props: ['crane'] } },
+  { id: 'craneC', role: 8, name: 'Rigger', price: 75, tag: 'Hooks the load on safely.', look: { torso: '#c0392b', belt: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, props: ['hook'] } },
+  // ---- Geologist ----
+  { id: 'geo', role: 9, name: 'Geologist', price: 70, tag: 'Reads the rock under the river.', look: { torso: '#c9a26a', legs: '#5b4a3a', hat: 'hard', hatc: cY, props: ['rockhammer'] } },
+  { id: 'geoA', role: 9, name: 'Soil Tester', price: 75, tag: 'Pulls up a soil core to test.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'cap', hatc: '#8a5a2a', props: ['core'] } },
+  { id: 'geoB', role: 9, name: 'Rock Collector', price: 80, tag: 'Never leaves without a good rock.', look: { torso: '#e8e2d0', legs: '#5b4a3a', hat: 'sun', hatc: '#e8c778', props: ['rocks'] } },
+  { id: 'geoC', role: 9, name: 'Driller', price: 85, tag: 'Drills test holes for the bridge footings.', look: { torso: '#2e6bd6', legs: '#25252e', hat: 'hard', hatc: '#e0261f', goggles: 1, props: ['drill'] } }
 ];
 // Who each crew member is: half are women, and skin tones and hair vary, so every student can see someone like themselves in a professional job.
 // style: short | long | pony | bun | curly
@@ -492,7 +512,23 @@ const CREW_PEOPLE = {
   inspector:    { skin: SKIN.olive, style: 'short', hairc: '#222222' },
   inspectorA:   { skin: SKIN.tan,   style: 'long',  hairc: '#1a1a1a' },
   inspectorB:   { skin: SKIN.light, style: 'short', hairc: '#3a2a1a' },
-  inspectorC:   { skin: SKIN.fair,  style: 'pony',  hairc: '#d9a441' }
+  inspectorC:   { skin: SKIN.fair,  style: 'pony',  hairc: '#d9a441' },
+  surveyor:     { skin: SKIN.tan,   style: 'short', hairc: '#222222' },
+  surveyorA:    { skin: SKIN.deep,  style: 'pony',  hairc: '#111111' },
+  surveyorB:    { skin: SKIN.fair,  style: 'bun',   hairc: '#a0522d' },
+  surveyorC:    { skin: SKIN.olive, style: 'short', hairc: '#4a3320' },
+  envsci:       { skin: SKIN.light, style: 'long',  hairc: '#5b3a1a' },
+  envsciA:      { skin: SKIN.brown, style: 'short', hairc: '#111111' },
+  envsciB:      { skin: SKIN.fair,  style: 'short', hairc: '#7b5a3a' },
+  envsciC:      { skin: SKIN.tan,   style: 'curly', hairc: '#111111' },
+  crane:        { skin: SKIN.light, style: 'short', hairc: '#a0522d' },
+  craneA:       { skin: SKIN.brown, style: 'pony',  hairc: '#111111' },
+  craneB:       { skin: SKIN.olive, style: 'bun',   hairc: '#222222' },
+  craneC:       { skin: SKIN.deep,  style: 'short', hairc: '#111111' },
+  geo:          { skin: SKIN.fair,  style: 'pony',  hairc: '#a0522d' },
+  geoA:         { skin: SKIN.tan,   style: 'short', hairc: '#222222' },
+  geoB:         { skin: SKIN.deep,  style: 'curly', hairc: '#111111' },
+  geoC:         { skin: SKIN.brown, style: 'short', hairc: '#111111' }
 };
 CHARACTERS.forEach(c => Object.assign(c.look, CREW_PEOPLE[c.id]));
 // One-time move of progress saved under the game's earlier name ("bridgerunner_...") to the "similaritybuilder_..." keys.
@@ -900,7 +936,7 @@ function renderShop() {
   const tabs = $('shopTabs'); tabs.innerHTML = '';
   CREW_ROLES.forEach((r, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'roleTab' + (i === shopRole ? ' on' : '');
-    b.textContent = `${r} ${CHARACTERS.filter(c => c.role === i && owned.includes(c.id)).length}/4`;
+    b.innerHTML = `<span>${r}</span><small>${CHARACTERS.filter(c => c.role === i && owned.includes(c.id)).length}/4</small>`;
     b.onclick = () => { shopRole = i; renderShop(); tabs.children[i].focus(); };
     tabs.appendChild(b);
   });
@@ -1608,7 +1644,7 @@ function drawChar(g, x, fy, ch, o) {
   g.save(); g.translate(x, fy); g.scale(.82, .82); g.translate(-50, -130);                    // drawn on a 100 x 140 sheet, feet at y = 130
   g.lineCap = 'round'; g.lineJoin = 'round';
   const s = running ? Math.sin(ph) : 0;
-  const legF = air ? .75 : s * .75, legB = air ? -.55 : -s * .75, armF = air ? 2.5 : (L.props || []).some(k => k !== 'whistle' && k !== 'badge') ? .55 - s * .12 : .32 - s * .7, armB = air ? 2.9 : -.2 + s * .7;
+  const legF = air ? .75 : s * .75, legB = air ? -.55 : -s * .75, armF = air ? 2.5 : (L.props || []).some(k => !['whistle', 'badge', 'headset', 'tube'].includes(k)) ? .55 - s * .12 : .32 - s * .7, armB = air ? 2.9 : -.2 + s * .7;
   const pt = (hx, hy, a, len) => [hx + Math.sin(a) * len, hy + Math.cos(a) * len];
   // back leg + back arm (behind the body)
   let [fx, fy2] = pt(47, 94, legB, 32); line(47, 94, fx, fy2, L.legs, 10); ell(fx - 1, fy2 + 3, 9, 4.5, boots);
@@ -1641,10 +1677,13 @@ function drawChar(g, x, fy, ch, o) {
   if (L.hat === 'beret') { g.save(); g.translate(50, 19); g.rotate(-.14); g.beginPath(); g.ellipse(0, 0, 17, 7, 0, 0, 7); g.fillStyle = L.hatc; g.fill(); g.strokeStyle = OL; g.lineWidth = 2; g.stroke(); g.restore(); rect(48, 10, 4, 6, 1, L.hatc); }
   else if (L.hat === 'hard' || L.hat === 'headlamp') { CHAR_HATS.hard(L.hatc).forEach(([d, c]) => p(d, c, OL, 2)); if (L.hat === 'headlamp') circ(68, 27, 4, '#fff6a0', OL, 1.5); }
   else if (L.hat === 'cap') CHAR_HATS.cap(L.hatc).forEach(([d, c]) => p(d, c, OL, 2));
+  else if (L.hat === 'sun') { g.beginPath(); g.ellipse(52, 29, 27, 5, 0, 0, 7); g.fillStyle = L.hatc; g.fill(); g.strokeStyle = OL; g.lineWidth = 2; g.stroke(); p('M40 29 Q40 13 52 13 Q64 13 64 29 Z', L.hatc, OL, 2); g.fillStyle = '#d92b2b'; g.fillRect(41, 23, 22, 4); }
+  else if (L.hat === 'ranger') { g.beginPath(); g.ellipse(52, 28, 25, 4.5, 0, 0, 7); g.fillStyle = L.hatc; g.fill(); g.strokeStyle = OL; g.lineWidth = 2; g.stroke(); p('M42 28 L44 12 Q52 8 60 12 L62 28 Z', L.hatc, OL, 2); g.fillStyle = '#3a2a1a'; g.fillRect(43, 22, 18, 3); }
   if (L.glasses === 'round') { circ(59, 35, 4.5, null, '#222', 1.6); line(54, 35, 47, 36, '#222', 1.6); }
   if (L.glasses === 'square') { rect(54, 31, 10, 8, 0, null, '#222', 1.8); line(54, 35, 47, 36, '#222', 1.6); }
   if (L.goggles) { rect(38, 30, 26, 6, 3, '#333'); g.beginPath(); g.ellipse(60, 34, 6, 5, 0, 0, 7); g.fillStyle = '#bfeaff'; g.fill(); g.strokeStyle = OL; g.lineWidth = 1.8; g.stroke(); }
   const props = L.props || [];
+  if (props.includes('headset')) { g.strokeStyle = '#333'; g.lineWidth = 3; g.beginPath(); g.moveTo(40, 30); g.quadraticCurveTo(52, 8, 64, 30); g.stroke(); circ(47, 38, 5, '#333'); g.lineWidth = 2; g.beginPath(); g.moveTo(47, 43); g.quadraticCurveTo(52, 50, 60, 46); g.stroke(); }
   if (props.includes('whistle')) { line(58, 51, 62, 62, '#888', 1.5); rect(59, 61, 9, 6, 3, '#c0c6d0', OL, 1.5); }
   if (props.includes('badge')) p('M58 66 l2.5 5 5.5 1 -4 3.5 1 5.5 -5 -3 -5 3 1 -5.5 -4 -3.5 5.5 -1z', '#ffd23f', OL, 1);
   // front arm + whatever it carries
@@ -1672,6 +1711,22 @@ function drawChar(g, x, fy, ch, o) {
     else if (k === 'cable') { circ(10, -6, 12, null, '#e0761f', 5); circ(10, -6, 5, null, '#e0761f', 3); }
     else if (k === 'bulb') { circ(4, -22, 11, '#ffe14a', OL, 2); rect(0, -12, 8, 8, 1, '#b0b7c0', OL, 1.5); }
     else if (k === 'stamp') { rect(-4, -30, 18, 12, 2, '#d92b2b', OL, 2); rect(1, -18, 6, 20, 0, '#8a5a2a'); }
+    else if (k === 'tripod') { line(0, -8, -12, 26, '#8a5a2a', 3); line(0, -8, 0, 28, '#8a5a2a', 3); line(0, -8, 12, 26, '#8a5a2a', 3); rect(-8, -26, 16, 16, 2, '#e0761f', OL, 2); circ(9, -18, 3, '#333'); }
+    else if (k === 'rod') { for (let t = 0; t < 8; t++) { g.fillStyle = t % 2 ? '#fff' : '#d92b2b'; g.fillRect(-2, -52 + t * 10, 5, 10); } g.strokeStyle = OL; g.lineWidth = 1.5; g.strokeRect(-2, -52, 5, 80); }
+    else if (k === 'map') { rect(-2, -32, 36, 26, 2, '#ead9a8', OL, 2); g.strokeStyle = '#c0392b'; g.lineWidth = 2; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(3, -12); g.quadraticCurveTo(16, -32, 28, -14); g.stroke(); g.setLineDash([]); line(24, -24, 30, -18, '#c0392b', 2); line(30, -24, 24, -18, '#c0392b', 2); }
+    else if (k === 'drone') { rect(-6, -8, 16, 8, 2, '#333', OL, 1.5); line(6, -8, 14, -34, '#888', 1.5); rect(6, -44, 18, 7, 3, '#555', OL, 1.5); line(2, -46, 12, -46, '#888', 2.5); line(20, -46, 30, -46, '#888', 2.5); }
+    else if (k === 'binoculars') { rect(-4, -18, 8, 6, 1, '#333'); circ(-2, -12, 6, '#333', OL, 1.5); circ(10, -12, 6, '#333', OL, 1.5); rect(2, -14, 4, 3, 0, '#555'); circ(-2, -12, 3, '#6fa8dc'); circ(10, -12, 3, '#6fa8dc'); }
+    else if (k === 'net') { line(0, -40, 0, 26, '#8a5a2a', 3); g.beginPath(); g.ellipse(6, -50, 13, 12, 0, 0, 7); g.fillStyle = 'rgba(220,240,255,.6)'; g.fill(); g.strokeStyle = '#555'; g.lineWidth = 2; g.stroke(); }
+    else if (k === 'notebook') { rect(-2, -26, 18, 24, 2, '#2f8a5a', OL, 2); g.fillStyle = '#fff'; g.fillRect(2, -22, 12, 16); line(4, -16, 12, -16, '#8894ad', 1.5); line(4, -11, 10, -11, '#8894ad', 1.5); }
+    else if (k === 'jar') { rect(-4, -28, 18, 26, 4, '#bfeaff', OL, 2); g.fillStyle = 'rgba(46,134,193,.6)'; g.fillRect(-2, -16, 14, 12); rect(-5, -32, 20, 6, 2, '#888', OL, 1.5); }
+    else if (k === 'joystick') { rect(-8, -6, 22, 8, 2, '#333', OL, 1.5); line(2, -6, 2, -26, '#555', 4); circ(2, -29, 5, '#d92b2b', OL, 1.5); }
+    else if (k === 'radio') { rect(0, -26, 10, 24, 2, '#333', OL, 1.5); line(5, -26, 5, -42, '#555', 2); g.fillStyle = '#5bd0ff'; g.fillRect(2, -22, 6, 6); }
+    else if (k === 'crane') { rect(-4, -4, 20, 6, 1, '#555', OL, 1.5); line(6, -4, 6, -44, '#e8b02a', 4); line(6, -44, 32, -44, '#e8b02a', 4); line(30, -44, 30, -28, '#333', 1.5); circ(30, -26, 4, null, '#333', 2.5); }
+    else if (k === 'hook') { g.setLineDash([3, 3]); line(6, -44, 6, -10, '#888', 2); g.setLineDash([]); circ(6, -6, 6, null, '#b0b7c0', 3.5); }
+    else if (k === 'rockhammer') { line(0, 0, 8, -30, '#8a5a2a', 4); g.save(); g.translate(9, -32); g.rotate(-.3); rect(-12, -4, 26, 8, 1, '#888', OL, 2); g.restore(); }
+    else if (k === 'core') { rect(-3, -44, 10, 58, 3, 'rgba(223,231,238,.7)', OL, 2); g.fillStyle = '#8a5a2a'; g.fillRect(-1, -40, 6, 16); g.fillStyle = '#c9a26a'; g.fillRect(-1, -24, 6, 14); g.fillStyle = '#888'; g.fillRect(-1, -10, 6, 20); }
+    else if (k === 'rocks') { p('M-6 -2 L-10 -14 L0 -24 L12 -18 L14 -4 Z', '#9aa0aa', OL, 2); circ(16, -4, 4, '#b8a58a', OL, 1.5); }
+    else if (k === 'drill') { rect(-2, -22, 22, 13, 3, '#e8b02a', OL, 2); line(20, -15, 38, -15, '#888', 3.5); rect(2, -9, 9, 16, 2, '#333', OL, 1.5); }
     else if (k === 'signOK') { line(4, -40, 4, 30, '#8a5a2a', 3); rect(-10, -66, 28, 26, 3, '#1e9e57', OL, 2); g.strokeStyle = '#fff'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(-4, -52); g.lineTo(2, -46); g.lineTo(12, -60); g.stroke(); }
   }
   g.restore();
@@ -1908,19 +1963,19 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-// Shop cheat (same as the other games): hold Shift and press T, A, V together while the Shop is open - once - for lots of coins
-let cheatUsed = store.get('similaritybuilder_cheat_used', false) === true;
+// Cheat code (same combo as the other games): hold Shift and press T, A, V together AT ANY TIME - unlocks every level start and gives max coins
 const cheatDown = new Set();
 addEventListener('keyup', e => cheatDown.delete(e.code));
 addEventListener('blur', () => cheatDown.clear());
 addEventListener('keydown', e => {
   cheatDown.add(e.code);
-  if ($('shop').classList.contains('hidden') || cheatUsed) return;
-  if (e.shiftKey && ['KeyT', 'KeyA', 'KeyV'].every(k => cheatDown.has(k))) {
-    cheatUsed = true; store.set('similaritybuilder_cheat_used', true);
-    coins = 999; store.set(KEY.coins, coins);
-    sfx.good(); renderShop(); buildMenu(); toast('🪙 Max coins unlocked!', 'good');
-  }
+  if (e.repeat || !e.shiftKey || !['KeyT', 'KeyA', 'KeyV'].every(k => cheatDown.has(k))) return;
+  cheatDown.clear();
+  coins = 999999; store.set(KEY.coins, coins);
+  for (let lv = 2; lv <= MAX_LEVEL; lv++) saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: (lv - 1) * 4, wrong: 0, bestStreak: 0 });   // every level start unlocked
+  sfx.good(); toast('🔓 All levels unlocked · max coins!', 'good');
+  if (!$('shop').classList.contains('hidden')) renderShop();
+  if (screen === 'menu') buildMenu();
 });
 function jump() { if (G && G.state === 'run' && !paused) G.jumpBuf = .12; }
 addEventListener('keydown', e => {

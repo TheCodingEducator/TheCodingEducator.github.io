@@ -2657,3 +2657,22 @@ function drawMaxVelocityPrompt() {
     }
   }
 }
+
+
+// ---------- CHEAT CODE (same combo in every game) ----------
+// Hold Shift and press T, A, V together at ANY time while the game is open: max coins, every car / trail / powerup unlocked, and Hard Mode fully unlocked.
+(function () {
+  var down = {};
+  addEventListener('keyup', function (e) { delete down[e.code]; });
+  addEventListener('blur', function () { down = {}; });
+  addEventListener('keydown', function (e) {
+    down[e.code] = true;
+    if (e.repeat || !e.shiftKey || !down.KeyT || !down.KeyA || !down.KeyV) return;
+    down = {};
+    totalCoins = 999999; hasUnlockedHardMode = true; cheatCoinsUsed = true;
+    for (var k = 0; k < unlockedHardSkills.length; k++) unlockedHardSkills[k] = true;
+    ['cars', 'trails', 'boosts'].forEach(function (t) { unlockedItems[t] = shopData[t].map(function (i) { return i.id; }); });
+    saveExponentProgress();
+    try { playSound("sound://category_achievements/peaceful_win_1.mp3"); } catch (err) {}
+  });
+})();

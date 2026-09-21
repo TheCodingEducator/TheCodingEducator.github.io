@@ -295,8 +295,8 @@ var piggy = {
 };
 
 // ---- Similarity Builder ----
-// 1 coin per correct answer, spent in the game's Shop on the bridge-building crew (24 looks across 6 jobs, the Site Worker is free).
-var BRIDGE_CREW_TOTAL = 24;
+// 1 coin per correct answer, spent in the game's Shop on the bridge-building crew (40 looks across 10 jobs, the Site Worker is free).
+var BRIDGE_CREW_TOTAL = 40;
 var bridge = {
   played: localStorage.getItem('similaritybuilder_best_meters') !== null || localStorage.getItem('similaritybuilder_coins') !== null,
   bestMeters: readNum('similaritybuilder_best_meters', 0),
@@ -335,7 +335,7 @@ var BADGES = [
   { icon: "🏃", name: "Marathon Runner", desc: "Run 300+ meters in one Similarity Builder run", earned: bridge.bestMeters >= 300 },
   { icon: "📏", name: "Scale Master", desc: "Reach level 4 in Similarity Builder", earned: bridge.bestLevel >= 4 },
   { icon: "👷", name: "Crew Boss", desc: "Hire 3+ crew members in Similarity Builder", earned: bridge.crew >= 3 },
-  { icon: "🏗️", name: "Full Crew", desc: "Hire all 24 bridge-building crew looks", earned: bridge.crew >= BRIDGE_CREW_TOTAL }
+  { icon: "🏗️", name: "Full Crew", desc: "Hire all 40 bridge-building crew looks", earned: bridge.crew >= BRIDGE_CREW_TOTAL }
 ];
 
 var badgesHtml = BADGES.map(function (b) {

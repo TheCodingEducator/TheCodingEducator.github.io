@@ -317,8 +317,9 @@
   #sb #pause .start { display:inline-block; width:auto; margin:0; }
   #sb .coinDot { display:inline-block; width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff3a8,#f5c518 55%,#b8860b); border:1.5px solid #8a6508; vertical-align:-2px; }
   #sb #shop { z-index:50; }
-  #sb .shopTabs { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:4px 0 8px; }
-  #sb .roleTab { cursor:pointer; border:2px solid #c5cbe8; background:#eef1ff; color:var(--ink); border-radius:999px; padding:5px 11px; font:800 13px inherit; font-family:inherit; }
+  #sb .shopTabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin:4px 0 8px; }
+  #sb .roleTab { cursor:pointer; border:2px solid #c5cbe8; background:#eef1ff; color:var(--ink); border-radius:14px; padding:4px 6px; min-height:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; font-family:inherit; }
+  #sb .roleTab span { font-weight:800; font-size:12.5px; } #sb .roleTab small { font-size:11px; opacity:.8; }
   #sb .roleTab.on { background:var(--accent2); border-color:var(--accent2); color:#fff; }
   #sb .shopGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:6px 0 10px; }
   #sb .shopCard { background:#f4f7ff; border:3px solid #d4d9f2; border-radius:14px; padding:8px; text-align:center; display:flex; flex-direction:column; gap:4px; }
@@ -326,7 +327,7 @@
   #sb .shopCard canvas { width:100%; max-width:110px; height:auto; align-self:center; border-radius:10px; }
   #sb .shopName { font-weight:900; font-size:16px; color:var(--ink); }
   #sb .shopTag { font-size:12px; color:var(--muted); line-height:1.25; min-height:60px; }
-  #sb .shopName { min-height:22px; }
+  #sb .shopName { min-height:40px; display:flex; align-items:center; justify-content:center; line-height:1.1; }
   #sb .shopBtn { font-size:14px; padding:0 10px; height:44px; margin-top:auto; }
   #sb #pause .shopBtn { display:block; width:100%; }
   #sb .start.locked { background:#eef1ff; color:#8c94b8; border:2px dashed #c5cbe8; cursor:help; }
