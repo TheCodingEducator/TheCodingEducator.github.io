@@ -1205,15 +1205,35 @@ function updateAngleReveal() {
 
 var TRAIL_AFTER_BOUNCE_PX = 110; // how far the line keeps going past the bounce
 // The red wedge for the answer the player typed is sized so its number always
-// sits fully inside it: a narrow angle needs a longer wedge before its width
-// can hold the label, so the label radius grows as the typed angle shrinks.
-function wrongWedgeSize(typedDeg) {
-  var halfW = 30; // half the label's width in px, plus a little padding
-  var half = max(6, min(typedDeg, 179)) / 2 * Math.PI / 180;
-  // Never closer than one label-height past the green number (which sits at
-  // GREEN_LABEL_R between the green lines), so the two never overlap.
-  var labelR = constrain(halfW / Math.sin(half), GREEN_LABEL_R + 34, 160);
-  return { labelR: labelR, wedgeR: labelR + 18 };
+// sits fully inside it (see the corner test below).
+function wrongWedgeSize(info) {
+  var typed = info.typed;
+  var mid = info.baseAngle + info.sweepSign * (info.known + typed / 2); // world degrees
+  var halfSpan = typed / 2;
+  var scales = [1, 0.75, 0.55]; // a very narrow wedge gets a smaller number rather than a giant wedge
+  var best = null;
+  for (var si = 0; si < scales.length && !best; si++) {
+    var sc = scales[si], boxW = 60 * sc, boxH = 30 * sc;
+    // Slide the label outward along the wedge's middle until every corner of its
+    // box is inside the wedge's angle, whichever way the wedge happens to point
+    // (the text is wider than tall, so a sideways wedge needs more room). Never
+    // closer than one label-height past the green number (GREEN_LABEL_R), so the
+    // two never overlap.
+    var maxR = si === scales.length - 1 ? 340 : 200; // only the smallest size may run long
+    for (var labelR = GREEN_LABEL_R + 34; labelR < maxR; labelR += 4) {
+      var cx = cos(mid) * labelR, cy = sin(mid) * labelR, ok = true;
+      for (var k = 0; k < 4; k++) {
+        var px = cx + (k % 2 ? boxW : -boxW) / 2, py = cy + (k < 2 ? boxH : -boxH) / 2;
+        var off = ((atan2(py, px) - mid) % 360 + 540) % 360 - 180;
+        if (abs(off) > halfSpan - 1.5) { ok = false; break; }
+      }
+      if (ok) { best = { labelR: labelR, scale: sc, boxW: boxW, boxH: boxH }; break; }
+    }
+  }
+  if (!best) best = { labelR: 340, scale: scales[scales.length - 1], boxW: 33, boxH: 16.5 };
+  // The outline also has to enclose the box radially: farthest corner + margin.
+  var reach = best.labelR + sqrt(best.boxW * best.boxW + best.boxH * best.boxH) / 2 + 6;
+  return { labelR: best.labelR, wedgeR: reach, mid: mid, scale: best.scale, boxW: best.boxW, boxH: best.boxH };
 }
 
 // The route a CORRECT answer would have taken, cut off at the same point as
@@ -1334,7 +1354,7 @@ function drawVertexAngleMarker() {
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
   var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
   var wLo = min(knownEnd, wrongEnd), wHi = max(knownEnd, wrongEnd);
-  var wSize = wrongWedgeSize(resolvedInfo.typed);
+  var wSize = wrongWedgeSize(resolvedInfo);
 
   push();
   translate(resolvedInfo.point.x, resolvedInfo.point.y);
@@ -1377,10 +1397,12 @@ function drawResolvedAngleLabels() {
   if (resolvedInfo.typed !== null && !resolvedInfo.correct) {
     // Centered in the middle of the red wedge: halfway between its two rays,
     // measured in the same frame the arcs are drawn in (baseAngle + sweep).
-    var wrongMid = resolvedInfo.baseAngle + resolvedInfo.sweepSign * (resolvedInfo.known + resolvedInfo.typed / 2);
-    var wLabelR = wrongWedgeSize(resolvedInfo.typed).labelR;
+    var wSizeL = wrongWedgeSize(resolvedInfo);
+    var wrongMid = wSizeL.mid;
+    var wLabelR = wSizeL.labelR;
     var wx = resolvedInfo.point.x + cos(wrongMid) * wLabelR, wy = resolvedInfo.point.y + sin(wrongMid) * wLabelR;
     var wrongLabel = resolvedInfo.typed + '°';
+    textSize(26 * wSizeL.scale);
     fill(0, 0, 0, 150);
     text(wrongLabel, wx + 1.5, wy + 1.5);
     fill('#e63946');
