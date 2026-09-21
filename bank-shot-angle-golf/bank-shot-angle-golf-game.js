@@ -1301,7 +1301,6 @@ function computeGreenArms(pts) {
 // Gold arc between the two green lines, kept close to the vertex so the green
 // number (further out along the bisector) never overlaps it.
 var GREEN_ARC_R = 26;
-var WRONG_ARC_R = 36; // the red angle's small arc at the vertex, just outside the gold one
 var GREEN_LABEL_R = 58;
 function getGreenArms() {
   if (!resolvedInfo) return null;
@@ -1353,11 +1352,10 @@ function drawTrail() {
 }
 
 function drawVertexAngleMarker() {
-  // Only a wrong answer draws anything here: a light red wedge, a small red arc
-  // at the vertex, and (in drawResolvedAngleLabels) the number inside it. No
-  // extra red lines - the ball's own red route line is the only red line.
-  // The correct angle is marked by the gold arc between the green route lines
-  // (drawGreenAngleArc).
+  // Only a wrong answer draws anything here: a light red wedge, with the number
+  // (drawResolvedAngleLabels) inside it. No red arc and no extra red lines - the
+  // ball's own red route line is the only red line. The correct angle is marked
+  // by the gold arc between the green route lines (drawGreenAngleArc).
   if (!resolvedInfo || resolvedInfo.typed === null || resolvedInfo.correct) return;
   var knownEnd = resolvedInfo.sweepSign * resolvedInfo.known;
   var wrongEnd = knownEnd + resolvedInfo.sweepSign * resolvedInfo.typed;
@@ -1371,10 +1369,6 @@ function drawVertexAngleMarker() {
   noStroke();
   fill(230, 57, 70, 45);
   arc(0, 0, wSize.wedgeR * 2, wSize.wedgeR * 2, wLo, wHi, PIE);
-  noFill();
-  stroke('#e63946');
-  strokeWeight(3.5);
-  arc(0, 0, WRONG_ARC_R * 2, WRONG_ARC_R * 2, wLo, wHi);
   pop();
 }
 
