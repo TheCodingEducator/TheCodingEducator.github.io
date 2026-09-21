@@ -1279,8 +1279,22 @@ var GREEN_ARC_R = 26;
 var GREEN_LABEL_R = 58;
 function getGreenArms() {
   if (!resolvedInfo) return null;
-  if (resolvedInfo.greenArms === undefined) resolvedInfo.greenArms = computeGreenArms(resolvedInfo.intendedTrail);
-  return resolvedInfo.greenArms;
+  var ri = resolvedInfo;
+  if (ri.greenArms === undefined) {
+    if (ri.type === 'STRAIGHT') {
+      // No bounce on a straight shot: the angle lives at the launch spot. The
+      // route line is one side; the other side is the ray at the known angle,
+      // which is `answer` degrees away from the forward direction, toward the
+      // side the question swept (opposite the sweep sign measured from the
+      // backward ray).
+      var wrongShot = ri.typed !== null && !ri.correct;
+      var a1 = wrongShot ? ri.launchAngle : ri.aimAngle;
+      ri.greenArms = { v: ri.point, a1: a1, diff: -ri.sweepSign * 180, mid: a1 - ri.sweepSign * 90, s: -ri.sweepSign };
+    } else {
+      ri.greenArms = computeGreenArms(ri.intendedTrail);
+    }
+  }
+  return ri.greenArms;
 }
 // The number shown at the wall is the angle between the route's incoming line
 // and the wall's normal (the line that splits the bounce in half). So the gold
@@ -1894,6 +1908,7 @@ function submitAnswer() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
+    aimAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x), launchAngle: atan2(launchDir.y, launchDir.x),
     trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
     intendedTrail: simulateTrail(pendingShot, correct)
   };
@@ -2077,6 +2092,7 @@ function triggerTimeoutChaos() {
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
+    aimAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x), launchAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x),
     trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
     intendedTrail: simulateTrail(pendingShot, true)
   };
