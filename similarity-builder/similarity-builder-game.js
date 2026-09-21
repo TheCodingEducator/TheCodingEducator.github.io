@@ -146,7 +146,7 @@ const MAX_BIG_SIDE = [40, 48, 100, 250];
 // which shapes can appear at each level (a name listed twice shows up twice as often)
 const SHAPES_BY_LEVEL = [
   ['tri', 'rect'],
-  ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair'],
+  ['tri', 'rect', 'par', 'trap', 'rtrap', 'house'],                      // (no staircase here: too many small sides to number without crowding)
   ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair', 'ell', 'tee', 'arrow'],
   ['sq', 'rect', 'par', 'rhomb', 'isotri', 'equitri', 'trap']
 ];
@@ -161,6 +161,7 @@ function genProblem(level, ksOverride, forceType) {                    // forceT
     const type = forceType || pick(TYPE_BY_LEVEL[L]), k = pick(ks), u = pick(UNIT_BY_LEVEL[L]);
     const lensS = base.lens.map(v => v * u), lensB = lensS.map(v => v * k);          // small figure / big figure (whole numbers)
     if (Math.max(...lensS) > MAX_SMALL_SIDE[L] || Math.max(...lensB) > MAX_BIG_SIDE[L]) continue;
+    if (level === 3 && ![...lensS, ...lensB].every(v => v < 30 ? v % 5 === 0 : v % 10 === 0)) continue;     // level 3: multiples of 5 under 30, multiples of 10 from 30 up
     const hgt = Math.max(...base.pts.map(p => p[1])) * u * k;
     const fits = PPF_OPTIONS.filter(o => lensB[0] * o >= 120 && lensB[0] * o <= 400);   // gap 120-400 px
     if (!fits.length) continue;
@@ -196,16 +197,11 @@ const gapFor = P => P.lensB[0] * P.ppf;                     // gap width = real 
 // The kinds of questions Practice mode lets you pick from (choose as many as you like; they are mixed together).
 // Each one is a level's question style; level 2 is split into its two halves (multiply / divide).
 const PRACTICE_TYPES = [
-  { id: 'scale', level: 1, type: 'scale', name: 'Find the scale factor',
-    desc: 'Two similar shapes, every side labeled. Find how many times bigger the big shape is: divide a side of the big shape by the matching side of the small one. Small numbers, factors 1 to 3.' },
-  { id: 'up', level: 2, type: 'up', name: 'Find a side of the BIGGER shape',
-    desc: 'The scale factor is given. Multiply the matching side of the small shape by it. The missing side and its match are highlighted and color-matched. Factors 2 to 4.' },
-  { id: 'down', level: 2, type: 'down', name: 'Find a side of the SMALLER shape',
-    desc: 'The scale factor is given, and you know a side of the big shape. Divide it by the scale factor to get the matching side of the small shape. Factors 2 to 4.' },
-  { id: 'hard', level: 3, type: null, name: 'No scale factor shown (turned & flipped)',
-    desc: 'No arrows and no scale factor: all sides of both shapes are shown except one. Use a pair of matching sides to find the factor yourself, then multiply or divide. The big shape is turned or flipped. Numbers are multiples of 5 up to 100.' },
-  { id: 'equal', level: 4, type: null, name: 'Equal sides not labeled',
-    desc: 'Only one number is shown for each group of equal sides. Tick marks and the shape\'s name (square, rhombus, rectangle, isosceles...) tell you the rest. The big shape is turned or flipped, with bigger numbers.' }
+  { id: 'scale', level: 1, type: 'scale', name: 'Scale factor', desc: 'Find the scale factor.' },
+  { id: 'up', level: 2, type: 'up', name: 'Multiply', desc: 'Find the bigger side.' },
+  { id: 'down', level: 2, type: 'down', name: 'Divide', desc: 'Find the smaller side.' },
+  { id: 'hard', level: 3, type: null, name: 'Turned and flipped', desc: 'No scale factor shown.' },
+  { id: 'equal', level: 4, type: null, name: 'Equal sides', desc: 'Use the tick marks.' }
 ];
 
 const chip = (txt, col) => `<span class="chip" style="border-color:${col};color:${col}">${txt}</span>`;
@@ -217,6 +213,13 @@ function stepsHTML(P) {
   const x = P.type === 'up' ? P.lensS[P.src] : P.lensB[P.src];
   const twin = P.src !== P.ti ? `<div>${chip(x, C(P.src))} <b style="font-size:26px">=</b> ${chip(x, C(P.ti))}</div>` : '';
   return twin + `<div>${chip(x, C(P.src))} ${P.type === 'up' ? '×' : '÷'} ${P.k} = ${chip(P.answer, C(P.ti))}</div>`;
+}
+// the questions you missed, as pictures: both shapes with every side labeled and the scale-factor arrow, then your answer next to the right one
+function missedHTML(list) {
+  const last = list.slice(-4);
+  if (!last.length) return '';
+  return `<p style="text-align:left;font-weight:800;margin:6px 0 2px">📝 Questions you missed${list.length > last.length ? ` (last ${last.length})` : ''}:</p><div class="review">` +
+    last.map(P => `<div class="miss">${pairSVG(P, true)}<div class="missLine">${P.timedOut ? '⏱ Time ran out' : '<span class="bad">❌ ' + ansText(P, P.userAns) + '</span>'} <span>➜</span> <span class="ok">✅ ${ansText(P, P.answer)}</span></div></div>`).join('') + `</div>`;
 }
 const ansText = (P, v) => P.type === 'scale' ? '×' + fmt(v) : fmt(v) + ' ft';
 
@@ -239,24 +242,27 @@ function pairSVG(P, reveal) {
   const capH = focus && nUp ? 46 : 0, OFFY = noArrows ? 0 : capH + 22 + 20 * nUp, VH = OFFY + 190 + (nLow ? (focus ? 70 : 46) + 20 * nLow : 8);
   const topY = Math.min(pre.top, img.top), botY = Math.max(pre.bottom, img.bottom);
   let ru = 0, rl = 0;
-  const single = SHAPES[P.shape].single, big = P.level === 4 ? `Big ${single}` : 'Big', small = P.level === 4 ? `Small ${single}` : 'Small';
+  // panel titles: the shape you start from is the PRE-IMAGE; the one you move to (the one with the missing side) is the IMAGE
+  const small = toSmall ? 'Image' : 'Pre-image', big = toSmall ? 'Pre-image' : 'Image';
   const font = 'font-family:Trebuchet MS,system-ui,sans-serif';
   let defs = '', paths = '', pills = '';
   const items = [];
   edges.forEach((i, r) => {
     const col = COLORS[P.cmap[i]], m1 = pre.mids[i], m2 = img.mids[i];
     const low = isLow(i), sgn = low ? 1 : -1, rank = low ? rl++ : ru++;
-    const off = focus ? 33 : (P.ticks ? 24 : 17), gap = focus ? 30 : 20;       // the arrow starts / ends just past each side's number
-    let sx = preX + m1.x + m1.nx * off, sy = OFFY + m1.y + m1.ny * off + sgn * gap, dx = imgX + m2.x + m2.nx * off, dy = OFFY + m2.y + m2.ny * off + sgn * gap;
-    if (focus) {                                                                    // level 2: start right on the known number's bubble and end right on the "?" bubble
-      const B = (m, X, e) => ({ x: X + m.x + m.nx * (off + e), y: OFFY + m.y + m.ny * (off + e) });
-      const b1 = B(m1, preX, 8), b2 = B(m2, imgX, reveal ? 8 : 10), hEnd = reveal ? 34 : 30;
-      sx = b1.x; sy = b1.y + sgn * 21; dx = b2.x; dy = b2.y + sgn * (hEnd / 2 + 9);
-    }
-    // lower arrows really dip: the lowest point is well below where the arrow starts and ends, then it rises to its match
-    const apex = low ? Math.max(OFFY + botY + 32, (sy + dy) / 2 + 30) + rank * 20 : OFFY + topY - 32 - rank * 20;
-    const apexF = !focus ? apex : low ? Math.max(apex, Math.max(sy, dy) + 40 + rank * 20) : Math.min(apex, Math.min(sy, dy) - 40 - rank * 20);   // level 2: a real arc that rises/dips clear of both numbers, so the arrowhead lands on the "?" from above/below
-    const cx = (sx + dx) / 2, cy = 2 * (apexF - (sy + dy) / 4);
+    // Every arrow runs straight from the NUMBER on the first shape to the matching NUMBER on the second: it leaves the edge of one
+    // number and its head points right at the other. (If a side has no number on one shape, it uses the side's midpoint instead.)
+    const lab = (m, X) => m.lx !== undefined ? { x: X + m.lx, y: OFFY + m.ly, hw: m.lw / 2 + 2, hh: m.lh / 2 + 2 }
+      : { x: X + m.x + m.nx * 20, y: OFFY + m.y + m.ny * 20, hw: 4, hh: 4 };
+    const A1 = lab(m1, preX), A2 = lab(m2, imgX);
+    // lower arrows really dip below the shapes then rise to the match; the others arch over the top
+    const apex = low ? Math.max(OFFY + botY + 32, (A1.y + A2.y) / 2 + 30) + rank * 20 : OFFY + topY - 32 - rank * 20;
+    const apexF = low ? Math.max(apex, Math.max(A1.y, A2.y) + 34 + rank * 20) : Math.min(apex, Math.min(A1.y, A2.y) - 34 - rank * 20);
+    const cx = (A1.x + A2.x) / 2, cy = 2 * apexF - (A1.y + A2.y) / 2;
+    const edge = (L, tx, ty, extra) => { const ux = tx - L.x, uy = ty - L.y, l = Math.hypot(ux, uy) || 1, nx = ux / l, ny = uy / l;      // where a ray from the number's centre leaves its box
+      const t = Math.min(L.hw / (Math.abs(nx) || 1e-6), L.hh / (Math.abs(ny) || 1e-6)) + extra; return { x: L.x + nx * t, y: L.y + ny * t }; };
+    const S = edge(A1, cx, cy, 3), E = edge(A2, cx, cy, 7);
+    const sx = S.x, sy = S.y, dx = E.x, dy = E.y;
     defs += `<marker id="ah${i}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="${col}"/></marker>`;
     paths += `<path d="M${sx},${sy} Q${cx},${cy} ${dx},${dy}" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round" stroke-opacity=".9" marker-end="url(#ah${i})"/>`;
     items.push({ col, sx, sy, cx, cy, dx, dy });
@@ -338,6 +344,7 @@ function figParts(P, which, reveal) {
   // nothing sticks out past a corner and there are no gaps. (Glows first, then the colored sides on top.)
   const area = pts.reduce((s, p, i) => { const q = pts[(i + 1) % n]; return s + p[0] * q[1] - q[0] * p[1]; }, 0);
   const nrm = pts.map((a, i) => { const b = pts[(i + 1) % n]; let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; return area > 0 ? [dy, -dx] : [-dy, dx]; });
+  mids.forEach((m, i) => { m.nx = nrm[i][0]; m.ny = nrm[i][1]; });                    // labels sit straight out from the MIDDLE of each side (perpendicular to it)
   const mit = pts.map((_, i) => {
     const p = nrm[(i + n - 1) % n], q = nrm[i]; const d = Math.max(.4, 1 + p[0] * q[0] + p[1] * q[1]);
     let mx = (p[0] + q[0]) / d, my = (p[1] + q[1]) / d; const l = Math.hypot(mx, my); if (l > 2.4) { mx *= 2.4 / l; my *= 2.4 / l; }   // very sharp corners: cap the point
@@ -373,21 +380,43 @@ function figParts(P, which, reveal) {
       });
     });
   }
+  // ---- the numbers: each one sits straight out from the middle of its side, but is nudged (out, then sideways) until it doesn't
+  // touch another number, sit on top of the shape, or cover another side. (Notches and inner corners used to pile numbers on top of each other.)
+  const items = [];
   for (let i = 0; i < n; i++) {
     let txt = null;
     if (qHere && i === P.ti) txt = reveal ? fmt(P.answer) : '?';
     else if ((reveal ? SHAPES[P.shape].label : show).includes(i)) txt = fmt(lens[i]);     // the wrong-answer card reveals every side
     if (txt === null) continue;
-    const m = mids[i], col = COLORS[P.cmap[i]], off = P.ticks ? 24 : 17;
-    if (focus && i === P.ti) {                                                         // spotlighted number: a filled bubble in the side's color
-      const size = txt === '?' ? 20 : 22, w = Math.max(txt === '?' ? 32 : 40, 18 + String(txt).length * size * .62), h = size + (txt === '?' ? 10 : 12);
-      const lx = m.x + m.nx * (off + (txt === '?' ? 10 : 8)), ly = m.y + m.ny * (off + (txt === '?' ? 10 : 8));
-      out += `<rect x="${lx - w/2}" y="${ly - h/2}" width="${w}" height="${h}" rx="${h/2}" fill="${col}" stroke="#fff" stroke-width="3"/>` +
-        `<text x="${lx}" y="${ly + 1}" text-anchor="middle" dominant-baseline="central" font-size="${size}" font-weight="900" fill="#fff" style="${font}">${txt}</text>`;
-    } else {
-      const lx = m.x + m.nx * off, ly = m.y + m.ny * off;
-      out += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${txt === '?' ? 24 : focus ? 21 : 18}" font-weight="900" fill="${col}" stroke="#fff" stroke-width="4" paint-order="stroke" style="${font}">${txt}</text>`;
+    const isQ = txt === '?', bubble = focus && i === P.ti, str = String(txt);
+    const size = bubble ? (isQ ? 20 : 22) : isQ ? 24 : focus ? 21 : 18;
+    const w = bubble ? Math.max(isQ ? 32 : 40, 18 + str.length * size * .62) : str.length * size * .62 + 6, h = bubble ? size + (isQ ? 10 : 12) : size;
+    items.push({ i, txt, isQ, bubble, size, w, h });
+  }
+  items.sort((a, b) => (b.isQ - a.isQ) || (b.bubble - a.bubble) || (a.i - b.i));          // the "?" and the spotlighted number get first pick of the space
+  const inPoly = (x, y) => { let c = false; for (let a = 0, b = n - 1; a < n; b = a++) { const [xi, yi] = pts[a], [xj, yj] = pts[b]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const segDist = (x, y, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy); };
+  const placed = [], base = P.ticks ? 24 : 17;
+  for (const it of items) {
+    const m = mids[it.i], tx = -m.ny, ty = m.nx, hw = it.w / 2 + 2, hh = it.h / 2 + 2, o0 = base + (it.bubble ? (it.isQ ? 10 : 8) : 0);
+    let best = null;
+    const sx = m.nx >= 0 ? 1 : -1;                                                     // "to the right of a right-hand side, to the left of a left-hand side"
+    search: for (let d = 0; d < 9; d++) for (const [dirx, diry, lat] of [[m.nx, m.ny, 0], [sx, 0, 0], [m.nx, m.ny, 14], [m.nx, m.ny, -14], [sx, 0, 12], [sx, 0, -12], [m.nx, m.ny, 28], [m.nx, m.ny, -28], [m.nx, m.ny, 44], [m.nx, m.ny, -44]]) {
+      const o = o0 + d * 6, x = m.x + dirx * o + tx * lat, y = m.y + diry * o + ty * lat;
+      if (x - hw < 3 || x + hw > VW - 3 || y - hh < 3 || y + hh > VH - 3) continue;
+      if (placed.some(q => Math.abs(q.x - x) < hw + q.hw && Math.abs(q.y - y) < hh + q.hh)) continue;
+      if ([[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([sx, sy]) => inPoly(x + sx * hw, y + sy * hh))) continue;
+      if (pts.some((a, k) => k !== it.i && segDist(x, y, a, pts[(k + 1) % n]) < Math.min(hw, hh) * .9 + 2)) continue;
+      best = { x, y }; break search;
     }
+    if (!best) best = { x: m.x + m.nx * o0, y: m.y + m.ny * o0 };
+    m.lx = best.x; m.ly = best.y; m.lw = it.w; m.lh = it.h; placed.push({ x: best.x, y: best.y, hw, hh });
+    const col = COLORS[P.cmap[it.i]], { x: lx, y: ly } = best;
+    if (it.bubble)                                                                     // spotlighted number: a filled bubble in the side's color
+      out += `<rect x="${lx - it.w / 2}" y="${ly - it.h / 2}" width="${it.w}" height="${it.h}" rx="${it.h / 2}" fill="${col}" stroke="#fff" stroke-width="3"/>` +
+        `<text x="${lx}" y="${ly + 1}" text-anchor="middle" dominant-baseline="central" font-size="${it.size}" font-weight="900" fill="#fff" style="${font}">${it.txt}</text>`;
+    else
+      out += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${it.size}" font-weight="900" fill="${col}" stroke="#fff" stroke-width="4" paint-order="stroke" style="${font}">${it.txt}</text>`;
   }
   return { body: out, mids, VW, VH, top: Math.min(...pts.map(p => p[1])), bottom: Math.max(...pts.map(p => p[1])) };
 }
@@ -398,16 +427,74 @@ const THEMES = [
   { name: 'Jungle', sky: ['#7fdcc0','#f4fbd0'], far: '#5fae7a', near: '#2f8a5a', top: '#45b04f', body: '#6b4a2b', sun: '#fffbd0' },
   { name: 'Night City', sky: ['#171b48','#7a4a8f'], far: '#3a3470', near: '#25204d', top: '#5b5b70', body: '#2d2d3a', sun: '#e8ecff', city: true }
 ];
-// The bridge-building crew. You earn 1 coin for every correct answer and spend coins in the Shop to hire them as your runner.
-// (Looks only - every crew member runs the same.)  hat: cap | hard | hardWhite | beret | hair    extras: what they carry / wear
+// The bridge-building crew: 6 jobs x 4 looks. You earn 1 coin for every correct answer and spend coins in the Shop to hire them as your runner.
+// (Looks only - every crew member runs the same.)  Drawn from the SIDE, walking to the right.
+//   look: torso/legs/boots colors; hat (hard | cap | beret | hair | headlamp) + hatc; hair; glasses (round | square); goggles;
+//         vest + stripes; bibs; tie; belt; bolt; sash; props (held in the front hand, or worn: whistle, badge)
+const CREW_ROLES = ['Site Worker', 'Politician', 'Architect', 'Engineer', 'Electrician', 'Safety Inspector'];
+const cY = '#ffd23f', cWH = '#f4f4f4', cBL = '#2f80ed', cOR = '#ff9f1a';
 const CHARACTERS = [
-  { id: 'crew',        name: 'Site Worker',      price: 0,  tag: 'Ready to build. Your starting runner.',        body: '#2f80ed', accent: '#1b4f9c', hat: 'cap',       extras: [] },
-  { id: 'politician',  name: 'Politician',       price: 10, tag: 'Gets the funding approved.',                   body: '#2b3a67', accent: '#1c2547', hat: 'hair',      extras: ['tie'] },
-  { id: 'architect',   name: 'Architect',        price: 20, tag: 'Designs the bridge on paper first.',           body: '#3b3b46', accent: '#26262e', hat: 'beret',     extras: ['tube', 'glasses'] },
-  { id: 'engineer',    name: 'Engineer',         price: 30, tag: 'Checks the math and the forces.',              body: '#ff9f1a', accent: '#7a5a20', hat: 'hard',      extras: ['clipboard', 'glasses'] },
-  { id: 'electrician', name: 'Electrician',      price: 45, tag: 'Wires up the lights and signals.',             body: '#2e6bd6', accent: '#1d3f86', hat: 'hardWhite', extras: ['bolt', 'belt'] },
-  { id: 'inspector',   name: 'Safety Inspector', price: 60, tag: 'Makes sure it is safe before it opens.',       body: '#a6e22e', accent: '#4a5a1c', hat: 'hardWhite', extras: ['stripes', 'clipboard'] }
+  // ---- Site Worker (the free starter is the first one) ----
+  { id: 'crew', role: 0, name: 'Site Worker', price: 0, tag: 'Ready to build. Your starting runner.', look: { torso: cBL, legs: '#1b4f9c', hat: 'cap', hatc: '#1b4f9c' } },
+  { id: 'crewA', role: 0, name: 'Shovel Crew', price: 5, tag: 'Hi-vis vest, hard hat, and a shovel.', look: { torso: '#e8e2d0', vest: cOR, stripes: 1, legs: '#3d5a80', hat: 'hard', hatc: cY, props: ['shovel'] } },
+  { id: 'crewB', role: 0, name: 'Fix-It Pro', price: 10, tag: 'Overalls, a tool belt, and a wrench.', look: { torso: '#c0392b', bibs: '#3a5f9c', legs: '#3a5f9c', hat: 'cap', hatc: '#e0761f', belt: 1, props: ['wrench'] } },
+  { id: 'crewC', role: 0, name: 'Flagger', price: 15, tag: 'Slows the traffic with a STOP sign.', look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: '#f2c21b', props: ['paddle'] } },
+  // ---- Politician ----
+  { id: 'politician', role: 1, name: 'Politician', price: 10, tag: 'Gets the funding approved.', look: { torso: '#2b3a67', legs: '#1c2547', hair: '#b9b9c4', tie: '#d92b2b' } },
+  { id: 'politicianA', role: 1, name: 'Mayor', price: 15, tag: 'A sash and a flag for the big day.', look: { torso: '#2b3a67', legs: '#1c2547', hair: '#7b5a3a', tie: '#d92b2b', sash: '#e8b02a', props: ['flag'] } },
+  { id: 'politicianB', role: 1, name: 'Ribbon Cutter', price: 20, tag: 'Opens the bridge with giant scissors.', look: { torso: '#3b3b46', legs: '#25252e', hair: '#b9b9c4', tie: '#2e86c1', props: ['scissors', 'badge'] } },
+  { id: 'politicianC', role: 1, name: 'Campaigner', price: 25, tag: 'Rallies the town with a megaphone.', look: { torso: '#e8e8ee', vest: '#3a5f9c', legs: '#3b3b46', hair: '#5b3a1a', tie: '#d92b2b', props: ['megaphone'] } },
+  // ---- Architect ----
+  { id: 'architect', role: 2, name: 'Architect', price: 20, tag: 'Designs the bridge on a blue blueprint first.', look: { torso: '#3b3b46', legs: '#26262e', hat: 'beret', hatc: '#7b3fa0', glasses: 'round', props: ['roll'] } },
+  { id: 'architectA', role: 2, name: 'Designer', price: 25, tag: 'Black turtleneck, a ruler, and a blue blueprint tube.', look: { torso: '#222222', legs: '#333333', hair: '#5b3a1a', glasses: 'square', props: ['ruler', 'tube'] } },
+  { id: 'architectB', role: 2, name: 'Draftsperson', price: 30, tag: 'Hard hat, a big compass, and a blue blueprint tube.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cWH, glasses: 'round', tie: cBL, props: ['compass', 'tube'] } },
+  { id: 'architectC', role: 2, name: 'Blueprint Boss', price: 35, tag: 'A big blue blueprint and a red beret.', look: { torso: '#c9a26a', legs: '#5b4a3a', hat: 'beret', hatc: '#c0392b', glasses: 'round', belt: 1, props: ['blueprint'] } },
+  // ---- Engineer ----
+  { id: 'engineer', role: 3, name: 'Engineer', price: 30, tag: 'Checks the math and the forces.', look: { torso: cOR, legs: '#7a5a20', hat: 'hard', hatc: cY, glasses: 'round', props: ['clip'] } },
+  { id: 'engineerA', role: 3, name: 'Lab Engineer', price: 35, tag: 'Goggles and a laptop full of numbers.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cY, goggles: 1, props: ['laptop'] } },
+  { id: 'engineerB', role: 3, name: 'Surveyor', price: 40, tag: 'Measures every angle with a protractor.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
+  { id: 'engineerC', role: 3, name: 'Site Engineer', price: 45, tag: 'Vest, clipboard, and a badge.', look: { torso: cBL, vest: cOR, legs: '#25252e', hat: 'hard', hatc: cOR, props: ['clip', 'badge'] } },
+  // ---- Electrician ----
+  { id: 'electrician', role: 4, name: 'Electrician', price: 45, tag: 'Wires up the lights and signals.', look: { torso: '#2e6bd6', legs: '#1d3f86', hat: 'hard', hatc: cWH, bolt: 1, belt: 1 } },
+  { id: 'electricianA', role: 4, name: 'Lineworker', price: 50, tag: 'Headlamp on, pliers in hand.', look: { torso: '#2e6bd6', legs: '#2e6bd6', hat: 'headlamp', hatc: cWH, belt: 1, props: ['pliers'] } },
+  { id: 'electricianB', role: 4, name: 'Cable Crew', price: 55, tag: 'Carries a big coil of cable.', look: { torso: '#d9dde6', legs: '#3d4a6a', hat: 'hard', hatc: '#e0261f', bolt: 1, props: ['cable'] } },
+  { id: 'electricianC', role: 4, name: 'Bright Spark', price: 60, tag: 'Goggles on and a glowing bulb.', look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['bulb'] } },
+  // ---- Safety Inspector ----
+  { id: 'inspector', role: 5, name: 'Safety Inspector', price: 60, tag: 'Makes sure it is safe before it opens.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cWH, stripes: 1, vest: '#a6e22e', props: ['clip'] } },
+  { id: 'inspectorA', role: 5, name: 'Stamp Inspector', price: 65, tag: 'Approves the bridge with a stamp.', look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['stamp'] } },
+  { id: 'inspectorB', role: 5, name: 'Whistle Marshal', price: 70, tag: 'A whistle, a green cap, and an OK sign.', look: { torso: '#3b3b46', vest: '#a6e22e', stripes: 1, legs: '#25252e', hat: 'cap', hatc: '#a6e22e', props: ['whistle', 'signOK'] } },
+  { id: 'inspectorC', role: 5, name: 'OK Inspector', price: 75, tag: 'Gives the final thumbs-up sign.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cOR, glasses: 'square', stripes: 1, vest: '#a6e22e', props: ['signOK'] } }
 ];
+// Who each crew member is: half are women, and skin tones and hair vary, so every student can see someone like themselves in a professional job.
+// style: short | long | pony | bun | curly
+const SKIN = { fair: '#ffd9b0', light: '#f0c9a0', olive: '#d9a66c', tan: '#c68642', brown: '#8d5524', deep: '#5c3a21' };
+const CREW_PEOPLE = {
+  crew:         { skin: SKIN.tan,   style: 'pony',  hairc: '#2b1b10' },
+  crewA:        { skin: SKIN.brown, style: 'short', hairc: '#151515' },
+  crewB:        { skin: SKIN.fair,  style: 'bun',   hairc: '#a0522d' },
+  crewC:        { skin: SKIN.light, style: 'short', hairc: '#4a3320' },
+  politician:   { skin: SKIN.brown, style: 'long',  hairc: '#b9b9c4' },
+  politicianA:  { skin: SKIN.fair,  style: 'short', hairc: '#7b5a3a' },
+  politicianB:  { skin: SKIN.light, style: 'long',  hairc: '#222222' },
+  politicianC:  { skin: SKIN.deep,  style: 'curly', hairc: '#111111' },
+  architect:    { skin: SKIN.fair,  style: 'bun',   hairc: '#5b3a1a' },
+  architectA:   { skin: SKIN.tan,   style: 'short', hairc: '#222222' },
+  architectB:   { skin: SKIN.deep,  style: 'pony',  hairc: '#111111' },
+  architectC:   { skin: SKIN.olive, style: 'short', hairc: '#4a3320' },
+  engineer:     { skin: SKIN.light, style: 'short', hairc: '#333333' },
+  engineerA:    { skin: SKIN.brown, style: 'pony',  hairc: '#1a1a1a' },
+  engineerB:    { skin: SKIN.tan,   style: 'short', hairc: '#222222' },
+  engineerC:    { skin: SKIN.fair,  style: 'pony',  hairc: '#c0872b' },
+  electrician:  { skin: SKIN.brown, style: 'short', hairc: '#111111' },
+  electricianA: { skin: SKIN.light, style: 'bun',   hairc: '#2b1b10' },
+  electricianB: { skin: SKIN.fair,  style: 'short', hairc: '#a0522d' },
+  electricianC: { skin: SKIN.deep,  style: 'pony',  hairc: '#111111' },
+  inspector:    { skin: SKIN.olive, style: 'short', hairc: '#222222' },
+  inspectorA:   { skin: SKIN.tan,   style: 'long',  hairc: '#1a1a1a' },
+  inspectorB:   { skin: SKIN.light, style: 'short', hairc: '#3a2a1a' },
+  inspectorC:   { skin: SKIN.fair,  style: 'pony',  hairc: '#d9a441' }
+};
+CHARACTERS.forEach(c => Object.assign(c.look, CREW_PEOPLE[c.id]));
 // One-time move of progress saved under the game's earlier name ("bridgerunner_...") to the "similaritybuilder_..." keys.
 // It MOVES the values (copies, then deletes the old key), so a later "Reset" can't bring old progress back.
 (function migrateOldSaveKeys() {
@@ -490,6 +577,7 @@ addEventListener('pagehide', saveRunStats);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveRunStats(); });
 
 let G = null;
+let cardAt = 0;                                          // when the last pop-up card appeared (for the Enter/Space delay)
 let curMode = 'run';                     // 'run' = Bridge Run (obstacles, 3 hearts, levels)   'practice' = no obstacles, no hearts, pick your question types
 const keys = {};
 
@@ -501,7 +589,7 @@ function newWorld(menu, cp, mode) {
   const runLen = practice ? Math.round(PRACTICE_SECONDS * 330) : Math.round(4000 * SPEED_BY_LEVEL[lv - 1]);   // the same ~11 s of quiet running the very first level gets (Practice: a short jog)
   return {
     mode: mode || 'run', ptypes: [], answered: 0, byType: {},
-    state: menu ? 'menu' : 'run', t: 0, cam: 0, px: menu ? 0 : x0, py: GROUND, vy: 0, onGround: true,
+    state: menu ? 'menu' : 'run', t: 0, cam: 0, camY: 0, px: menu ? 0 : x0, py: GROUND, vy: 0, onGround: true,
     jumpBuf: 0, airJumps: 0, stumble: 0, inv: 0, crashed: false, shake: 0,
     lives: 3, streak: 0, bestStreak: cp ? cp.bestStreak : 0, solved: cp ? cp.solved : 0, wrong: cp ? cp.wrong : 0,
     level: lv, theme: cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, dist: 0, missed: [],
@@ -525,14 +613,14 @@ const OBS = {
   cone:      { kind: 'solid', w: 26, h: 38, label: 'road cone' },
   barrel:    { kind: 'solid', w: 38, h: 48, label: 'hazmat barrel' },
   redtape:   { kind: 'solid', w: 58, h: 30, label: 'red tape' },
-  fence:     { kind: 'solid', w: 26, h: 58, label: '"Private Property" fence' },
+  home:      { kind: 'solid', w: 54, h: 52, label: 'private home' },
   // --- walking toward you ---
-  protesters:{ kind: 'solid', w: 140, h: 66, vx: -70, label: 'protesters' },
+  protesters:{ kind: 'solid', w: 200, h: 66, vx: -70, label: 'protesters' },
   tortoise:  { kind: 'solid', w: 46, h: 28, vx: -22, label: 'endangered tortoise' },
-  frog:      { kind: 'solid', w: 32, h: 28, vx: -30, label: 'endangered frog' },
+  frog:      { kind: 'solid', w: 64, h: 40, vx: -30, label: 'endangered frog' },
   lawyer:    { kind: 'solid', w: 30, h: 68, vx: -45, label: 'lawyer (needs a permit)' },
   // --- ground hazards ---
-  puddle:    { kind: 'zone', w: 120, effect: 'hurt',     label: 'puddle',            msg: 'You splashed into a puddle!' },
+  flood:     { kind: 'zone', w: 160, effect: 'hurt',     label: 'flooded land',      msg: 'You waded into the flood!' },
   soil:      { kind: 'zone', w: 130, effect: 'hurt',     label: 'unstable soil',     msg: 'The unstable soil gave way!' },
   hole:      { kind: 'zone', w: 64,  effect: 'hurt',     label: 'hole in the ground', msg: 'You fell in a hole in the ground!' },
   pipe:      { kind: 'pipe', w: 56, label: 'loose underground pipe', msg: 'A loose pipe burst out of the ground!' },
@@ -548,8 +636,8 @@ const OBS = {
 // (A name listed twice shows up twice as often.)
 const LEVEL_OBS = [
   ['rock', 'cactus', 'log', 'cone', 'tortoise'],                                            // 1: simple things on the ground - just jump
-  ['stump', 'frog', 'barrel', 'redtape', 'fence', 'vulture'],                               // 2: taller and wider things, plus the first flyer to duck under
-  ['puddle', 'hole', 'soil', 'lawyer', 'parrot', 'powerline'],                              // 3: wide hazards to clear, walkers, and low-hanging lines
+  ['stump', 'frog', 'barrel', 'redtape', 'home', 'vulture'],                               // 2: taller and wider things, plus the first flyer to duck under
+  ['flood', 'hole', 'soil', 'lawyer', 'parrot', 'powerline'],                              // 3: wide hazards to clear, walkers, and low-hanging lines
   ['protesters', 'protesters', 'pipe', 'pipe', 'drone', 'falcon', 'storm']                  // 4: big groups, bursting pipes, and lots of overhead traffic
 ];
 const flyY = c => GROUND - 125 + Math.sin(G.t * 4 + c.x) * 8;
@@ -576,13 +664,30 @@ function gapAfter(prev, type, level) {
   const spd = 330 * SPEED_BY_LEVEL[level - 1], minPx = spd * MIN_GAP_SEC[level - 1], d = OBS[type], pd = prev ? OBS[prev.type] : null;
   const [tight, medium] = GAP_MIX[level - 1], r = Math.random();
   const mult = r < tight ? 1 + Math.random() * .15 : r < tight + medium ? 1.35 + Math.random() * .55 : 2 + Math.random() * .8;
-  let g = minPx * mult + (pd && !pd.fly ? Math.min(pd.w || 40, 90) * .6 : 0);
+  let g = minPx * mult + (pd && !pd.fly ? (prev.w ? prev.w : Math.min(pd.w || 40, 90) * .6) : 0);       // (prev.w = a long stretch from a pattern: leave its whole length)
   if (pd && pd.vx) g += 110;                                                       // walkers move toward you: keep clear of whatever is in front of them
-  if (pd && pd.kind === 'zone') g += pd.w * .5;
+  if (pd && pd.kind === 'zone' && !prev.w) g += pd.w * .5;
   if (d.fly && pd && !pd.fly) g = Math.max(g, spd * .78 + (d.w || 0) * .5);        // land from the jump before the flyer arrives
-  if (pd && pd.fly && !d.fly) g = Math.max(g, (pd.w || 0) + 28 + spd * .48);       // get past the flyer before jumping the next thing
+  if (pd && pd.fly && !d.fly) g = Math.max(g, (prev.w ? prev.w / 2 : pd.w || 0) + 28 + spd * .48);       // get past the flyer before jumping the next thing
   if (d.fly && d.w) g += d.w * .3;                                                 // wide flyers (storms, power lines) get a bit more room
   return g;
+}
+// Bigger "moves" that make you change where you are, not just when you jump. Every one always has a way through:
+//   tapeWall  a long wall of red tape: hop onto the platform above it and run along
+//   skyField  a long stretch of flooded land / unstable soil: only a HIGH platform (double jump) gets you across without touching it
+//   lowLine   a very long power line / storm cloud: you must stay down on the ground for the whole length
+//   pipeRow   three loose pipes in a row: run through when they are down, or take the high platform over them
+const PATTERNS = { 2: ['tapeWall'], 3: ['skyField', 'lowLine'], 4: ['lowLine', 'pipeRow'] };
+const PATTERN_CHANCE = [0, .18, .28, .36];
+function patternType(kind, level) { return kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : 'storm') : 'pipe'; }
+function makePattern(kind, type, x) {
+  const obs = [], floats = [], mk = (t, xx, extra) => Object.assign({ x: xx, type: t, fly: !!OBS[t].fly, hit: false, t0: Math.random() * PIPE_CYCLE }, extra || {});
+  if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
+  else if (kind === 'skyField') { const w = rnd(380, 500); obs.push(mk(type, x, { w })); floats.push({ x: x - 40, w: w + 80, h: pick([170, 185, 195]) }); }
+  else if (kind === 'lowLine') { const w = rnd(360, 480); obs.push(mk(type, x + w / 2, { w })); }
+  else { for (let i = 0; i < 3; i++) obs.push(mk('pipe', x + i * 190)); if (Math.random() < .5) floats.push({ x: x - 30, w: 2 * 190 + 56 + 60, h: 175 }); }
+  const last = obs[obs.length - 1], endX = last.fly ? last.x + last.w / 2 : last.x + (last.w || OBS[last.type].w);
+  return { obs, floats, last, endX };
 }
 function fillContent(p, first, theme, level = 1, keepX = null) {
   if (curMode === 'practice') { p.obs = []; p.floats = []; return; }        // Practice mode: a clear track - no obstacles at all
@@ -595,8 +700,15 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
   // (faster levels cover the same 720 px sooner, so the quiet start is stretched by the level's speed to stay a full 3 s)
   let prev = kept.length ? kept[kept.length - 1] : null;
   let x = prev ? 0 : Math.max(p.s + (first ? Math.round(2200 * SPEED_BY_LEVEL[level - 1]) : 340), keepX === null ? 0 : keepX + 40);
-  const fresh = [], pool = LEVEL_OBS[level - 1], flyPool = pool.filter(t => OBS[t].fly);
+  const fresh = [], patFloats = [], pool = LEVEL_OBS[level - 1], flyPool = pool.filter(t => OBS[t].fly);
   while (true) {
+    if (prev && !first && PATTERNS[level] && Math.random() < PATTERN_CHANCE[level - 1]) {          // a bigger move instead of a single obstacle
+      const kind = pick(PATTERNS[level]), ptype = patternType(kind, level);
+      if (!(prev.fly && OBS[ptype].fly)) {
+        const px0 = prev.x + gapAfter(prev, ptype, level), pat = makePattern(kind, ptype, px0);
+        if (pat.endX < p.e - 300) { pat.obs.forEach(c => p.obs.push(c)); pat.floats.forEach(f => patFloats.push(f)); prev = pat.last; continue; }
+      }
+    }
     let type = null;
     for (let tries = 0; tries < 40 && !type; tries++) {
       const t = pick(pool), d = OBS[t];
@@ -614,7 +726,7 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
   }
   // floating platforms: you can land on them (from above) and run along them to hop over a ground obstacle.
   // They only sit over ground obstacles that stay put, never near a flyer. Height 105-125 px: reachable with one jump, easy with a double jump.
-  p.floats = keptFloats;
+  p.floats = keptFloats.concat(patFloats);
   const flyers = p.obs.filter(c => c.fly);
   fresh.forEach(c => {
     if (c.fly || OBS[c.type].vx || Math.random() > 0.7) return;
@@ -640,6 +752,7 @@ function ensureNext() {
   if (G.pi === G.platforms.length - 1 && G.px > p.e - 1100) {
     p.problem = nextProblem();                               // the puzzle decides how wide the gap is
     p.gapW = gapFor(p.problem);
+    p.shapeP = p.problem; p.under = Math.random() < .5;                  // half of the gaps are shaped holes: the bridge goes DOWN into them
     const s = p.e + p.gapW;
     const secs = G.mode === 'practice' ? PRACTICE_SECONDS : SECONDS_BETWEEN_QUESTIONS;
     const runLen = Math.round(secs * 330 * SPEED_BY_LEVEL[G.level - 1] * (0.9 + Math.random() * 0.2));   // time to dodge before the next question
@@ -662,6 +775,8 @@ function showScreen(name) {
   $('practice').classList.toggle('hidden', name !== 'practice');
   $('sb').classList.toggle('playing', name === 'play');                // the ☰ Menu / pause button only shows while you're actually playing
   if (name === 'title') startTitleAnim(); else stopTitleAnim();
+  const f = { title: 'btnPlay', menu: 'btnStart', practice: 'btnPracStart' }[name];       // keyboard: the main button is ready to press
+  if (f) setTimeout(() => { const el = $(f); if (el && el.offsetParent !== null && !el.disabled) el.focus(); }, 30);
 }
 function hidePlayOverlays() {
   ['over', 'feedback', 'problem', 'pause', 'shop'].forEach(id => $(id).classList.add('hidden'));
@@ -734,13 +849,6 @@ function updateHUD() {
 function buildMenu() {
   $('mBest').textContent = Math.floor(best);
   $('mCoins').textContent = coins; $('hCoins').textContent = coins;
-  const box = $('skins'); box.innerHTML = '';                        // your runner: tap any crew member you've hired (hire more in the Shop)
-  CHARACTERS.filter(c => owned.includes(c.id)).forEach(ch => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'skin' + (ch.id === charId ? ' sel' : ''); b.textContent = ch.name;
-    b.onclick = () => { equipCharacter(ch.id); buildMenu(); };
-    box.appendChild(b);
-  });
   renderStarts($('menuStarts'), '📍 Or start from a level you\'ve reached:');
 }
 
@@ -778,27 +886,32 @@ function finishPractice() {
   $('ovTitle').textContent = '🎓 Practice summary';
   $('ovStats').innerHTML = `<div><b>${total}</b>Questions answered</div><div><b>${G.solved}</b>Correct</div>` +
     `<div><b>${acc}%</b>Accuracy</div><div><b>${G.bestStreak}</b>Best streak</div>`;
-  const uniq = G.missed.slice(-4);
-  $('ovReview').innerHTML = uniq.length ? `<p style="text-align:left;font-weight:800;margin-bottom:2px">📝 Missed:</p><div class="review">` +
-    uniq.map(P => `<div>${stepsHTML(P)} <span style="color:#c33">${P.timedOut ? '⏱' : '❌ ' + ansText(P, P.userAns)}</span></div>`).join('') + `</div>`
-    : `<p>${total ? '🎉 No missed questions!' : 'No questions answered yet.'}</p>`;
+  $('ovReview').innerHTML = missedHTML(G.missed) || `<p>${total ? '🎉 No missed questions!' : 'No questions answered yet.'}</p>`;
   $('ovContinue').innerHTML = ''; $('btnAgain').textContent = 'Practice again';
   G.state = 'over'; setPaused(false);
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden'); $('pause').classList.add('hidden');
-  $('over').classList.remove('hidden');
+  $('over').classList.remove('hidden'); cardAt = performance.now(); $('btnAgain').focus();
 }
 
 /* ===================== SHOP ===================== */
+let shopRole = 0;                                                         // which job's four looks the Shop is showing
 function renderShop() {
   $('shopCoins').textContent = coins;
+  const tabs = $('shopTabs'); tabs.innerHTML = '';
+  CREW_ROLES.forEach((r, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'roleTab' + (i === shopRole ? ' on' : '');
+    b.textContent = `${r} ${CHARACTERS.filter(c => c.role === i && owned.includes(c.id)).length}/4`;
+    b.onclick = () => { shopRole = i; renderShop(); tabs.children[i].focus(); };
+    tabs.appendChild(b);
+  });
   const grid = $('shopGrid'); grid.innerHTML = '';
-  CHARACTERS.forEach(ch => {
+  CHARACTERS.filter(c => c.role === shopRole).forEach(ch => {
     const has = owned.includes(ch.id), eq = ch.id === charId;
     const card = document.createElement('div'); card.className = 'shopCard' + (eq ? ' eq' : '') + (has ? '' : ' locked');
     const cv = document.createElement('canvas'); cv.width = 110; cv.height = 132; cv.setAttribute('aria-hidden', 'true');
     const g = cv.getContext('2d'), grd = g.createLinearGradient(0, 0, 0, 132); grd.addColorStop(0, '#dff1ff'); grd.addColorStop(1, '#f6e7c8');
-    g.fillStyle = grd; g.fillRect(0, 0, 110, 132); g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(55, 122, 22, 5, 0, 0, 7); g.fill();
-    drawChar(g, 55, 120, ch, { ph: 1.1, running: true });
+    g.fillStyle = grd; g.fillRect(0, 0, 110, 132); g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(55, 122, 24, 5, 0, 0, 7); g.fill();
+    drawChar(g, 50, 120, ch, { ph: 1.1, running: true });
     card.appendChild(cv);
     const nm = document.createElement('div'); nm.className = 'shopName'; nm.textContent = ch.name; card.appendChild(nm);
     const tg = document.createElement('div'); tg.className = 'shopTag'; tg.textContent = ch.tag; card.appendChild(tg);
@@ -812,7 +925,7 @@ function renderShop() {
     card.appendChild(btn); grid.appendChild(card);
   });
 }
-function openShop() { renderShop(); $('shop').classList.remove('hidden'); }
+function openShop() { renderShop(); $('shop').classList.remove('hidden'); const b = $('shopGrid').querySelector('button:not(:disabled)') || $('btnShopClose'); b.focus(); }
 function closeShop() { $('shop').classList.add('hidden'); buildMenu(); }
 
 /* ===================== PROBLEM FLOW ===================== */
@@ -835,8 +948,8 @@ function startSolve() {
   const single = SHAPES[P.shape].single;
   const prompts = {
     scale: 'What is the <b>scale factor</b>?',
-    up: 'Find the missing side of the <b>big</b> shape.',
-    down: 'Find the missing side of the <b>small</b> shape.'
+    up: 'Find the missing side of the <b>image</b>.',
+    down: 'Find the missing side of the <b>image</b>.'
   };
   let txt = prompts[P.type];
   if (P.level === 4) txt += ` <span style="color:#5b6485">Same tick marks = same length.</span>`;
@@ -866,6 +979,10 @@ function submit(timedOut) {
   const P = G.problem, p = G.platforms[G.pi];
   const ok = val === P.answer;
   P.userAns = val; P.timedOut = !!timedOut;
+  if (timedOut) {                                                       // out of time: no bridge at all - you just walk to the edge and fall in
+    p.bridge = null; $('problem').classList.add('hidden'); G.state = 'cross';
+    toast("Time's up! No bridge…", 'bad'); return;
+  }
   const ratio = ok ? 1 : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, 2.2));     // the bridge is built at the scale YOUR number implies
   p.bridge = { ratio, len: p.gapW * ratio, ok, prog: 0, collapsed: false, cAnim: 0, P, val, sparked: false };
   $('problem').classList.add('hidden');
@@ -921,14 +1038,14 @@ function showFeedback() {
   $('fbBody').innerHTML = solutionHTML(P);
   $('fbStorm').innerHTML = G.mode === 'practice' ? '' : '❤️'.repeat(G.lives) + '🖤'.repeat(3 - G.lives);
   $('btnNext').textContent = 'Try a new bridge ➜';
-  $('feedback').classList.remove('hidden');
+  $('feedback').classList.remove('hidden'); cardAt = performance.now(); $('btnNext').focus();
 }
 
 function respawn() {
   const p = G.platforms[G.pi];
   p.bridge = null; p.bridged = false;
   G.px = p.e - 70; G.py = GROUND; G.vy = 0; G.onGround = true;
-  const P = nextProblem(); p.problem = P; setGap(p, gapFor(P));            // a new puzzle means a new gap width
+  const P = nextProblem(); p.problem = P; setGap(p, gapFor(P)); p.shapeP = P; p.under = Math.random() < .5;            // a new puzzle means a new gap width
   $('feedback').classList.add('hidden');
   startSolve();
 }
@@ -942,13 +1059,10 @@ function gameOver() {
   $('ovStats').innerHTML =
     `<div><b>${meters} m</b>Distance ${newBest ? '🏆 New best!' : ''}</div><div><b>${best} m</b>Best distance</div>` +
     `<div><b>${G.solved}</b>Bridges built</div><div><b>${acc}%</b>Accuracy · best streak ${G.bestStreak}</div>`;
-  const uniq = G.missed.slice(-4);
-  $('ovReview').innerHTML = uniq.length ? `<p style="text-align:left;font-weight:800;margin-bottom:2px">📝 Missed:</p><div class="review">` +
-    uniq.map(P => `<div>${stepsHTML(P)} <span style="color:#c33">${P.timedOut ? '⏱' : '❌ ' + ansText(P, P.userAns)}</span></div>`).join('') + `</div>`
-    : `<p>🎉 No missed math problems!${G.crashed ? ' Watch out for obstacles next time.' : ''}</p>`;
+  $('ovReview').innerHTML = missedHTML(G.missed) || `<p>🎉 No missed math problems!${G.crashed ? ' Watch out for obstacles next time.' : ''}</p>`;
   renderStarts($('ovContinue'), '↩ Or continue where you unlocked a level:');      // same level, same distance, fresh hearts
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
-  $('over').classList.remove('hidden');
+  $('over').classList.remove('hidden'); cardAt = performance.now(); $('btnAgain').focus();
 }
 
 /* ===================== PHYSICS / UPDATE ===================== */
@@ -1004,14 +1118,14 @@ function update(dt) {
     if (G.inv > 0) G.inv -= dt;
     const grounded = G.py >= GROUND - 4;                              // feet on the ground (not up on a floating platform or in the air)
     for (const c of p.obs) {
-      const d = OBS[c.type];
+      const d = OBS[c.type], dw = c.w || d.w;
       if (c.hit && d.kind !== 'zone') continue;
-      let hurt = false, ex = c.x + (d.w || 0) / 2, ey = GROUND - 20;
+      let hurt = false, ex = c.x + (dw || 0) / 2, ey = GROUND - 20;
       if (d.fly) {
-        const y = flyYOf(c), half = d.w ? d.w / 2 + 12 : 28;
+        const y = flyYOf(c), half = dw ? dw / 2 + 12 : 28;
         hurt = Math.abs(G.px - c.x) < half && (G.py - 92) < y + 14 && G.py > y - 14; ex = c.x; ey = y;
       } else if (d.kind === 'zone') {
-        const inside = grounded && G.px + 6 > c.x && G.px - 6 < c.x + d.w;
+        const inside = grounded && G.px + 6 > c.x && G.px - 6 < c.x + dw;
         if (inside && !c.hit) {
           if (d.effect === 'slow') {                                    // puddle: you slip and lose speed
             G.stumble = Math.max(G.stumble, .3);
@@ -1026,15 +1140,19 @@ function update(dt) {
         ey = GROUND + 6;
       } else if (d.kind === 'pipe') {
         const h = pipeH(c);
-        hurt = h > 16 && G.px + 10 > c.x && G.px - 10 < c.x + d.w && G.py > GROUND - h + 4; ey = GROUND - h / 2;
+        hurt = h > 16 && G.px + 10 > c.x && G.px - 10 < c.x + dw && G.py > GROUND - h + 4; ey = GROUND - h / 2;
       } else {
-        hurt = G.px + 10 > c.x && G.px - 10 < c.x + d.w && G.py > GROUND - d.h + 4; ey = GROUND - d.h / 2;
+        hurt = G.px + 10 > c.x && G.px - 10 < c.x + dw && G.py > GROUND - d.h + 4; ey = GROUND - d.h / 2;
       }
       if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
         toast(G.lives > 0 ? `${d.msg || 'You ran into the ' + d.label + '!'} −1 ❤️` : 'Crashed out!', 'bad');
         if (G.lives <= 0) { G.crashed = true; gameOver(); return; }
+        if (c.type === 'hole') {                                           // you really fall into a hole in the ground...
+          G.state = 'hfall'; G.holeC = c; G.vy = 0; G.px = c.x + dw / 2; G.onGround = false; G.airJumps = 0;
+          burst(c.x + dw / 2 - G.cam, GROUND, '#7a5230', 14); return;
+        }
       }
     }
     // every 1000 m is a new level: faster runner, that level's own obstacles, tighter spacing, and a saved checkpoint to restart from
@@ -1054,12 +1172,12 @@ function update(dt) {
   } else if (G.state === 'cross') {
     G.px += 250 * dt;
     const b = p.bridge;
-    // a wrong bridge always collapses: too long snaps in the middle of the gap; too short buckles under the runner and swings down
+    if (b) { // a wrong bridge always collapses: too long snaps in the middle of the gap; too short buckles under the runner and swings down
     const trigger = b.ratio > 1 ? p.gapW * .5 : b.len * .55;
     if (!b.ok && !b.collapsed && G.px >= p.e + trigger) {
       b.collapsed = true; sfx.hit(); G.shake = .4;
       burst(p.e + trigger - G.cam, GROUND, '#c98a4b', 26);
-    }
+    } }
   } else if (G.state === 'solve' && G.mode === 'run') {                   // (Practice has no timer)
     G.timeLeft -= dt;
     const f = clamp(G.timeLeft / G.timeTotal, 0, 1);
@@ -1068,6 +1186,11 @@ function update(dt) {
     $('pTimer').textContent = '⏱ ' + Math.max(0, Math.ceil(G.timeLeft)) + 's';
     if (G.timeLeft <= 0) submit(true);
   }
+  // camera: slide down to show a shaped hole while you work on it, and back up afterwards
+  { const pp = G.platforms[G.pi]; let target = 0;
+    if (pp && pp.under && pp.gapW && G.px > pp.e - 420 && G.px < pp.e + (pp.bridge ? pp.bridge.len : pp.gapW) + 60 && G.state !== 'over')
+      target = clamp(pitDepth(pp) - 110, 0, 230);
+    G.camY += (target - G.camY) * Math.min(1, dt * 3); if (Math.abs(target - G.camY) < .5) G.camY = target; }
   // gravity + landing
   if (G.state === 'rise') {
     const r = G.rise; r.t = Math.min(1, r.t + dt / 1.5);
@@ -1075,11 +1198,21 @@ function update(dt) {
     G.px = r.x0 + (r.x1 - r.x0) * e;
     G.py = r.y0 + (GROUND - r.y0) * e - Math.sin(Math.PI * e) * 60;
     if (Math.random() < .5) G.particles.push({ x: G.px, y: G.py - 20, vx: (Math.random() - .5) * 60, vy: 80, life: .5, color: '#fff' });
-    if (r.t >= 1) { G.py = GROUND; G.vy = 0; G.onGround = true; G.airJumps = 0; showFeedback(); }
+    if (r.t >= 1) {
+      G.py = GROUND; G.vy = 0; G.onGround = true; G.airJumps = 0;
+      if (r.hole) { G.state = 'run'; G.inv = 1.8; } else showFeedback();                  // (out of a hole: straight back to running)
+    }
+  } else if (G.state === 'hfall') {                                      // ...drop down the hole, then balloons carry you back up out of it
+    G.vy += 2400 * dt; G.py += G.vy * dt;
+    if (G.py >= GROUND + 105) {
+      G.py = GROUND + 105; G.state = 'rise'; G.vy = 0;
+      G.rise = { t: 0, x0: G.px, y0: G.py, x1: G.holeC.x + OBS.hole.w + 45, hole: true };
+      toast('Whoosh! Balloons to the rescue…', ''); beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
+    }
   } else if (G.state !== 'fall') {
     const prevPy = G.py;
     G.vy += 2400 * dt; G.py += G.vy * dt;
-    if (G.py < 100) { G.py = 100; if (G.vy < 0) G.vy = 0; }         // keep the runner's head on screen (top of a double jump from a platform)
+    // (no ceiling: you can jump right off the top of the screen and come back down)
     let landed = false;
     if (G.vy >= 0) for (const q of G.platforms) {                      // land on a floating platform (one-way: only from above)
       if (!q.floats || q.e < G.px - 500 || q.s > G.px + 500) continue;
@@ -1095,7 +1228,10 @@ function update(dt) {
     if (G.py > GROUND + 40 && !support(G.px)) { G.state = 'fall'; applyFail(); }
   } else {
     G.vy += 2400 * dt; G.py += G.vy * dt;
-    if (G.py > H + 90) { if (G.lives <= 0) gameOver(); else startRise(); }
+    { const pp = G.platforms[G.pi]; if (pp && pp.under && pp.shapeP && pp.gapW && G.px > pp.e - 40 && G.px < pp.e + pp.gapW + 40) {
+      const [lo, hi] = pitLimits(pp, G.py), t = hi - lo > 34 ? clamp(G.px, lo + 17, hi - 17) : (lo + hi) / 2;
+      G.px += (t - G.px) * Math.min(1, dt * 12); } }
+    if (G.py > H + G.camY + 90) { if (G.lives <= 0) gameOver(); else startRise(); }
   }
 }
 
@@ -1141,7 +1277,7 @@ function drawHills(T, factor, color, baseY, amp) {
 // screen-space vertices of the bridge shape (base beam sits on the deck, scaled so a correct base spans the gap)
 function bridgeVerts(p) {
   const b = p.bridge, x0 = p.e - G.cam, sc = b.len / b.P.lens[0];
-  return b.P.pts.map(([x, y]) => [x0 + x * sc, GROUND - y * sc]);
+  return b.P.pts.map(([x, y]) => [x0 + x * sc, p.under ? GROUND + y * sc : GROUND - y * sc]);   // "under" bridges hang DOWN from the deck
 }
 function haloText(txt, x, y, color, size) {
   ctx.font = `900 ${size}px Trebuchet MS, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1172,7 +1308,7 @@ function drawBridge(p, T) {
   };
   const pulse = .5 + .5 * Math.sin(G.t * 6);
   if (done) {                                             // tint + bracing once the frame is complete
-    ctx.fillStyle = b.ok ? 'rgba(255,190,80,.16)' : 'rgba(255,80,80,.14)';
+    ctx.fillStyle = b.ok ? (p.under ? 'rgba(255,190,80,.4)' : 'rgba(255,190,80,.16)') : 'rgba(255,80,80,.14)';
     ctx.beginPath(); V.forEach((v, i) => i ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1])); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(217,115,26,.75)'; ctx.lineWidth = 2.5; ctx.beginPath();
     if (sh.brace) sh.brace.forEach(([i, j]) => { ctx.moveTo(V[i][0], V[i][1]); ctx.lineTo(V[j][0], V[j][1]); });
@@ -1209,7 +1345,7 @@ function drawBridge(p, T) {
     const label = (i, txt, col, size) => {
       const a = V[i], c = V[(i + 1) % n]; let mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2;
       let nx = mx - cx, ny = my - cy, l = Math.hypot(nx, ny) || 1;
-      if (i === 0) { nx = 0; ny = 1; l = 1; my = GROUND + 6; }      // base label goes below the deck
+      if (i === 0) { nx = 0; ny = p.under ? -1 : 1; l = 1; my = GROUND + (p.under ? -6 : 6); }      // base label goes on the open-air side of the deck
       haloText(txt, mx + nx / l * 26, my + ny / l * (i === 0 ? 20 : 26), col, size);
     };
     if (b.val !== null && b.val !== undefined) {              // the built beam's real length (or the scale you chose for level 1)
@@ -1221,7 +1357,7 @@ function drawBridge(p, T) {
 
 // draws one obstacle. x = its left edge on screen (flyers: their centre). c.x keeps changing for the ones that walk.
 function drawObstacle(c, x) {
-  const G0 = GROUND, ol = '#3b2a1a', T = G.t, d = OBS[c.type];
+  const G0 = GROUND, ol = '#3b2a1a', T = G.t, d = OBS[c.type], dw = c.w || d.w;
   ctx.save(); if (c.hit && d.kind !== 'zone' && d.kind !== 'pipe') ctx.globalAlpha = .4;
   ctx.lineWidth = 3; ctx.strokeStyle = ol; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   const rr = (a, b, w, h, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(a, b, w, h, r); ctx.fill(); ctx.stroke(); };
@@ -1254,30 +1390,35 @@ function drawObstacle(c, x) {
       rr(x, G0 - 48, 38, 48, 9, '#c0392b'); ctx.fillStyle = '#ffd23f'; ctx.fillRect(x + 1.5, G0 - 34, 35, 6); ctx.fillRect(x + 1.5, G0 - 16, 35, 6);
       txt('!', x + 19, G0 - 22, 14); break;
     case 'redtape':                                                    // red tape: bureaucracy, stretched across the path
-      rr(x, G0 - 34, 6, 34, 2, '#8a8a8a'); rr(x + d.w - 6, G0 - 34, 6, 34, 2, '#8a8a8a');
+      rr(x, G0 - 34, 6, 34, 2, '#8a8a8a'); rr(x + dw - 6, G0 - 34, 6, 34, 2, '#8a8a8a');
       ctx.fillStyle = '#d92b2b'; ctx.strokeStyle = '#7a1414'; ctx.lineWidth = 2;
-      for (const yy of [G0 - 32, G0 - 17]) { ctx.beginPath(); ctx.moveTo(x + 5, yy); ctx.quadraticCurveTo(x + d.w / 2, yy + 5, x + d.w - 5, yy); ctx.lineTo(x + d.w - 5, yy + 8); ctx.quadraticCurveTo(x + d.w / 2, yy + 13, x + 5, yy + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-      txt('RED TAPE', x + d.w / 2, G0 - 26, 11, '#fff'); break;
-    case 'fence':                                                       // a fence around private property
-      rr(x + 9, G0 - 58, 8, 58, 2, '#8a8a8a'); ctx.strokeStyle = '#9aa0aa'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(x, G0 - 8 - i * 12); ctx.lineTo(x + d.w, G0 - 20 - i * 12); ctx.moveTo(x, G0 - 20 - i * 12); ctx.lineTo(x + d.w, G0 - 8 - i * 12); } ctx.stroke();
-      rr(x - 8, G0 - 60, 42, 16, 3, '#ffd23f'); txt('PRIVATE', x + 13, G0 - 52, 8); break;
+      for (const yy of [G0 - 32, G0 - 17]) { ctx.beginPath(); ctx.moveTo(x + 5, yy); ctx.quadraticCurveTo(x + dw / 2, yy + 5, x + dw - 5, yy); ctx.lineTo(x + dw - 5, yy + 8); ctx.quadraticCurveTo(x + dw / 2, yy + 13, x + 5, yy + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      rr(x + dw / 2 - 62, G0 - 70, 124, 30, 5, '#fff'); txt('RED TAPE', x + dw / 2, G0 - 55, 20, '#c0180c'); break;
+    case 'home':                                                        // a mini private home: someone lives here, so you can't build through it
+      ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
+      rr(x + 37, G0 - 62, 8, 20, 1, '#a0523d');                                                                 // chimney
+      rr(x + 2, G0 - 34, dw - 4, 34, 2, '#f2d9a8');                                                            // walls
+      ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(x - 4, G0 - 34); ctx.lineTo(x + dw / 2, G0 - 58); ctx.lineTo(x + dw + 4, G0 - 34); ctx.closePath(); ctx.fill(); ctx.stroke();   // roof
+      rr(x + 8, G0 - 24, 12, 24, 2, '#7a4b22');                                                                 // door
+      rr(x + 30, G0 - 27, 14, 13, 2, '#9ad8ff');                                                                // window
+      ctx.strokeStyle = '#3a6f8f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 37, G0 - 27); ctx.lineTo(x + 37, G0 - 14); ctx.moveTo(x + 30, G0 - 20.5); ctx.lineTo(x + 44, G0 - 20.5); ctx.stroke();
+      rr(x - 66, G0 - 104, 186, 36, 6, '#ffd23f'); txt('LET ME STAY!', x + dw / 2, G0 - 86, 22, '#7a1414'); break;
     case 'protesters': {                                                // a group carrying signs that walks toward you
-      const signs = ['NO!', 'STOP', 'NO WAY'], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
+      const signs = ['NO!', 'STOP', 'WAIT'], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
       for (let i = 0; i < 3; i++) {
-        const px = x + 24 + i * 46, bob = Math.abs(Math.sin(T * 6 + i)) * 2, lift = i === 1 ? 14 : 0;
+        const px = x + 36 + i * 64, bob = Math.abs(Math.sin(T * 6 + i)) * 2, lift = i === 1 ? 14 : 0;
         person(px, 66, ['#c0392b', '#2e86c1', '#27ae60'][i], '#f1c08a', true, i);
-        ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px, G0 - 40); ctx.lineTo(px, G0 - 92 - lift - bob); ctx.stroke();
-        ctx.lineWidth = 3; rr(px - 22, G0 - 132 - lift - bob, 44, 38, 5, cols[i]);                    // a big sign...
-        ctx.lineWidth = 2; ctx.strokeStyle = '#c0392b'; ctx.beginPath(); ctx.roundRect(px - 19, G0 - 129 - lift - bob, 38, 32, 3); ctx.stroke();   // ...with a red border
-        txt(signs[i], px, G0 - 113 - lift - bob, signs[i].length > 4 ? 12 : 16, '#111');              // ...and big dark letters
+        ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px, G0 - 40); ctx.lineTo(px, G0 - 96 - lift - bob); ctx.stroke();
+        ctx.lineWidth = 3; rr(px - 31, G0 - 146 - lift - bob, 62, 50, 6, cols[i]);                    // a big sign...
+        ctx.lineWidth = 2; ctx.strokeStyle = '#c0392b'; ctx.beginPath(); ctx.roundRect(px - 28, G0 - 143 - lift - bob, 56, 44, 4); ctx.stroke();   // ...with a red border
+        txt(signs[i], px, G0 - 121 - lift - bob, i === 0 ? 30 : 22, '#111');              // ...and big dark letters
       } break; }
     case 'lawyer': {                                                    // a lawyer with a briefcase who wants to see a permit
       person(x + 15, 68, '#555b6e', '#f1c08a', true, 0);
       ctx.fillStyle = '#d92b2b'; ctx.beginPath(); ctx.moveTo(x + 15, G0 - 50); ctx.lineTo(x + 18, G0 - 44); ctx.lineTo(x + 15, G0 - 34); ctx.lineTo(x + 12, G0 - 44); ctx.fill();
       rr(x + 19, G0 - 36, 14, 11, 2, '#7a4b22');
-      rr(x - 22, G0 - 108, 66, 22, 8, '#fff'); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x + 6, G0 - 88); ctx.lineTo(x + 14, G0 - 88); ctx.lineTo(x + 12, G0 - 78); ctx.fill();
-      txt('PERMIT?', x + 11, G0 - 97, 13, '#1d2340'); break; }
+      rr(x - 44, G0 - 120, 110, 32, 8, '#fff'); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x + 6, G0 - 88); ctx.lineTo(x + 14, G0 - 88); ctx.lineTo(x + 12, G0 - 78); ctx.fill();
+      txt('PERMIT?', x + 11, G0 - 104, 21, '#1d2340'); break; }
     case 'tortoise': {                                                  // a protected desert tortoise crossing the trail
       const l = Math.sin(T * 3) * 2;
       ctx.fillStyle = '#c9a26a'; ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
@@ -1285,25 +1426,39 @@ function drawObstacle(c, x) {
       ctx.beginPath(); ctx.ellipse(x - 2, G0 - 15, 7, 5, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#7a8f3a'; ctx.beginPath(); ctx.ellipse(x + 24, G0 - 16, 22, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 24, G0 - 31); ctx.lineTo(x + 24, G0 - 16); ctx.moveTo(x + 10, G0 - 22); ctx.lineTo(x + 38, G0 - 22); ctx.stroke();
-      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 6, G0 - 30); ctx.lineTo(x + 6, G0 - 66); ctx.stroke();
-      rr(x - 54, G0 - 100, 118, 34, 5, '#fff'); txt('PROTECTED', x + 5, G0 - 83, 16, '#0d7a3c'); break; }
-    case 'frog': {                                                      // an endangered tree frog, hopping toward you
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 20, G0 - 30); ctx.lineTo(x + 20, G0 - 70); ctx.stroke();
+      rr(x - 50, G0 - 108, 140, 38, 6, '#fff'); txt('PROTECTED', x + 20, G0 - 89, 23, '#0d7a3c'); break; }
+    case 'frog': {                                                      // an endangered red-eyed tree frog, hopping toward you
       const hop = Math.abs(Math.sin(T * 5 + c.x * .01)) * 8;
-      ctx.fillStyle = '#5cc94f'; ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.ellipse(x + 16, G0 - 12 - hop, 14, 10, 0, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(x + 26, G0 - 6 - hop * .4, 8, 5, .3, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(x + 6, G0 - 6 - hop * .4, 8, 5, -.3, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + 9, G0 - 22 - hop, 4, 0, 7); ctx.arc(x + 21, G0 - 22 - hop, 4, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(x + 9, G0 - 22 - hop, 1.6, 0, 7); ctx.arc(x + 21, G0 - 22 - hop, 1.6, 0, 7); ctx.fill();
-      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 32, G0 - 4); ctx.lineTo(x + 32, G0 - 60); ctx.stroke();
-      rr(x - 32, G0 - 94, 132, 34, 5, '#fff'); txt('ENDANGERED', x + 34, G0 - 77, 16, '#0d7a3c'); break; }
-    case 'puddle': {                                                    // standing water
-      const w = d.w; ctx.fillStyle = 'rgba(70,150,230,.85)'; ctx.strokeStyle = 'rgba(20,70,140,.9)'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 4, w / 2, 8, 0, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5;
-      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(x + w * (.25 + i * .25), G0 + 4, 10 + Math.sin(T * 3 + i) * 3, 3, 0, 0, 7); ctx.stroke(); } break; }
+      const E = (ex, ey, rx, ry, f) => { ctx.fillStyle = f; ctx.beginPath(); ctx.ellipse(ex, ey, rx, ry, 0, 0, 7); ctx.fill(); if (f !== null) ctx.stroke(); };
+      ctx.save(); ctx.translate(x + 32, G0 - hop); ctx.scale(.5, .5); ctx.translate(-110, -128);       // drawn at 220-unit size, then shrunk to about 70 px wide
+      ctx.strokeStyle = '#2b3a1e'; ctx.lineWidth = 6.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      E(60, 122, 20, 8, '#ff8a1f'); E(160, 122, 20, 8, '#ff8a1f');                                      // orange back feet
+      E(110, 100, 44, 30, '#39d353');                                                                    // body
+      ctx.strokeStyle = '#3a6fe0'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(68, 96); ctx.quadraticCurveTo(66, 112, 74, 122); ctx.moveTo(152, 96); ctx.quadraticCurveTo(154, 112, 146, 122); ctx.stroke();   // blue flanks
+      ctx.strokeStyle = '#2b3a1e'; ctx.lineWidth = 6.5;
+      ctx.fillStyle = '#fff6c2'; ctx.beginPath(); ctx.ellipse(110, 112, 24, 14, 0, 0, 7); ctx.fill();   // cream belly
+      E(86, 70, 15, 15, '#e0261f'); E(134, 70, 15, 15, '#e0261f');                                      // big red eyes...
+      ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(86, 70, 3.5, 11, 0, 0, 7); ctx.ellipse(134, 70, 3.5, 11, 0, 0, 7); ctx.fill();   // ...with slit pupils
+      ctx.beginPath(); ctx.moveTo(88, 92); ctx.quadraticCurveTo(110, 104, 132, 92); ctx.stroke();         // smile
+      ctx.lineWidth = 5; for (const [tx, ty, tr] of [[80, 122, 7], [96, 124, 6], [124, 124, 6], [140, 122, 7]]) E(tx, ty, tr, tr, '#ff8a1f');   // round orange toe pads
+      ctx.restore();
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 32, G0 - 46); ctx.lineTo(x + 32, G0 - 64); ctx.stroke();
+      rr(x - 44, G0 - 102, 152, 38, 6, '#fff'); txt('ENDANGERED', x + 32, G0 - 83, 22, '#0d7a3c'); break; }
+    case 'flood': {                                                     // land under flood water: rippling water, half-sunk fence posts, and a warning sign
+      const w = dw, top = G0 - 24;
+      ctx.fillStyle = 'rgba(60,140,225,.88)'; ctx.strokeStyle = 'rgba(20,70,140,.95)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x, G0 + 6);
+      for (let i = 0; i <= w; i += 8) ctx.lineTo(x + i, top + Math.sin(T * 3 + (x + i) * .08) * 3);          // a wavy surface
+      ctx.lineTo(x + w, G0 + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.28)'; for (let i = 20; i < w - 10; i += 46) ctx.fillRect(x + i, top + 10 + (i % 3) * 3, 22, 3);
+      ctx.fillStyle = '#7a5230'; ctx.strokeStyle = ol; ctx.lineWidth = 2;                                    // fence posts sticking out of the water
+      for (let i = 30; i < w - 20; i += 90) { ctx.beginPath(); ctx.roundRect(x + i, G0 - 46, 7, 26, 2); ctx.fill(); ctx.stroke(); }
+      const sx = x + Math.min(w / 2, 80);
+      ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, G0 - 22); ctx.lineTo(sx, G0 - 62); ctx.stroke();
+      rr(sx - 52, G0 - 100, 104, 36, 6, '#fff'); txt('FLOOD!', sx, G0 - 82, 24, '#1c5fb5'); break; }
     case 'soil': {                                                      // unstable soil: cracks, and it shakes when you linger on it
-      const w = d.w, sh = c.sink ? Math.sin(T * 60) * (1 + c.sink * 4) : 0;
+      const w = dw, sh = c.sink ? Math.sin(T * 60) * (1 + c.sink * 4) : 0;
       ctx.fillStyle = '#5b3a1e'; ctx.strokeStyle = '#2f1d0e'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.roundRect(x, G0 - 1, w, 15, 6); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#1e1208'; ctx.lineWidth = 2; ctx.beginPath();
@@ -1312,13 +1467,15 @@ function drawObstacle(c, x) {
       ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(x - 12, G0 - 46); ctx.lineTo(x - 2, G0 - 26); ctx.lineTo(x - 22, G0 - 26); ctx.closePath(); ctx.fill(); ctx.strokeStyle = ol; ctx.lineWidth = 2; ctx.stroke();
       ctx.strokeStyle = '#6b4a2a'; ctx.beginPath(); ctx.moveTo(x - 12, G0 - 26); ctx.lineTo(x - 12, G0); ctx.stroke(); txt('!', x - 12, G0 - 34, 13); break; }
     case 'hole': {                                                      // a hole in the ground
-      const w = d.w; ctx.fillStyle = '#0b0714'; ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 2, w / 2, 13, 0, 0, 7); ctx.fill(); ctx.stroke();
+      const w = dw; ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 3;
+      const hg = ctx.createLinearGradient(0, G0, 0, G0 + 125); hg.addColorStop(0, '#1a1030'); hg.addColorStop(1, '#0b0714');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.roundRect(x, G0, w, 125, [0, 0, 12, 12]); ctx.fill(); ctx.stroke();      // a real pit you can fall down
+      ctx.fillStyle = '#0b0714'; ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 2, w / 2, 13, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + w / 2, G0 + 2, w / 2 - 6, 8, 0, .2, Math.PI - .2); ctx.stroke();
       ctx.fillStyle = '#7a5230'; for (const [px, py] of [[-2, -6], [w + 2, -3], [w * .3, -12], [w * .75, -11]]) { ctx.beginPath(); ctx.arc(x + px, G0 + py + 6, 3, 0, 7); ctx.fill(); } break; }
     case 'pipe': {                                                      // a loose pipe that pops up out of the ground
       const h = pipeH(c);
-      ctx.fillStyle = '#5b3a1e'; ctx.strokeStyle = '#2f1d0e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + d.w / 2, G0 + 1, d.w / 2, 7, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#5b3a1e'; ctx.strokeStyle = '#2f1d0e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x + dw / 2, G0 + 1, dw / 2, 7, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
       if (h > 1) {
         ctx.lineWidth = 3; ctx.strokeStyle = ol; rr(x + 10, G0 - h, 36, h + 2, 4, '#7d8b9a'); rr(x + 6, G0 - h - 5, 44, 9, 3, '#5f6d7b');
         ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x + 15, G0 - h + 2, 5, Math.max(0, h - 4));
@@ -1332,7 +1489,7 @@ function drawObstacle(c, x) {
       if (c.type === 'falcon') { ctx.fillStyle = '#f4f1ea'; ctx.beginPath(); ctx.ellipse(x - 2, y + 3, 10, 5, 0, 0, 7); ctx.fill(); }
       ctx.fillStyle = '#ffc93c'; ctx.beginPath(); ctx.moveTo(x - 15, y - 2); ctx.lineTo(x - 26, y + 3); ctx.lineTo(x - 15, y + 5); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 9, y - 3, 2.5, 0, 7); ctx.fill();
-      if (c.type === 'falcon') { rr(x - 66, y - 62, 132, 34, 5, '#fff'); txt('ENDANGERED', x, y - 45, 16, '#0d7a3c'); } break; }
+      if (c.type === 'falcon') { rr(x - 76, y - 74, 152, 38, 6, '#fff'); txt('ENDANGERED', x, y - 55, 22, '#0d7a3c'); } break; }
     case 'drone': {
       const y = flyYOf(c);
       rr(x - 16, y - 8, 32, 16, 6, '#4b5578'); ctx.fillStyle = Math.sin(G.t * 10) > 0 ? '#ff4d4d' : '#701'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
@@ -1345,7 +1502,7 @@ function drawObstacle(c, x) {
       for (let i = 0; i < 5; i++) { const dx = x - 26 + i * 13, dy = ((T * 260 + i * 37) % 44); ctx.moveTo(dx, y + 16 + dy); ctx.lineTo(dx - 3, y + 24 + dy); } ctx.stroke();
       if (Math.sin(T * 5 + c.x) > .75) { ctx.fillStyle = '#ffe14d'; ctx.beginPath(); ctx.moveTo(x + 4, y + 10); ctx.lineTo(x - 6, y + 32); ctx.lineTo(x + 1, y + 32); ctx.lineTo(x - 5, y + 52); ctx.lineTo(x + 10, y + 26); ctx.lineTo(x + 3, y + 26); ctx.closePath(); ctx.fill(); } break; }
     case 'powerline': {                                                 // electrical lines strung between two poles, sparking
-      const y = flyYOf(c), hw = d.w / 2, sag = 14;
+      const y = flyYOf(c), hw = dw / 2, sag = 14;
       ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x - hw, G0); ctx.lineTo(x - hw, y - 34); ctx.moveTo(x + hw, G0); ctx.lineTo(x + hw, y - 34); ctx.stroke();
       ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x - hw - 14, y - 30); ctx.lineTo(x - hw + 14, y - 30); ctx.moveTo(x + hw - 14, y - 30); ctx.lineTo(x + hw + 14, y - 30); ctx.stroke();
       ctx.strokeStyle = '#1b1b24'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - hw, y - 28); ctx.quadraticCurveTo(x, y - 28 + sag * 2, x + hw, y - 28); ctx.stroke();
@@ -1356,21 +1513,54 @@ function drawObstacle(c, x) {
   ctx.restore();
 }
 
+// the hole for an "under" gap: the outline of the correct big shape, flipped so its base is the open top at ground level
+const pitDepth = p => p.shapeP && p.gapW ? Math.max(...p.shapeP.pts.map(q => q[1])) * p.gapW / p.shapeP.lens[0] : 0;
+function drawPit(p, T, gx) {
+  const P = p.shapeP, sc = p.gapW / P.lens[0], depth = pitDepth(p);
+  ctx.fillStyle = T.body; ctx.fillRect(gx, GROUND, p.gapW, H + 700 - GROUND);                     // solid ground all round...
+  ctx.fillStyle = 'rgba(0,0,0,.14)'; for (let yy = GROUND + 34; yy < H + 700; yy += 34) ctx.fillRect(gx, yy, p.gapW, 4);
+  const g = ctx.createLinearGradient(0, GROUND, 0, GROUND + depth);
+  g.addColorStop(0, T.city ? '#1a1030' : '#3b2a55'); g.addColorStop(1, '#0d0a1c');
+  ctx.fillStyle = g; ctx.beginPath();                                                                // ...with a hole cut in the shape of the figure
+  P.pts.forEach(([x, y], i) => i ? ctx.lineTo(gx + x * sc, GROUND + y * sc) : ctx.moveTo(gx + x * sc, GROUND + y * sc));
+  ctx.closePath(); ctx.fill();
+  const sh = pitShaft(p);                                                                            // ...and the hole keeps going down below the figure's lowest point
+  ctx.fillStyle = '#0d0a1c'; ctx.fillRect(sh.x0, GROUND + depth - 30, sh.x1 - sh.x0, H + 700);
+  ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sh.x0, GROUND + depth - 30); ctx.lineTo(sh.x0, H + 700); ctx.moveTo(sh.x1, GROUND + depth - 30); ctx.lineTo(sh.x1, H + 700); ctx.stroke();
+}
+// the bottomless part of a shaped hole: a shaft under the figure's lowest side(s), at least 46 px wide (world x)
+function pitShaft(p) {
+  const P = p.shapeP, sc = p.gapW / P.lens[0], my = Math.max(...P.pts.map(q => q[1])), low = P.pts.filter(q => q[1] >= my - 1e-6);
+  const xl = Math.min(...low.map(q => q[0])) * sc, xr = Math.max(...low.map(q => q[0])) * sc, w = Math.max(46, xr - xl), c = p.e + (xl + xr) / 2;
+  return { x0: c - w / 2, x1: c + w / 2 };
+}
+// while falling into a shaped hole the runner slides along the hole's walls, so they really drop down INSIDE it
+function pitLimits(p, y) {
+  const P = p.shapeP, sc = p.gapW / P.lens[0], depth = pitDepth(p), n = P.pts.length, xs = [];
+  if (y - GROUND > depth - 30) { const s = pitShaft(p); return [s.x0, s.x1]; }
+  for (let i = 0; i < n; i++) {
+    const a = P.pts[i], b = P.pts[(i + 1) % n], ay = GROUND + a[1] * sc, by = GROUND + b[1] * sc;
+    if ((ay - y) * (by - y) <= 0 && ay !== by) xs.push(p.e + (a[0] + (b[0] - a[0]) * (y - ay) / (by - ay)) * sc);
+  }
+  return xs.length ? [Math.min(...xs), Math.max(...xs)] : [p.e, p.e + p.gapW];
+}
 function drawWorld(T) {
   for (let i = 0; i < G.platforms.length; i++) {
     const p = G.platforms[i], sx = p.s - G.cam, ex = p.e - G.cam;
     if (ex < -50 && !(p.bridge)) continue; if (sx > W + 50) continue;
     // chasm
-    if (p.gapW) {
+    if (p.gapW && p.under && p.shapeP) drawPit(p, T, ex);
+    else if (p.gapW) {
       const gx = ex, gw = p.gapW; const g = ctx.createLinearGradient(0, GROUND, 0, H);
       g.addColorStop(0, T.city ? '#1a1030' : '#3b2a55'); g.addColorStop(1, '#0d0a1c');
       ctx.fillStyle = g; ctx.fillRect(gx, GROUND, gw, H - GROUND);
     }
     const x = Math.max(-10, sx), w = Math.min(W + 10, ex) - x;
     if (w > 0) {
-      ctx.fillStyle = T.body; ctx.fillRect(x, GROUND, w, H - GROUND);
+      ctx.fillStyle = T.body; ctx.fillRect(x, GROUND, w, H + 700 - GROUND);
       ctx.fillStyle = 'rgba(0,0,0,.14)';
-      for (let yy = GROUND + 34; yy < H; yy += 34) ctx.fillRect(x, yy, w, 4);
+      for (let yy = GROUND + 34; yy < H + 700; yy += 34) ctx.fillRect(x, yy, w, 4);
       ctx.fillStyle = T.top; ctx.fillRect(x, GROUND, w, 14);
       if (T.city) { ctx.fillStyle = '#f5d23a'; for (let xx = Math.floor((x + G.cam) / 60) * 60 - G.cam; xx < x + w; xx += 60) ctx.fillRect(xx, GROUND + 5, 30, 3); }
     }
@@ -1391,57 +1581,100 @@ function drawWorld(T) {
       ctx.fillStyle = 'rgba(0,0,0,.2)'; for (let bx = fx + 14; bx < fx + f.w - 8; bx += 24) ctx.fillRect(bx, fy + 11, 10, 3);
     }
     for (const c of p.obs) {
-      const cx = c.x - G.cam; if (cx < -80 || cx > W + 80) continue;
+      const cx = c.x - G.cam, wd = c.w || OBS[c.type].w || 0;                         // (long obstacles stay drawn until their far end has left the screen)
+      if (c.fly ? (cx + wd / 2 < -80 || cx - wd / 2 > W + 80) : (cx + wd < -80 || cx > W + 80)) continue;
       drawObstacle(c, cx);
     }
     drawBridge(p, T);
   }
 }
 
-// Draws one crew member with feet at (x, fy) on drawing context g. Used for the runner AND for the Shop previews.
-// o = { ph: leg-swing phase, running, air }
+// Draws one crew member from the SIDE (walking to the right) with feet at (x, fy) on drawing context g.
+// Used for the runner, the Shop previews and the title screen.   o = { ph: stride phase, running, air }
+const CHAR_HATS = {
+  hard: c => [[`M37 33 Q37 15 52 15 Q67 15 67 33 Z`, c], [`M36 31 h38 a2 2 0 0 1 2 2 v1 a2 2 0 0 1 -2 2 h-38 a2 2 0 0 1 -2 -2 v-1 a2 2 0 0 1 2 -2 Z`, c], [`M48 11 h8 v6 h-8 Z`, c]],
+  cap: c => [[`M37 32 Q38 16 52 16 Q66 16 67 32 Z`, c], [`M62 29 L79 33 L62 35 Z`, c]],
+  hair: c => [[`M38 36 Q36 16 52 16 Q66 16 66 30 Q56 22 46 28 Q44 34 42 40 Z`, c]]
+};
+const CHAR_OL = '#2a2a3a', CHAR_SK = '#ffd9b0';
 function drawChar(g, x, fy, ch, o) {
-  const { ph = 0, running = false, air = false } = o || {}, ex = ch.extras || [];
-  g.save(); g.translate(x, 0); g.lineCap = 'round'; g.lineJoin = 'round';
-  if (ex.includes('tube')) {                                             // architect: a rolled-up set of plans on the back
-    g.save(); g.translate(-3, fy - 52); g.rotate(-.7); g.fillStyle = '#c99760'; g.strokeStyle = '#6b4a2a'; g.lineWidth = 1.5;
-    g.beginPath(); g.roundRect(-4, -24, 9, 48, 4); g.fill(); g.stroke(); g.fillStyle = '#e8d3a8'; g.fillRect(-4, -20, 9, 4); g.restore();
+  const { ph = 0, running = false, air = false } = o || {}, L = ch.look || {};
+  const p = (d, fill, stroke, lw) => { const q = new Path2D(d); if (fill) { g.fillStyle = fill; g.fill(q); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2; g.stroke(q); } };
+  const line = (x1, y1, x2, y2, col, w) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+  const rect = (rx, ry, w, h, r, fill, stroke, lw) => { g.beginPath(); g.roundRect(rx, ry, w, h, r); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2; g.stroke(); } };
+  const circ = (cx, cy, r, fill, stroke, lw) => { g.beginPath(); g.arc(cx, cy, r, 0, 7); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw || 2; g.stroke(); } };
+  const ell = (cx, cy, rx, ry, fill) => { g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, 7); g.fillStyle = fill; g.fill(); };
+  const OL = CHAR_OL, SK = L.skin || CHAR_SK, HC = L.hairc || L.hair || '#3a2a1a', sleeve = L.sleeve || L.torso, boots = L.boots || '#3b2a1a';
+  g.save(); g.translate(x, fy); g.scale(.82, .82); g.translate(-50, -130);                    // drawn on a 100 x 140 sheet, feet at y = 130
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const s = running ? Math.sin(ph) : 0;
+  const legF = air ? .75 : s * .75, legB = air ? -.55 : -s * .75, armF = air ? 2.5 : (L.props || []).some(k => k !== 'whistle' && k !== 'badge') ? .55 - s * .12 : .32 - s * .7, armB = air ? 2.9 : -.2 + s * .7;
+  const pt = (hx, hy, a, len) => [hx + Math.sin(a) * len, hy + Math.cos(a) * len];
+  // back leg + back arm (behind the body)
+  let [fx, fy2] = pt(47, 94, legB, 32); line(47, 94, fx, fy2, L.legs, 10); ell(fx - 1, fy2 + 3, 9, 4.5, boots);
+  let [bx, by] = pt(45, 58, armB, 27); line(45, 58, bx, by, sleeve, 8); circ(bx, by + 2, 4, SK);
+  if ((L.props || []).includes('tube')) {                                                    // a blue blueprint tube slung over the back
+    g.save(); g.translate(41, 62); g.rotate(-.55); rect(-5, -26, 10, 54, 4, '#2a6fd6', OL, 2); g.fillStyle = '#fff'; g.fillRect(-5, -16, 10, 3); g.fillRect(-5, 12, 10, 3); g.restore();
   }
-  // legs
-  g.strokeStyle = ch.accent; g.lineWidth = 8;
-  for (const s of [1, -1]) {
-    const a = running ? Math.sin(ph) * s * .9 : (air ? s * .6 : s * .15);
-    g.beginPath(); g.moveTo(0, fy - 26); g.lineTo(Math.sin(a) * 18, fy - 26 + Math.cos(a) * 24); g.stroke();
-  }
+  // front leg
+  [fx, fy2] = pt(53, 94, legF, 32); line(53, 94, fx, fy2, L.legs, 10); ell(fx + 4, fy2 + 3, 10, 4.5, boots);
   // body
-  g.fillStyle = ch.body; g.beginPath(); g.roundRect(-13, fy - 62, 26, 38, 8); g.fill();
-  if (ex.includes('stripes')) { g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(-13, fy - 52, 26, 4); g.fillRect(-13, fy - 38, 26, 4); }   // hi-vis reflective bands
-  if (ex.includes('tie')) { g.fillStyle = '#f4f4f4'; g.beginPath(); g.moveTo(-7, fy - 62); g.lineTo(7, fy - 62); g.lineTo(0, fy - 48); g.closePath(); g.fill();
-    g.fillStyle = '#d92b2b'; g.beginPath(); g.moveTo(0, fy - 60); g.lineTo(4, fy - 54); g.lineTo(0, fy - 36); g.lineTo(-4, fy - 54); g.closePath(); g.fill(); }
-  if (ex.includes('bolt')) { g.fillStyle = '#ffd23f'; g.beginPath(); g.moveTo(3, fy - 58); g.lineTo(-6, fy - 46); g.lineTo(0, fy - 46); g.lineTo(-4, fy - 33); g.lineTo(7, fy - 49); g.lineTo(1, fy - 49); g.closePath(); g.fill(); }
-  if (ex.includes('belt')) { g.fillStyle = '#7a4b22'; g.fillRect(-13, fy - 32, 26, 5); g.fillStyle = '#b0b7c0'; g.fillRect(6, fy - 32, 5, 12); }    // tool belt
-  // arms
-  g.strokeStyle = ch.body; g.lineWidth = 6;
-  for (const s of [1, -1]) {
-    const a = running ? -Math.sin(ph) * s * .9 : (air ? -2.2 : .2);
-    g.beginPath(); g.moveTo(0, fy - 54); g.lineTo(Math.sin(a) * 18, fy - 54 + Math.cos(a) * 18); g.stroke();
+  rect(40, 52, 24, 46, 9, L.torso, OL, 2);
+  if (L.vest) { rect(53, 53, 10, 44, 4, L.vest); }
+  if (L.vest ? L.stripes : L.stripes) { g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(40, 64, 24, 4); g.fillRect(40, 80, 24, 4); }
+  if (L.bibs) { rect(44, 70, 20, 28, 3, L.bibs); line(58, 54, 58, 70, L.bibs, 5); }
+  if (L.tie) p('M62 54 L66 58 L64 84 L60 62 Z', L.tie, OL, 1);
+  if (L.belt) { g.fillStyle = '#7a4b22'; g.fillRect(40, 86, 24, 6); rect(57, 88, 9, 11, 2, '#8a5a2a', OL, 1); }
+  if (L.bolt) p('M56 58 L50 70 L55 70 L52 82 L61 66 L56 66 Z', '#ffd23f');
+  if (L.sash) p('M42 54 L52 54 L64 92 L54 92 Z', L.sash);
+  // hair that hangs or sticks out BEHIND the head
+  if (L.style === 'long') p('M39 30 Q33 46 36 66 Q47 70 53 62 L53 40 Z', HC, OL, 1.5);
+  else if (L.style === 'pony') p('M40 30 Q27 32 27 52 Q34 48 42 42 Z', HC, OL, 1.5);
+  else if (L.style === 'bun') circ(39, 22, 6.5, HC, OL, 1.5);
+  else if (L.style === 'curly') circ(45, 27, 16, HC, OL, 1.5);
+  // head (profile: nose and eye at the front, ear at the back)
+  circ(52, 36, 14, SK, OL, 2);
+  p('M64 34 L70 39 L64 42 Z', SK, OL, 1.8);
+  circ(59, 34, 2, '#222'); line(58, 45, 64, 45, '#222', 1.5);
+  g.beginPath(); g.ellipse(48, 38, 3, 4, 0, 0, 7); g.fillStyle = 'rgba(0,0,0,.14)'; g.fill(); g.strokeStyle = OL; g.lineWidth = 1; g.stroke(); g.beginPath(); g.ellipse(48, 38, 3, 4, 0, 0, 7); g.fillStyle = 'rgba(255,255,255,0)'; g.fill(); g.strokeStyle = OL; g.lineWidth = 1; g.stroke();
+  if (!L.hat) CHAR_HATS.hair(HC).forEach(([d, c]) => p(d, c, OL, 1.5));                           // hair on top (when there is no hat)
+  if (L.hat === 'beret') { g.save(); g.translate(50, 19); g.rotate(-.14); g.beginPath(); g.ellipse(0, 0, 17, 7, 0, 0, 7); g.fillStyle = L.hatc; g.fill(); g.strokeStyle = OL; g.lineWidth = 2; g.stroke(); g.restore(); rect(48, 10, 4, 6, 1, L.hatc); }
+  else if (L.hat === 'hard' || L.hat === 'headlamp') { CHAR_HATS.hard(L.hatc).forEach(([d, c]) => p(d, c, OL, 2)); if (L.hat === 'headlamp') circ(68, 27, 4, '#fff6a0', OL, 1.5); }
+  else if (L.hat === 'cap') CHAR_HATS.cap(L.hatc).forEach(([d, c]) => p(d, c, OL, 2));
+  if (L.glasses === 'round') { circ(59, 35, 4.5, null, '#222', 1.6); line(54, 35, 47, 36, '#222', 1.6); }
+  if (L.glasses === 'square') { rect(54, 31, 10, 8, 0, null, '#222', 1.8); line(54, 35, 47, 36, '#222', 1.6); }
+  if (L.goggles) { rect(38, 30, 26, 6, 3, '#333'); g.beginPath(); g.ellipse(60, 34, 6, 5, 0, 0, 7); g.fillStyle = '#bfeaff'; g.fill(); g.strokeStyle = OL; g.lineWidth = 1.8; g.stroke(); }
+  const props = L.props || [];
+  if (props.includes('whistle')) { line(58, 51, 62, 62, '#888', 1.5); rect(59, 61, 9, 6, 3, '#c0c6d0', OL, 1.5); }
+  if (props.includes('badge')) p('M58 66 l2.5 5 5.5 1 -4 3.5 1 5.5 -5 -3 -5 3 1 -5.5 -4 -3.5 5.5 -1z', '#ffd23f', OL, 1);
+  // front arm + whatever it carries
+  let [hx, hy] = pt(55, 58, armF, 27); line(55, 58, hx, hy, sleeve, 8); circ(hx, hy + 2, 4.5, SK, OL, 1);
+  g.save(); g.translate(hx, hy + 2);
+  for (const k of props) {
+    if (k === 'shovel') { line(0, -40, 0, 40, '#8a5a2a', 4); p('M-8 40 L8 40 L5 54 L-5 54 Z', '#b0b7c0', OL, 2); }
+    else if (k === 'wrench') { line(0, 0, 12, -26, '#b0b7c0', 6); circ(13, -30, 6, null, '#b0b7c0', 4); }
+    else if (k === 'paddle') { line(0, -34, 0, 26, '#8a5a2a', 3); circ(0, -46, 14, '#d92b2b', OL, 2); g.fillStyle = '#fff'; g.font = '900 11px Trebuchet MS, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('STOP', 0, -46); }
+    else if (k === 'scissors') { line(0, 6, 24, -14, '#c0c6d0', 4); line(0, -14, 24, 6, '#c0c6d0', 4); circ(-2, 8, 4, null, '#d92b2b', 2.5); circ(-2, -16, 4, null, '#d92b2b', 2.5); }
+    else if (k === 'megaphone') { p('M0 -6 L26 -20 L26 12 L0 2 Z', '#e8b02a', OL, 2); rect(-6, -6, 8, 10, 1, '#555'); }
+    else if (k === 'flag') { line(0, -46, 0, 20, '#8a5a2a', 3); p('M0 -46 L20 -40 L0 -32 Z', '#d92b2b', OL, 1.5); }
+    else if (k === 'roll') { g.save(); g.rotate(.44); rect(-3, -30, 10, 50, 4, '#2a6fd6', OL, 2); g.fillStyle = '#fff'; g.fillRect(-3, -22, 10, 3); g.fillRect(-3, 8, 10, 3); g.restore(); }             // a rolled-up blue blueprint
+    else if (k === 'blueprint') {                                                          // an unrolled blue blueprint: white grid lines and a little bridge
+      rect(-2, -34, 36, 28, 2, '#1f5fbf', OL, 2); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1;
+      g.beginPath(); for (let t = 6; t < 34; t += 8) { g.moveTo(-2 + t, -34); g.lineTo(-2 + t, -6); } for (let t = -26; t < -6; t += 7) { g.moveTo(-2, t); g.lineTo(34, t); } g.stroke();
+      g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(2, -14); g.lineTo(30, -14); g.moveTo(6, -14); g.quadraticCurveTo(16, -26, 26, -14); g.stroke();
+    }
+    else if (k === 'ruler') { rect(0, -40, 8, 60, 0, '#e8d3a8', OL, 2); g.strokeStyle = OL; g.lineWidth = 1.5; g.beginPath(); for (let t = -32; t <= 8; t += 8) { g.moveTo(0, t); g.lineTo(4, t); } g.stroke(); }
+    else if (k === 'compass') { line(4, -42, -4, 24, '#b0b7c0', 3.5); line(4, -42, 14, 24, '#b0b7c0', 3.5); circ(4, -43, 4, '#555'); }
+    else if (k === 'clip') { rect(-2, -26, 20, 28, 2, '#b98b5a', OL, 2); g.fillStyle = '#fff'; g.fillRect(1, -22, 14, 20); line(3, -16, 12, -16, '#8894ad', 1.5); line(3, -11, 12, -11, '#8894ad', 1.5); line(3, -6, 9, -6, '#8894ad', 1.5); }
+    else if (k === 'laptop') { rect(-2, -22, 26, 18, 2, '#333', OL, 2); rect(-6, -4, 34, 4, 2, '#888'); g.fillStyle = '#5bd0ff'; g.fillRect(2, -18, 18, 10); }
+    else if (k === 'protractor') { p('M-4 -14 A20 20 0 0 1 36 -14 Z', '#cfe9ff', OL, 2); }
+    else if (k === 'pliers') { line(0, 0, 10, -38, '#d92b2b', 4); line(8, 0, 0, -38, '#d92b2b', 4); line(0, -40, 8, -40, '#b0b7c0', 5); }
+    else if (k === 'cable') { circ(10, -6, 12, null, '#e0761f', 5); circ(10, -6, 5, null, '#e0761f', 3); }
+    else if (k === 'bulb') { circ(4, -22, 11, '#ffe14a', OL, 2); rect(0, -12, 8, 8, 1, '#b0b7c0', OL, 1.5); }
+    else if (k === 'stamp') { rect(-4, -30, 18, 12, 2, '#d92b2b', OL, 2); rect(1, -18, 6, 20, 0, '#8a5a2a'); }
+    else if (k === 'signOK') { line(4, -40, 4, 30, '#8a5a2a', 3); rect(-10, -66, 28, 26, 3, '#1e9e57', OL, 2); g.strokeStyle = '#fff'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(-4, -52); g.lineTo(2, -46); g.lineTo(12, -60); g.stroke(); }
   }
-  if (ex.includes('clipboard')) {
-    g.fillStyle = '#b98b5a'; g.strokeStyle = '#6b4a2a'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(9, fy - 56, 15, 19, 2); g.fill(); g.stroke();
-    g.fillStyle = '#fff'; g.fillRect(11, fy - 52, 11, 14); g.strokeStyle = '#8894ad'; g.lineWidth = 1; g.beginPath(); g.moveTo(13, fy - 48); g.lineTo(20, fy - 48); g.moveTo(13, fy - 44); g.lineTo(20, fy - 44); g.moveTo(13, fy - 40); g.lineTo(18, fy - 40); g.stroke();
-  }
-  // head
-  g.fillStyle = '#ffd9b0'; g.beginPath(); g.arc(0, fy - 74, 13, 0, 7); g.fill();
-  g.fillStyle = '#222'; g.beginPath(); g.arc(5, fy - 75, 2.2, 0, 7); g.fill();
-  if (ex.includes('glasses')) { g.strokeStyle = '#222'; g.lineWidth = 1.6; g.beginPath(); g.arc(5, fy - 75, 4.5, 0, 7); g.moveTo(0.5, fy - 75); g.lineTo(-6, fy - 76); g.stroke(); }
-  // hat / hair
-  if (ch.hat === 'cap') { g.fillStyle = ch.accent; g.beginPath(); g.arc(0, fy - 78, 13, Math.PI, 0); g.fill(); g.fillRect(2, fy - 80, 18, 5); }
-  else if (ch.hat === 'hard' || ch.hat === 'hardWhite') {
-    g.fillStyle = ch.hat === 'hard' ? '#ffd23f' : '#f4f4f4'; g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.5;
-    g.beginPath(); g.arc(0, fy - 79, 14, Math.PI, 0); g.fill(); g.stroke(); g.fillRect(-16, fy - 80, 32, 5); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(-2, fy - 93, 4, 12);
-  }
-  else if (ch.hat === 'beret') { g.fillStyle = '#7b3fa0'; g.beginPath(); g.ellipse(-2, fy - 85, 15, 6, -.15, 0, 7); g.fill(); g.fillRect(-3, fy - 93, 3, 5); }
-  else if (ch.hat === 'hair') { g.fillStyle = '#b9b9c4'; g.beginPath(); g.arc(0, fy - 78, 13, Math.PI * 1.02, Math.PI * 1.98); g.lineTo(6, fy - 84); g.lineTo(-3, fy - 90); g.closePath(); g.fill(); }
+  g.restore();
   g.restore();
 }
 
@@ -1476,14 +1709,21 @@ function draw() {
   drawSky(T);
   drawHills(T, .18, T.far, 330, 130);
   drawHills(T, .4, T.near, 380, 110);
+  ctx.save(); ctx.translate(0, -G.camY);                            // the view slides down when the bridge has to go underground
   drawWorld(T);
   drawRunner();
   for (const p of G.particles) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - G.cam, p.y, 5, 5); }
   ctx.globalAlpha = 1;
+  ctx.restore();
   if (G.state === 'menu') { /* keep clean behind the menu card */ }
   if (G.tipT > 0 && G.state === 'run') {
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.roundRect(W / 2 - 250, 110, 500, 40, 20); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Trebuchet MS, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('SPACE / TAP to jump · again in the air = double jump!', W / 2, 137);
+  }
+  if (G.state !== 'menu' && G.py - 100 - G.camY < 0) {                              // above the top of the screen: a little marker shows where the runner is
+    const rx = 240 + (G.px - G.cam - 240), up = clamp((100 + G.camY - G.py) / 160, 0, 1);
+    ctx.globalAlpha = .55 + .4 * up; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1d2340'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(rx, 8); ctx.lineTo(rx - 13, 32); ctx.lineTo(rx + 13, 32); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
   }
   ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = 'bold 14px Trebuchet MS, sans-serif'; ctx.textAlign = 'right'; ctx.fillText(T.name + ' · Level ' + G.level, W - 12, H - 10);
   ctx.restore();
@@ -1517,6 +1757,37 @@ function titlePill(g, x, y, text, col) {
   g.font = '900 22px "Trebuchet MS",sans-serif'; const w = g.measureText(text).width + 22;
   g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.roundRect(x - w / 2, y - 16, w, 32, 16); g.fill(); g.stroke();
   g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + 1);
+}
+// the different things the title-screen runner hops over (all centred on cx, standing on y)
+const TITLE_OBS = ['cone', 'rock', 'home', 'cactus', 'tortoise', 'barrel', 'log'];
+function drawTitleObs(g, type, cx, y) {
+  const ol = '#3b2a1a', box = (x, yy, w, h, r, f) => { g.fillStyle = f; g.beginPath(); g.roundRect(x, yy, w, h, r); g.fill(); g.stroke(); };
+  const sign = (txt, sx, sy, w) => { box(sx - w / 2, sy - 17, w, 30, 5, '#fff'); g.fillStyle = '#0d7a3c'; g.font = '900 20px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, sx, sy - 1); };
+  g.save(); g.strokeStyle = ol; g.lineWidth = 2.5; g.lineJoin = 'round';
+  if (type === 'cone') {
+    g.fillStyle = '#ff7a1a'; g.beginPath(); g.moveTo(cx - 14, y); g.lineTo(cx + 14, y); g.lineTo(cx + 5, y - 38); g.lineTo(cx - 5, y - 38); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#fff'; g.fillRect(cx - 9, y - 22, 18, 6); g.fillStyle = '#c95a0a'; g.fillRect(cx - 18, y - 3, 36, 5);
+  } else if (type === 'rock') {
+    g.fillStyle = '#8d8f99'; g.beginPath(); g.moveTo(cx - 26, y); g.quadraticCurveTo(cx - 24, y - 40, cx, y - 40); g.quadraticCurveTo(cx + 26, y - 38, cx + 26, y); g.closePath(); g.fill(); g.stroke();
+  } else if (type === 'cactus') {
+    box(cx - 8, y - 62, 16, 62, 8, '#3f9d4f'); box(cx - 26, y - 44, 12, 26, 6, '#3f9d4f'); box(cx + 14, y - 50, 12, 26, 6, '#3f9d4f');
+    g.fillStyle = '#3f9d4f'; g.fillRect(cx - 20, y - 24, 14, 8); g.fillRect(cx + 6, y - 30, 14, 8);
+  } else if (type === 'barrel') {
+    box(cx - 19, y - 48, 38, 48, 5, '#f2c21b'); g.fillStyle = '#3b2a1a'; g.fillRect(cx - 19, y - 34, 38, 5); g.fillRect(cx - 19, y - 16, 38, 5);
+  } else if (type === 'log') {
+    box(cx - 32, y - 30, 64, 30, 8, '#8a5a30'); g.fillStyle = '#d9b27c'; g.beginPath(); g.ellipse(cx + 26, y - 15, 6, 12, 0, 0, 7); g.fill(); g.stroke();
+  } else if (type === 'home') {
+    box(cx + 12, y - 62, 8, 20, 1, '#a0523d'); box(cx - 25, y - 34, 50, 34, 2, '#f2d9a8');
+    g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(cx - 31, y - 34); g.lineTo(cx, y - 58); g.lineTo(cx + 31, y - 34); g.closePath(); g.fill(); g.stroke();
+    box(cx - 19, y - 24, 12, 24, 2, '#7a4b22'); box(cx + 3, y - 27, 14, 13, 2, '#9ad8ff');
+    box(cx - 94, y - 106, 188, 36, 6, '#ffd23f'); g.fillStyle = '#7a1414'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LET ME STAY!', cx, y - 88);
+  } else if (type === 'tortoise') {
+    g.fillStyle = '#c9a26a'; for (const lx of [-16, -6, 8, 18]) { g.beginPath(); g.roundRect(cx + lx - 3, y - 8, 7, 8, 2); g.fill(); g.stroke(); }
+    g.beginPath(); g.ellipse(cx - 26, y - 15, 7, 5, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#7a8f3a'; g.beginPath(); g.ellipse(cx, y - 16, 22, 15, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(cx, y - 70); g.lineTo(cx, y - 30); g.stroke(); sign('PROTECTED', cx, y - 82, 132);
+  }
+  g.restore();
 }
 function drawTitle() {
   const w = titleCv.clientWidth, h = titleCv.clientHeight; if (!w || !h) return;
@@ -1593,8 +1864,7 @@ function drawTitle() {
   const RX = 170, cone = 470 - ((t * 260) % 760), rdx = cone - RX;
   const jh = rdx > -60 && rdx < 110 ? 78 * Math.sin(Math.PI * (110 - rdx) / 170) : 0;
   tg.globalAlpha = Math.max(0, Math.min(1, (470 - cone) / 40, (cone + 200) / 60));
-  tg.fillStyle = '#ff7a1a'; tg.beginPath(); tg.moveTo(cone - 14, GY); tg.lineTo(cone + 14, GY); tg.lineTo(cone + 4, GY - 32); tg.lineTo(cone - 4, GY - 32); tg.closePath(); tg.fill();
-  tg.fillStyle = '#fff'; tg.fillRect(cone - 9, GY - 18, 18, 5); tg.fillStyle = '#c95a0a'; tg.fillRect(cone - 17, GY - 3, 34, 4);
+  drawTitleObs(tg, TITLE_OBS[Math.floor(t * 260 / 760) % TITLE_OBS.length], cone, GY);          // a different obstacle each time round
   tg.fillStyle = 'rgba(0,0,0,.25)'; tg.beginPath(); tg.globalAlpha = 1; tg.ellipse(RX, GY + 3, Math.max(6, 22 - jh / 4), 5, 0, 0, 7); tg.fill();
   drawChar(tg, RX, GY - jh, currentChar(), { ph: t * 14, running: jh < 2, air: jh >= 2 });
 }
@@ -1606,12 +1876,27 @@ function startTitleAnim() {
 }
 function stopTitleAnim() { cancelAnimationFrame(titleRaf); titleRaf = 0; }
 
+/* ===================== FIT EVERYTHING WITHOUT SCROLLING ===================== */
+// Pop-up cards never scroll: if one is taller than the game box, it is shrunk just enough to fit (and grows back when there is room).
+function fitCards() {
+  document.querySelectorAll('#sb .overlay').forEach(ov => {
+    if (ov.classList.contains('hidden') || ov.id === 'title') return;
+    const card = ov.querySelector('.card'); if (!card) return;
+    card.style.zoom = ''; const room = ov.getBoundingClientRect().height - 24; let z = 1;
+    for (let i = 0; i < 16 && card.getBoundingClientRect().height > room && z > .35; i++) { z *= .94; card.style.zoom = z.toFixed(3); }
+  });
+}
+let fitQueued = false;
+const queueFit = () => { if (fitQueued) return; fitQueued = true; requestAnimationFrame(() => { fitQueued = false; try { fitCards(); } catch (e) {} }); };
+new MutationObserver(queueFit).observe($('sb'), { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+addEventListener('resize', queueFit); document.addEventListener('fullscreenchange', queueFit);
+
 /* ===================== LOOP & INPUT ===================== */
 let last = performance.now();
 let paused = false;                                        // the Menu button pauses everything (timer, runner, bridge)
 function setPaused(v) {
   paused = v; $('pause').classList.toggle('hidden', !v);
-  if (v) $('btnFinish').classList.toggle('hidden', !(G && G.mode === 'practice'));
+  if (v) { $('btnFinish').classList.toggle('hidden', !(G && G.mode === 'practice')); $('btnResume').focus(); }
   $('menuBtn').textContent = v ? '✕ Close' : '☰ Menu';
   last = performance.now();
 }
@@ -1651,6 +1936,32 @@ addEventListener('keydown', e => {
     else setPaused(!paused);                                         // while playing: same as the ☰ Menu button
     return;
   }
+  const vis = id => !$(id).classList.contains('hidden'), enter = e.code === 'Enter' || e.code === 'NumpadEnter', space = e.code === 'Space', cardAge = performance.now() - cardAt;
+  // Enter / Space carry on past the "Oops" card and the end-of-run card (a short delay so a jump-key tap doesn't skip it by accident)
+  if ((enter || space) && screen === 'play' && !paused && !vis('shop')) {
+    if (vis('feedback')) { e.preventDefault(); if (!e.repeat && cardAge > 350) $('btnNext').click(); return; }
+    if (vis('over')) { e.preventDefault(); if (!e.repeat && cardAge > 700) $('btnAgain').click(); return; }
+  }
+  // Menu screen: 1 = Bridge Run, 2 = Practice, 3 = Shop.  Practice screen: 1-5 tick/untick a question type, Enter starts.
+  if (screen === 'menu' && !vis('shop')) {
+    if (e.key === '1') { e.preventDefault(); $('btnStart').click(); return; }
+    if (e.key === '2') { e.preventDefault(); $('btnPractice').click(); return; }
+    if (e.key === '3') { e.preventDefault(); $('btnShop').click(); return; }
+  }
+  if (screen === 'practice' && !vis('shop')) {
+    const k = +e.key, cards = document.querySelectorAll('#ptypes .ptype');
+    if (k >= 1 && k <= cards.length) { e.preventDefault(); cards[k - 1].click(); return; }
+    if (enter && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); $('btnPracStart').click(); return; }
+  }
+  // arrow keys move between the buttons of whichever screen or card is open (Tab works too)
+  if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.code) && (screen !== 'play' || vis('shop') || vis('pause') || vis('over') || vis('feedback'))) {
+    const ov = ['shop', 'pause', 'over', 'feedback', 'practice', 'menu'].map($).find(el => !el.classList.contains('hidden'));
+    if (ov) {
+      const btns = [...ov.querySelectorAll('button:not(:disabled)')].filter(b => b.offsetParent !== null), at = btns.indexOf(document.activeElement);
+      if (btns.length) { e.preventDefault(); const dir = (e.code === 'ArrowRight' || e.code === 'ArrowDown') ? 1 : -1; btns[(at + dir + btns.length) % btns.length].focus(); }
+      return;
+    }
+  }
   if (screen !== 'play') return;
   if (paused) return;
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
@@ -1674,8 +1985,8 @@ $('btnNext').onclick = respawn;
 $('btnHint').onclick = () => {
   if (!G || G.state !== 'solve' || G.hint) return;
   const P = G.problem; G.hint = true;
-  const hints = P.level === 3 ? { up: 'scale factor = big ÷ small (use a pair you can see), then multiply', down: 'scale factor = big ÷ small (use a pair you can see), then divide' }
-    : { scale: 'big ÷ small', up: 'small side × scale factor', down: 'big side ÷ scale factor' };
+  const hints = P.level === 3 ? { up: 'scale factor = image ÷ pre-image (use a pair you can see), then multiply the pre-image side by it', down: 'scale factor = pre-image ÷ image (use a pair you can see), then divide the pre-image side by it' }
+    : { scale: 'image ÷ pre-image', up: 'pre-image side × scale factor', down: 'pre-image side ÷ scale factor' };
   $('hintBox').innerHTML = '💡 ' + (P.level === 4 ? 'Same ticks = same length. ' : '') + '<b>' + hints[P.type] + '</b>';
   $('hintBox').classList.remove('hidden'); $('btnHint').disabled = true;
 };
