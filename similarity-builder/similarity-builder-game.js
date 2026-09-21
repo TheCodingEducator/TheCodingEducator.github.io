@@ -452,7 +452,7 @@ const CHARACTERS = [
   // ---- Engineer ----
   { id: 'engineer', role: 3, name: 'Engineer', price: 30, tag: 'Checks the math and the forces.', look: { torso: cOR, legs: '#7a5a20', hat: 'hard', hatc: cY, glasses: 'round', props: ['clip'] } },
   { id: 'engineerA', role: 3, name: 'Lab Engineer', price: 35, tag: 'Goggles and a laptop full of numbers.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cY, goggles: 1, props: ['laptop'] } },
-  { id: 'engineerB', role: 3, name: 'Angle Engineer', price: 40, tag: 'Measures every angle with a protractor.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
+  { id: 'engineerB', role: 3, name: 'Angle Engineer', price: 40, tag: 'Measures every angle with a detailed protractor.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
   { id: 'engineerC', role: 3, name: 'Site Engineer', price: 45, tag: 'Vest, clipboard, and a badge.', look: { torso: cBL, vest: cOR, legs: '#25252e', hat: 'hard', hatc: cOR, props: ['clip', 'badge'] } },
   // ---- Electrician ----
   { id: 'electrician', role: 4, name: 'Electrician', price: 45, tag: 'Wires up the lights and signals.', look: { torso: '#2e6bd6', legs: '#1d3f86', hat: 'hard', hatc: cWH, bolt: 1, belt: 1 } },
@@ -1706,7 +1706,22 @@ function drawChar(g, x, fy, ch, o) {
     else if (k === 'compass') { line(4, -42, -4, 24, '#b0b7c0', 3.5); line(4, -42, 14, 24, '#b0b7c0', 3.5); circ(4, -43, 4, '#555'); }
     else if (k === 'clip') { rect(-2, -26, 20, 28, 2, '#b98b5a', OL, 2); g.fillStyle = '#fff'; g.fillRect(1, -22, 14, 20); line(3, -16, 12, -16, '#8894ad', 1.5); line(3, -11, 12, -11, '#8894ad', 1.5); line(3, -6, 9, -6, '#8894ad', 1.5); }
     else if (k === 'laptop') { rect(-2, -22, 26, 18, 2, '#333', OL, 2); rect(-6, -4, 34, 4, 2, '#888'); g.fillStyle = '#5bd0ff'; g.fillRect(2, -18, 18, 10); }
-    else if (k === 'protractor') { p('M-4 -14 A20 20 0 0 1 36 -14 Z', '#cfe9ff', OL, 2); }
+    else if (k === 'protractor') {                                                       // a detailed protractor: see-through half-disc, degree ticks every 5 degrees, a 90 mark, and the center hole
+      g.save(); g.translate(16, -2); const R = 27;
+      g.beginPath(); g.arc(0, 0, R, Math.PI, 0); g.closePath(); g.fillStyle = 'rgba(190,225,255,.85)'; g.fill(); g.strokeStyle = OL; g.lineWidth = 2; g.stroke();
+      g.beginPath(); g.arc(0, 0, R - 11, Math.PI, 0); g.strokeStyle = '#4a6f9c'; g.lineWidth = 1; g.stroke();          // the inner scale line
+      g.beginPath(); g.arc(0, 0, 5, Math.PI, 0); g.stroke();
+      g.strokeStyle = '#1d2f55'; g.lineWidth = 1;
+      for (let a = 0; a <= 180; a += 5) {
+        const t = Math.PI + a * Math.PI / 180, len = a % 30 === 0 ? 10 : a % 10 === 0 ? 7 : 4;
+        g.beginPath(); g.moveTo(Math.cos(t) * R, Math.sin(t) * R); g.lineTo(Math.cos(t) * (R - len), Math.sin(t) * (R - len)); g.stroke();
+        if (a % 30 === 0 && a > 0 && a < 180) { g.beginPath(); g.moveTo(Math.cos(t) * (R - 11), Math.sin(t) * (R - 11)); g.lineTo(Math.cos(t) * 5, Math.sin(t) * 5); g.strokeStyle = 'rgba(29,47,85,.35)'; g.stroke(); g.strokeStyle = '#1d2f55'; }   // guide lines every 30 degrees
+      }
+      line(0, -R, 0, -R + 14, '#d92b2b', 2);                                                                             // the 90 degree mark
+      line(-R, 0, R, 0, OL, 2.5);                                                                                        // the flat base
+      circ(0, -2, 2.6, '#fff', OL, 1);                                                                                   // the center hole
+      g.restore();
+    }
     else if (k === 'pliers') { line(0, 0, 10, -38, '#d92b2b', 4); line(8, 0, 0, -38, '#d92b2b', 4); line(0, -40, 8, -40, '#b0b7c0', 5); }
     else if (k === 'cable') { circ(10, -6, 12, null, '#e0761f', 5); circ(10, -6, 5, null, '#e0761f', 3); }
     else if (k === 'bulb') { circ(4, -22, 11, '#ffe14a', OL, 2); rect(0, -12, 8, 8, 1, '#b0b7c0', OL, 1.5); }
@@ -2133,5 +2148,5 @@ requestAnimationFrame(frame);
 }
 
 // small hook (used for automated checks and by the Reset Progress button to avoid re-saving)
-window.BBR = { pairSVG, titleStep(dt) { titleT += dt; drawTitle(); }, showScreen, step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
+window.BBR = { drawChar, CHARACTERS, pairSVG, titleStep(dt) { titleT += dt; drawTitle(); }, showScreen, step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
 })();
