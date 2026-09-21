@@ -939,6 +939,29 @@ function raySegmentIntersect(origin, dir, a, b) {
   return null;
 }
 
+// Runs the shot with the game's real physics (bushes, hills, water currents,
+// friction, the cup) on a scratch ball, as if it were launched exactly along
+// aimDir, and reports the first course wall it actually touches - or null if it
+// comes to rest / drops in the cup without touching any. A straight ray can't
+// see any of those things, so it used to call a shot a "bank shot" (wall
+// question) even when a bush or slope meant it never reached that wall.
+function simulateFirstWallContact(origin, aimDir, power) {
+  var b = { x: origin.x, y: origin.y, vx: aimDir.x * power, vy: aimDir.y * power };
+  for (var frame = 0; frame < 2000; frame++) {
+    var speed = mag(b.vx, b.vy);
+    if (speed < MIN_STOP_SPEED) return null;
+    stepBallOneFrame(b, null, hole.walls, hole.bushes, hole.zones, true);
+    if (hole.cup && dist(b.x, b.y, hole.cup.x, hole.cup.y) < CUP_R - 2 && mag(b.vx, b.vy) < CUP_CAPTURE_SPEED) return null;
+    if (frame < 2) continue;
+    for (var i = 0; i < hole.walls.length; i++) {
+      var w = hole.walls[i];
+      var c = closestPointOnSegment(b.x, b.y, w.x1, w.y1, w.x2, w.y2);
+      if (dist(b.x, b.y, c.x, c.y) <= BALL_R + 1.5) return { wall: w, point: { x: b.x, y: b.y } };
+    }
+  }
+  return null;
+}
+
 function classifyAndBuildShot(aimDir, power, holeNum) {
   var origin = { x: ball.x, y: ball.y };
   var maxDist = stoppingDistance(power);
@@ -959,19 +982,37 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     }
   }
 
+  // The straight ray above can name a wall the ball never touches first (its
+  // radius clips a nearer wall or corner; a bush or slope bends it). Trust the
+  // real physics: no wall touched -> straight-line (supplementary) question; a
+  // different wall touched -> ask about THAT wall.
+  var angDir = aimDir;
+  var sim = simulateFirstWallContact(origin, aimDir, power);
+  if (!sim) {
+    hit = null;
+  } else if (!hit || hit.wall !== sim.wall) {
+    hit = { wall: sim.wall, point: sim.point, t: dist(origin.x, origin.y, sim.point.x, sim.point.y) };
+    angDir = vNorm(vSub(sim.point, origin));
+  }
+
   if (hit) {
     var w = hit.wall;
     var wallVec = vNorm({ x: w.x2 - w.x1, y: w.y2 - w.y1 });
-    var Wd = vDot(wallVec, aimDir) >= 0 ? wallVec : vScale(wallVec, -1);
+    var Wd = vDot(wallVec, angDir) >= 0 ? wallVec : vScale(wallVec, -1);
     var perp = vPerp(Wd);
-    var N = vDot(perp, aimDir) < 0 ? perp : vScale(perp, -1);
-    var rawKnown = degrees(Math.acos(constrain(vDot(aimDir, Wd), -1, 1)));
+    var N = vDot(perp, angDir) < 0 ? perp : vScale(perp, -1);
+    var rawKnown = degrees(Math.acos(constrain(vDot(angDir, Wd), -1, 1)));
     var tier = applyDifficultyTier(rawKnown, gameMode, holeNum, 89);
-    return {
+    var wallShot = {
       type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: tier.timerOn,
       correctAnswer: 90 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
-      aimDir: aimDir, power: power, applied: false
+      aimDir: aimDir, power: power, applied: false, launchFrom: { x: origin.x, y: origin.y }
     };
+    // Only ask a wall question if the correct answer would really make the ball
+    // bounce off that wall. A corner (two walls touching the ball at once) can
+    // swallow the scripted bounce; then there is no wall angle to solve, so it
+    // falls through to the straight-line question below.
+    if (simulateTrail(wallShot, true).bounceIdx !== undefined) return wallShot;
   }
 
   var tier2 = applyDifficultyTier(null, gameMode, holeNum, 179);
