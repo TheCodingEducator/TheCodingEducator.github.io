@@ -21,6 +21,8 @@
       s.push({ id: 'menu', x: 40, y: 350, w: 140, h: 40 }, { id: 'go', x: 220, y: 350, w: 140, h: 40 });
       return s;
     }
+    if (gameState === 'winScreen') return [{ id: 'menu', x: 40, y: 300, w: 150, h: 40 }, { id: 'play', x: 210, y: 300, w: 150, h: 40 }];
+    if (gameState === 'over' && window._goBtnY) return [{ id: 'menu', x: 40, y: window._goBtnY, w: 150, h: 40 }, { id: 'play', x: 210, y: window._goBtnY, w: 150, h: 40 }];
     if (gameState === 'shop') {
       var out = [{ id: 'tab0', x: 60, y: 70, w: 90, h: 30 }, { id: 'tab1', x: 150, y: 70, w: 90, h: 30 }, { id: 'tab2', x: 250, y: 70, w: 90, h: 30 }];
       var items = shopData[shopTab];
@@ -44,6 +46,7 @@
     if (key === 'exit') return 'no';
     if (key === 'start') return 'easy';
     if (key === 'skillSelect') return 'go';
+    if (key === 'winScreen' || key === 'over') return 'play';
     if (key.indexOf('shop') === 0) return 'tab' + ['cars', 'trails', 'boosts'].indexOf(shopTab);
     return null;
   }
@@ -102,7 +105,7 @@
     if (!dir && !go && e.code !== 'Tab') return;
     e.preventDefault(); e.stopImmediatePropagation();                                        // the game must not ALSO react to these keys here
     var cur = current(rs);
-    if (go) { if (e.repeat) return; if (!active) { active = true; return; } press(cur); return; }
+    if (go) { if (e.repeat) return; if (!active && gameState !== 'winScreen' && gameState !== 'over') { active = true; return; } active = true; press(cur); return; }   // (on the win / game-over screens Enter still plays again right away)
     if (!active) { active = true; hover(cur); return; }                                      // first key press just shows the ring
     var next = null;
     if (e.code === 'Tab') { var idx = rs.indexOf(cur); next = rs[(idx + (e.shiftKey ? -1 : 1) + rs.length) % rs.length]; }

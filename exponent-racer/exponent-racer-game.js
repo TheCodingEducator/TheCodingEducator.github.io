@@ -82,7 +82,7 @@ var shopData = {
     { id: "alien", name: "UFO", price: 300 }, { id: "dragon", name: "Dragon", price: 300 },
     { id: "bird", name: "Bird", price: 300 }, { id: "swervingtruck", name: "Swerving Truck", price: 300 },
     { id: "plane", name: "Crop Duster", price: 300 }, { id: "motorcycle", name: "Motorcycle", price: 300 },
-    { id: "vintage", name: "Vintage Car", price: 300 }, { id: "supercar", name: "Supercar", price: 300 },
+    { id: "vintage", name: "Hamburger Car", price: 300 }, { id: "supercar", name: "Supercar", price: 300 },
     { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 }
   ],
 
@@ -1807,6 +1807,8 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     }
   }
 
+  // No trail during the finish-line drive / win screen (it used to freeze in place where it was when the drive began)
+  if (gameState === "winSequence" || gameState === "winScreen") smokeParticles = [];
   for (var s = smokeParticles.length - 1; s >= 0; s--) {
     var p = smokeParticles[s];
     if (!isFrozen) {
@@ -2139,7 +2141,7 @@ function drawGameOver() {
     }
     if (wrongAnswersList.length > 3) { fill("gray"); textSize(10); text("+ " + (wrongAnswersList.length - 3) + " more unlisted mistake(s)", 200, reviewStartY + (maxShow * 35)); }
   }
-  currentY += h4 + gap; var btnY = currentY;
+  currentY += h4 + gap; var btnY = currentY; window._goBtnY = btnY;                        // (the keyboard navigation needs to know where the buttons are)
 
   fill("gray"); stroke("black"); strokeWeight(2); rect(40, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text("Menu", 115, btnY + 20);
   fill("green"); stroke("black"); strokeWeight(2); rect(210, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text("Play Again", 285, btnY + 20); textStyle(NORMAL);
@@ -2309,18 +2311,23 @@ function drawVehicle(cx, cy, type, color, isPlayer, signalDir, blinkState, water
   }
 
   if (color === "vintage") {
-    // A classic car: cream rounded body with a black roof band, big round
-    // chrome headlights, chrome bumpers front and back, whitewall tires,
-    // and a spare tire mounted on the trunk.
-    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 44, 28, 6);
-    fill("black"); rect(cx - 16, cy + 6, 6, 12); rect(cx + 10, cy + 6, 6, 12); rect(cx - 16, cy + 27, 6, 12); rect(cx + 10, cy + 27, 6, 12);
-    fill("white"); ellipse(cx - 13, cy + 12, 4, 4); ellipse(cx + 13, cy + 12, 4, 4); ellipse(cx - 13, cy + 33, 4, 4); ellipse(cx + 13, cy + 33, 4, 4);
-    fill("#e8dcc0"); rect(cx - 13, cy, 26, 43, 6);
-    fill("#3a2a1a"); rect(cx - 13, cy + 12, 26, 14);
-    fill("#c9c9c9"); rect(cx - 14, cy - 2, 28, 4, 2); rect(cx - 14, cy + 41, 28, 4, 2);
-    fill("#c9c9c9"); ellipse(cx - 7, cy + 1, 7, 7); ellipse(cx + 7, cy + 1, 7, 7);
-    fill("#fdf6e3"); ellipse(cx - 7, cy + 1, 4, 4); ellipse(cx + 7, cy + 1, 4, 4);
-    fill("#c9c9c9"); ellipse(cx, cy + 44, 6, 6); fill("#7f7f7f"); ellipse(cx, cy + 44, 3, 3);
+    // The Hamburger Car (keeps the old "vintage" id so anyone who already owns it still does): seen from above, a sesame-seed bun on
+    // top of ruffled lettuce, a red tomato ring, a bit of melted cheese and the edge of the patty, on four black wheels with headlights.
+    noStroke(); fill("rgba(0,0,0,0.25)"); ellipse(cx, cy + 44, 30, 6);
+    fill("#5a3418"); rect(cx - 15, cy + 1, 30, 42, 15);                                     // patty edge
+    fill("#ffcf3a"); rect(cx - 15, cy + 6, 9, 9, 2); rect(cx + 6, cy + 27, 9, 9, 2);        // cheese corners
+    fill("#e0402f"); rect(cx - 14, cy + 2, 28, 40, 14);                                     // tomato ring
+    fill("#4fae3a");                                                                          // ruffled lettuce round the edge
+    for (var lt = 0; lt < 8; lt++) { ellipse(cx - 14, cy + 6 + lt * 4.8, 5, 6); ellipse(cx + 14, cy + 6 + lt * 4.8, 5, 6); }
+    ellipse(cx - 6, cy + 2, 6, 5); ellipse(cx + 2, cy + 1.5, 6, 5); ellipse(cx + 9, cy + 3, 5, 5); ellipse(cx - 7, cy + 42, 6, 5); ellipse(cx + 3, cy + 42.5, 6, 5);
+    fill("#e0a04a"); rect(cx - 12, cy + 4, 24, 36, 12);                                     // the bun
+    fill("#f0bd72"); rect(cx - 9, cy + 7, 12, 14, 6);                                       // shine
+    fill("#fff3d6");                                                                          // sesame seeds
+    ellipse(cx - 5, cy + 10, 4, 2.4); ellipse(cx + 4, cy + 13, 4, 2.4); ellipse(cx - 1, cy + 19, 4, 2.4);
+    ellipse(cx + 6, cy + 23, 4, 2.4); ellipse(cx - 6, cy + 26, 4, 2.4); ellipse(cx + 1, cy + 31, 4, 2.4); ellipse(cx - 4, cy + 35, 4, 2.4);
+    fill("#fff3a8"); ellipse(cx - 8, cy + 2, 4, 4); ellipse(cx + 8, cy + 2, 4, 4);          // headlights
+    fill("#c9c9c9"); rect(cx - 5, cy + 42, 10, 3, 1);                                        // little rear bumper
+    fill("black"); rect(cx - 18, cy + 6, 6, 12, 2); rect(cx + 12, cy + 6, 6, 12, 2); rect(cx - 18, cy + 27, 6, 12, 2); rect(cx + 12, cy + 27, 6, 12, 2);      // wheels, on top so they show
     return;
   }
 
