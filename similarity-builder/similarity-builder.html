@@ -429,7 +429,6 @@
         <h2>&#9208; Paused</h2>
         <button class="btn" id="btnResume">&#9654; Resume</button>
         <button class="btn alt" id="btnRestart">&#128260; Restart</button>
-        <button class="btn alt hidden" id="btnFinish">&#127891; Finish practice</button>
         <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
         <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Menu screen</button>
       </div></div>
@@ -455,7 +454,7 @@
 
       <!-- Menu screen: the only place to start a game or open the Shop -->
       <div id="menu" class="overlay hidden"><div class="card center menuCard">
-        <div class="ptop"><h2 style="margin:0">&#127753; Menu</h2><span class="badge"><span class="coinDot"></span> <b id="mCoins">0</b> coins &middot; Best <b id="mBest">0</b> m</span></div>
+        <div class="ptop"><h2 style="margin:0">&#127753; Menu</h2><span class="badge"><span class="coinDot"></span> <b id="mCoins">0</b> coins &middot; Best <b id="mBest">0</b> m &middot; Level <b id="mBestLevel">1</b></span></div>
         <div class="menuGrid">
           <div class="tile">
             <h3>&#127939; Bridge Run</h3>
@@ -516,7 +515,7 @@
       </div></div>
 
       <!-- Run over -->
-      <div id="over" class="overlay hidden"><div class="card center">
+      <div id="over" class="overlay hidden"><div class="card center" style="max-width:880px">
         <h2 id="ovTitle">&#127937; Run over!</h2>
         <div class="stats" id="ovStats"></div>
         <div id="ovContinue"></div>

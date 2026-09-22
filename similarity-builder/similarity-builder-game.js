@@ -138,7 +138,7 @@ for (const s of Object.values(SHAPES)) {
 }
 
 /* ---- LEVEL SETTINGS (edit these!) ----
-   Level 1: find the SCALE FACTOR between two dilated figures (triangles and rectangles only, scale factor 1-3)
+   Level 1: find the SCALE FACTOR between two dilated figures (triangles and rectangles only, scale factor 1-5, small side lengths)
    Level 2: the scale factor is given: multiply OR divide to find a missing side (the missing side is spotlighted)
    Level 3: figures are turned / flipped, no scale factor is shown and only ONE pair of matching sides is labeled, so you find k first;
             tick marks and colors show which sides are equal
@@ -157,11 +157,11 @@ const KINDS_BY_LEVEL = [
 ];
 const SHAPES_L2 = ['tri', 'rect', 'par', 'trap', 'rtrap', 'house'];                      // (no staircase here: too many small sides to number without crowding)
 const KIND_CFG = {
-  scale: { level: 1, shapes: ['tri', 'rect'], ks: [1, 2, 3], units: [1], maxS: 10, maxB: 40 },
+  scale: { level: 1, shapes: ['tri', 'rect'], ks: [1, 2, 3, 4, 5], units: [1], maxS: 8, maxB: 40 },   // pre-image side capped at 8 so even ×4/×5 keeps both numbers small
   ud:    { level: 2, shapes: SHAPES_L2, ks: [2, 3, 4], units: [1], maxS: 12, maxB: 48 },
   pair:  { level: 3, shapes: ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair', 'ell', 'tee', 'arrow', 'isotri'], ks: [2, 3, 4, 5], units: [5], maxS: Infinity, maxB: 100, friendly: true, turn: true },
   frac:  { level: 5, shapes: SHAPES_L2, fracs: [[3, 2], [3, 2], [4, 3], [5, 2]], fracsDown: [[3, 2], [3, 2], [4, 3], [5, 2], [2, 1], [3, 1], [4, 1], [5, 1]], maxS: 30, maxB: 60, easyNums: true },
-  alg:   { level: 5, shapes: ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair', 'ell', 'tee', 'arrow', 'isotri'], ks: [2, 3, 4, 5], units: [5], maxS: Infinity, maxB: 100, friendly: true, turn: true },
+  alg:   { level: 5, shapes: ['tri', 'rect'], ks: [2, 3, 4], units: [1], maxS: 9, maxB: 30 },   // simple shapes and small numbers - the algebra step is the challenge here, not the geometry
   sim:   { level: 4, shapes: SHAPES_L2, ks: [2, 3, 4], maxS: 12, maxB: 48 }
 };
 const SECONDS_BETWEEN_QUESTIONS = 10;                          // about how long you run (dodging obstacles) between two questions
@@ -176,13 +176,15 @@ function fitPPF(lensB0, heightFt) {
   const ppf = fits.reduce((a, b) => Math.abs(b - 10) < Math.abs(a - 10) ? b : a);         // prefer 10 px per foot so gap width tracks real length
   return heightFt * ppf > 330 ? 0 : ppf;
 }
-// an algebra expression that equals `v` for a whole-number x (like 2x + 5), for level 5
+// a ONE-STEP algebra expression that equals `v` for a small whole-number x, for level 5: either "x + c" / "x − c"
+// (undo with one subtraction) or just "mx" (undo with one division) - never both together, and x, m and c all stay small.
 function makeExpr(v) {
   const opts = [];
-  for (let x = 2; x <= 12; x++) for (let m = 1; m <= 4; m++) { const c = v - m * x; if (c !== 0 && c >= -20 && c <= 30) opts.push({ x, m, c }); }
+  for (let x = 2; x <= 9; x++) { const c = v - x; if (c !== 0) opts.push({ x, m: 1, c }); }                        // one-step: subtract c from both sides
+  for (let m = 2; m <= 6; m++) { const x = v / m; if (Number.isInteger(x) && x >= 2 && x <= 9) opts.push({ x, m, c: 0 }); }   // one-step: divide both sides by m
   if (!opts.length) return null;
   const o = pick(opts);
-  return { x: o.x, m: o.m, c: o.c, val: v, expr: (o.m === 1 ? '' : o.m) + 'x ' + (o.c > 0 ? '+ ' + o.c : '− ' + (-o.c)) };
+  return { x: o.x, m: o.m, c: o.c, val: v, expr: (o.m === 1 ? '' : o.m) + 'x' + (o.c ? (o.c > 0 ? ' + ' + o.c : ' − ' + (-o.c)) : '') };
 }
 
 function genProblem(level, ksOverride, forceKind) {                    // forceKind (Practice mode): only make this kind of question
@@ -197,8 +199,10 @@ function genProblem(level, ksOverride, forceKind) {                    // forceK
 
 // scale / up / down / pair / fup / fdown / alg: two similar figures, one side missing (or the scale factor)
 function genShapes(kind) {
-  const isScale = kind === 'scale', isFrac = kind === 'fup' || kind === 'fdown', isPair = kind === 'pair' || kind === 'alg';
-  const C = KIND_CFG[isScale ? 'scale' : isFrac ? 'frac' : isPair ? (kind === 'alg' ? 'alg' : 'pair') : 'ud'];
+  // 'alg' uses the plain, every-side-shown labeling (like level 2) rather than the harder find-k-yourself one -
+  // the algebra step is the new challenge, so the scale factor itself stays obvious.
+  const isScale = kind === 'scale', isFrac = kind === 'fup' || kind === 'fdown', isPair = kind === 'pair';
+  const C = KIND_CFG[isScale ? 'scale' : isFrac ? 'frac' : isPair ? 'pair' : kind === 'alg' ? 'alg' : 'ud'];
   let fracPick = null;
   for (let n = 0; n < 1500; n++) {
     const key = pick(C.shapes), sh = SHAPES[key], base = sh.make();
@@ -581,7 +585,7 @@ function figParts(P, which, reveal) {
       if (pts.some((a, k) => k !== it.i && hitsBox(a, pts[(k + 1) % n], x, y, hw, hh))) continue;                 // never on top of another side (checks the whole label box)
       best = { x, y }; break search;
     }
-    if (!best) best = { x: m.x + m.nx * o0, y: m.y + m.ny * o0 };
+    if (!best) best = { x: clamp(m.x + m.nx * o0, hw + 3, VW - hw - 3), y: clamp(m.y + m.ny * o0, hh + 3, VH - hh - 3) };  // never let a wide label (e.g. "x + 6") run off the card, even when no clean spot was found
     m.lx = best.x; m.ly = best.y; m.lw = it.w; m.lh = it.h; placed.push({ x: best.x, y: best.y, hw, hh });
     const col = COLORS[P.cmap[it.i]], { x: lx, y: ly } = best;
     if (it.bubble)                                                                     // spotlighted number: a filled bubble in the side's color
@@ -599,6 +603,9 @@ const THEMES = [
   { name: 'Jungle', sky: ['#7fdcc0','#f4fbd0'], far: '#5fae7a', near: '#2f8a5a', top: '#45b04f', body: '#6b4a2b', sun: '#fffbd0' },
   { name: 'Night City', sky: ['#171b48','#7a4a8f'], far: '#3a3470', near: '#25204d', top: '#5b5b70', body: '#2d2d3a', sun: '#e8ecff', city: true }
 ];
+// Canyon and Jungle alternate every 6 bridges early on; Night City only starts once level 4 begins (3000 m) and then stays
+// for the rest of the run, since its dark sky is the one theme that needs full daylight obstacle colors to read clearly.
+function themeFor(level, solved) { return level >= 4 ? 2 : Math.floor(solved / 6) % 2; }
 // The bridge-building crew: 6 jobs x 4 looks. You earn 1 coin for every correct answer and spend coins in the Shop to hire them as your runner.
 // (Looks only - every crew member runs the same.)  Drawn from the SIDE, walking to the right.
 //   look: torso/legs/boots colors; hat (hard | cap | beret | hair | headlamp) + hatc; hair; glasses (round | square); goggles;
@@ -723,7 +730,7 @@ const KEY = {
   muted: 'similaritybuilder_muted', checkpoints: 'similaritybuilder_checkpoints', practice: 'similaritybuilder_practice_types',
   coins: 'similaritybuilder_coins', owned: 'similaritybuilder_owned', character: 'similaritybuilder_character'
 };
-let best = store.get(KEY.bestMeters, 0), muted = store.get(KEY.muted, false);
+let best = store.get(KEY.bestMeters, 0), bestLevel = store.get(KEY.bestLevel, 1), muted = store.get(KEY.muted, false);
 let coins = Math.max(0, Math.floor(Number(store.get(KEY.coins, 0)) || 0));
 let owned = (store.get(KEY.owned, ['crew']) || ['crew']).filter(id => CHARACTERS.some(c => c.id === id));
 if (!owned.includes('crew')) owned.unshift('crew');
@@ -746,7 +753,7 @@ function saveRunStats() {
   if (window.similarityBuilderResetting || !G || G.state === 'menu' || G.mode !== 'run') return;   // Practice never counts toward your best distance
   const meters = Math.max(0, Math.floor(G.px / 30));
   if (meters > best) { best = meters; store.set(KEY.bestMeters, best); }
-  if (G.level > store.get(KEY.bestLevel, 1)) store.set(KEY.bestLevel, G.level);
+  if (G.level > bestLevel) { bestLevel = G.level; store.set(KEY.bestLevel, bestLevel); }
   if (G.solved > store.get(KEY.bestBridges, 0)) store.set(KEY.bestBridges, G.solved);
   if (G.bestStreak > store.get(KEY.bestStreak, 0)) store.set(KEY.bestStreak, G.bestStreak);
 }
@@ -764,13 +771,19 @@ function saveCheckpoint(cp) {
   if (window.similarityBuilderResetting) return;
   checkpoints[cp.level] = cp; store.set(KEY.checkpoints, checkpoints);
 }
-// Fills `el` with a row of "Level N · X m" buttons (level 1 = a fresh start at 0 m; levels not reached yet are locked).
+// The checkpoint for the highest level ever reached - used to send the player back into harder questions by
+// default (the main Start button and "Run again") instead of always dropping them back to level 1.
+function highestCheckpoint() {
+  const lvs = Object.keys(checkpoints).map(Number);
+  return lvs.length ? checkpoints[Math.max(...lvs)] : undefined;
+}
+// Fills `el` with a row of "Level N · X m" buttons (level 1 = a full restart at 0 m; levels not reached yet are locked).
 // Clicking one starts a new run there; `beforeStart` runs first (used by the pause menu to close itself).
 function renderStarts(el, head, beforeStart) {
   el.innerHTML = `<p class="startsHead">${head}</p><div class="starts">` +
     Array.from({ length: MAX_LEVEL }, (_, i) => {
       const lv = i + 1, c = checkpoints[lv];
-      if (lv === 1) return `<button type="button" class="btn alt start" data-lv="1">Level 1 · 0 m</button>`;
+      if (lv === 1) return `<button type="button" class="btn ghost start" data-lv="1">↺ Start Over</button>`;
       return c ? `<button type="button" class="btn alt start" data-lv="${lv}">Level ${lv} · ${Math.floor(c.px / 30)} m</button>`
                : `<span class="start locked" title="Reach level ${lv} in a run to unlock this start">🔒 Level ${lv}</span>`;
     }).join('') + `</div>`;
@@ -800,9 +813,9 @@ function newWorld(menu, cp, mode) {
     state: menu ? 'menu' : 'run', t: 0, cam: 0, camY: 0, px: menu ? 0 : x0, py: GROUND, vy: 0, onGround: true,
     jumpBuf: 0, airJumps: 0, stumble: 0, inv: 0, crashed: false, shake: 0,
     lives: 3, streak: 0, bestStreak: cp ? cp.bestStreak : 0, solved: cp ? cp.solved : 0, wrong: cp ? cp.wrong : 0,
-    level: lv, theme: cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, dist: 0, missed: [],
+    level: lv, theme: cp ? themeFor(lv, cp.solved) : 0, dist: 0, missed: [],
     platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
-      : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, lv)],
+      : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? themeFor(lv, cp.solved) : 0, lv)],
     pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0
   };
 }
@@ -1061,7 +1074,10 @@ function updateHUD() {
 // the Menu screen: Bridge Run, Practice, and the Shop live here (and only here)
 function buildMenu() {
   $('mBest').textContent = Math.floor(best);
+  $('mBestLevel').textContent = bestLevel;
   $('mCoins').textContent = coins; $('hCoins').textContent = coins;
+  const hc = highestCheckpoint();                                     // push the player back into their hardest unlocked level by default
+  $('btnStart').textContent = hc ? `▶ Continue · Level ${hc.level}` : 'Start Running!';
   renderStarts($('menuStarts'), '📍 Or start from a level you\'ve reached:');
 }
 
@@ -1094,18 +1110,6 @@ function renderPracticeState() {
   b.textContent = n === 0 ? 'Pick at least one type' : `Start Practice (${n} type${n > 1 ? 's' : ''})`;
 }
 function openPractice() { hidePlayOverlays(); renderPractice(); showScreen('practice'); }
-// the summary card when you finish Practice (it re-uses the end-of-run card)
-function finishPractice() {
-  const total = G.solved + G.wrong, acc = total ? Math.round(G.solved / total * 100) : 0;
-  $('ovTitle').textContent = '🎓 Practice summary';
-  $('ovStats').innerHTML = `<div><b>${total}</b>Questions answered</div><div><b>${G.solved}</b>Correct</div>` +
-    `<div><b>${acc}%</b>Accuracy</div><div><b>${G.bestStreak}</b>Best streak</div>`;
-  $('ovReview').innerHTML = missedHTML(G.missed) || `<p>${total ? '🎉 No missed questions!' : 'No questions answered yet.'}</p>`;
-  $('ovContinue').innerHTML = ''; $('btnAgain').textContent = 'Practice again';
-  G.state = 'over'; setPaused(false);
-  $('feedback').classList.add('hidden'); $('problem').classList.add('hidden'); $('pause').classList.add('hidden');
-  $('over').classList.remove('hidden'); cardAt = performance.now(); $('btnAgain').focus();
-}
 
 /* ===================== SHOP ===================== */
 let shopRole = 0;                                                         // which job's four looks the Shop is showing
@@ -1201,13 +1205,14 @@ function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for
     toast("Time's up! No bridge…", 'bad'); return;
   }
   const ratio = ok ? 1 : P.type === 'sim' ? (val === null ? 0.1 : val === 'yes' ? 1.6 : 0.55) : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, 2.2));     // the bridge is built at the scale YOUR number implies
-  p.bridge = { ratio, len: p.gapW * ratio, ok, prog: 0, collapsed: false, cAnim: 0, P, val, sparked: false };
+  p.bridge = { ratio, len: p.gapW * ratio, ok, prog: 0, collapsed: false, cAnim: 0, P, val, sparked: false, material: pick(BRIDGE_MATERIALS) };  // a fresh random material for every bridge
   $('problem').classList.add('hidden');
   G.state = 'build'; sfx.build();
 }
 
 function advanceLevel(lv) {
   G.level = lv;
+  G.theme = themeFor(lv, G.solved);                                     // Night City locks in the moment level 4 starts (3000 m)
   for (let i = G.pi; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
   saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
   sfx.good(); toast(`🎉 Level ${lv} at ${(lv - 1) * METERS_PER_LEVEL} m: faster + new obstacles!`, 'good');
@@ -1218,7 +1223,7 @@ function onBridgeBuilt() {
     p.bridged = true;
     G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.solved++;
     const oldTheme = G.theme;
-    G.theme = Math.floor(G.solved / 6) % THEMES.length;
+    G.theme = themeFor(G.level, G.solved);
     if (G.mode === 'run' && G.theme !== oldTheme)                                          // platforms ahead get the new scenery
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
     addCoins(1); sfx.coin();                                          // 1 coin for every correct answer
@@ -1272,11 +1277,11 @@ function respawn() {
 function gameOver() {
   G.state = 'over';
   const total = G.solved + G.wrong, acc = total ? Math.round(G.solved / total * 100) : 0;
-  const meters = Math.max(0, Math.floor(G.px / 30)), newBest = meters > best;
+  const meters = Math.max(0, Math.floor(G.px / 30)), newBest = meters > best, newBestLevel = G.level > bestLevel;
   saveRunStats();                                       // best distance, highest level, most bridges, best streak
   $('ovTitle').textContent = G.crashed ? '💥 You crashed out!' : '🏁 Run over!'; $('btnAgain').textContent = 'Run again';
   $('ovStats').innerHTML =
-    `<div><b>${meters} m</b>Distance ${newBest ? '🏆 New best!' : ''}</div><div><b>${best} m</b>Best distance</div>` +
+    `<div><b>${meters} m</b>Distance ${newBest ? '🏆 New best!' : ''}</div><div><b>${best} m &middot; Level ${bestLevel}</b>Best distance${newBestLevel ? ' 🏆' : ''}</div>` +
     `<div><b>${G.solved}</b>Bridges built</div><div><b>${acc}%</b>Accuracy · best streak ${G.bestStreak}</div>`;
   $('ovReview').innerHTML = missedHTML(G.missed) || `<p>🎉 No missed math problems!${G.crashed ? ' Watch out for obstacles next time.' : ''}</p>`;
   renderStarts($('ovContinue'), '↩ Or continue where you unlocked a level:');      // same level, same distance, fresh hearts
@@ -1494,6 +1499,59 @@ function drawHills(T, factor, color, baseY, amp) {
 }
 
 // screen-space vertices of the bridge shape (base beam sits on the deck, scaled so a correct base spans the gap)
+// ---- Bridge materials (testing) ----
+// Press "M" while playing to cycle these live, so a look can be tried on real questions before it's made permanent.
+// Every beam is drawn in its own local frame - translated to its start point and rotated to face its end point - so
+// the exact same drawing function works on any side of any shape (triangle, rectangle, pentagon, L-shape...).
+const BRIDGE_MATERIALS = ['wood', 'steel', 'stone', 'cable'];
+function beamFrame(ax, ay, bx, by, drawFn) {
+  ctx.save(); ctx.translate(ax, ay); ctx.rotate(Math.atan2(by - ay, bx - ax)); drawFn(); ctx.restore();
+}
+function drawWoodBeam(len, w) {
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#5c3a1a'; ctx.lineWidth = w * 1.35; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  ctx.strokeStyle = '#c9975a'; ctx.lineWidth = Math.max(1.5, w * .22); ctx.beginPath(); ctx.moveTo(2, -w * .28); ctx.lineTo(Math.max(2, len - 2), -w * .28); ctx.stroke();
+  ctx.strokeStyle = '#6b4423'; ctx.lineWidth = 1.2;
+  for (let x = 9; x < len - 5; x += 15) { ctx.beginPath(); ctx.moveTo(x, -w * .18); ctx.lineTo(x + 5, w * .18); ctx.stroke(); }
+  ctx.fillStyle = '#4a2c12'; ctx.beginPath(); ctx.arc(0, 0, w * .34, 0, 7); ctx.arc(len, 0, w * .34, 0, 7); ctx.fill();
+}
+function drawSteelBeam(len, w) {
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = w * 1.3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  ctx.strokeStyle = '#5b6577'; ctx.lineWidth = w * .78; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.stroke();
+  ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = Math.max(1.5, w * .22); ctx.beginPath(); ctx.moveTo(3, 0); ctx.lineTo(Math.max(3, len - 3), 0); ctx.stroke();
+  ctx.fillStyle = '#6b7280'; ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1.4;
+  const step = Math.max(26, len); for (let x = 0; x <= len + 1; x += step) { ctx.beginPath(); ctx.arc(x, 0, w * .3, 0, 7); ctx.fill(); ctx.stroke(); }
+}
+function drawStoneBeam(len, w) {
+  const bw = clamp(Math.round(len / 5), 16, 40), n = Math.max(1, Math.round(len / bw));
+  for (let i = 0; i < n; i++) {
+    const x0 = i * len / n, x1 = (i + 1) * len / n;
+    ctx.fillStyle = i % 2 ? '#b8ab94' : '#c9bd9a'; ctx.strokeStyle = '#6b6152'; ctx.lineWidth = 1.4;
+    ctx.fillRect(x0, -w / 2, x1 - x0, w); ctx.strokeRect(x0, -w / 2, x1 - x0, w);
+  }
+}
+function drawCableBeam(len, w) {
+  ctx.lineCap = 'round'; const rw = Math.max(2.5, w * .32);
+  ctx.setLineDash([6, 6]); ctx.lineDashOffset = 0;
+  ctx.strokeStyle = '#2f3540'; ctx.lineWidth = rw; ctx.beginPath(); ctx.moveTo(0, -w * .14); ctx.lineTo(len, -w * .14); ctx.stroke();
+  ctx.lineDashOffset = 6; ctx.strokeStyle = '#7b8494'; ctx.beginPath(); ctx.moveTo(0, w * .14); ctx.lineTo(len, w * .14); ctx.stroke();
+  ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  ctx.fillStyle = '#5b6478'; ctx.strokeStyle = '#2f3540'; ctx.lineWidth = 1.6;
+  ctx.fillRect(-6, -8, 12, 16); ctx.strokeRect(-6, -8, 12, 16); ctx.fillRect(len - 6, -8, 12, 16); ctx.strokeRect(len - 6, -8, 12, 16);
+  if (len > 26) { ctx.save(); ctx.translate(len / 2, 0); ctx.rotate(Math.PI / 4); ctx.fillRect(-5, -5, 10, 10); ctx.strokeRect(-5, -5, 10, 10); ctx.restore(); }
+}
+const BEAM_DRAW = { wood: drawWoodBeam, steel: drawSteelBeam, stone: drawStoneBeam, cable: drawCableBeam };
+// draws (a fraction `frac` of) the beam from (ax,ay) to (bx,by) in the given material - `w` is the same beam width
+// the flat-color version used to take, so every call site just swaps in this function. Each bridge picks its own
+// material at random when it's built (see submit()), so two bridges on screen at once can look different.
+function drawMaterialBeam(ax, ay, bx, by, w, frac, material) {
+  const len = Math.hypot(bx - ax, by - ay) * clamp(frac, 0, 1);
+  if (len < .5) return;
+  beamFrame(ax, ay, bx, by, () => (BEAM_DRAW[material] || drawWoodBeam)(len, w));
+}
+
 function bridgeVerts(p) {
   const b = p.bridge, x0 = p.e - G.cam, sc = b.len / b.P.lens[0];
   return b.P.pts.map(([x, y]) => [x0 + x * sc, p.under ? GROUND + y * sc : GROUND - y * sc]);   // "under" bridges hang DOWN from the deck
@@ -1513,38 +1571,54 @@ function drawBridge(p, T) {
   const done = beamP >= 1;
   const paint = () => {
   ctx.lineCap = 'butt'; ctx.lineJoin = 'round';                 // beams end exactly at their joints (no overshoot)
-  // deck planks
+  const material = b.material || 'wood';                        // picked once, at random, when this bridge was built (see submit())
+  // deck planks (styled to loosely match the beam material)
   if (dl > 1) {
-    ctx.fillStyle = '#8a4b2a'; ctx.fillRect(x0, GROUND - 2, dl, 12);
-    ctx.strokeStyle = '#5c2f18'; ctx.lineWidth = 1.5; ctx.beginPath();
-    for (let x = x0; x < x0 + dl; x += 14) { ctx.moveTo(x, GROUND - 2); ctx.lineTo(x, GROUND + 10); } ctx.stroke();
+    if (material === 'steel') {
+      ctx.fillStyle = '#6b7280'; ctx.fillRect(x0, GROUND - 2, dl, 12);
+      ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (let x = x0; x < x0 + dl; x += 18) { ctx.moveTo(x, GROUND - 2); ctx.lineTo(x + 9, GROUND + 10); ctx.lineTo(x + 18, GROUND - 2); } ctx.stroke();
+    } else if (material === 'stone') {
+      ctx.fillStyle = '#b8ab94'; ctx.fillRect(x0, GROUND - 2, dl, 12);
+      ctx.strokeStyle = '#6b6152'; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (let x = x0; x < x0 + dl; x += 22) { ctx.moveTo(x, GROUND - 2); ctx.lineTo(x, GROUND + 10); } ctx.stroke();
+    } else {
+      ctx.fillStyle = '#8a4b2a'; ctx.fillRect(x0, GROUND - 2, dl, 12);
+      ctx.strokeStyle = '#5c2f18'; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (let x = x0; x < x0 + dl; x += 14) { ctx.moveTo(x, GROUND - 2); ctx.lineTo(x, GROUND + 10); } ctx.stroke();
+    }
   }
   // beam order: base first, the keystone (unknown side) always LAST
   const ord = []; for (let i = 1; i < n; i++) if (i !== ti) ord.push(i); if (ti > 0) ord.push(ti);
-  const seg = (i, f, w, col) => {
+  const seg = (i, f, w, col) => {                                // a plain colored line - used only for the correct/wrong glow halo now
     const a = V[i], c = V[(i + 1) % n];
     ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f); ctx.stroke();
   };
+  const mat = (i, f, w) => { const a = V[i], c = V[(i + 1) % n]; drawMaterialBeam(a[0], a[1], c[0], c[1], w, f, material); };
   const pulse = .5 + .5 * Math.sin(G.t * 6);
   if (done) {                                             // tint + bracing once the frame is complete
     ctx.fillStyle = b.ok ? (p.under ? 'rgba(255,190,80,.4)' : 'rgba(255,190,80,.16)') : 'rgba(255,80,80,.14)';
     ctx.beginPath(); V.forEach((v, i) => i ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1])); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(217,115,26,.75)'; ctx.lineWidth = 2.5; ctx.beginPath();
-    if (sh.brace) sh.brace.forEach(([i, j]) => { ctx.moveTo(V[i][0], V[i][1]); ctx.lineTo(V[j][0], V[j][1]); });
-    else if (n === 3) { ctx.moveTo(V[2][0], V[2][1]); ctx.lineTo(V[2][0], GROUND); }
-    else if (n === 4) { ctx.moveTo(V[0][0], V[0][1]); ctx.lineTo(V[2][0], V[2][1]); ctx.moveTo(V[1][0], V[1][1]); ctx.lineTo(V[3][0], V[3][1]); }
-    else for (let i = 2; i < n - 1; i++) { ctx.moveTo(V[0][0], V[0][1]); ctx.lineTo(V[i][0], V[i][1]); }   // fan bracing for pentagons / L-shapes
-    ctx.stroke();
+    const braceLines = [];                                        // [ax,ay,bx,by] for every brace, regardless of shape
+    if (sh.brace) sh.brace.forEach(([i, j]) => braceLines.push([V[i][0], V[i][1], V[j][0], V[j][1]]));
+    else if (n === 3) braceLines.push([V[2][0], V[2][1], V[2][0], GROUND]);
+    else if (n === 4) { braceLines.push([V[0][0], V[0][1], V[2][0], V[2][1]]); braceLines.push([V[1][0], V[1][1], V[3][0], V[3][1]]); }
+    else for (let i = 2; i < n - 1; i++) braceLines.push([V[0][0], V[0][1], V[i][0], V[i][1]]);   // fan bracing for pentagons / L-shapes
+    if (material === 'wood' || material === 'steel') braceLines.forEach(([ax, ay, bx, by]) => drawMaterialBeam(ax, ay, bx, by, 4, 1, material));
+    else { ctx.strokeStyle = 'rgba(217,115,26,.75)'; ctx.lineWidth = 2.5; ctx.beginPath(); braceLines.forEach(([ax, ay, bx, by]) => { ctx.moveTo(ax, ay); ctx.lineTo(bx, by); }); ctx.stroke(); }
   }
-  seg(0, deckP, 7, COLORS[P.cmap[0]]);
+  mat(0, deckP, 7);
   ord.forEach((i, k) => {
     const f = clamp(beamP * ord.length - k, 0, 1); if (f <= 0) return;
-    if (i === ti) { ctx.save(); ctx.shadowColor = b.ok ? '#ffd23f' : '#ff5d5d'; ctx.shadowBlur = 14 + 10 * pulse; seg(i, f, 15, b.ok ? 'rgba(255,210,63,.75)' : 'rgba(255,93,93,.75)'); ctx.restore(); seg(i, f, 8, b.ok ? COLORS[P.cmap[i]] : '#ff5d5d'); }
-    else seg(i, f, 7, COLORS[P.cmap[i]]);
+    if (i === ti) { ctx.save(); ctx.shadowColor = b.ok ? '#ffd23f' : '#ff5d5d'; ctx.shadowBlur = 14 + 10 * pulse; seg(i, f, 15, b.ok ? 'rgba(255,210,63,.75)' : 'rgba(255,93,93,.75)'); ctx.restore(); mat(i, f, 8); }
+    else mat(i, f, 7);
   });
-  if (ti === 0 && deckP >= 1) { ctx.save(); ctx.shadowColor = b.ok ? '#ffd23f' : '#ff5d5d'; ctx.shadowBlur = 14 + 10 * pulse; seg(0, 1, 13, b.ok ? 'rgba(255,210,63,.7)' : 'rgba(255,93,93,.7)'); ctx.restore(); seg(0, 1, 8, b.ok ? COLORS[P.cmap[0]] : '#ff5d5d'); }
-  // joints
-  if (done) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5c2f18'; ctx.lineWidth = 2; V.forEach(v => { ctx.beginPath(); ctx.arc(v[0], v[1], 5, 0, 7); ctx.fill(); ctx.stroke(); }); }
+  if (ti === 0 && deckP >= 1) { ctx.save(); ctx.shadowColor = b.ok ? '#ffd23f' : '#ff5d5d'; ctx.shadowBlur = 14 + 10 * pulse; seg(0, 1, 13, b.ok ? 'rgba(255,210,63,.7)' : 'rgba(255,93,93,.7)'); ctx.restore(); mat(0, 1, 8); }
+  // joints, tinted per material
+  if (done) {
+    const jc = { wood: ['#a06b34', '#5c3a1a'], steel: ['#6b7280', '#1f2937'], stone: ['#c9bd9a', '#6b6152'], cable: ['#5b6478', '#2f3540'] }[material] || ['#fff', '#5c2f18'];
+    ctx.fillStyle = jc[0]; ctx.strokeStyle = jc[1]; ctx.lineWidth = 2; V.forEach(v => { ctx.beginPath(); ctx.arc(v[0], v[1], 5, 0, 7); ctx.fill(); ctx.stroke(); });
+  }
   };
   if (!b.collapsed) { ctx.save(); paint(); ctx.restore(); }
   else if (b.ratio < 1) {                    // too short: the whole bridge buckles and swings down from the ledge it is attached to
@@ -1583,7 +1657,7 @@ function drawObstacle(c, x) {
   const txt = (s, tx, ty, size, col) => { ctx.fillStyle = col || '#222'; ctx.font = `900 ${size}px Trebuchet MS, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, tx, ty); };
   const person = (px, h, body, head, walk, phase) => {                 // a little walking person, feet on the ground at px
     const s = walk ? Math.sin(T * 9 + phase) : 0;
-    ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 5;
+    ctx.strokeStyle = '#5b5f72'; ctx.lineWidth = 5;                    // (kept clear of near-black so it still reads against Night City's dark ground)
     ctx.beginPath(); ctx.moveTo(px, G0 - h * .4); ctx.lineTo(px + s * 5, G0); ctx.moveTo(px, G0 - h * .4); ctx.lineTo(px - s * 5, G0); ctx.stroke();
     ctx.fillStyle = body; ctx.strokeStyle = ol; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(px - 8, G0 - h * .78, 16, h * .42, 5); ctx.fill(); ctx.stroke();
     ctx.fillStyle = head; ctx.beginPath(); ctx.arc(px, G0 - h * .86, 7, 0, 7); ctx.fill(); ctx.stroke();
@@ -1701,7 +1775,7 @@ function drawObstacle(c, x) {
         if (h > 14) { ctx.fillStyle = 'rgba(90,170,255,.9)'; for (let i = 0; i < 3; i++) { const dy = ((T * 90 + i * 22) % 44); ctx.beginPath(); ctx.arc(x + 14 + i * 14, G0 - h - 8 - dy * .5, 3, 0, 7); ctx.fill(); } }
       } break; }
     case 'vulture': case 'parrot': case 'falcon': {                     // birds (the falcon is an endangered peregrine)
-      const y = flyYOf(c), fl = Math.sin(G.t * 12 + c.x) * 14, col = { vulture: '#3a2a2a', parrot: '#e2334a', falcon: '#5f7186' }[c.type];
+      const y = flyYOf(c), fl = Math.sin(G.t * 12 + c.x) * 14, col = { vulture: '#3a2a2a', parrot: '#e2334a', falcon: '#a9bcdd' }[c.type];   // falcon brightened so it still shows up against Night City's dark sky
       ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, 17, 10, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - 6, y - 4); ctx.lineTo(x - 26, y - 6 - fl); ctx.lineTo(x - 2, y + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x + 4, y - 4); ctx.lineTo(x + 22, y - 6 - fl); ctx.lineTo(x + 8, y + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
@@ -1718,7 +1792,7 @@ function drawObstacle(c, x) {
       rr(x, G0 - 40 + bob, 36, 28, 5, '#d8632a');
       ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.roundRect(x + 4, G0 - 36 + bob, 15, 13, 2); ctx.fill(); ctx.stroke();
       rr(x, G0 - 18, 100, 8, 2, '#5b6478');
-      for (const wx of [x + 20, x + 80]) { ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(wx, G0 - 9, 10, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#9aa3b5'; ctx.beginPath(); ctx.arc(wx, G0 - 9, 4, 0, 7); ctx.fill(); }
+      for (const wx of [x + 20, x + 80]) { ctx.fillStyle = '#4a4f5c'; ctx.beginPath(); ctx.arc(wx, G0 - 9, 10, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#9aa3b5'; ctx.beginPath(); ctx.arc(wx, G0 - 9, 4, 0, 7); ctx.fill(); }
       break; }
     case 'helicopter': {                                                // a news helicopter hovering overhead
       const y = flyYOf(c), sp = Math.sin(G.t * 40) * 30;
@@ -1726,13 +1800,13 @@ function drawObstacle(c, x) {
       rr(x - 24, y - 13, 44, 26, 13, '#e25a3d'); ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.ellipse(x - 11, y - 3, 9, 7, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - 6, y - 13); ctx.lineTo(x - 6, y - 21); ctx.moveTo(x - 6 - 30 - sp * .3, y - 21); ctx.lineTo(x - 6 + 30 + sp * .3, y - 21); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - 20, y + 20); ctx.lineTo(x + 14, y + 20); ctx.moveTo(x - 12, y + 13); ctx.lineTo(x - 14, y + 20); ctx.moveTo(x + 6, y + 13); ctx.lineTo(x + 8, y + 20); ctx.stroke(); break; }
-    case 'drone': {
+    case 'drone': {                                                     // (brightened body + blink color so it stays visible against Night City's dark sky)
       const y = flyYOf(c);
-      rr(x - 16, y - 8, 32, 16, 6, '#4b5578'); ctx.fillStyle = Math.sin(G.t * 10) > 0 ? '#ff4d4d' : '#701'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
+      rr(x - 16, y - 8, 32, 16, 6, '#8b9bd6'); ctx.fillStyle = Math.sin(G.t * 10) > 0 ? '#ff4d4d' : '#ffb3b3'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
       ctx.strokeStyle = '#cfd6ff'; ctx.lineWidth = 3; const r = Math.abs(Math.sin(G.t * 30)) * 10 + 8;
       ctx.beginPath(); ctx.moveTo(x - 16 - r / 2, y - 12); ctx.lineTo(x - 16 + r / 2, y - 12); ctx.moveTo(x + 16 - r / 2, y - 12); ctx.lineTo(x + 16 + r / 2, y - 12); ctx.stroke(); break; }
     case 'storm': {                                                     // a storm cloud: weather delay
-      const y = flyYOf(c); ctx.fillStyle = '#5b6478'; ctx.strokeStyle = '#2e3446'; ctx.lineWidth = 2.5;
+      const y = flyYOf(c); ctx.fillStyle = '#8790ab'; ctx.strokeStyle = '#2e3446'; ctx.lineWidth = 2.5;   // brightened so the cloud still stands out against Night City's dark sky
       ctx.beginPath(); ctx.ellipse(x, y, 34, 15, 0, 0, 7); ctx.ellipse(x - 20, y + 3, 18, 11, 0, 0, 7); ctx.ellipse(x + 20, y + 3, 18, 11, 0, 0, 7); ctx.ellipse(x - 6, y - 10, 16, 12, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(140,200,255,.9)'; ctx.lineWidth = 2; ctx.beginPath();
       for (let i = 0; i < 5; i++) { const dx = x - 26 + i * 13, dy = ((T * 260 + i * 37) % 44); ctx.moveTo(dx, y + 16 + dy); ctx.lineTo(dx - 3, y + 24 + dy); } ctx.stroke();
@@ -2175,7 +2249,7 @@ let last = performance.now();
 let paused = false;                                        // the Menu button pauses everything (timer, runner, bridge)
 function setPaused(v) {
   paused = v; $('pause').classList.toggle('hidden', !v);
-  if (v) { $('btnFinish').classList.toggle('hidden', !(G && G.mode === 'practice')); $('btnResume').focus(); }
+  if (v) { $('btnResume').focus(); }
   $('menuBtn').textContent = v ? '✕ Close' : '☰ Menu';
   last = performance.now();
 }
@@ -2268,10 +2342,9 @@ $('btnMenuBack').onclick = () => showScreen('title');
 $('btnPractice').onclick = openPractice;
 $('btnPracBack').onclick = () => showScreen('menu');
 $('btnPracStart').onclick = () => { const t = PRACTICE_TYPES.filter(p => practicePicked.includes(p.id)); if (t.length) startPractice(t); };
-$('btnStart').onclick = () => startGame();          // (an arrow, so the click event isn't passed in as a checkpoint)
-$('btnAgain').onclick = () => { if (G && G.mode === 'practice' && G.ptypes.length) startPractice(G.ptypes); else startGame(); };
+$('btnStart').onclick = () => startGame(highestCheckpoint());      // continues at the hardest level reached, so easy questions aren't repeated forever
+$('btnAgain').onclick = () => { if (G && G.mode === 'practice' && G.ptypes.length) startPractice(G.ptypes); else startGame(highestCheckpoint()); };
 $('btnOverMenu').onclick = toMenu;
-$('btnFinish').onclick = () => { if (G && G.mode === 'practice') finishPractice(); };
 $('btnBuild').onclick = () => submit();
 $('btnNext').onclick = respawn;
 $('btnSimYes').onclick = () => submit(false, 'yes');
@@ -2283,7 +2356,7 @@ $('menuBtn').onclick = () => setPaused(!paused);
 $('btnResume').onclick = () => setPaused(false);
 $('btnShop').onclick = openShop;                 // (Menu screen only)
 $('btnShopClose').onclick = closeShop;
-$('btnRestart').onclick = () => { const pr = G && G.mode === 'practice' ? G.ptypes : null; setPaused(false); if (pr && pr.length) startPractice(pr); else startGame(); };
+$('btnRestart').onclick = () => { const pr = G && G.mode === 'practice' ? G.ptypes : null; setPaused(false); if (pr && pr.length) startPractice(pr); else startGame(G && G.level > 1 ? checkpoints[G.level] : undefined); };  // restarts THIS run's level, not all the way back to level 1
 $('btnTitle').onclick = toMenu;                                              // back to the Menu screen
 (function keypad() {
   const kp = $('keypad');
