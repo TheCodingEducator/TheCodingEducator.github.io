@@ -314,7 +314,7 @@
   #sb .starts { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:6px; }
   #sb .start { font-size:15px; padding:8px 13px; border-radius:12px; font-weight:800; font-family:inherit; }
   #sb #pause .start { display:inline-block; width:auto; margin:0; }
-  #sb .coinDot { display:inline-block; width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff3a8,#f5c518 55%,#b8860b); border:1.5px solid #8a6508; vertical-align:-2px; }
+  #sb .coinDot { display:inline-block; font-size:15px; vertical-align:-2px; filter:drop-shadow(0 0 1px rgba(0,0,0,.25)); }   /* the same star shown on a correctly-built bridge */
   #sb #shop { z-index:50; }
   #sb .shopTabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin:4px 0 8px; }
   #sb .roleTab { cursor:pointer; border:2px solid #c5cbe8; background:#eef1ff; color:var(--ink); border-radius:14px; padding:4px 6px; min-height:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; font-family:inherit; }
@@ -391,6 +391,8 @@
     .rotate-prompt { display: flex; }
   }
 </style>
+<script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
@@ -413,7 +415,7 @@
         <span class="pill" id="hLives"></span>
         <span class="pill" id="hCorrectPill" style="display:none">&#9989; Correct <b id="hCorrect">0</b></span>
         <span class="pill">🔥 Streak <b id="hStreak">0</b></span>
-        <span class="pill" title="1 coin for every correct answer - spend them in the Shop"><span class="coinDot"></span> <b id="hCoins">0</b></span>
+        <span class="pill" title="1 star for every correct answer - spend them in the Shop"><span class="coinDot">&#11088;</span> <b id="hCoins">0</b></span>
         <span class="pill">🏃 <b id="hDist">0</b> m</span>
       </div>
       <div id="stage">
@@ -435,8 +437,8 @@
 
       <!-- Crew Shop -->
       <div id="shop" class="overlay hidden"><div class="card" style="max-width:740px">
-        <div class="ptop"><h2 style="margin:0">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot"></span> <b id="shopCoins">0</b> coins</span></div>
-        <p style="margin:6px 0 8px">Every correct answer earns 1 <span class="coinDot"></span> coin. Hire the crew that builds real bridges &mdash; then run as them!</p>
+        <div class="ptop"><h2 style="margin:0">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="shopCoins">0</b> stars</span></div>
+        <p style="margin:6px 0 8px">Every correct answer earns 1 <span class="coinDot">&#11088;</span> star. Hire the crew that builds real bridges &mdash; then run as them!</p>
         <div id="shopTabs" class="shopTabs"></div>
         <div id="shopGrid" class="shopGrid"></div>
         <div class="center"><button class="btn" id="btnShopClose">Done</button></div>
@@ -454,11 +456,11 @@
 
       <!-- Menu screen: the only place to start a game or open the Shop -->
       <div id="menu" class="overlay hidden"><div class="card center menuCard">
-        <div class="ptop"><h2 style="margin:0">&#127753; Menu</h2><span class="badge"><span class="coinDot"></span> <b id="mCoins">0</b> coins &middot; Best <b id="mBest">0</b> m &middot; Level <b id="mBestLevel">1</b></span></div>
+        <div class="ptop"><h2 style="margin:0">&#127753; Menu</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="mCoins">0</b> stars &middot; Best <b id="mBest">0</b> m &middot; Level <b id="mBestLevel">1</b></span></div>
         <div class="menuGrid">
           <div class="tile">
             <h3>&#127939; Bridge Run</h3>
-            <p>Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn coins &mdash; the farther the better.</p>
+            <p>Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn stars &mdash; the farther the better.</p>
             <button class="btn" id="btnStart">Start Running!</button>
             <div id="menuStarts"></div>
           </div>
@@ -469,7 +471,7 @@
           </div>
           <div class="tile">
             <h3>&#128717; Crew Shop</h3>
-            <p>Spend the coins you earn from correct answers to hire a bridge-building crew, then run as them.</p>
+            <p>Spend the stars you earn from correct answers to hire a bridge-building crew, then run as them.</p>
             <button class="btn ghost" id="btnShop" style="font-size:17px">Open the Shop</button>
           </div>
         </div>
@@ -556,7 +558,7 @@
 
 <section class="reset-progress">
   <h2>Reset Progress</h2>
-  <p>Erases your saved best distance, highest level, level checkpoints, coins, and hired crew for Similarity Builder on this device only. Other games are not affected. This cannot be undone.</p>
+  <p>Erases your saved best distance, highest level, level checkpoints, stars, and hired crew for Similarity Builder on this device only. Other games are not affected. This cannot be undone.</p>
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
@@ -636,7 +638,7 @@
   });
 
   document.getElementById('reset-progress-btn').addEventListener('click', function () {
-    var ok = confirm('Reset your Similarity Builder progress? This erases your saved best distance, highest level, checkpoints, coins, and hired crew on this device. This cannot be undone.');
+    var ok = confirm('Reset your Similarity Builder progress? This erases your saved best distance, highest level, checkpoints, stars, and hired crew on this device. This cannot be undone.');
     if (!ok) return;
     // The game also saves on tab-hide/unload as a safety net against losing
     // progress earned right before closing the tab - reload() triggers that
