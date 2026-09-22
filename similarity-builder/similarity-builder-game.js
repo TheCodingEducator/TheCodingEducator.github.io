@@ -33,7 +33,7 @@ const ISO_SETS = [[6,5],[8,5],[4,3],[12,10],[10,13]];                           
 const R3 = Math.sqrt(3) / 2;
 
 // Each shape: name, bridge name, label = edges that may carry a number, cmap = edge -> color (same color = same kind of side),
-// classes = groups of edges that are equal in length (used at level 5, where equal sides are NOT labeled twice)
+// classes = groups of edges that are equal in length (worked out from cmap below; used for the tick marks)
 const SHAPES = {
   tee: {
     name: 'T-shapes', single: 'T-shape', bridge: 'T-Beam Bridge', label: [0,1,2,3,4], cmap: [0,1,2,3,4,3,2,1],
@@ -132,76 +132,181 @@ const SHAPES = {
   }
 };
 
+// Groups of sides that are equal in length (they share a color): used for the tick marks and to pick a "twin" of the missing side.
+for (const s of Object.values(SHAPES)) {
+  const g = {}; s.cmap.forEach((c, i) => (g[c] = g[c] || []).push(i)); s.classes = Object.values(g);
+}
+
 /* ---- LEVEL SETTINGS (edit these!) ----
    Level 1: find the SCALE FACTOR between two dilated figures (triangles and rectangles only, scale factor 1-3)
-   Level 2: multiply OR divide to find a missing side (bigger or smaller figure)   scale factor 2-4, small numbers
-   Level 3: multiply OR divide, figure rotated/reflected                          scale factor 2-5, friendly numbers (multiples of 5, biggest side 100)
-   Level 4: like level 3, but some sides are NOT labeled - use tick marks / the shape's name (square, rhombus, rectangle...) */
-const MAX_LEVEL = 4;
-const K_BY_LEVEL = [[1, 2, 3], [2, 3, 4], [2, 3, 4, 5], [2, 3, 4, 5]];
-const TYPE_BY_LEVEL = [['scale'], ['up', 'down'], ['up', 'down'], ['up', 'down']];
-const UNIT_BY_LEVEL = [[1], [1], [5], [5, 10]];                        // every side is multiplied by one of these
-const MAX_SMALL_SIDE = [10, 12, Infinity, Infinity];                    // keeps the numbers easy on the early levels
-const MAX_BIG_SIDE = [40, 48, 100, 250];
-// which shapes can appear at each level (a name listed twice shows up twice as often)
-const SHAPES_BY_LEVEL = [
-  ['tri', 'rect'],
-  ['tri', 'rect', 'par', 'trap', 'rtrap', 'house'],                      // (no staircase here: too many small sides to number without crowding)
-  ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair', 'ell', 'tee', 'arrow'],
-  ['sq', 'rect', 'par', 'rhomb', 'isotri', 'equitri', 'trap']
+   Level 2: the scale factor is given: multiply OR divide to find a missing side (the missing side is spotlighted)
+   Level 3: figures are turned / flipped, no scale factor is shown and only ONE pair of matching sides is labeled, so you find k first;
+            tick marks and colors show which sides are equal
+   Level 4: nested & overlapping triangles, and "Similar or Not Similar?"
+   Level 5: every kind of question mixed together (including FRACTIONAL scale factors like 3/2 or 2/3), plus ALGEBRA in the sides (solve for x) */
+const MAX_LEVEL = 5;
+// which kinds of question a level asks (a kind listed twice is asked twice as often)
+//   scale = find k   up / down = multiply / divide to a missing side   pair = find k from one pair, then the missing side
+//   fup / fdown = like up / down with a fractional scale factor   nest = nested & overlapping triangles   sim = similar or not   alg = solve for x
+const KINDS_BY_LEVEL = [
+  ['scale'],
+  ['up', 'down'],
+  ['pair'],
+  ['nest', 'nest', 'sim', 'sim'],
+  ['scale', 'up', 'down', 'pair', 'fup', 'fdown', 'nest', 'sim', 'alg', 'alg', 'alg']
 ];
+const SHAPES_L2 = ['tri', 'rect', 'par', 'trap', 'rtrap', 'house'];                      // (no staircase here: too many small sides to number without crowding)
+const KIND_CFG = {
+  scale: { level: 1, shapes: ['tri', 'rect'], ks: [1, 2, 3], units: [1], maxS: 10, maxB: 40 },
+  ud:    { level: 2, shapes: SHAPES_L2, ks: [2, 3, 4], units: [1], maxS: 12, maxB: 48 },
+  pair:  { level: 3, shapes: ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair', 'ell', 'tee', 'arrow', 'isotri'], ks: [2, 3, 4, 5], units: [5], maxS: Infinity, maxB: 100, friendly: true, turn: true },
+  frac:  { level: 5, shapes: SHAPES_L2, fracs: [[3, 2], [3, 2], [4, 3], [5, 2]], fracsDown: [[3, 2], [3, 2], [4, 3], [5, 2], [2, 1], [3, 1], [4, 1], [5, 1]], maxS: 30, maxB: 60, easyNums: true },
+  alg:   { level: 5, shapes: ['tri', 'rect', 'par', 'trap', 'rtrap', 'house', 'stair', 'ell', 'tee', 'arrow', 'isotri'], ks: [2, 3, 4, 5], units: [5], maxS: Infinity, maxB: 100, friendly: true, turn: true },
+  sim:   { level: 4, shapes: SHAPES_L2, ks: [2, 3, 4], maxS: 12, maxB: 48 }
+};
 const SECONDS_BETWEEN_QUESTIONS = 10;                          // about how long you run (dodging obstacles) between two questions
-const METERS_PER_LEVEL = 1000;                           // Level 2 starts at 1000 m, Level 3 at 2000 m, Level 4 at 3000 m
+const METERS_PER_LEVEL = 1000;                           // Level 2 starts at 1000 m, Level 3 at 2000 m ... Level 5 at 4000 m
 const levelForMeters = m => Math.min(MAX_LEVEL, 1 + Math.floor(m / METERS_PER_LEVEL));
+const SIM_YES = 'Similar', SIM_NO = 'Not Similar';                                       // the two answer buttons of a "Similar or not?" question
 
-function genProblem(level, ksOverride, forceType) {                    // forceType (Practice mode): only make this kind of question: scale / up / down
-  const L = level - 1, ks = ksOverride || K_BY_LEVEL[L], shapes = SHAPES_BY_LEVEL[L];
+// pixels per foot that keeps the gap 120-400 px wide and the finished bridge on screen (0 = this size does not fit)
+function fitPPF(lensB0, heightFt) {
+  const fits = PPF_OPTIONS.filter(o => lensB0 * o >= 120 && lensB0 * o <= 400);
+  if (!fits.length) return 0;
+  const ppf = fits.reduce((a, b) => Math.abs(b - 10) < Math.abs(a - 10) ? b : a);         // prefer 10 px per foot so gap width tracks real length
+  return heightFt * ppf > 330 ? 0 : ppf;
+}
+// an algebra expression that equals `v` for a whole-number x (like 2x + 5), for level 5
+function makeExpr(v) {
+  const opts = [];
+  for (let x = 2; x <= 12; x++) for (let m = 1; m <= 4; m++) { const c = v - m * x; if (c !== 0 && c >= -20 && c <= 30) opts.push({ x, m, c }); }
+  if (!opts.length) return null;
+  const o = pick(opts);
+  return { x: o.x, m: o.m, c: o.c, val: v, expr: (o.m === 1 ? '' : o.m) + 'x ' + (o.c > 0 ? '+ ' + o.c : '− ' + (-o.c)) };
+}
+
+function genProblem(level, ksOverride, forceKind) {                    // forceKind (Practice mode): only make this kind of question
+  let kind = forceKind || pick(KINDS_BY_LEVEL[level - 1]);
+  if (kind === 'frac') kind = pick(['fup', 'fdown']);
+  for (let n = 0; n < 40; n++) {
+    const P = kind === 'nest' ? genNest() : kind === 'sim' ? genSim() : genShapes(kind);
+    if (P) return P;
+  }
+  return genShapes('scale');
+}
+
+// scale / up / down / pair / fup / fdown / alg: two similar figures, one side missing (or the scale factor)
+function genShapes(kind) {
+  const isScale = kind === 'scale', isFrac = kind === 'fup' || kind === 'fdown', isPair = kind === 'pair' || kind === 'alg';
+  const C = KIND_CFG[isScale ? 'scale' : isFrac ? 'frac' : isPair ? (kind === 'alg' ? 'alg' : 'pair') : 'ud'];
+  let fracPick = null;
   for (let n = 0; n < 1500; n++) {
-    const key = pick(shapes), sh = SHAPES[key], base = sh.make();
-    const type = forceType || pick(TYPE_BY_LEVEL[L]), k = pick(ks), u = pick(UNIT_BY_LEVEL[L]);
-    const lensS = base.lens.map(v => v * u), lensB = lensS.map(v => v * k);          // small figure / big figure (whole numbers)
-    if (Math.max(...lensS) > MAX_SMALL_SIDE[L] || Math.max(...lensB) > MAX_BIG_SIDE[L]) continue;
-    if (level === 3 && ![...lensS, ...lensB].every(v => v < 30 ? v % 5 === 0 : v % 10 === 0)) continue;     // level 3: multiples of 5 under 30, multiples of 10 from 30 up
-    const hgt = Math.max(...base.pts.map(p => p[1])) * u * k;
-    const fits = PPF_OPTIONS.filter(o => lensB[0] * o >= 120 && lensB[0] * o <= 400);   // gap 120-400 px
-    if (!fits.length) continue;
-    const ppf = fits.reduce((a, b) => Math.abs(b - 10) < Math.abs(a - 10) ? b : a);     // prefer 10 px per foot so gap width tracks real length
-    if (hgt * ppf > 330) continue;                                                        // finished bridge stays on screen
-    let ti = -1, src = 0, showS = [], showB = [];
-    if (type === 'scale') { showS = sh.label.slice(); showB = sh.label.slice(); }
-    else if (level === 4) {                                                            // one number per group of equal sides
-      const tc = pick(sh.classes.filter(c => c.length > 1));
-      ti = pick(tc); src = pick(tc.filter(i => i !== ti));                             // the labeled twin of the missing side
-      const reps = sh.classes.map(c => c === tc ? src : pick(c));
-      if (type === 'up') showS = reps; else showB = reps;
-    } else {
+    const key = pick(C.shapes), sh = SHAPES[key], base = sh.make();
+    const type = isScale ? 'scale' : (kind === 'up' || kind === 'fup') ? 'up' : (kind === 'down' || kind === 'fdown') ? 'down' : pick(['up', 'down']);
+    let k, u = 1, frac = null, lensS, lensB;
+    if (isFrac) { if (n % 100 === 0) fracPick = pick(type === 'down' ? C.fracsDown : C.fracs);      // one factor at a time, so every factor gets its turn
+      frac = fracPick; k = frac[0] / frac[1]; lensS = base.lens.map(v => v * frac[1]); lensB = base.lens.map(v => v * frac[0]); }      // (shrinking also allows 1/2, 1/3, 1/4 and 1/5)
+    else { k = pick(C.ks); u = pick(C.units); lensS = base.lens.map(v => v * u); lensB = lensS.map(v => v * k); }      // small figure / big figure (whole numbers)
+    if (Math.max(...lensS) > C.maxS || Math.max(...lensB) > C.maxB) continue;
+    if (C.easyNums && ![...lensS, ...lensB].every(v => v <= 30 || v % 10 === 0)) continue;             // every side is 30 or less, or a multiple of 10
+    if (C.friendly && ![...lensS, ...lensB].every(v => v < 30 ? v % 5 === 0 : v % 10 === 0)) continue;   // multiples of 5 under 30, multiples of 10 from 30 up
+    const ppf = fitPPF(lensB[0], Math.max(...base.pts.map(p => p[1])) * lensB[0] / base.lens[0]); if (!ppf) continue;
+    let ti = -1, src = 0, showS = [], showB = [], pair = -1;
+    if (isScale) { showS = sh.label.slice(); showB = sh.label.slice(); }
+    else if (isPair) {                                                    // only ONE pair of matching sides is labeled (plus the twin of the missing side)
+      const cand = sh.classes.filter(c => c.some(i => sh.label.includes(i)));
+      if (cand.length < 2) continue;
+      const A = pick(cand), a = pick(A.filter(i => sh.label.includes(i)));
+      const others = cand.filter(c => c !== A), multi = others.filter(c => c.length > 1);
+      const T = multi.length && Math.random() < .7 ? pick(multi) : pick(others);
+      src = pick(T.filter(i => sh.label.includes(i)));
+      ti = T.length > 1 ? pick(T.filter(i => i !== src)) : src;
+      if (lensS[a] === lensS[ti] || lensB[a] === lensB[ti]) continue;
+      pair = a;
+      if (type === 'up') { showS = [...new Set([a, src])]; showB = [a]; } else { showB = [...new Set([a, src])]; showS = [a]; }
+    } else {                                                              // every side of both shapes is numbered except the one missing side
       ti = pick(sh.label); src = ti;
       if (sh.label.some(j => j !== ti && base.lens[j] === base.lens[ti])) continue;         // another numbered side is the same length: that would give the answer away
-      if (level === 3 || level === 2) { showS = sh.label.slice(); showB = sh.label.slice(); }   // levels 2-3: every side of both shapes is numbered except the one missing side
-      else if (type === 'up') showS = sh.label.slice(); else showB = sh.label.slice();
+      showS = sh.label.slice(); showB = sh.label.slice();
     }
-    const answer = type === 'scale' ? k : type === 'up' ? lensB[ti] : lensS[ti];
-    let flip = false, rot = 0;
-    if (level >= 3) { flip = Math.random() < 0.5; rot = pick([90, 180, 270]); }        // always turned; sometimes mirrored too
+    let answer = type === 'scale' ? k : type === 'up' ? lensB[ti] : lensS[ti], alg = null;
+    if (isFrac && ((type === 'up' ? lensS[src] : lensB[src]) > 11 || answer > 11)) continue;       // the numbers being multiplied and divided stay within the 11 x 11 times table
+    if (kind === 'alg') { alg = makeExpr(answer); if (!alg) continue; answer = alg.x; }
     return {
-      type, level, shape: key, shapeName: sh.name, pts: base.pts, lens: base.lens, lensS, lensB, k, u, ppf,
-      ti, src, showS, showB, answer, flip, rot,
-      cmap: level === 4 ? base.pts.map((_, i) => i) : sh.cmap,                          // level 4: colors don't reveal which sides are equal
-      classes: sh.classes || [], ticks: level === 4
+      type, kind, level: C.level, shape: key, shapeName: sh.name, pts: base.pts, lens: base.lens, lensS, lensB, k, u, ppf, frac, alg, pair,
+      ti, src, showS, showB, answer, flip: !!C.turn && Math.random() < 0.5, rot: C.turn ? pick([90, 180, 270]) : 0,        // turned; sometimes mirrored too
+      cmap: sh.cmap, classes: sh.classes, ticks: isPair, focus: !isScale && !isPair, noArrows: isPair
     };
   }
-  return genProblem(level, [2], forceType);
+  return null;
 }
+
+// "Similar or Not Similar?": two figures with every side numbered. Similar ones are scaled copies; the others are the same kind of shape with sides that do not scale together.
+function genSim() {
+  const C = KIND_CFG.sim, similar = Math.random() < .5;
+  for (let n = 0; n < 1500; n++) {
+    const key = pick(C.shapes), sh = SHAPES[key], b1 = sh.make(), k = pick(C.ks);
+    let b2 = b1;
+    if (!similar) { b2 = sh.make(); const r = b2.lens.map((v, i) => v / b1.lens[i]); if (r.every(v => Math.abs(v - r[0]) < 1e-9)) continue; }
+    const lensS = b1.lens.slice(), lensB = b2.lens.map(v => v * k);
+    if (Math.max(...lensS) > C.maxS || Math.max(...lensB) > C.maxB) continue;
+    const ppf = fitPPF(lensB[0], Math.max(...b2.pts.map(p => p[1])) * lensB[0] / b2.lens[0]); if (!ppf) continue;
+    const sum = a => a.reduce((s, v) => s + v, 0);
+    return {
+      type: 'sim', kind: 'sim', level: C.level, shape: key, shapeName: sh.name, pts: b2.pts, ptsS: b1.pts, lens: b2.lens, lensS, lensB, k: clamp(sum(lensB) / sum(lensS), 1.3, 4), u: 1, ppf,
+      ti: -1, src: 0, showS: sh.label.slice(), showB: sh.label.slice(), answer: similar ? 'yes' : 'no', flip: Math.random() < .5, rot: pick([90, 180, 270]),
+      cmap: sh.cmap, classes: sh.classes, ticks: false, focus: false, noArrows: true, pair: -1, frac: null, alg: null
+    };
+  }
+  return null;
+}
+
+// Nested and overlapping triangles: a line parallel to one side makes a small triangle inside (or, where two lines cross, a "bow tie" of two
+// triangles that overlap at a corner). The parallel lines make the triangles similar; find the missing length.
+const NEST_RATIOS = [[1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [2, 5], [3, 5]];
+function triPts(base, l1, l2) {                                       // a triangle with the given base and two other sides
+  const x = (l2 * l2 + base * base - l1 * l1) / (2 * base), y = Math.sqrt(Math.max(0, l2 * l2 - x * x));
+  return [[0, 0], [base, 0], [x, y]];
+}
+function genNest() {
+  const variant = pick(['nested', 'hourglass']);
+  for (let n = 0; n < 800; n++) {
+    let [p, q] = pick(NEST_RATIOS);
+    const m = rnd(2, 6), w = rnd(2, 6), l = rnd(2, 6), side = pick(['AC', 'BC']);
+    if (!(m < l + w && l < m + w && w < m + l)) continue;               // the triangle has to exist
+    let vals, Q;
+    if (variant === 'nested') { Q = q; vals = { AD: p * m, DB: (q - p) * m, DE: p * w, BC: q * w }; }
+    else {
+      if (Math.random() < .5) [p, q] = [q, p];
+      Q = Math.max(p, q);
+      vals = side === 'AC' ? { AB: p * w, DE: q * w, AC: p * m, CD: q * m } : { AB: p * w, DE: q * w, BC: p * m, CE: q * m };
+    }
+    const keys = Object.keys(vals);
+    if (Math.max(...keys.map(k => vals[k])) > 36 || Math.min(...keys.map(k => vals[k])) < 2) continue;
+    const unk = pick(keys), big = [Q * w, Q * l, Q * m], pts = triPts(big[0], big[1], big[2]);
+    const ppf = fitPPF(big[0], pts[2][1]); if (!ppf) continue;
+    return {
+      type: 'nest', kind: 'nest', level: 4, shape: 'tri', shapeName: 'triangles', pts, lens: big, lensS: big, lensB: big, k: 1, u: 1, ppf,
+      ti: -1, src: 0, showS: [], showB: [], answer: vals[unk], flip: false, rot: 0, cmap: SHAPES.tri.cmap, classes: [], ticks: false, focus: false, noArrows: true, pair: -1, frac: null, alg: null,
+      nest: { variant, p, q, vals, unk, mir: Math.random() < .5, skew: pick([-50, -20, 0, 20, 50]), side }
+    };
+  }
+  return null;
+}
+
 const gapFor = P => P.lensB[0] * P.ppf;                     // gap width = real base length of the big bridge x pixels-per-foot
 
 // The kinds of questions Practice mode lets you pick from (choose as many as you like; they are mixed together).
 // Each one is a level's question style; level 2 is split into its two halves (multiply / divide).
 const PRACTICE_TYPES = [
-  { id: 'scale', level: 1, type: 'scale', name: 'Scale factor', desc: 'Find the scale factor.' },
-  { id: 'up', level: 2, type: 'up', name: 'Multiply', desc: 'Find the bigger side.' },
-  { id: 'down', level: 2, type: 'down', name: 'Divide', desc: 'Find the smaller side.' },
-  { id: 'hard', level: 3, type: null, name: 'Turned and flipped', desc: 'No scale factor shown.' },
-  { id: 'equal', level: 4, type: null, name: 'Equal sides', desc: 'Use the tick marks.' }
+  { id: 'scale', level: 1, kind: 'scale', name: 'Scale factor', desc: 'Find the scale factor.' },
+  { id: 'up', level: 2, kind: 'up', name: 'Multiply', desc: 'Find the bigger side.' },
+  { id: 'down', level: 2, kind: 'down', name: 'Divide', desc: 'Find the smaller side.' },
+  { id: 'pair', level: 3, kind: 'pair', name: 'Turned and flipped', desc: 'Find k from one pair of sides.' },
+  { id: 'nest', level: 4, kind: 'nest', name: 'Nested triangles', desc: 'Find the missing length.' },
+  { id: 'sim', level: 4, kind: 'sim', name: 'Similar or not?', desc: 'Compare two figures.' },
+  { id: 'frac', level: 5, kind: 'frac', name: 'Fractional scale factors', desc: 'Factors like 3/2, 2/3 or 1/4.' },
+  { id: 'alg', level: 5, kind: 'alg', name: 'Algebra in the sides', desc: 'Solve for x.' }
 ];
 
 const chip = (txt, col) => `<span class="chip" style="border-color:${col};color:${col}">${txt}</span>`;
@@ -209,10 +314,24 @@ const chip = (txt, col) => `<span class="chip" style="border-color:${col};color:
 // the worked steps, drawn with color chips (used on the wrong-answer card and the end-of-run list)
 function stepsHTML(P) {
   const C = i => COLORS[P.cmap[i]];
+  if (P.type === 'nest') return nestSteps(P);
+  if (P.type === 'sim') {
+    const rows = SHAPES[P.shape].label.map(i => { const r = P.lensB[i] / P.lensS[i]; return `<span style="white-space:nowrap">${chip(P.lensB[i], C(i))} ÷ ${chip(P.lensS[i], C(i))} = <b>${fmt(r)}</b></span>`; });
+    return `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center">${rows.join('')}</div><div>${P.answer === 'yes' ? 'Every ratio is the same, so the figures are similar.' : 'The ratios are not all the same, so the figures are not similar.'}</div>`;
+  }
   if (P.type === 'scale') return `<div>${chip(P.lensB[0], C(0))} ÷ ${chip(P.lensS[0], C(0))} = ${chip('×' + P.k, '#ff7a1a')}</div>`;
   const x = P.type === 'up' ? P.lensS[P.src] : P.lensB[P.src];
   const twin = P.src !== P.ti ? `<div>${chip(x, C(P.src))} <b style="font-size:26px">=</b> ${chip(x, C(P.ti))}</div>` : '';
-  return twin + `<div>${chip(x, C(P.src))} ${P.type === 'up' ? '×' : '÷'} ${P.k} = ${chip(P.answer, C(P.ti))}</div>`;
+  const kLine = P.pair >= 0 ? `<div>${chip(P.lensB[P.pair], C(P.pair))} ÷ ${chip(P.lensS[P.pair], C(P.pair))} = ${chip('k = ' + P.k, '#ff7a1a')}</div>` : '';   // one matching pair gives k
+  const val = P.alg ? P.alg.val : P.answer;
+  const f = P.frac ? (P.type === 'up' ? P.frac[0] + '/' + P.frac[1] : P.frac[1] + '/' + P.frac[0]) : P.k;
+  const op = P.type === 'up' ? '×' : P.frac ? '×' : '÷';
+  const algLine = P.alg ? `<div>${chip(P.alg.expr, C(P.ti))} = ${chip(val, C(P.ti))} &nbsp;➜&nbsp; ${chip('x = ' + P.answer, '#ff7a1a')}</div>` : '';
+  if (P.frac) {                                                          // a fractional factor: multiply by the numerator first, then divide by the denominator
+    const num = P.type === 'up' ? P.frac[0] : P.frac[1], den = P.type === 'up' ? P.frac[1] : P.frac[0];
+    return twin + `<div>${chip(x, C(P.src))} × ${num} = ${chip(x * num, '#5b6485')}</div><div>${chip(x * num, '#5b6485')} ÷ ${den} = ${chip(val, C(P.ti))}</div>`;
+  }
+  return kLine + twin + `<div>${chip(x, C(P.src))} ${op} ${f} = ${chip(val, C(P.ti))}</div>` + algLine;
 }
 // the questions you missed, as pictures: both shapes with every side labeled and the scale-factor arrow, then your answer next to the right one
 function missedHTML(list) {
@@ -221,17 +340,18 @@ function missedHTML(list) {
   return `<p style="text-align:left;font-weight:800;margin:6px 0 2px">📝 Questions you missed${list.length > last.length ? ` (last ${last.length})` : ''}:</p><div class="review">` +
     last.map(P => `<div class="miss">${pairSVG(P, true)}<div class="missLine">${P.timedOut ? '⏱ Time ran out' : '<span class="bad">❌ ' + ansText(P, P.userAns) + '</span>'} <span>➜</span> <span class="ok">✅ ${ansText(P, P.answer)}</span></div></div>`).join('') + `</div>`;
 }
-const ansText = (P, v) => P.type === 'scale' ? '×' + fmt(v) : fmt(v) + ' ft';
+const ansText = (P, v) => P.type === 'scale' ? '×' + fmt(v) : P.type === 'sim' ? (v === 'yes' ? SIM_YES : SIM_NO) : P.alg ? 'x = ' + fmt(v) : fmt(v) + ' ft';
 
 // Both figures in ONE picture, with a curved arrow for every side: from the pre-image side to its matching side on the image,
 // the scale factor on top of the arrow (×k going small -> big, ÷k going big -> small; "×?" on level 1 while it is unknown).
 // Arrows/pills use the side's own color so you can see which side goes where.
 function pairSVG(P, reveal) {
+  if (P.type === 'nest') return nestSVG(P, reveal);
   const A = figParts(P, 'model', reveal), Bp = figParts(P, 'bridge', reveal);
-  const focus = P.level === 2 && P.type !== 'scale';                                    // level 2: only the missing side's arrow
+  const focus = !!P.focus;                                                              // levels 2 and 4: only the missing side's arrow
   const toSmall = P.type === 'down';
-  const label = P.type === 'scale' && !reveal ? '×?' : (toSmall ? '÷' : '×') + P.k;
-  const noArrows = P.level === 3 && !reveal;                                       // level 3 question: no arrows, no scale factor - find it yourself
+  const label = P.type === 'scale' && !reveal ? '×?' : P.frac ? '×' + (toSmall ? P.frac[1] + '/' + P.frac[0] : P.frac[0] + '/' + P.frac[1]) : (toSmall ? '÷' : '×') + P.k;
+  const noArrows = P.type === 'sim' || (P.noArrows && !reveal);                    // no arrows and no scale factor: find it yourself (or just compare the figures)
   const edges = noArrows ? [] : focus ? [P.ti] : reveal ? SHAPES[P.shape].label.slice() : [...new Set([...P.showS, ...P.showB, ...(P.ti >= 0 ? [P.ti] : [])])].sort((a, b) => a - b);
   const OFFX = 340, VW = 600;
   const pre = toSmall ? Bp : A, img = toSmall ? A : Bp, preX = toSmall ? OFFX : 0, imgX = toSmall ? 0 : OFFX;
@@ -243,7 +363,7 @@ function pairSVG(P, reveal) {
   const topY = Math.min(pre.top, img.top), botY = Math.max(pre.bottom, img.bottom);
   let ru = 0, rl = 0;
   // panel titles: the shape you start from is the PRE-IMAGE; the one you move to (the one with the missing side) is the IMAGE
-  const small = toSmall ? 'Image' : 'Pre-image', big = toSmall ? 'Pre-image' : 'Image';
+  const small = P.type === 'sim' ? 'Figure A' : toSmall ? 'Image' : 'Pre-image', big = P.type === 'sim' ? 'Figure B' : toSmall ? 'Pre-image' : 'Image';
   const font = 'font-family:Trebuchet MS,system-ui,sans-serif';
   let defs = '', paths = '', pills = '';
   const items = [];
@@ -293,9 +413,57 @@ function pairSVG(P, reveal) {
     ${paths}${pills}</svg>`;
 }
 
+// ---- nested / overlapping triangles (level 4): a line parallel to one side makes a small triangle inside the big one, or two crossing
+// lines make a "bow tie" of two triangles that overlap at a corner. Parallel marks (>>) show which sides are parallel. ----
+function nestSVG(P, reveal) {
+  const N = P.nest, v = N.vals, VW = 360, VH = 240, font = 'font-family:Trebuchet MS,system-ui,sans-serif';
+  const X = p => [N.mir ? VW - p[0] : p[0], p[1]], dirx = s => N.mir ? -s : s;
+  const oC = COLORS[1], gC = COLORS[2], pC = COLORS[3], tC = COLORS[5], grey = '#7a84ad';
+  const seg = (a, b, col, w) => { const A = X(a), B = X(b); return `<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`; };
+  const poly = (ps, fill) => `<polygon points="${ps.map(p => X(p).join(',')).join(' ')}" fill="${fill}"/>`;
+  const chev = (a, b, col) => {
+    const A = X(a), B = X(b), dx = B[0] - A[0], dy = B[1] - A[1], l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l, nx = -uy, ny = ux, mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
+    return [-6, 5].map(o => { const cx = mx + ux * o, cy = my + uy * o;
+      return `<path d="M${cx - ux * 4 + nx * 6},${cy - uy * 4 + ny * 6} L${cx + ux * 4},${cy + uy * 4} L${cx - ux * 4 - nx * 6},${cy - uy * 4 - ny * 6}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`; }).join('');
+  };
+  const letter = (t, p, dx, dy) => { const q = X(p); return `<text x="${q[0] + dirx(dx)}" y="${q[1] + dy}" text-anchor="middle" dominant-baseline="central" font-size="17" font-weight="800" fill="#5b6485" style="${font}">${t}</text>`; };
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const away = (a, b, from, d) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, m = mid(a, b); let nx = -dy / l, ny = dx / l;   // a point d px off the side, on the side away from `from`
+    if (nx * (from[0] - m[0]) + ny * (from[1] - m[1]) > 0) { nx = -nx; ny = -ny; } return [m[0] + nx * d, m[1] + ny * d]; };
+  const num = (key, col, pt) => {
+    const q = X(pt), isU = key === N.unk, txt = isU ? (reveal ? v[key] : '?') : v[key], w = String(txt).length > 1 ? 46 : 36;
+    return isU ? `<rect x="${q[0] - w / 2}" y="${q[1] - 16}" width="${w}" height="32" rx="16" fill="${reveal ? col : '#ffd23f'}" stroke="#fff" stroke-width="3"/>` +
+        `<text x="${q[0]}" y="${q[1] + 1}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="900" fill="${reveal ? '#fff' : '#1d2340'}" style="${font}">${txt}</text>`
+      : `<text x="${q[0]}" y="${q[1]}" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="900" fill="${col}" stroke="#fff" stroke-width="4" paint-order="stroke" style="${font}">${txt}</text>`;
+  };
+  let out = '';
+  if (N.variant === 'nested') {
+    const t = clamp(N.p / N.q, .3, .7), A = [130 + N.skew, 28], B = [40, 198], C = [320, 198];
+    const D = [A[0] + t * (B[0] - A[0]), A[1] + t * (B[1] - A[1])], E = [A[0] + t * (C[0] - A[0]), A[1] + t * (C[1] - A[1])], cen = [(A[0] + B[0] + C[0]) / 3, (A[1] + B[1] + C[1]) / 3];
+    out = poly([A, B, C], '#e8eeff') + poly([A, D, E], '#fff1de') + seg(A, C, grey, 4) + seg(A, D, gC, 5) + seg(D, B, tC, 5) + seg(D, E, oC, 5) + seg(B, C, oC, 5) + chev(D, E, oC) + chev(B, C, oC) +
+      num('AD', gC, away(A, D, cen, 24)) + num('DB', tC, away(D, B, cen, 24)) + num('BC', oC, [mid(B, C)[0], 224]) + num('DE', oC, [mid(D, E)[0], mid(D, E)[1] + (t < .55 ? 24 : -22)]) +
+      letter('A', A, 0, -14) + letter('B', B, -13, 14) + letter('C', C, 13, 14) + letter('D', D, -17, 2) + letter('E', E, 17, 2);
+  } else {
+    const r = clamp(N.q / N.p, .5, 2), w = Math.min(200, 200 / r), Cx = 180, A = [Cx - w / 2, 42], B = [Cx + w / 2, 42], Cy = 42 + 156 / (1 + r), C = [Cx, Cy];
+    const D = [Cx + r * (Cx - A[0]), Cy + r * (Cy - 42)], E = [Cx + r * (Cx - B[0]), Cy + r * (Cy - 42)];
+    out = poly([A, B, C], '#e8eeff') + poly([C, D, E], '#fff1de') + seg(A, C, gC, 5) + seg(C, D, gC, 5) + seg(B, C, pC, 5) + seg(C, E, pC, 5) + seg(A, B, oC, 5) + seg(E, D, oC, 5) + chev(A, B, oC) + chev(E, D, oC) +
+      num('AB', oC, [mid(A, B)[0], 17]) + num('DE', oC, [mid(E, D)[0], 224]) +
+      (N.side === 'AC' ? num('AC', gC, away(A, C, B, 26)) + num('CD', gC, away(C, D, E, 26)) : num('BC', pC, away(B, C, A, 26)) + num('CE', pC, away(C, E, D, 26))) +
+      letter('A', A, -12, -8) + letter('B', B, 12, -8) + letter('D', D, 13, 12) + letter('E', E, -13, 12) + letter('C', C, 0, -13);
+  }
+  return `<svg class="pair" style="max-width:440px;margin:0 auto" viewBox="0 0 ${VW} ${VH}" role="img" aria-label="two similar triangles">${out}</svg>`;
+}
+// the worked steps for a nested / overlapping triangle question: the sides that match make equal ratios
+function nestSteps(P) {
+  const N = P.nest, v = N.vals, oC = COLORS[1], gC = COLORS[2], pC = COLORS[3], tC = COLORS[5], sl = '#5b6485';
+  if (N.variant === 'nested') return `<div>${chip(v.AD, gC)} + ${chip(v.DB, tC)} = ${chip(v.AD + v.DB, sl)}</div><div>${chip(v.AD, gC)} ÷ ${chip(v.AD + v.DB, sl)} = ${chip(v.DE, oC)} ÷ ${chip(v.BC, oC)}</div>`;
+  const a = N.side === 'AC' ? [v.AC, v.CD, gC] : [v.BC, v.CE, pC];
+  return `<div>${chip(v.AB, oC)} ÷ ${chip(v.DE, oC)} = ${chip(a[0], a[2])} ÷ ${chip(a[1], a[2])}</div>`;
+}
+
 // wrong-answer card: mostly pictures - both figures with per-side arrows, and the math with matching colors
 function solutionHTML(P) {
-  const verdict = P.timedOut ? '⏱' : `<span class="bad">❌ ${ansText(P, P.userAns)} <small>${P.userAns < P.answer ? '(too small)' : '(too big)'}</small></span>`;
+  const verdict = P.timedOut ? '⏱' : `<span class="bad">❌ ${ansText(P, P.userAns)} <small>${typeof P.userAns === 'number' ? (P.userAns < P.answer ? '(too small)' : '(too big)') : ''}</small></span>`;
   return `<div class="verdict">${verdict}<span class="arrow">➜</span><span class="ok">✅ ${ansText(P, P.answer)}</span></div>
     ${pairSVG(P, true)}
     <div class="steps">${stepsHTML(P)}</div>`;
@@ -311,7 +479,8 @@ function figParts(P, which, reveal) {
   const n = P.pts.length, VW = 260, VH = 190, pad = 48, isB = which === 'bridge';
   const ang = (isB ? P.rot : 0) * Math.PI / 180, ca = Math.cos(ang), sa = Math.sin(ang);
   const flip = isB && P.flip;
-  let pts = P.pts.map(([x, y]) => { x = flip ? -x : x; y = -y; return [x*ca - y*sa, x*sa + y*ca]; });
+  const srcPts = !isB && P.ptsS ? P.ptsS : P.pts;                                    // (a "not similar" pair has two different shapes)
+  let pts = srcPts.map(([x, y]) => { x = flip ? -x : x; y = -y; return [x*ca - y*sa, x*sa + y*ca]; });
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
   // draw the two figures at (roughly) their true relative size: the big one fills the box, the small one shrinks by k^0.7
@@ -322,7 +491,7 @@ function figParts(P, which, reveal) {
   const cx = pts.reduce((a, p) => a + p[0], 0) / n, cy = pts.reduce((a, p) => a + p[1], 0) / n;
   const lens = isB ? P.lensB : P.lensS, show = isB ? P.showB : P.showS;
   const qHere = (P.type === 'up' && isB) || (P.type === 'down' && !isB);            // which figure holds the "?"
-  const focus = P.level === 2 && P.type !== 'scale';                                    // level 2: spotlight the missing side + its match
+  const focus = !!P.focus;                                                              // spotlight the missing side + its match
   const font = 'font-family:Trebuchet MS,system-ui,sans-serif';
   const mids = pts.map((a, i) => {
     const b = pts[(i + 1) % n], mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2; let nx = mx - cx, ny = my - cy; const nl = Math.hypot(nx, ny) || 1;
@@ -330,7 +499,7 @@ function figParts(P, which, reveal) {
   });
   let out = `<polygon points="${pts.map(p => p.join(',')).join(' ')}" fill="#e8eeff" stroke="none"/>`;
   for (let i = 0; i < n; i++) {                                                      // right-angle marks
-    const v0 = P.pts[i], p0 = P.pts[(i + n - 1) % n], q0 = P.pts[(i + 1) % n];
+    const v0 = srcPts[i], p0 = srcPts[(i + n - 1) % n], q0 = srcPts[(i + 1) % n];
     const dot = (p0[0]-v0[0])*(q0[0]-v0[0]) + (p0[1]-v0[1])*(q0[1]-v0[1]);
     if (n <= 6 && Math.abs(dot) < 1e-6) {
       const v = pts[i], a = pts[(i + n - 1) % n], b = pts[(i + 1) % n];
@@ -385,17 +554,18 @@ function figParts(P, which, reveal) {
   const items = [];
   for (let i = 0; i < n; i++) {
     let txt = null;
-    if (qHere && i === P.ti) txt = reveal ? fmt(P.answer) : '?';
+    if (qHere && i === P.ti) txt = reveal ? fmt(P.alg ? P.alg.val : P.answer) : P.alg ? P.alg.expr : '?';      // (level 5: an expression like 2x + 5)
     else if ((reveal ? SHAPES[P.shape].label : show).includes(i)) txt = fmt(lens[i]);     // the wrong-answer card reveals every side
     if (txt === null) continue;
-    const isQ = txt === '?', bubble = focus && i === P.ti, str = String(txt);
-    const size = bubble ? (isQ ? 20 : 22) : isQ ? 24 : focus ? 21 : 18;
+    const isQ = qHere && i === P.ti && !reveal, bubble = focus && i === P.ti, str = String(txt);
+    const size = bubble ? (isQ ? 20 : 22) : isQ ? (P.alg ? 21 : 24) : focus ? 21 : 18;
     const w = bubble ? Math.max(isQ ? 32 : 40, 18 + str.length * size * .62) : str.length * size * .62 + 6, h = bubble ? size + (isQ ? 10 : 12) : size;
     items.push({ i, txt, isQ, bubble, size, w, h });
   }
   items.sort((a, b) => (b.isQ - a.isQ) || (b.bubble - a.bubble) || (a.i - b.i));          // the "?" and the spotlighted number get first pick of the space
   const inPoly = (x, y) => { let c = false; for (let a = 0, b = n - 1; a < n; b = a++) { const [xi, yi] = pts[a], [xj, yj] = pts[b]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
   const segDist = (x, y, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1]; let t = ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1); t = Math.max(0, Math.min(1, t)); return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy); };
+  const hitsBox = (a, b, x, y, hw, hh) => { const N = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3)); for (let s = 0; s <= N; s++) { if (Math.abs(a[0] + (b[0] - a[0]) * s / N - x) < hw + 1 && Math.abs(a[1] + (b[1] - a[1]) * s / N - y) < hh + 1) return true; } return false; };
   const placed = [], base = P.ticks ? 24 : 17;
   for (const it of items) {
     const m = mids[it.i], tx = -m.ny, ty = m.nx, hw = it.w / 2 + 2, hh = it.h / 2 + 2, o0 = base + (it.bubble ? (it.isQ ? 10 : 8) : 0);
@@ -406,7 +576,7 @@ function figParts(P, which, reveal) {
       if (x - hw < 3 || x + hw > VW - 3 || y - hh < 3 || y + hh > VH - 3) continue;
       if (placed.some(q => Math.abs(q.x - x) < hw + q.hw && Math.abs(q.y - y) < hh + q.hh)) continue;
       if ([[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([sx, sy]) => inPoly(x + sx * hw, y + sy * hh))) continue;
-      if (pts.some((a, k) => k !== it.i && segDist(x, y, a, pts[(k + 1) % n]) < Math.min(hw, hh) * .9 + 2)) continue;
+      if (pts.some((a, k) => k !== it.i && hitsBox(a, pts[(k + 1) % n], x, y, hw, hh))) continue;                 // never on top of another side (checks the whole label box)
       best = { x, y }; break search;
     }
     if (!best) best = { x: m.x + m.nx * o0, y: m.y + m.ny * o0 };
@@ -418,7 +588,7 @@ function figParts(P, which, reveal) {
     else
       out += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="${it.size}" font-weight="900" fill="${col}" stroke="#fff" stroke-width="4" paint-order="stroke" style="${font}">${it.txt}</text>`;
   }
-  return { body: out, mids, VW, VH, top: Math.min(...pts.map(p => p[1])), bottom: Math.max(...pts.map(p => p[1])) };
+  return { body: out, mids, pts, VW, VH, top: Math.min(...pts.map(p => p[1])), bottom: Math.max(...pts.map(p => p[1])) };
 }
 
 /* ===================== GAME STATE ===================== */
@@ -631,7 +801,7 @@ function newWorld(menu, cp, mode) {
     level: lv, theme: cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, dist: 0, missed: [],
     platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
       : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? Math.floor(cp.solved / 6) % THEMES.length : 0, lv)],
-    pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, hint: false, tipT: 0
+    pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0
   };
 }
 
@@ -666,7 +836,11 @@ const OBS = {
   drone:     { fly: true, label: 'survey drone' },
   falcon:    { fly: true, label: 'endangered falcon' },
   storm:     { fly: true, w: 70, label: 'storm cloud (weather delay)' },
-  powerline: { fly: true, w: 180, still: true, label: 'electrical line' }
+  powerline: { fly: true, w: 180, still: true, label: 'electrical line' },
+  // --- level 5 ---
+  crate:     { kind: 'solid', w: 44, h: 84, label: 'stack of crates' },
+  truck:     { kind: 'solid', w: 100, h: 54, vx: -95, label: 'dump truck' },
+  helicopter:{ fly: true, w: 60, label: 'news helicopter' }
 };
 // Every level has its OWN obstacles (none repeat on another level), and every one of them costs a heart if it touches you.
 // (A name listed twice shows up twice as often.)
@@ -674,7 +848,8 @@ const LEVEL_OBS = [
   ['rock', 'cactus', 'log', 'cone', 'tortoise'],                                            // 1: simple things on the ground - just jump
   ['stump', 'frog', 'barrel', 'redtape', 'home', 'vulture'],                               // 2: taller and wider things, plus the first flyer to duck under
   ['flood', 'hole', 'soil', 'lawyer', 'parrot', 'powerline'],                              // 3: wide hazards to clear, walkers, and low-hanging lines
-  ['protesters', 'protesters', 'pipe', 'pipe', 'drone', 'falcon', 'storm']                  // 4: big groups, bursting pipes, and lots of overhead traffic
+  ['protesters', 'protesters', 'pipe', 'pipe', 'drone', 'falcon', 'storm'],                 // 4: big groups, bursting pipes, and lots of overhead traffic
+  ['crate', 'crate', 'truck', 'truck', 'helicopter', 'helicopter']                          // 5: tall stacks, a dump truck rolling at you, and a helicopter overhead
 ];
 const flyY = c => GROUND - 125 + Math.sin(G.t * 4 + c.x) * 8;
 const flyYOf = c => OBS[c.type].still ? GROUND - 128 : flyY(c);                   // power lines don't bob
@@ -686,12 +861,12 @@ const pipeH = c => {
 };
 
 // each level: the runner is faster, and the spacing gets tighter and more surprising
-const SPEED_BY_LEVEL = [1, 1.12, 1.26, 1.4];                 // × the base running speed (330 px/s)
+const SPEED_BY_LEVEL = [1, 1.1, 1.2, 1.3, 1.4];                 // × the base running speed (330 px/s)
 // The tightest gap between two obstacles, in seconds of running (a jump lasts 0.69 s, a double jump longer, so even the tightest is possible).
-const MIN_GAP_SEC = [.85, .75, .66, .58];
+const MIN_GAP_SEC = [.85, .75, .66, .58, .52];
 // How the gaps are shuffled: share of TIGHT clusters, share of MEDIUM gaps (the rest are long breathers). Later levels have more clusters.
-const GAP_MIX = [[.15, .55], [.25, .50], [.35, .45], [.45, .40]];
-const COMBO_CHANCE = [0, .1, .25, .35];                      // chance that a flyer is placed right behind a ground obstacle (jump, land, then run under it)
+const GAP_MIX = [[.15, .55], [.25, .50], [.35, .45], [.45, .40], [.55, .35]];
+const COMBO_CHANCE = [0, .1, .25, .35, .45];                      // chance that a flyer is placed right behind a ground obstacle (jump, land, then run under it)
 
 const PRACTICE_SECONDS = 3;                                  // Practice: about how long you run between two questions
 // Distance from the previous obstacle to the next one. Always random, never below what can be cleared:
@@ -713,9 +888,9 @@ function gapAfter(prev, type, level) {
 //   skyField  a long stretch of flooded land / unstable soil: only a HIGH platform (double jump) gets you across without touching it
 //   lowLine   a very long power line / storm cloud: you must stay down on the ground for the whole length
 //   pipeRow   three loose pipes in a row: run through when they are down, or take the high platform over them
-const PATTERNS = { 2: ['tapeWall'], 3: ['skyField', 'lowLine'], 4: ['lowLine', 'pipeRow'] };
-const PATTERN_CHANCE = [0, .18, .28, .36];
-function patternType(kind, level) { return kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : 'storm') : 'pipe'; }
+const PATTERNS = { 2: ['tapeWall'], 3: ['skyField', 'lowLine'], 4: ['lowLine', 'pipeRow'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow'] };
+const PATTERN_CHANCE = [0, .18, .28, .36, .44];
+function patternType(kind, level) { return kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
 function makePattern(kind, type, x) {
   const obs = [], floats = [], mk = (t, xx, extra) => Object.assign({ x: xx, type: t, fly: !!OBS[t].fly, hit: false, t0: Math.random() * PIPE_CYCLE }, extra || {});
   if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
@@ -798,7 +973,7 @@ function ensureNext() {
 
 // the next question: Bridge Run follows your level; Practice picks at random from the question types you chose
 function nextProblem() {
-  if (G.mode === 'practice') { const t = pick(G.ptypes); return genProblem(t.level, undefined, t.type); }
+  if (G.mode === 'practice') { const t = pick(G.ptypes); return genProblem(t.level, undefined, t.kind); }
   return genProblem(G.level);
 }
 
@@ -893,12 +1068,13 @@ function buildMenu() {
 let practicePicked = (() => { const s = store.get(KEY.practice, null); return Array.isArray(s) ? s.filter(id => PRACTICE_TYPES.some(t => t.id === id)) : ['scale']; })();
 function renderPractice() {
   const grid = $('ptypes'); grid.innerHTML = '';
-  PRACTICE_TYPES.forEach(t => {
-    const on = practicePicked.includes(t.id);
+  PRACTICE_TYPES.forEach(t => {                                            // (listed in level order; each level has its own color)
+    const on = practicePicked.includes(t.id), lc = ['#2f80ed', '#1e9e57', '#f2994a', '#9b51e0', '#e0245e'][t.level - 1];
     const card = document.createElement('button'); card.type = 'button';
     card.className = 'ptype' + (on ? ' on' : ''); card.setAttribute('role', 'checkbox'); card.setAttribute('aria-checked', on ? 'true' : 'false');
-    let sample = ''; try { sample = pairSVG(genProblem(t.level, undefined, t.type), false); } catch (e) {}      // a live example of this kind of question
-    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel">Level ${t.level}</span>` +
+    let sample = ''; try { sample = pairSVG(genProblem(t.level, undefined, t.kind), false); } catch (e) {}      // a live example of this kind of question
+    card.style.borderLeftColor = lc; card.style.borderLeftWidth = '8px';
+    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel" style="color:${lc}">Level ${t.level}</span>` +
       `<span class="pname">${t.name}</span><span class="pdesc">${t.desc}</span><span class="psample" aria-hidden="true">${sample}</span>`;
     card.onclick = () => {
       practicePicked = practicePicked.includes(t.id) ? practicePicked.filter(id => id !== t.id) : practicePicked.concat(t.id);
@@ -965,7 +1141,7 @@ function openShop() { renderShop(); $('shop').classList.remove('hidden'); const 
 function closeShop() { $('shop').classList.add('hidden'); buildMenu(); }
 
 /* ===================== PROBLEM FLOW ===================== */
-const TIME_BY_LEVEL = [45, 40, 36, 33];        // seconds to answer, by level
+const TIME_BY_LEVEL = [45, 40, 35, 31, 27];        // seconds to answer, by level
 function answerTime() { return TIME_BY_LEVEL[G.level - 1]; }
 
 function startSolve() {
@@ -973,7 +1149,6 @@ function startSolve() {
   const gp = G.platforms[G.pi];
   G.problem = gp.problem || nextProblem(); gp.problem = null;
   G.timeTotal = G.timeLeft = answerTime();
-  G.hint = false;
   const P = G.problem;
   const bn = SHAPES[P.shape].bridge;
   const practice = G.mode === 'practice';
@@ -985,19 +1160,20 @@ function startSolve() {
   const prompts = {
     scale: 'What is the <b>scale factor</b>?',
     up: 'Find the missing side of the <b>image</b>.',
-    down: 'Find the missing side of the <b>image</b>.'
+    down: 'Find the missing side of the <b>image</b>.',
+    nest: 'Find the <b>missing length</b>.',
+    sim: 'Are these two figures <b>similar</b>?'
   };
-  let txt = prompts[P.type];
-  if (P.level === 4) txt += ` <span style="color:#5b6485">Same tick marks = same length.</span>`;
-  $('pPrompt').innerHTML = txt;
+  $('pPrompt').innerHTML = P.alg ? 'Solve for <b>x</b>.' : prompts[P.type];
   $('pairWrap').innerHTML = pairSVG(P, false);
-  $('ansLbl').textContent = P.type === 'scale' ? 'k =' : '? =';
-  $('ansUnit').style.display = P.type === 'scale' ? 'none' : '';
-  $('hintBox').classList.add('hidden');
-  $('btnHint').disabled = false;
+  const sim = P.type === 'sim';                                              // "Similar or not?" has two buttons instead of a number box
+  $('ansRow').classList.toggle('hidden', sim); $('simRow').classList.toggle('hidden', !sim);
+  $('keypad').style.display = sim ? 'none' : '';
+  $('ansLbl').textContent = P.type === 'scale' ? 'k =' : P.alg ? 'x =' : '? =';
+  $('ansUnit').style.display = P.type === 'scale' || P.alg ? 'none' : '';
   $('ans').value = '';
   $('problem').classList.remove('hidden');
-  setTimeout(() => { if (!matchMedia('(pointer:coarse)').matches) $('ans').focus(); }, 30);
+  setTimeout(() => { if (!sim && !matchMedia('(pointer:coarse)').matches) $('ans').focus(); }, 30);
 }
 
 function parseAns(str) {                          // whole numbers only
@@ -1005,12 +1181,15 @@ function parseAns(str) {                          // whole numbers only
   return /^\d{1,4}$/.test(str) ? Number(str) : NaN;
 }
 
-function submit(timedOut) {
+function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for a "Similar or not?" question
   if (G.state !== 'solve') return;
   let val = null;
   if (!timedOut) {
-    val = parseAns($('ans').value);
-    if (!isFinite(val)) { const a = $('ans'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); return; }
+    if (G.problem.type === 'sim') { if (choice !== 'yes' && choice !== 'no') return; val = choice; }
+    else {
+      val = parseAns($('ans').value);
+      if (!isFinite(val)) { const a = $('ans'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); return; }
+    }
   }
   const P = G.problem, p = G.platforms[G.pi];
   const ok = val === P.answer;
@@ -1019,7 +1198,7 @@ function submit(timedOut) {
     p.bridge = null; $('problem').classList.add('hidden'); G.state = 'cross';
     toast("Time's up! No bridge…", 'bad'); return;
   }
-  const ratio = ok ? 1 : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, 2.2));     // the bridge is built at the scale YOUR number implies
+  const ratio = ok ? 1 : P.type === 'sim' ? (val === null ? 0.1 : val === 'yes' ? 1.6 : 0.55) : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, 2.2));     // the bridge is built at the scale YOUR number implies
   p.bridge = { ratio, len: p.gapW * ratio, ok, prog: 0, collapsed: false, cAnim: 0, P, val, sparked: false };
   $('problem').classList.add('hidden');
   G.state = 'build'; sfx.build();
@@ -1043,6 +1222,8 @@ function onBridgeBuilt() {
     addCoins(1); sfx.coin();                                          // 1 coin for every correct answer
     const up = ' · +1 coin';
     toast((b.P.type === 'scale' ? `Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`
+      : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? 'Similar' : 'Not similar'} — ${SHAPES[b.P.shape].bridge} locked in!`
+      : b.P.alg ? `x = ${b.P.answer} — ${SHAPES[b.P.shape].bridge} locked in!`
       : `${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`) + up, 'good'); sfx.good();
     G.state = 'run';
   } else {
@@ -1385,7 +1566,7 @@ function drawBridge(p, T) {
       haloText(txt, mx + nx / l * 26, my + ny / l * (i === 0 ? 20 : 26), col, size);
     };
     if (b.val !== null && b.val !== undefined) {              // the built beam's real length (or the scale you chose for level 1)
-      const txt = P.type === 'scale' ? '×' + b.val : fmt(P.lensB[ti] * b.ratio) + ' ft';
+      const txt = P.type === 'scale' ? '×' + b.val : P.type === 'sim' ? (b.val === 'yes' ? SIM_YES : SIM_NO) : P.alg ? 'x = ' + b.val : fmt((ti >= 0 ? P.lensB[ti] : P.answer) * b.ratio) + ' ft';
       label(ti >= 0 ? ti : 0, (b.ok ? '⭐ ' : '❌ ') + txt, b.ok ? '#b58100' : '#d33', 20);
     }
   }
@@ -1438,7 +1619,7 @@ function drawObstacle(c, x) {
       rr(x + 8, G0 - 24, 12, 24, 2, '#7a4b22');                                                                 // door
       rr(x + 30, G0 - 27, 14, 13, 2, '#9ad8ff');                                                                // window
       ctx.strokeStyle = '#3a6f8f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 37, G0 - 27); ctx.lineTo(x + 37, G0 - 14); ctx.moveTo(x + 30, G0 - 20.5); ctx.lineTo(x + 44, G0 - 20.5); ctx.stroke();
-      rr(x - 66, G0 - 104, 186, 36, 6, '#ffd23f'); txt('LET ME STAY!', x + dw / 2, G0 - 86, 22, '#7a1414'); break;
+      rr(x - 92, G0 - 104, 238, 36, 6, '#ffd23f'); txt("DON'T EVICT ME!", x + dw / 2, G0 - 86, 22, '#7a1414'); break;
     case 'protesters': {                                                // a group carrying signs that walks toward you
       const signs = ['NO!', 'STOP', 'WAIT'], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
       for (let i = 0; i < 3; i++) {
@@ -1526,6 +1707,23 @@ function drawObstacle(c, x) {
       ctx.fillStyle = '#ffc93c'; ctx.beginPath(); ctx.moveTo(x - 15, y - 2); ctx.lineTo(x - 26, y + 3); ctx.lineTo(x - 15, y + 5); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 9, y - 3, 2.5, 0, 7); ctx.fill();
       if (c.type === 'falcon') { rr(x - 76, y - 74, 152, 38, 6, '#fff'); txt('ENDANGERED', x, y - 55, 22, '#0d7a3c'); } break; }
+    case 'crate': {                                                     // a tall stack of shipping crates: a supply delay
+      const box = (bx, by, bw, bh, f) => { rr(bx, by, bw, bh, 3, f); ctx.strokeStyle = 'rgba(70,40,15,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx + 4, by + 4); ctx.lineTo(bx + bw - 4, by + bh - 4); ctx.moveTo(bx + bw - 4, by + 4); ctx.lineTo(bx + 4, by + bh - 4); ctx.stroke(); ctx.strokeStyle = ol; ctx.lineWidth = 3; };
+      box(x, G0 - 42, 44, 42, '#c9954f'); box(x + 3, G0 - 84, 38, 42, '#d9a862'); break; }
+    case 'truck': {                                                     // a dump truck driving toward you
+      const bob = Math.sin(T * 14) * 1.2;
+      rr(x + 34, G0 - 54 + bob, 66, 36, 4, '#e0a81a'); txt('DUMP', x + 67, G0 - 36 + bob, 18, '#5b3a00');
+      rr(x, G0 - 40 + bob, 36, 28, 5, '#d8632a');
+      ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.roundRect(x + 4, G0 - 36 + bob, 15, 13, 2); ctx.fill(); ctx.stroke();
+      rr(x, G0 - 18, 100, 8, 2, '#5b6478');
+      for (const wx of [x + 20, x + 80]) { ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(wx, G0 - 9, 10, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#9aa3b5'; ctx.beginPath(); ctx.arc(wx, G0 - 9, 4, 0, 7); ctx.fill(); }
+      break; }
+    case 'helicopter': {                                                // a news helicopter hovering overhead
+      const y = flyYOf(c), sp = Math.sin(G.t * 40) * 30;
+      ctx.beginPath(); ctx.moveTo(x + 16, y - 4); ctx.lineTo(x + 48, y - 8); ctx.lineTo(x + 48, y - 1); ctx.lineTo(x + 16, y + 5); ctx.closePath(); ctx.fillStyle = '#c94a30'; ctx.fill(); ctx.stroke();
+      rr(x - 24, y - 13, 44, 26, 13, '#e25a3d'); ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.ellipse(x - 11, y - 3, 9, 7, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 6, y - 13); ctx.lineTo(x - 6, y - 21); ctx.moveTo(x - 6 - 30 - sp * .3, y - 21); ctx.lineTo(x - 6 + 30 + sp * .3, y - 21); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 20, y + 20); ctx.lineTo(x + 14, y + 20); ctx.moveTo(x - 12, y + 13); ctx.lineTo(x - 14, y + 20); ctx.moveTo(x + 6, y + 13); ctx.lineTo(x + 8, y + 20); ctx.stroke(); break; }
     case 'drone': {
       const y = flyYOf(c);
       rr(x - 16, y - 8, 32, 16, 6, '#4b5578'); ctx.fillStyle = Math.sin(G.t * 10) > 0 ? '#ff4d4d' : '#701'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
@@ -1858,7 +2056,7 @@ function drawTitleObs(g, type, cx, y) {
     box(cx + 12, y - 62, 8, 20, 1, '#a0523d'); box(cx - 25, y - 34, 50, 34, 2, '#f2d9a8');
     g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(cx - 31, y - 34); g.lineTo(cx, y - 58); g.lineTo(cx + 31, y - 34); g.closePath(); g.fill(); g.stroke();
     box(cx - 19, y - 24, 12, 24, 2, '#7a4b22'); box(cx + 3, y - 27, 14, 13, 2, '#9ad8ff');
-    box(cx - 94, y - 106, 188, 36, 6, '#ffd23f'); g.fillStyle = '#7a1414'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LET ME STAY!', cx, y - 88);
+    box(cx - 120, y - 106, 240, 36, 6, '#ffd23f'); g.fillStyle = '#7a1414'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText("DON'T EVICT ME!", cx, y - 88);
   } else if (type === 'tortoise') {
     g.fillStyle = '#c9a26a'; for (const lx of [-16, -6, 8, 18]) { g.beginPath(); g.roundRect(cx + lx - 3, y - 8, 7, 8, 2); g.fill(); g.stroke(); }
     g.beginPath(); g.ellipse(cx - 26, y - 15, 7, 5, 0, 0, 7); g.fill(); g.stroke();
@@ -2053,6 +2251,12 @@ addEventListener('keydown', e => {
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
   const isJumpKey = ['Space', 'ArrowUp', 'KeyW', 'Enter', 'NumpadEnter'].includes(e.code) || e.key === 'Enter';
   if (isJumpKey && G && G.state === 'run') { e.preventDefault(); if (!e.repeat) jump(); }
+  if (G && G.state === 'solve' && G.problem.type === 'sim') {              // "Similar or not?": arrow keys pick a button, Enter / Space presses it
+    const yes = $('btnSimYes'), no = $('btnSimNo');
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowUp' || e.code === 'KeyS') { e.preventDefault(); yes.focus(); return; }
+    if (e.code === 'ArrowRight' || e.code === 'ArrowDown' || e.code === 'KeyN') { e.preventDefault(); no.focus(); return; }
+    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') { e.preventDefault(); if (!e.repeat && (document.activeElement === yes || document.activeElement === no)) document.activeElement.click(); return; }
+  }
   if ((e.code === 'Enter' || e.key === 'Enter') && G && G.state === 'solve') { e.preventDefault(); submit(); }
 });
 $('stage').addEventListener('pointerdown', e => { audioInit(); jump(); });
@@ -2068,14 +2272,8 @@ $('btnOverMenu').onclick = toMenu;
 $('btnFinish').onclick = () => { if (G && G.mode === 'practice') finishPractice(); };
 $('btnBuild').onclick = () => submit();
 $('btnNext').onclick = respawn;
-$('btnHint').onclick = () => {
-  if (!G || G.state !== 'solve' || G.hint) return;
-  const P = G.problem; G.hint = true;
-  const hints = P.level === 3 ? { up: 'scale factor = image ÷ pre-image (use a pair you can see), then multiply the pre-image side by it', down: 'scale factor = pre-image ÷ image (use a pair you can see), then divide the pre-image side by it' }
-    : { scale: 'image ÷ pre-image', up: 'pre-image side × scale factor', down: 'pre-image side ÷ scale factor' };
-  $('hintBox').innerHTML = '💡 ' + (P.level === 4 ? 'Same ticks = same length. ' : '') + '<b>' + hints[P.type] + '</b>';
-  $('hintBox').classList.remove('hidden'); $('btnHint').disabled = true;
-};
+$('btnSimYes').onclick = () => submit(false, 'yes');
+$('btnSimNo').onclick = () => submit(false, 'no');
 const muteLabel = () => { $('muteBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on'; };
 $('muteBtn').onclick = () => { muted = !muted; store.set(KEY.muted, muted); muteLabel(); audioInit(); };
 muteLabel();
@@ -2113,34 +2311,35 @@ function buildLevelsPage() {
   document.head.appendChild(st);
   const root = document.createElement('div'); root.id = 'lv';
   let h = `<h1>📋 Question levels</h1><div class="intro">Every level's rules and live sample questions (refresh the page for new samples). Settings live in the code as
-    <code>TYPE_BY_LEVEL</code>, <code>SPEED_BY_LEVEL</code>, <code>LEVEL_OBS</code>, <code>MIN_GAP_SEC</code>, <code>GAP_MIX</code>, <code>METERS_PER_LEVEL</code>, <code>SHAPES_BY_LEVEL</code>, <code>K_BY_LEVEL</code>, <code>UNIT_BY_LEVEL</code>, <code>MAX_SMALL_SIDE</code>, <code>MAX_BIG_SIDE</code>, <code>TIME_BY_LEVEL</code> and <code>MAX_LEVEL</code>.</div>`;
+    <code>KINDS_BY_LEVEL</code>, <code>KIND_CFG</code>, <code>SPEED_BY_LEVEL</code>, <code>TIME_BY_LEVEL</code>, <code>LEVEL_OBS</code>, <code>MIN_GAP_SEC</code>, <code>GAP_MIX</code>, <code>METERS_PER_LEVEL</code> and <code>MAX_LEVEL</code>.</div>`;
   const WHAT = {
     scale: '❓ Find the SCALE FACTOR between the two figures',
     up: '✖ Find a missing side of the BIGGER figure (multiply by the scale factor)',
-    down: '➗ Find a missing side of the SMALLER figure (divide by the scale factor)'
+    down: '➗ Find a missing side of the SMALLER figure (divide by the scale factor)',
+    pair: '🔎 Find k from ONE pair of sides, then find the missing side',
+    fup: '✖ Multiply by a FRACTIONAL scale factor (like 3/2)',
+    fdown: '✖ Shrink by a FRACTIONAL scale factor (like 2/3)',
+    nest: '🔺 Nested and overlapping triangles: find the missing length',
+    sim: '⚖ Similar or Not Similar?',
+    alg: '🔤 Algebra in the sides: solve for x'
   };
   const NOTE = [
     'Both figures show all their sides. Small numbers.',
     'Scale factor is given; the missing side is spotlighted. Mixes multiplying and dividing. Small numbers.',
-    'No arrows and no scale factor shown: all sides of both shapes are given except the missing one, so you find the factor yourself. Big figure is always turned (90°, 180° or 270°) and sometimes flipped. Numbers are multiples of 5 (biggest side 100).',
-    'Like level 3, but equal sides are only labeled once (tick marks show which are equal). Uses the shape name: square, rectangle, rhombus…'
+    'The bigger figure is turned (90°, 180° or 270°) and sometimes flipped. No scale factor and only ONE pair of matching sides is labeled, so find k first. Tick marks and colors show which sides are equal. Numbers are multiples of 5 (biggest side 100).',
+    'Nested / overlapping triangles (parallel lines make similar triangles) and "Similar or Not Similar?" questions.',
+    'A mix of every earlier question type, plus fractional scale factors (like 3/2 or 2/3) and algebra: a side is written like 2x + 5 and the student solves for x.'
   ];
   for (let lv = 1; lv <= MAX_LEVEL; lv++) {
-    const counts = {}; SHAPES_BY_LEVEL[lv - 1].forEach(s => counts[s] = (counts[s] || 0) + 1);
-    const total = SHAPES_BY_LEVEL[lv - 1].length;
     const startAt = (lv - 1) * METERS_PER_LEVEL;
     h += `<div class="lvl"><h2>Level ${lv}</h2><div class="meta"><span>${lv === 1 ? 'Starts at the beginning' : `Reached at ${startAt} m`}${lv === MAX_LEVEL ? ' (and stays here)' : ''}</span>` +
       `<span>⏱ ${TIME_BY_LEVEL[lv - 1]} s per question</span><span>🏃 runner speed ×${SPEED_BY_LEVEL[lv - 1]}</span>` +
-      `<span>🪨 obstacles: ${LEVEL_OBS[lv - 1].filter((t, i, a) => a.indexOf(t) === i).map(t => OBS[t].label).join(", ")} (spacing from ${MIN_GAP_SEC[lv - 1]} s)</span>${lv >= 3 ? '<span>🔄 figure rotated / flipped</span>' : ''}</div>` +
-      `<div class="tags"><b>Question:</b> ` + TYPE_BY_LEVEL[lv - 1].map(t => `<span class="tag">${WHAT[t]}</span>`).join('') + `</div>` +
-      `<div class="meta">${NOTE[lv - 1]}</div>` +
-      `<div class="tags"><b>Shapes:</b> ` + Object.keys(counts).map(s => `<span class="tag">${SHAPES[s].name} · ${Math.round(counts[s] / total * 100)}%</span>`).join('') + `</div>` +
-      `<div class="tags"><b>Scale factors:</b> ` + K_BY_LEVEL[lv - 1].map(k => `<span class="tag k">×${k}</span>`).join('') + ` <b>Side-length units:</b> ` + UNIT_BY_LEVEL[lv - 1].map(u => `<span class="tag k">×${u}</span>`).join('') + `</div>` +
-      `<div class="samples">`;
+      `<span>🪨 obstacles: ${LEVEL_OBS[lv - 1].filter((t, i, a) => a.indexOf(t) === i).map(t => OBS[t].label).join(", ")} (spacing from ${MIN_GAP_SEC[lv - 1]} s)</span></div>` +
+      `<div class="tags"><b>Questions:</b> ` + KINDS_BY_LEVEL[lv - 1].filter((t, i, a) => a.indexOf(t) === i).map(t => `<span class="tag">${WHAT[t]}</span>`).join('') + `</div>` +
+      `<div class="meta">${NOTE[lv - 1]}</div><div class="samples">`;
     for (let i = 0; i < 4; i++) {
       const P = genProblem(lv);
-      h += `<div class="s"><div class="pair"><div>${figSVG(P, 'model')}</div><div class="kb">×${P.type === 'scale' ? '?' : P.k}</div><div>${figSVG(P, 'bridge')}</div></div>` +
-        `<div class="cap">${SHAPES[P.shape].bridge} · answer <b>${P.type === 'scale' ? '×' + P.answer : P.answer + ' ft'}</b> (${P.type === 'scale' ? 'scale factor' : P.type === 'up' ? 'multiply' : 'divide'})</div></div>`;
+      h += `<div class="s">${pairSVG(P, false)}<div class="cap">${SHAPES[P.shape].bridge} · answer <b>${ansText(P, P.answer)}</b></div></div>`;
     }
     h += `</div></div>`;
   }
@@ -2156,5 +2355,5 @@ requestAnimationFrame(frame);
 }
 
 // small hook (used for automated checks and by the Reset Progress button to avoid re-saving)
-window.BBR = { drawChar, CHARACTERS, pairSVG, titleStep(dt) { titleT += dt; drawTitle(); }, showScreen, step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
+window.BBR = { figParts, drawChar, CHARACTERS, pairSVG, titleStep(dt) { titleT += dt; drawTitle(); }, showScreen, step(dt) { update(dt); draw(); updateHUD(); }, genProblem, get G() { return G; }, submit, startGame: (cp, earlier) => startGame(cp, earlier), solutionHTML, figSVG, fmt };
 })();

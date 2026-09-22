@@ -293,7 +293,6 @@
   #sb #ans:focus { outline:none; border-color:var(--accent2); }
   #sb #ans.shake { animation:sbShake .3s; }
   @keyframes sbShake { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-  #sb .hint { background:#fff7dd; border-left:5px solid #ffc83d; padding:8px 10px; border-radius:8px; font-size:15px; color:var(--ink); }
   #sb #keypad { display:none; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
   #sb #keypad button { font-size:22px; font-weight:800; padding:8px 0; border-radius:10px; border:2px solid #c5cbe8; background:#f5f7ff; color:var(--ink); font-family:inherit; }
   @media (pointer:coarse) { #sb #keypad { display:grid; } }
@@ -356,20 +355,20 @@
   #sb .tile .skin { font-size:12px; padding:4px 8px; }
   #sb #pPrompt { font-size:clamp(20px,3.6vw,26px); font-weight:800; text-align:center; margin:4px 0 8px; line-height:1.25; }
   #sb .kbd { display:inline-block; min-width:22px; padding:0 6px; margin-left:6px; border-radius:6px; background:rgba(255,255,255,.28); font-size:.8em; line-height:1.5; }
-  #sb .kbdHint { font-size:12.5px; color:var(--muted); margin:8px 0 0; text-align:center; }
+  #sb .kbdTip { font-size:12.5px; color:var(--muted); margin:8px 0 0; text-align:center; }
   #sb button:focus-visible { outline:4px solid #1d2340; outline-offset:2px; box-shadow:0 0 0 7px #ffd23f; }
   #sb .pbar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; position:sticky; bottom:-16px; background:#fff; padding:8px 0 4px; box-shadow:0 -10px 10px -4px #fff; }
-  #sb .ptypes { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin:8px 0 12px; }
+  #sb .ptypes { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:8px 0 12px; }
   #sb .ptype { position:relative; text-align:left; display:flex; flex-direction:column; gap:3px; background:#f4f7ff; border:3px solid #d4d9f2; border-radius:14px; padding:9px 11px 8px 40px; cursor:pointer; font-family:inherit; color:var(--ink); }
   #sb .ptype.on { border-color:var(--accent2); background:#eaf2ff; }
   #sb .ptype:focus-visible { outline:3px solid var(--accent); }
   #sb .pcheck { position:absolute; left:10px; top:10px; width:22px; height:22px; border-radius:7px; border:3px solid #b9c2ec; background:#fff; color:#fff; font-weight:900; font-size:15px; line-height:16px; text-align:center; }
   #sb .ptype.on .pcheck { background:var(--accent2); border-color:var(--accent2); }
-  #sb .plevel { font-size:11.5px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+  #sb .plevel { font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
   #sb .pname { font-weight:900; font-size:15.5px; }
   #sb .pdesc { font-size:13px; color:var(--muted); line-height:1.3; }
   #sb .psample { display:block; margin-top:4px; background:#fff; border-radius:10px; padding:2px; }
-  #sb .psample svg { width:100%; height:auto; display:block; }
+  #sb .psample svg { width:100%; height:auto; max-height:112px; display:block; }
 
   /* Teacher view (?levels) - same look as the game, but shown as a normal page */
   #lv { max-width:1000px; margin:0 auto; padding:64px 16px 32px; color:#1d2340; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; }
@@ -383,8 +382,8 @@
     text-align: center; padding: 32px;
     font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-hint 1.6s ease-in-out infinite; }
-  @keyframes rotate-hint { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-tilt 1.6s ease-in-out infinite; }
+  @keyframes rotate-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
   .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
   .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
   .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
@@ -476,7 +475,7 @@
           </div>
         </div>
         <button class="btn ghost" id="btnMenuBack">&larr; Title screen</button>
-        <p class="kbdHint">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
+        <p class="kbdTip">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
       </div></div>
 
       <!-- Practice setup -->
@@ -495,13 +494,15 @@
         <div class="bar"><i id="barFill"></i></div>
         <p id="pPrompt"></p>
         <div id="pairWrap"></div>
-        <p class="hint hidden" id="hintBox"></p>
-        <div class="answer">
+        <div class="answer" id="ansRow">
           <label for="ans" id="ansLbl">? =</label>
           <input id="ans" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Your answer (whole number)">
           <span style="font-weight:700" id="ansUnit">ft</span>
           <button class="btn" id="btnBuild">Build! &#127753;</button>
-          <button class="btn ghost" id="btnHint">&#128161; Hint</button>
+        </div>
+        <div class="answer hidden" id="simRow" style="justify-content:center;gap:14px">
+          <button class="btn" id="btnSimYes">Similar</button>
+          <button class="btn alt" id="btnSimNo">Not Similar</button>
         </div>
         <div id="keypad"></div>
       </div></div>
@@ -511,7 +512,7 @@
         <h2 id="fbTitle">&#128165; The bridge failed!</h2>
         <div id="fbBody"></div>
         <p id="fbStorm" style="font-weight:700"></p>
-        <div class="center"><button class="btn alt" id="btnNext">Try a new bridge</button><p class="kbdHint">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
+        <div class="center"><button class="btn alt" id="btnNext">Try a new bridge</button><p class="kbdTip">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
       </div></div>
 
       <!-- Run over -->
@@ -521,7 +522,7 @@
         <div id="ovContinue"></div>
         <button class="btn" id="btnAgain">Run again</button>
         <button class="btn ghost" id="btnOverMenu" style="margin-left:6px">&#127968; Menu</button>
-        <p class="kbdHint">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
+        <p class="kbdTip">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
         <div id="ovReview"></div>
       </div></div>
     </div>
@@ -531,37 +532,26 @@
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.8.G.A.4</span>
       <p>Understand that a two-dimensional figure is similar to another if the second can be obtained from the first by a sequence of rotations, reflections, translations, and dilations; given two similar two-dimensional figures, describe a sequence that exhibits the similarity between them.</p>
-      <p class="applies">Applies to: every level - the two shapes are always dilations of each other; levels 3-4 turn and flip the bigger shape.</p>
+      <p class="applies">Applies to: every level - the two shapes are always dilations of each other; levels 3 and 5 turn and flip the bigger shape.</p>
     </div>
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.7.G.A.1</span>
       <p>Solve problems involving scale drawings of geometric figures, including computing actual lengths and areas from a scale drawing and reproducing a scale drawing at a different scale.</p>
-      <p class="applies">Applies to: level 1 (find the scale factor) and levels 2-4 (use it to find a missing length).</p>
+      <p class="applies">Applies to: level 1 (find the scale factor) and levels 2-5 (use it to find a missing length).</p>
     </div>
   </aside>
 </div>
 
 <section class="teaching-notes">
   <h2>Teaching Notes for Educators</h2>
-  <p>Similarity Builder is built around one skill: given two similar figures, find the scale factor and use it to find an unknown side length. Every gap in the canyon is one of these problems, and the answer the student types is literally the size the bridge gets built at - so the math decides whether the runner crosses or falls.</p>
+  <p>Students use the scale factor between two similar figures to find an unknown side length, and the answer they type is the size the bridge is built at.</p>
   <ul>
-    <li><strong>Four levels that build the skill step by step.</strong> Level 1 asks only for the scale factor between two dilated shapes (1 to 3, triangles and rectangles). Level 2 gives the factor and mixes multiplying and dividing to find a missing side (factors 2 to 4, six shape types, small numbers) with the missing side spotlighted. Level 3 removes every hint - no arrows and no scale factor shown, just both shapes' side lengths with one missing - so students must find the factor themselves from a visible pair, on shapes that are turned and flipped, with round numbers (multiples of 5 under 30 and multiples of 10 from 30 up, nothing bigger than 100). Level 4 adds the reasoning step: only one number is shown for each group of equal sides, so students use tick marks and what they know about squares, rectangles, parallelograms, rhombuses, and isosceles and equilateral triangles to work out the sides that aren't labeled.</li>
-    <li><strong>Correct sides are color-matched.</strong> Corresponding sides share a color across the two figures, including after the bigger figure is rotated or flipped, so students match sides by position in the figure instead of by where they happen to sit on the screen.</li>
-    <li><strong>Whole numbers only.</strong> Every side length and scale factor is a whole number and the answer box only accepts whole numbers, keeping the focus on the proportional reasoning rather than on decimal or fraction arithmetic.</li>
-    <li><strong>Right and wrong have a visible consequence.</strong> The bridge is built to the scale of the answer that was typed: a bridge that is too small buckles under the runner, one that is too large snaps in the middle, and either way the runner drops into the gap and loses a heart. It is a direct picture of what an incorrect scale factor does to a figure.</li>
-    <li><strong>Mistakes become worked examples.</strong> After a wrong answer, the same two figures come back with every side labeled and a color-matched curved arrow on each side showing the multiplication (or division) by the scale factor - a picture of the calculation, not a wall of text.</li>
-    <li><strong>An action game around the math.</strong> Between puzzles the student runs about ten seconds, using a double jump and floating platforms. Every 1000 m the runner speeds up and the obstacles get tighter, so success in the math is rewarded with a harder, faster run.</li>
-    <li><strong>The obstacles are the real reasons bridges don't get built - and each level has its own.</strong> Instead of random hazards, students dodge what actually stands between a community and a new bridge, and every obstacle costs a heart if it touches you. Level 1 is simple things on the ground (boulders, cacti, logs, cones, an endangered tortoise). Level 2 adds taller and wider things (stumps, an endangered frog, hazmat barrels, red tape, private homes) and the first flyer to run under. Level 3 brings wide hazards (flooded land, holes, unstable soil), lawyers who want to see a permit, and low-hanging birds and electrical lines. Level 4 is big groups of protesters, loose underground pipes that burst up, and lots of overhead traffic (survey drones, an endangered falcon, storm clouds). Ground hazards are jumped, but overhead ones must be run <em>under</em>, so students read each obstacle rather than mashing the jump button. Spacing is irregular - tight clusters mixed with long breathers - and gets tighter each level, but there is always a way through (every gap leaves time to land before the next thing arrives). It opens an easy conversation about permits, the environment, safety, and why big projects take years.</li>
-    <li><strong>Coins and a crew to hire.</strong> Every correct answer earns 1 coin (wrong answers never cost coins). Coins are spent in the in-game Shop to hire the bridge-building crew as the student's runner: six jobs - Site Worker, Politician (funding), Architect (design), Engineer (the math and forces), Electrician (power and signals), and Safety Inspector (safe to open) - each with four different looks and props, drawn from the side as they run to the right. Half of the crew are women, and skin tones and hairstyles vary across all six jobs, so every student can see someone like themselves as a professional. The characters are cosmetic, so students choose them for fun rather than for an advantage.</li>
-    <li><strong>Practice mode: pick exactly the skill you want.</strong> From the Menu screen, students (or a teacher choosing for them) can open Practice, a mode with no obstacles, no hearts, and no timer. They tick one or more question types - find the scale factor (level 1), find a side of the bigger shape, find a side of the smaller shape (level 2), the no-scale-factor turned-and-flipped questions (level 3), or the unlabeled-equal-sides questions (level 4) - and each type shows a plain-language description plus a live example. Questions then come from a random mix of the ticked types, wrong answers still show the worked example with the curved scale-factor arrows, and a summary card at the end shows accuracy and the missed questions. Students also earn coins for correct answers in Practice. Their selections are remembered on the device.</li>
-    <li><strong>A title screen and a menu.</strong> The game opens on an animated title screen where a small figure is dilated into a larger similar one - dashed rays through matching corners and a "&times; 3" or "&divide; 3" pill - while the runner hops obstacles. Play leads to the Menu screen, the one place to start a Bridge Run, open Practice, or visit the Crew Shop.</li>
-    <li><strong>Shaped holes.</strong> About half of the gaps are holes in the ground cut in the exact outline of the figure, upside down, so the figure's flat base is the bridge deck at ground level and the rest of the figure hangs down into the hole. The picture slides down to show the whole hole while the student works. A correct answer makes the figure fit its hole exactly; a wrong one leaves a gap or snaps. If time runs out, no bridge is built at all and the runner walks off the edge.</li>
-    <li><strong>Moves, not just jumps.</strong> From level 2 on, longer challenges ask the student to change where they are: hop onto a high platform to get over a long wall of red tape, double-jump to a very high platform to cross a long stretch of unstable soil, stay low under a very long power line or storm cloud, or time a row of loose pipes. There is no ceiling, so a high double jump can go right off the top of the screen. Every layout always has a way through.</li>
-    <li><strong>Keyboard-friendly.</strong> The whole game can be played without a mouse: Enter or Space starts, jumps, and carries on past the "Oops" and end-of-run cards; the arrow keys move to the nearest button in that direction (Tab works too); Esc goes back or pauses.</li>
-    <li><strong>Missed questions come back as pictures.</strong> The end-of-run and Practice summary cards show each missed question as the two labeled figures with the scale-factor arrow, next to the answer that was typed and the right answer.</li>
-    <li><strong>Timed, but forgiving.</strong> Each question has a countdown that tightens slightly on later levels, and a Hint button reminds students of the method without giving the answer. A Menu button (or the Esc key) pauses the whole game at any time, including mid-question.</li>
-    <li><strong>Level checkpoints, so one bad run isn't a setback.</strong> A new level unlocks every 1000 m (level 2 at 1000 m, level 3 at 2000 m, level 4 at 3000 m). Each time a student reaches one, the game remembers the level and the distance. The Menu screen and the end-of-run screen both list every level with the distance a new run would start at - for example "Level 2 &middot; 473 m" - with levels not yet reached shown locked. Picking one starts at the beginning of that level with the same distance and bridge count and three fresh hearts, instead of starting over from level 1. These checkpoints are saved in the student's own browser. That keeps students practicing at the level that challenges them rather than re-doing material they have already shown they can handle.</li>
-    <li><strong>Low-stakes and replayable.</strong> No accounts and unlimited runs. Three hearts per run, a saved personal best distance, level checkpoints, coins, and the crew they have hired - all stored only in the student's own browser. Nothing is ever sent to a server, and there are no accounts, names, or other personal information, so the game is safe for students under 13 (COPPA).</li>
+    <li><strong>The math:</strong> in similar figures, corresponding angles are equal and corresponding sides are proportional. The scale factor is k = image side &divide; pre-image side, so k &gt; 1 is an enlargement and k &lt; 1 is a reduction.</li>
+    <li><strong>Five levels:</strong> find the scale factor, use a given factor to multiply or divide, find k from just one matching pair in a turned or flipped figure, work with nested triangles and "Similar or Not Similar?", and finally a mix that adds fractional scale factors and algebra in the sides.</li>
+    <li><strong>Tick marks and colors:</strong> equal sides carry the same tick marks and color, and corresponding sides share a color, so students match by position in the figure instead of by where it sits on the screen.</li>
+    <li><strong>Nested triangles:</strong> a line parallel to one side, or two crossing lines, makes similar triangles, so matching ratios give the missing length (as in shadow and mirror problems).</li>
+    <li><strong>Real life:</strong> blueprints, scale models, maps, photo resizing, and finding a building's height from its shadow all use similar figures.</li>
+    <li><strong>Wrong answers teach:</strong> a bridge that is too small or too big fails to fit its gap, and the missed question returns as a picture with a scale-factor arrow on each side.</li>
   </ul>
 </section>
 
