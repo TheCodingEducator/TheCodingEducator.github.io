@@ -263,7 +263,9 @@ function genSim() {
 
 // Nested and overlapping triangles: a line parallel to one side makes a small triangle inside (or, where two lines cross, a "bow tie" of two
 // triangles that overlap at a corner). The parallel lines make the triangles similar; find the missing length.
-const NEST_RATIOS = [[1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [2, 5], [3, 5]];
+// The scale factor between the small and big triangle is always a WHOLE number (2-5), so every step - reducing the pair of given
+// sides, then multiplying or dividing - is a fact the student can do in their head instead of reducing an odd fraction.
+const NEST_K = [2, 3, 4, 5];
 function triPts(base, l1, l2) {                                       // a triangle with the given base and two other sides
   const x = (l2 * l2 + base * base - l1 * l1) / (2 * base), y = Math.sqrt(Math.max(0, l2 * l2 - x * x));
   return [[0, 0], [base, 0], [x, y]];
@@ -271,7 +273,7 @@ function triPts(base, l1, l2) {                                       // a trian
 function genNest() {
   const variant = pick(['nested', 'hourglass']);
   for (let n = 0; n < 800; n++) {
-    let [p, q] = pick(NEST_RATIOS);
+    let p = 1, q = pick(NEST_K);
     const m = rnd(2, 6), w = rnd(2, 6), l = rnd(2, 6), side = pick(['AC', 'BC']);
     if (!(m < l + w && l < m + w && w < m + l)) continue;               // the triangle has to exist
     let vals, Q;
