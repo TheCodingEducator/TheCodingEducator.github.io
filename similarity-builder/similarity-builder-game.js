@@ -289,7 +289,9 @@ function genNest() {
     }
     const keys = Object.keys(vals);
     if (Math.max(...keys.map(k => vals[k])) > 36 || Math.min(...keys.map(k => vals[k])) < 2) continue;
-    const unk = pick(keys), big = [Q * w, Q * l, Q * m], pts = triPts(big[0], big[1], big[2]);
+    // For "nested", AD can never be the unknown: finding it from DB, DE and BC needs solving DB = AD×(k-1) for AD, which isn't
+    // a clean multiply/divide/add-or-subtract step - every other position (including DB itself) always is.
+    const unk = pick(variant === 'nested' ? keys.filter(k => k !== 'AD') : keys), big = [Q * w, Q * l, Q * m], pts = triPts(big[0], big[1], big[2]);
     const ppf = fitPPF(big[0], pts[2][1]); if (!ppf) continue;
     return {
       type: 'nest', kind: 'nest', level: 4, shape: 'tri', shapeName: 'triangles', pts, lens: big, lensS: big, lensB: big, k: 1, u: 1, ppf,
@@ -459,12 +461,40 @@ function nestSVG(P, reveal) {
   }
   return `<svg class="pair" style="max-width:440px;margin:0 auto" viewBox="0 0 ${VW} ${VH}" role="img" aria-label="two similar triangles">${out}</svg>`;
 }
-// the worked steps for a nested / overlapping triangle question: the sides that match make equal ratios
+// The worked steps for a nested / overlapping triangle question, spelled out as separate arithmetic lines instead of one
+// proportion: find the scale factor first, then multiply or divide, then (for "nested") add or subtract from the total
+// line to reach the missing segment - every line shows the actual numbers, not just the relationship.
+const kLine = (big, small, col, k) => `<div>${chip(big, col)} ÷ ${chip(small, col)} = ${chip('k = ' + fmt(k), '#ff7a1a')}</div>`;
 function nestSteps(P) {
   const N = P.nest, v = N.vals, oC = COLORS[1], gC = COLORS[2], pC = COLORS[3], tC = COLORS[5], sl = '#5b6485';
-  if (N.variant === 'nested') return `<div>${chip(v.AD, gC)} + ${chip(v.DB, tC)} = ${chip(v.AD + v.DB, sl)}</div><div>${chip(v.AD, gC)} ÷ ${chip(v.AD + v.DB, sl)} = ${chip(v.DE, oC)} ÷ ${chip(v.BC, oC)}</div>`;
-  const a = N.side === 'AC' ? [v.AC, v.CD, gC] : [v.BC, v.CE, pC];
-  return `<div>${chip(v.AB, oC)} ÷ ${chip(v.DE, oC)} = ${chip(a[0], a[2])} ÷ ${chip(a[1], a[2])}</div>`;
+  if (N.variant === 'nested') {
+    if (N.unk === 'DB') {                                       // the pure pair (DE, BC) is fully known - find k, scale AD up to the total, then subtract
+      const k = v.BC / v.DE, AB = v.AD * k;
+      return kLine(v.BC, v.DE, oC, k) +
+        `<div>${chip(v.AD, gC)} × ${fmt(k)} = ${chip(fmt(AB), sl)}</div>` +
+        `<div>${chip(fmt(AB), sl)} − ${chip(v.AD, gC)} = ${chip(v.DB, tC)}</div>`;
+    }
+    // DE or BC is unknown - the two known parts of the line (AD, DB) add to the total, which gives k, then scale the other pair
+    const AB = v.AD + v.DB, k = AB / v.AD;
+    const line3 = N.unk === 'BC' ? `<div>${chip(v.DE, oC)} × ${fmt(k)} = ${chip(v.BC, oC)}</div>` : `<div>${chip(v.BC, oC)} ÷ ${fmt(k)} = ${chip(v.DE, oC)}</div>`;
+    return `<div>${chip(v.AD, gC)} + ${chip(v.DB, tC)} = ${chip(AB, sl)}</div>` + kLine(AB, v.AD, sl, k) + line3;
+  }
+  // hourglass: (AB, DE) and the other pair (AC/CD or BC/CE) scale by the exact same factor - whichever pair is fully
+  // known gives k, then that k is applied straight to the known half of the pair that has the missing side.
+  // AB/AC/BC always play the same role as each other (so do DE/CD/CE), but which of the two is actually BIGGER
+  // depends on the random draw, so k is taken as (bigger ÷ smaller) - always a whole number - and the multiply-or-
+  // divide direction is worked out from which named role turned out bigger, instead of ever showing a k under 1.
+  const pRole = k => k === 'AB' || k === 'AC' || k === 'BC', pair2 = N.side === 'AC' ? ['AC', 'CD'] : ['BC', 'CE'];
+  const targetKeys = (N.unk === 'AB' || N.unk === 'DE') ? ['AB', 'DE'] : pair2, knownKeys = targetKeys === pair2 ? ['AB', 'DE'] : pair2;
+  const col = targetKeys === pair2 ? (N.side === 'AC' ? gC : pC) : oC;
+  const [kp, kq] = pRole(knownKeys[0]) ? knownKeys : [knownKeys[1], knownKeys[0]];        // [p-role key, q-role key] of the known pair
+  const kWhole = Math.max(v[kp], v[kq]) / Math.min(v[kp], v[kq]), qBigger = v[kq] >= v[kp];
+  const knownCol = knownKeys === pair2 ? (N.side === 'AC' ? gC : pC) : oC;
+  const targetKnownKey = targetKeys.find(k => k !== N.unk), targetVal = v[targetKnownKey];
+  const unkIsQRole = !pRole(N.unk);
+  const ans = unkIsQRole === qBigger ? targetVal * kWhole : targetVal / kWhole;
+  return kLine(v[qBigger ? kq : kp], v[qBigger ? kp : kq], knownCol, kWhole) +
+    `<div>${chip(targetVal, col)} ${unkIsQRole === qBigger ? '×' : '÷'} ${fmt(kWhole)} = ${chip(fmt(ans), col)}</div>`;
 }
 
 // wrong-answer card: mostly pictures - both figures with per-side arrows, and the math with matching colors
@@ -577,7 +607,11 @@ function figParts(P, which, reveal) {
     const m = mids[it.i], tx = -m.ny, ty = m.nx, hw = it.w / 2 + 2, hh = it.h / 2 + 2, o0 = base + (it.bubble ? (it.isQ ? 10 : 8) : 0);
     let best = null;
     const sx = m.nx >= 0 ? 1 : -1;                                                     // "to the right of a right-hand side, to the left of a left-hand side"
-    search: for (let d = 0; d < 9; d++) for (const [dirx, diry, lat] of [[m.nx, m.ny, 0], [sx, 0, 0], [m.nx, m.ny, 14], [m.nx, m.ny, -14], [sx, 0, 12], [sx, 0, -12], [m.nx, m.ny, 28], [m.nx, m.ny, -28], [m.nx, m.ny, 44], [m.nx, m.ny, -44]]) {
+    // Two passes: first try just pushing straight out (further and further) along the side's own normal / sx - this
+    // keeps a label centered beside the middle of its side. Only if that never clears (label still touches the shape
+    // or another label even far out) do we try shifting sideways along the side, which can drag a label toward a corner.
+    const passes = [[[m.nx, m.ny, 0], [sx, 0, 0]], [[m.nx, m.ny, 14], [m.nx, m.ny, -14], [sx, 0, 12], [sx, 0, -12], [m.nx, m.ny, 28], [m.nx, m.ny, -28], [m.nx, m.ny, 44], [m.nx, m.ny, -44]]];
+    search: for (const variants of passes) for (let d = 0; d < 9; d++) for (const [dirx, diry, lat] of variants) {
       const o = o0 + d * 6, x = m.x + dirx * o + tx * lat, y = m.y + diry * o + ty * lat;
       if (x - hw < 3 || x + hw > VW - 3 || y - hh < 3 || y + hh > VH - 3) continue;
       if (placed.some(q => Math.abs(q.x - x) < hw + q.hw && Math.abs(q.y - y) < hh + q.hh)) continue;
@@ -850,7 +884,7 @@ const OBS = {
   parrot:    { fly: true, label: 'parrot' },
   drone:     { fly: true, label: 'survey drone' },
   falcon:    { fly: true, label: 'endangered falcon' },
-  storm:     { fly: true, w: 70, label: 'storm cloud (weather delay)' },
+  storm:     { fly: true, w: 50, label: 'storm cloud (weather delay)' },   // hit width matched to how wide the cloud actually draws (~76px) - it was hitting well before the player visually touched it
   powerline: { fly: true, w: 180, still: true, label: 'electrical line' },
   // --- level 5 ---
   crate:     { kind: 'solid', w: 44, h: 84, label: 'stack of crates' },
@@ -1137,7 +1171,7 @@ function renderShop() {
     if (eq) { btn.textContent = '✔ Running as'; btn.disabled = true; btn.classList.add('ghost'); }
     else if (has) { btn.textContent = 'Select'; btn.classList.add('alt'); btn.onclick = () => { equipCharacter(ch.id); renderShop(); buildMenu(); }; }
     else {
-      btn.textContent = `Hire · ${ch.price} coins`; btn.disabled = coins < ch.price;
+      btn.textContent = `Hire · ${ch.price} stars`; btn.disabled = coins < ch.price;
       btn.onclick = () => { if (buyCharacter(ch.id)) { sfx.good(); renderShop(); buildMenu(); } };
     }
     card.appendChild(btn); grid.appendChild(card);
@@ -1204,7 +1238,12 @@ function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for
     p.bridge = null; $('problem').classList.add('hidden'); G.state = 'cross';
     toast("Time's up! No bridge…", 'bad'); return;
   }
-  const ratio = ok ? 1 : P.type === 'sim' ? (val === null ? 0.1 : val === 'yes' ? 1.6 : 0.55) : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, 2.2));     // the bridge is built at the scale YOUR number implies
+  // On a wide gap, a plain 2.2x "too big" bridge can run off the right edge of the screen - worse still for a shape (like a
+  // leaning parallelogram or trapezoid) whose far point overhangs past its own base width. Cap the ratio using how far that
+  // point actually reaches, so the wrong-scale bridge always stays fully on screen no matter the shape or gap width.
+  const overhang = Math.max(...P.pts.map(pt => pt[0])) / P.lens[0];
+  const maxRatio = Math.min(2.2, 590 / (overhang * p.gapW));
+  const ratio = ok ? 1 : P.type === 'sim' ? (val === null ? 0.1 : val === 'yes' ? 1.6 : 0.55) : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, maxRatio));     // the bridge is built at the scale YOUR number implies
   p.bridge = { ratio, len: p.gapW * ratio, ok, prog: 0, collapsed: false, cAnim: 0, P, val, sparked: false, material: pick(BRIDGE_MATERIALS) };  // a fresh random material for every bridge
   $('problem').classList.add('hidden');
   G.state = 'build'; sfx.build();
@@ -1226,8 +1265,8 @@ function onBridgeBuilt() {
     G.theme = themeFor(G.level, G.solved);
     if (G.mode === 'run' && G.theme !== oldTheme)                                          // platforms ahead get the new scenery
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
-    addCoins(1); sfx.coin();                                          // 1 coin for every correct answer
-    const up = ' · +1 coin';
+    addCoins(1); sfx.coin();                                          // 1 star for every correct answer
+    const up = ' · +1 ⭐';
     toast((b.P.type === 'scale' ? `Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`
       : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? 'Similar' : 'Not similar'} — ${SHAPES[b.P.shape].bridge} locked in!`
       : b.P.alg ? `x = ${b.P.answer} — ${SHAPES[b.P.shape].bridge} locked in!`
@@ -2270,7 +2309,7 @@ addEventListener('keydown', e => {
   cheatDown.clear();
   coins = 999999; store.set(KEY.coins, coins);
   for (let lv = 2; lv <= MAX_LEVEL; lv++) saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: (lv - 1) * 4, wrong: 0, bestStreak: 0 });   // every level start unlocked
-  sfx.good(); toast('🔓 All levels unlocked · max coins!', 'good');
+  sfx.good(); toast('🔓 All levels unlocked · max stars!', 'good');
   if (!$('shop').classList.contains('hidden')) renderShop();
   if (screen === 'menu') buildMenu();
 });
