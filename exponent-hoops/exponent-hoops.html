@@ -249,8 +249,8 @@
 </head>
 <body>
 <a class="back-link" href="../index.html">&larr; All games</a>
-<button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
-<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" onclick="exitFullscreenAny()">&#10021; Exit Fullscreen</button>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Exponent Hoops</h1>
 <p class="sr-only">A basketball shooting game where you solve exponent rules to score. Play solo against a computer defender, or head-to-head with a friend. Controls: WASD or arrow keys to move, space or enter to shoot or answer questions, mouse to click menu buttons.</p>
 
@@ -344,6 +344,13 @@
   }
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // Wired up via addEventListener instead of an inline onclick= attribute -
+  // some school Chromebook content filters (GoGuardian, Securly, etc.) enforce
+  // a Content-Security-Policy that silently blocks inline event handlers while
+  // still allowing normal script-based listeners, which made this button do
+  // nothing at all on those devices.
+  document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+  document.getElementById('pseudo-fullscreen-exit-btn').addEventListener('click', exitFullscreenAny);
   // Escape must not leave fullscreen: while in real fullscreen, ask the browser (Chrome/Edge Keyboard Lock) to hand Escape to the page.
   // Players leave with the Exit Fullscreen button; (the browser itself still allows holding Escape for about 2 seconds as a safety exit).
   document.addEventListener('fullscreenchange', function () {

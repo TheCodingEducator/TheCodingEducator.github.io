@@ -403,8 +403,8 @@
 </div>
 
 <a class="back-link" href="../index.html">&larr; All games</a>
-<button type="button" class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()">&#10021; Fullscreen</button>
-<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" onclick="exitFullscreenAny()">&#10021; Exit Fullscreen</button>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Similarity Builder</h1>
 <p class="sr-only">A runner game about similar figures. You run across a canyon, and at every gap a puzzle shows two similar shapes of different sizes: find the scale factor between them (level 1), or use the scale factor to find a missing side length by multiplying or dividing (levels 2 to 4, where the shapes get turned, flipped, and eventually only label one side out of each group of equal sides). Whatever number you answer is what the bridge gets built with - too small and it buckles, too large and it snaps, and either way you fall and lose a heart. Between puzzles, dodge obstacles that are the real-world reasons a bridge does not get built - protesters, endangered animals, lawyers who need permits, red tape, unstable soil, flooded land, holes, loose pipes, and electrical lines. Each level has its own obstacles, and every one costs a heart if it touches you. Jump the ones on the ground and run under the ones overhead, and land on floating platforms. Every correct answer earns a coin to spend in the Shop on a bridge-building crew member such as a politician, architect, engineer, electrician, or safety inspector, each in four different looks. Controls: Space, Enter, or the up arrow (or a tap) jumps, and pressing again in the air double jumps. Type whole-number answers and press Enter or the Build button. The Menu button or the Escape key pauses. From the title screen, Play opens the Menu screen, where you can start a Bridge Run, open Practice (no obstacles or hearts, with a choice of question types), or open the Shop.</p>
 
@@ -627,6 +627,13 @@
   }
   document.addEventListener('fullscreenchange', updateFullscreenBtn);
   document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // Wired up via addEventListener instead of an inline onclick= attribute -
+  // some school Chromebook content filters (GoGuardian, Securly, etc.) enforce
+  // a Content-Security-Policy that silently blocks inline event handlers while
+  // still allowing normal script-based listeners, which made this button do
+  // nothing at all on those devices.
+  document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+  document.getElementById('pseudo-fullscreen-exit-btn').addEventListener('click', exitFullscreenAny);
   // Escape must not leave fullscreen: while in real fullscreen, ask the browser (Chrome/Edge Keyboard Lock) to hand Escape to the page.
   // Players leave with the Exit Fullscreen button; (the browser itself still allows holding Escape for about 2 seconds as a safety exit).
   document.addEventListener('fullscreenchange', function () {
