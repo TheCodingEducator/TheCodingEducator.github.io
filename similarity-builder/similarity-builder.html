@@ -273,7 +273,7 @@
   #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
 
   #sb .overlay { position:absolute; inset:0; background:rgba(10,12,30,.74); display:flex; align-items:center; justify-content:center; padding:12px; z-index:10; overflow:hidden; }
-  #sb .card { background:var(--card); color:var(--ink); border-radius:20px; padding:16px 18px; width:100%; max-width:640px; box-shadow:0 12px 40px rgba(0,0,0,.5); overflow:visible; transform-origin:center; }
+  #sb .card { background:var(--card); color:var(--ink); border-radius:20px; padding:22px 26px; width:100%; max-width:740px; box-shadow:0 12px 40px rgba(0,0,0,.5); overflow:visible; transform-origin:center; }
   #sb .card h2 { margin:0 0 6px; font-size:clamp(22px,4vw,30px); color:var(--ink); letter-spacing:0; text-transform:none; }
   #sb .card p { margin:6px 0; line-height:1.4; color:var(--ink); font-size:15px; }
   #sb .btn { cursor:pointer; border:0; border-radius:14px; padding:11px 20px; font-size:18px; font-weight:800; color:#fff; background:var(--accent); box-shadow:0 4px 0 #b4530a; font-family:inherit; }
@@ -350,7 +350,7 @@
   #sb .playBtn { font-size:clamp(20px,3.4vw,32px); padding:10px 44px; border:3px solid #fff; border-radius:999px; animation:sbPulse 1.6s ease-in-out infinite; }
   @keyframes sbPulse { 50% { transform:scale(1.07); } }
   #sb #menu, #sb #practice { z-index:15; background:rgba(10,12,30,.86); }
-  #sb .menuCard { max-width:860px; }
+  #sb .menuCard { max-width:875px; }
   #sb .menuGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:12px 0; text-align:center; }
   #sb .tile { background:#f4f7ff; border:3px solid #d4d9f2; border-radius:16px; padding:10px 12px; display:flex; flex-direction:column; align-items:center; gap:4px; }
   #sb .tile h3 { margin:0; font-size:20px; color:var(--ink); }
@@ -432,7 +432,7 @@
 
       <!-- Always-available menu button + pause menu -->
       <button id="menuBtn" aria-label="Menu">&#9776; Menu</button>
-      <div id="pause" class="overlay hidden"><div class="card center" style="max-width:380px">
+      <div id="pause" class="overlay hidden"><div class="card center" style="max-width:440px">
         <h2>&#9208; Paused</h2>
         <button class="btn" id="btnResume">&#9654; Resume</button>
         <button class="btn alt" id="btnRestart">&#128260; Restart</button>
@@ -441,7 +441,7 @@
       </div></div>
       <!-- Shown instead of immediately leaving when "Menu screen" is pressed mid-run,
            so a misclick can't silently discard the run/practice in progress. -->
-      <div id="exitConfirm" class="overlay hidden"><div class="card center" style="max-width:380px">
+      <div id="exitConfirm" class="overlay hidden"><div class="card center" style="max-width:440px">
         <h2>Exit to Menu?</h2>
         <p style="margin:0 0 16px">Your current run will be lost. Are you sure?</p>
         <button class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px">Yes, Exit</button>
@@ -449,7 +449,7 @@
       </div></div>
 
       <!-- Crew Shop -->
-      <div id="shop" class="overlay hidden"><div class="card" style="max-width:740px">
+      <div id="shop" class="overlay hidden"><div class="card" style="max-width:800px">
         <div class="ptop"><h2 style="margin:0">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="shopCoins">0</b> stars</span></div>
         <p style="margin:6px 0 8px">Every correct answer earns 1 <span class="coinDot">&#11088;</span> star. Hire the crew that builds real bridges &mdash; then run as them!</p>
         <div id="shopTabs" class="shopTabs"></div>
@@ -493,7 +493,7 @@
       </div></div>
 
       <!-- Practice setup -->
-      <div id="practice" class="overlay hidden"><div class="card" style="max-width:820px">
+      <div id="practice" class="overlay hidden"><div class="card" style="max-width:875px">
         <div class="ptop"><h2 style="margin:0">&#127891; Practice</h2><span class="badge">Pick one or more</span></div>
         <div id="ptypes" class="ptypes"></div>
         <div class="center pbar">
@@ -530,7 +530,7 @@
       </div></div>
 
       <!-- Run over -->
-      <div id="over" class="overlay hidden"><div class="card center" style="max-width:880px">
+      <div id="over" class="overlay hidden"><div class="card center" style="max-width:875px">
         <h2 id="ovTitle">&#127937; Run over!</h2>
         <div class="stats" id="ovStats"></div>
         <div id="ovContinue"></div>

@@ -1023,7 +1023,9 @@ function ensureNext() {
 // the next question: Bridge Run follows your level; Practice picks at random from the question types you chose
 function nextProblem() {
   if (G.mode === 'practice') { const t = pick(G.ptypes); return genProblem(t.level, undefined, t.kind); }
-  return genProblem(G.level);
+  const p = genProblem(G.level);
+  p.runLevel = G.level;      // the run's level AT GENERATION TIME - a question queued just before a level-up must still
+  return p;                  // show (and be) the level it was actually built for, even if G.level ticks up before it's reached
 }
 
 /* ---- screens: title -> menu -> (Bridge Run | Practice setup | Shop) ---- */
@@ -1192,7 +1194,7 @@ function startSolve() {
   const P = G.problem;
   const bn = SHAPES[P.shape].bridge;
   const practice = G.mode === 'practice';
-  $('pTitle').textContent = practice ? `Practice · Level ${P.level}` : `Level ${G.level}`;
+  $('pTitle').textContent = practice ? `Practice · Level ${P.level}` : `Level ${P.runLevel}`;
   $('barFill').parentElement.style.display = practice ? 'none' : '';        // Practice is untimed
   $('pTimer').style.display = practice ? 'none' : '';
   $('pTimer').textContent = '';
