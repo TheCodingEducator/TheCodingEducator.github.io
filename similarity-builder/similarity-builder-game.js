@@ -870,7 +870,7 @@ const OBS = {
   redtape:   { kind: 'solid', w: 58, h: 30, label: 'red tape' },
   home:      { kind: 'solid', w: 54, h: 52, label: 'private home' },
   // --- walking toward you ---
-  protesters:{ kind: 'solid', w: 200, h: 66, vx: -70, label: 'protesters' },
+  protesters:{ kind: 'solid', w: 140, h: 66, vx: -70, label: 'protesters' },
   tortoise:  { kind: 'solid', w: 46, h: 28, vx: -22, label: 'endangered tortoise' },
   frog:      { kind: 'solid', w: 64, h: 40, vx: -30, label: 'endangered frog' },
   lawyer:    { kind: 'solid', w: 30, h: 68, vx: -45, label: 'lawyer (needs a permit)' },
@@ -1738,12 +1738,12 @@ function drawObstacle(c, x) {
     case 'protesters': {                                                // a group carrying signs that walks toward you
       const signs = ['NO!', 'STOP', 'WAIT'], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
       for (let i = 0; i < 3; i++) {
-        const px = x + 36 + i * 64, bob = Math.abs(Math.sin(T * 6 + i)) * 2, lift = i === 1 ? 14 : 0;
+        const px = x + 30 + i * 46, bob = Math.abs(Math.sin(T * 6 + i)) * 2, lift = i === 1 ? 14 : 0;
         person(px, 66, ['#c0392b', '#2e86c1', '#27ae60'][i], '#f1c08a', true, i);
         ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px, G0 - 40); ctx.lineTo(px, G0 - 96 - lift - bob); ctx.stroke();
-        ctx.lineWidth = 3; rr(px - 31, G0 - 146 - lift - bob, 62, 50, 6, cols[i]);                    // a big sign...
-        ctx.lineWidth = 2; ctx.strokeStyle = '#c0392b'; ctx.beginPath(); ctx.roundRect(px - 28, G0 - 143 - lift - bob, 56, 44, 4); ctx.stroke();   // ...with a red border
-        txt(signs[i], px, G0 - 121 - lift - bob, i === 0 ? 30 : 22, '#111');              // ...and big dark letters
+        ctx.lineWidth = 3; rr(px - 23, G0 - 146 - lift - bob, 46, 50, 6, cols[i]);                    // a big sign...
+        ctx.lineWidth = 2; ctx.strokeStyle = '#c0392b'; ctx.beginPath(); ctx.roundRect(px - 20, G0 - 143 - lift - bob, 40, 44, 4); ctx.stroke();   // ...with a red border
+        txt(signs[i], px, G0 - 121 - lift - bob, i === 0 ? 22 : 17, '#111');              // ...and big dark letters
       } break; }
     case 'lawyer': {                                                    // a lawyer with a briefcase who wants to see a permit
       person(x + 15, 68, '#555b6e', '#f1c08a', true, 0);
