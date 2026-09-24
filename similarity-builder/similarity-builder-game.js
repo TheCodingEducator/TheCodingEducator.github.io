@@ -1918,7 +1918,7 @@ function drawWorld(T) {
       ctx.fillStyle = '#5a3a1e'; ctx.fillRect(ex - 24, GROUND - 60, 5, 60);
       ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(ex - 21, GROUND - 100); ctx.lineTo(ex - 2, GROUND - 62); ctx.lineTo(ex - 40, GROUND - 62); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#222'; ctx.lineWidth = 3; ctx.stroke();
-      ctx.fillStyle = '#222'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', ex - 21, GROUND - 68);
+      ctx.fillStyle = '#222'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Q', ex - 21, GROUND - 68);
     }
     for (const f of (p.floats || [])) {                                 // floating platforms you can land on
       const fx = f.x - G.cam; if (fx < -f.w - 20 || fx > W + 20) continue;
