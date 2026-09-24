@@ -650,19 +650,6 @@ function resetRound() {
   STATE="MOVING";
 }
 
-// Load a NEW challenge of the same topic type for this round (wrong-answer retry)
-function reloadRoundSameType() {
-  var curTopic = curCh().topic;
-  var curIdx   = challengeOrder[round];
-  var pool = [];
-  for (var k = 0; k < challengePool.length; k++) {
-    if (challengePool[k].topic === curTopic && k !== curIdx) pool.push(k);
-  }
-  if (pool.length === 0) pool.push(curIdx); // fallback: same challenge, fresh start
-  challengeOrder[round] = pool[Math.floor(Math.random() * pool.length)];
-  loadRound();
-}
-
 function resetGame() {
   score=0; round=0;
   p1wins=0; p2wins=0;
@@ -3178,8 +3165,7 @@ function draw(){
       return;
     }
     if(STATE==="FEEDBACK"){
-      if((gameMode==="GENIUS"||gameMode==="PRACTICE")&&!feedbackCorrect){ practiceHintType=""; resetRound(); STATE="MOVING"; return; }
-      if(gameMode==="GEOMETRY"&&!feedbackCorrect){ reloadRoundSameType(); return; }
+      if((gameMode==="GENIUS"||gameMode==="GEOMETRY"||gameMode==="PRACTICE")&&!feedbackCorrect){ practiceHintType=""; resetRound(); STATE="MOVING"; return; }
       if(lives<=0){ STATE="GAMEOVER"; return; }
       round++;
       if(round>=TOTAL_ROUNDS){
@@ -3267,8 +3253,7 @@ function draw(){
         return;
       }
       if(STATE==="FEEDBACK"){
-        if((gameMode==="GENIUS"||gameMode==="PRACTICE")&&!feedbackCorrect){ practiceHintType=""; resetRound(); STATE="MOVING"; return; }
-      if(gameMode==="GEOMETRY"&&!feedbackCorrect){ reloadRoundSameType(); return; }
+        if((gameMode==="GENIUS"||gameMode==="GEOMETRY"||gameMode==="PRACTICE")&&!feedbackCorrect){ practiceHintType=""; resetRound(); STATE="MOVING"; return; }
         if(lives<=0){ STATE="GAMEOVER"; return; }
         round++;
         if(round>=TOTAL_ROUNDS){
