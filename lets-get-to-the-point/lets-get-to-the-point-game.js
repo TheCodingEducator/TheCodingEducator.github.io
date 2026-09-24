@@ -8,6 +8,7 @@ var inputSprite = createSprite(-999, -999);
 inputSprite.visible = false;
 
 var exitConfirmPending = false;
+var exitConfirmSel = 1; // 0=YES EXIT, 1=CANCEL (default) - keyboard focus on the exit-confirm overlay
 var timeoutPopupState = "none"; // "none" | "stillThere" | "expired"
 
 // ---------- MOUSE STATE ----------
@@ -1450,7 +1451,7 @@ function drawHUD(){
     stroke(120,70,180); strokeWeight(1); rect(5,379,56,16,6);
     fill(255); noStroke(); textSize(9); textAlign(CENTER,CENTER);
     text("MENU",33,388);
-    if(mbHov&&mouseWentDown("left")) exitConfirmPending=true;
+    if(mbHov&&mouseWentDown("left")){ exitConfirmPending=true; exitConfirmSel=1; }
   }
 }
 
@@ -1463,14 +1464,25 @@ function drawExitConfirmOverlay(){
 
   var hoverYes=(mouseX>=60&&mouseX<=190&&mouseY>=225&&mouseY<=270);
   var hoverNo=(mouseX>=210&&mouseX<=340&&mouseY>=225&&mouseY<=270);
-  fill(hoverYes?220:180,60,60); stroke(255); strokeWeight(2); rect(60,225,130,45,10);
-  fill(hoverNo?40:20,hoverNo?190:150,hoverNo?90:70); rect(210,225,130,45,10);
+  if(hoverYes) exitConfirmSel=0;
+  if(hoverNo) exitConfirmSel=1;
+  var selYes=(exitConfirmSel===0), selNo=(exitConfirmSel===1);
+  fill(selYes?220:180,60,60); stroke(255); strokeWeight(selYes?4:2); rect(60,225,130,45,10);
+  fill(selNo?40:20,selNo?190:150,selNo?90:70); stroke(255); strokeWeight(selNo?4:2); rect(210,225,130,45,10);
   fill(255); noStroke(); textSize(14);
   text("YES, EXIT",125,247); text("CANCEL",275,247);
+  fill(180,190,220); textSize(10);
+  text("Arrow keys: choose  |  Enter/Space: confirm  |  Esc: cancel",200,300);
 
   if(mouseWentDown("left")){
     if(hoverYes){ exitConfirmPending=false; STATE="START"; }
     else if(hoverNo){ exitConfirmPending=false; }
+  }
+  if(keyWentDown("left")||keyWentDown("right")) exitConfirmSel=1-exitConfirmSel;
+  if(keyWentDown("escape")){ exitConfirmPending=false; return; }
+  if(keyWentDown("space")||keyWentDown("enter")){
+    if(exitConfirmSel===0){ exitConfirmPending=false; STATE="START"; }
+    else { exitConfirmPending=false; }
   }
 }
 
@@ -3099,7 +3111,7 @@ function draw(){
 
   // ---- ESCAPE: return to menu (confirm first if a round is in progress) ----
   if(keyWentDown("escape")&&STATE!=="START"){
-    if(STATE==="SHOWING"||STATE==="MOVING"||STATE==="FEEDBACK"){ exitConfirmPending=true; }
+    if(STATE==="SHOWING"||STATE==="MOVING"||STATE==="FEEDBACK"){ exitConfirmPending=true; exitConfirmSel=1; }
     else { STATE="START"; }
     return;
   }
