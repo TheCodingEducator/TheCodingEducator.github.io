@@ -434,6 +434,14 @@
         <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
         <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Menu screen</button>
       </div></div>
+      <!-- Shown instead of immediately leaving when "Menu screen" is pressed mid-run,
+           so a misclick can't silently discard the run/practice in progress. -->
+      <div id="exitConfirm" class="overlay hidden"><div class="card center" style="max-width:380px">
+        <h2>Exit to Menu?</h2>
+        <p style="margin:0 0 16px">Your current run will be lost. Are you sure?</p>
+        <button class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px">Yes, Exit</button>
+        <button class="btn ghost" id="btnExitConfirmNo" style="width:100%;font-size:18px;padding:11px">Keep Playing</button>
+      </div></div>
 
       <!-- Crew Shop -->
       <div id="shop" class="overlay hidden"><div class="card" style="max-width:740px">

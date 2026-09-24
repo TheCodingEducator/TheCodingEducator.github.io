@@ -604,7 +604,7 @@
     <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
     <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
     <div class="ccss-widget">
-      <button class="ccss-toggle" onclick="toggleCcssPanel()" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
+      <button class="ccss-toggle" data-action="toggleCcssPanel" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
       <div id="ccss-panel" class="ccss-panel hidden">
         <h4>Common Core Standards</h4>
         <div class="ccss-entry">
@@ -641,11 +641,11 @@
       <p class="subtitle">Master algebra by balancing the board.</p>
 
       <div class="title-buttons">
-        <button onclick="setMode('difficulty')" class="btn-hero">
+        <button data-action="setMode" data-args='["difficulty"]' class="btn-hero">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
           Play Challenge
         </button>
-        <button onclick="startSandbox()" class="btn-hero btn-secondary">
+        <button data-action="startSandbox" class="btn-hero btn-secondary">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>
           Sandbox Mode
         </button>
@@ -658,7 +658,7 @@
   <!-- =============================== -->
   <div id="difficulty-view" class="screen screen-centered hidden">
     <div class="top-nav" style="margin-bottom: auto;">
-      <button onclick="setMode('title')" class="nav-btn">
+      <button data-action="setMode" data-args='["title"]' class="nav-btn">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>
       <div></div>
@@ -670,19 +670,19 @@
     </div>
 
     <div class="card-grid" style="margin-bottom: auto;">
-      <div onclick="startChallenge('1-step')" class="diff-card">
+      <div data-action="startChallenge" data-args='["1-step"]' class="diff-card">
         <h3>1-Step Equations</h3>
         <span class="diff-tag">x + 3 = 8</span>
       </div>
-      <div onclick="startChallenge('2-step')" class="diff-card">
+      <div data-action="startChallenge" data-args='["2-step"]' class="diff-card">
         <h3>2-Step Equations</h3>
         <span class="diff-tag">2x + 1 = 7</span>
       </div>
-      <div onclick="startChallenge('multi-step')" class="diff-card">
+      <div data-action="startChallenge" data-args='["multi-step"]' class="diff-card">
         <h3>Variables Both Sides</h3>
         <span class="diff-tag">3x + 2 = x + 8</span>
       </div>
-      <div onclick="startChallenge('complex')" class="diff-card complex">
+      <div data-action="startChallenge" data-args='["complex"]' class="diff-card complex">
         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
           <svg style="color: #6366f1; width: 24px; height: 24px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <h3 style="color: #312e81; margin: 0;">Complex Equations</h3>
@@ -699,12 +699,12 @@
 
     <!-- Top Nav: Challenge -->
     <div id="challenge-nav" class="top-nav hidden">
-      <button onclick="setMode('difficulty')" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button data-action="setMode" data-args='["difficulty"]' class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <div class="progress-col">
         <div id="diff-badge" class="progress-label">1-STEP EQUATIONS</div>
         <div class="progress-dots" id="level-dots"></div>
       </div>
-      <button onclick="resetLevel()" class="nav-btn" title="Reset Level" style="gap: 0.375rem; font-weight: 800; font-size: 0.875rem; color: #475569;">
+      <button data-action="resetLevel" class="nav-btn" title="Reset Level" style="gap: 0.375rem; font-weight: 800; font-size: 0.875rem; color: #475569;">
         Reset
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
       </button>
@@ -712,9 +712,9 @@
 
     <!-- Top Nav: Sandbox -->
     <div id="sandbox-nav" class="top-nav hidden">
-      <button onclick="setMode('title')" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+      <button data-action="setMode" data-args='["title"]' class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
       <div class="progress-col"><div class="progress-label" style="font-size: 14px; margin: 0; color: #475569; letter-spacing: 0.2em;">SANDBOX</div></div>
-      <button onclick="startSandbox()" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button data-action="startSandbox" class="nav-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
     </div>
 
     <!-- Math Stack: Main Equation & Expanded Equation -->
@@ -742,8 +742,22 @@
         <h2 class="win-title" style="color: #ef4444; font-size: 1.5rem;">Fractions Ahead!</h2>
         <p style="margin-bottom: 1.5rem; color: #64748b; font-weight: 500; font-size: 0.875rem; max-width: 280px;">Dividing now will create a fraction. This is not recommended for this type of problem!</p>
         <div style="display: flex; gap: 1rem; width: 100%; justify-content: center;">
-          <button onclick="cancelWarning()" style="background: white; color: #475569; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid #cbd5e1;">Undo / Back</button>
-          <button onclick="proceedWarning()" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(239,68,68,0.3);">Proceed</button>
+          <button data-action="cancelWarning" style="background: white; color: #475569; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid #cbd5e1;">Undo / Back</button>
+          <button data-action="proceedWarning" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(239,68,68,0.3);">Proceed</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exit-to-menu confirmation - shown instead of immediately leaving whenever
+         the player backs out of an active Challenge or Sandbox session, so a
+         misclick can't silently discard mid-level progress. -->
+    <div id="exit-confirm-layer" class="win-overlay hidden" style="z-index: 250;">
+      <div class="win-modal" style="border-color: #fca5a5;">
+        <h2 class="win-title" style="color: #ef4444; font-size: 1.5rem;">Exit to Menu?</h2>
+        <p style="margin-bottom: 1.5rem; color: #64748b; font-weight: 500; font-size: 0.875rem; max-width: 280px;">Your progress on this level will be lost. Are you sure you want to leave?</p>
+        <div style="display: flex; gap: 1rem; width: 100%; justify-content: center;">
+          <button data-action="cancelExitConfirm" style="background: white; color: #475569; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid #cbd5e1;">Keep Playing</button>
+          <button data-action="confirmExit" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(239,68,68,0.3);">Yes, Exit</button>
         </div>
       </div>
     </div>
@@ -759,17 +773,17 @@
         <div class="c-box var">
           <span class="c-title">Variables</span>
           <div class="c-btns">
-            <button onclick="handleSandboxOp('left', 'sub', 'var')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["left","sub","var"]' class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
             <div class="c-icon var">x</div>
-            <button onclick="handleSandboxOp('left', 'add', 'var')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["left","add","var"]' class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
           </div>
         </div>
         <div class="c-box const">
           <span class="c-title">Constants</span>
           <div class="c-btns">
-            <button onclick="handleSandboxOp('left', 'sub', 'const')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["left","sub","const"]' class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
             <div class="c-icon const">1</div>
-            <button onclick="handleSandboxOp('left', 'add', 'const')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["left","add","const"]' class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
           </div>
         </div>
       </div>
@@ -816,9 +830,9 @@
                 <span>x</span>
                 <span class="sm-x-prefix-eq">=</span>
               </div>
-              <button onclick="changeXValue(-1)" class="sm-x-btn">-</button>
+              <button data-action="changeXValue" data-args='[-1]' class="sm-x-btn">-</button>
               <span id="sandbox-x-val" class="sm-x-val">5</span>
-              <button onclick="changeXValue(1)" class="sm-x-btn">+</button>
+              <button data-action="changeXValue" data-args='[1]' class="sm-x-btn">+</button>
             </div>
           </div>
           <div id="sandbox-sub" class="sm-sub">
@@ -839,17 +853,17 @@
             <div class="c-box-row var">
               <span class="c-title">Variables</span>
               <div class="c-btns">
-                <button onclick="handleOp('sub', 'var')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+                <button data-action="handleOp" data-args='["sub","var"]' class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
                 <div class="c-icon var">x</div>
-                <button onclick="handleOp('add', 'var')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                <button data-action="handleOp" data-args='["add","var"]' class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
               </div>
             </div>
             <div class="c-box-row const">
               <span class="c-title">Constants</span>
               <div class="c-btns">
-                <button onclick="handleOp('sub', 'const')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+                <button data-action="handleOp" data-args='["sub","const"]' class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
                 <div class="c-icon const">1</div>
-                <button onclick="handleOp('add', 'const')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                <button data-action="handleOp" data-args='["add","const"]' class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
               </div>
             </div>
           </div>
@@ -859,16 +873,16 @@
           <div class="action-group-row">
             <span class="action-title" style="margin-right: 0.25rem;">Operations</span>
             <div class="action-btns-row">
-              <button onclick="handleMultiply(2)" class="btn-action mul">×2</button>
-              <button onclick="handleMultiply(3)" class="btn-action mul">×3</button>
-              <button onclick="handleMultiply(4)" class="btn-action mul">×4</button>
-              <button onclick="handleMultiply(5)" class="btn-action mul">×5</button>
-              <button onclick="handleDivide(2)" class="btn-action div">÷2</button>
-              <button onclick="handleDivide(3)" class="btn-action div">÷3</button>
-              <button onclick="handleDivide(4)" class="btn-action div">÷4</button>
-              <button onclick="handleDivide(5)" class="btn-action div">÷5</button>
+              <button data-action="handleMultiply" data-args='[2]' class="btn-action mul">×2</button>
+              <button data-action="handleMultiply" data-args='[3]' class="btn-action mul">×3</button>
+              <button data-action="handleMultiply" data-args='[4]' class="btn-action mul">×4</button>
+              <button data-action="handleMultiply" data-args='[5]' class="btn-action mul">×5</button>
+              <button data-action="handleDivide" data-args='[2]' class="btn-action div">÷2</button>
+              <button data-action="handleDivide" data-args='[3]' class="btn-action div">÷3</button>
+              <button data-action="handleDivide" data-args='[4]' class="btn-action div">÷4</button>
+              <button data-action="handleDivide" data-args='[5]' class="btn-action div">÷5</button>
 
-              <button id="btn-expand" onclick="handleExpand()" class="btn-action exp disabled">
+              <button id="btn-expand" data-action="handleExpand" class="btn-action exp disabled">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 15l-6 6m6-6v4.8m0-4.8H4.2M9 9 3 3m6 6V4.2M9 9H4.2m5.8-5.8 6 6m-6-6v4.8m0-4.8h4.8"/></svg> Expand
               </button>
             </div>
@@ -876,7 +890,7 @@
 
           <div class="divider"></div>
 
-          <button id="btn-undo-challenge" onclick="handleUndo()" class="btn-undo-col disabled">
+          <button id="btn-undo-challenge" data-action="handleUndo" class="btn-undo-col disabled">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
             <span>Undo</span>
           </button>
@@ -886,7 +900,7 @@
         <div id="challenge-answer-panel" class="answer-panel hidden">
           <span style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 900; color: #1e293b;">x =</span>
           <input type="text" id="user-answer-input" class="answer-input" placeholder="e.g. 5/2" autocomplete="off" />
-          <button onclick="submitAnswer()" class="btn-submit">Submit</button>
+          <button data-action="submitAnswer" class="btn-submit">Submit</button>
         </div>
 
       </div>
@@ -897,17 +911,17 @@
         <div class="c-box var">
           <span class="c-title">Variables</span>
           <div class="c-btns">
-            <button onclick="handleSandboxOp('right', 'sub', 'var')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["right","sub","var"]' class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
             <div class="c-icon var">x</div>
-            <button onclick="handleSandboxOp('right', 'add', 'var')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["right","add","var"]' class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
           </div>
         </div>
         <div class="c-box const">
           <span class="c-title">Constants</span>
           <div class="c-btns">
-            <button onclick="handleSandboxOp('right', 'sub', 'const')" class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["right","sub","const"]' class="btn-op sub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/></svg></button>
             <div class="c-icon const">1</div>
-            <button onclick="handleSandboxOp('right', 'add', 'const')" class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+            <button data-action="handleSandboxOp" data-args='["right","add","const"]' class="btn-op add"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
           </div>
         </div>
       </div>
@@ -922,7 +936,7 @@
         </div>
         <h2 id="win-title" class="win-title">Solved!</h2>
         <p id="win-val" class="win-val">x = ?</p>
-        <button onclick="nextLevel()" class="btn-next">
+        <button data-action="nextLevel" class="btn-next">
           Next Level
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </button>
@@ -978,6 +992,14 @@
 
     // Global Keydown Listener for Hotkeys (Space/Enter -> Submit/Next Level)
     document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (!document.getElementById('exit-confirm-layer').classList.contains('hidden')) {
+                cancelExitConfirm();
+            } else if (state.mode === 'challenge' || state.mode === 'sandbox') {
+                requestModeChange(state.mode === 'challenge' ? 'difficulty' : 'title');
+            }
+            return;
+        }
         if (event.key === 'Enter' || event.key === ' ') {
             if (state.mode === 'challenge') {
                 if (state.pendingDivisor !== null) return; // Do not trigger if Warning Modal is visible
@@ -1420,6 +1442,26 @@
       document.getElementById('difficulty-view').classList.toggle('hidden', newMode !== 'difficulty');
       document.getElementById('game-view').classList.toggle('hidden', newMode !== 'challenge' && newMode !== 'sandbox');
       if (newMode === 'challenge' || newMode === 'sandbox') updateUI();
+    }
+
+    // Exit-to-menu confirmation state - see requestModeChange, which every
+    // setMode() button click is routed through (see TS_ACTIONS dispatcher below).
+    var exitConfirmTarget = null;
+    function requestModeChange(newMode) {
+      var leavingActivePlay = (state.mode === 'challenge' || state.mode === 'sandbox') && newMode !== state.mode;
+      if (!leavingActivePlay) { setMode(newMode); return; }
+      exitConfirmTarget = newMode;
+      document.getElementById('exit-confirm-layer').classList.remove('hidden');
+    }
+    function cancelExitConfirm() {
+      exitConfirmTarget = null;
+      document.getElementById('exit-confirm-layer').classList.add('hidden');
+    }
+    function confirmExit() {
+      var target = exitConfirmTarget;
+      exitConfirmTarget = null;
+      document.getElementById('exit-confirm-layer').classList.add('hidden');
+      setMode(target);
     }
 
     function startChallenge(diff) {
@@ -2072,6 +2114,32 @@
       if (document.fullscreenElement) navigator.keyboard.lock(['Escape']).catch(function () {});
       else navigator.keyboard.unlock();
     } catch (e) {}
+  });
+
+  // Every gameplay button/card above used to carry its own inline onclick="..."
+  // attribute. Same Chromebook-CSP problem as the fullscreen button: some school
+  // content filters silently block inline event handlers, which would have made
+  // every button in this game do nothing at all on those devices. Rather than
+  // give all 40 of them unique ids and 40 separate addEventListener calls, each
+  // one now carries data-action="fnName" (and data-args='[...]' for the ones that
+  // take arguments) and a single delegated listener below dispatches to the real
+  // function - still no inline handlers, no eval/Function() (which a strict CSP
+  // would also block), just a plain lookup table of real function references.
+  var TS_ACTIONS = {
+    toggleCcssPanel: toggleCcssPanel, setMode: requestModeChange, startSandbox: startSandbox,
+    startChallenge: startChallenge, resetLevel: resetLevel, cancelWarning: cancelWarning,
+    proceedWarning: proceedWarning, handleSandboxOp: handleSandboxOp, changeXValue: changeXValue,
+    handleOp: handleOp, handleMultiply: handleMultiply, handleDivide: handleDivide,
+    handleExpand: handleExpand, handleUndo: handleUndo, submitAnswer: submitAnswer,
+    nextLevel: nextLevel, cancelExitConfirm: cancelExitConfirm, confirmExit: confirmExit
+  };
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var fn = TS_ACTIONS[el.getAttribute('data-action')];
+    if (!fn) return;
+    var argsAttr = el.getAttribute('data-args');
+    fn.apply(null, argsAttr ? JSON.parse(argsAttr) : []);
   });
   </script>
 </body>

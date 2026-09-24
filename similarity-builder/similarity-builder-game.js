@@ -1039,7 +1039,7 @@ function showScreen(name) {
   if (f) setTimeout(() => { const el = $(f); if (el && el.offsetParent !== null && !el.disabled) el.focus(); }, 30);
 }
 function hidePlayOverlays() {
-  ['over', 'feedback', 'problem', 'pause', 'shop'].forEach(id => $(id).classList.add('hidden'));
+  ['over', 'feedback', 'problem', 'pause', 'shop', 'exitConfirm'].forEach(id => $(id).classList.add('hidden'));
 }
 // back to the Menu screen (from the pause menu or the end-of-run screen)
 function toMenu() {
@@ -2321,7 +2321,8 @@ addEventListener('keydown', e => {
   }
   if (e.code === 'Escape') {
     e.preventDefault();
-    if (!$('shop').classList.contains('hidden')) closeShop();
+    if (!$('exitConfirm').classList.contains('hidden')) { $('exitConfirm').classList.add('hidden'); $('pause').classList.remove('hidden'); }
+    else if (!$('shop').classList.contains('hidden')) closeShop();
     else if (screen === 'practice') showScreen('menu');
     else if (screen === 'menu') { showScreen('title'); }
     else if (!$('over').classList.contains('hidden')) toMenu();
@@ -2396,7 +2397,9 @@ $('btnResume').onclick = () => setPaused(false);
 $('btnShop').onclick = openShop;                 // (Menu screen only)
 $('btnShopClose').onclick = closeShop;
 $('btnRestart').onclick = () => { const pr = G && G.mode === 'practice' ? G.ptypes : null; setPaused(false); if (pr && pr.length) startPractice(pr); else startGame(G && G.level > 1 ? checkpoints[G.level] : undefined); };  // restarts THIS run's level, not all the way back to level 1
-$('btnTitle').onclick = toMenu;                                              // back to the Menu screen
+$('btnTitle').onclick = () => { $('pause').classList.add('hidden'); $('exitConfirm').classList.remove('hidden'); };
+$('btnExitConfirmYes').onclick = () => { $('exitConfirm').classList.add('hidden'); toMenu(); };
+$('btnExitConfirmNo').onclick = () => { $('exitConfirm').classList.add('hidden'); $('pause').classList.remove('hidden'); };
 (function keypad() {
   const kp = $('keypad');
   ['7','8','9','4','5','6','1','2','3','Clear','0','⌫'].forEach(k => {

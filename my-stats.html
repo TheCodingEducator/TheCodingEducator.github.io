@@ -213,7 +213,7 @@
   </p>
 
   <div class="reset-section">
-    <button class="reset-btn" onclick="resetAllProgress()">Reset all progress</button>
+    <button class="reset-btn" id="reset-all-progress-btn">Reset all progress</button>
   </div>
 </main>
 
@@ -432,6 +432,10 @@ function resetAllProgress() {
   keysToRemove.forEach(function (k) { localStorage.removeItem(k); });
   location.reload();
 }
+// Wired up via addEventListener instead of an inline onclick= attribute - some
+// school Chromebook content filters enforce a Content-Security-Policy that
+// silently blocks inline event handlers, which made this button do nothing.
+document.getElementById('reset-all-progress-btn').addEventListener('click', resetAllProgress);
 </script>
 
 </body>
