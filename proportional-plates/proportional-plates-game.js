@@ -174,9 +174,11 @@ let G = null, screen = 'title', paused = false, cardAt = 0, orderNo = 0;
 // meets the floor at y = 200; bigger y = closer to you). Everyone is drawn smaller the further back they are.
 const FLOOR_Y = 200;
 const depth = y => 0.6 + 0.47 * (y - FLOOR_Y) / 320;                  // drawing scale at floor depth y
-const SEATS = [{ tx: 540, ty: 298 }, { tx: 715, ty: 288 }, { tx: 885, ty: 316 },                      // back row, right of the kitchen
-  { tx: 110, ty: 395 }, { tx: 390, ty: 410 },                                                         // middle row, below the kitchen
-  { tx: 240, ty: 490 }, { tx: 620, ty: 470 }, { tx: 820, ty: 458 }]                                   // front row: tables spread from the far left to the far right
+// No table stands right in front of another table or its serving spot (the dashed circle beside it), so nothing is ever hidden:
+// the front row is too far forward to overlap the back row, and the middle row only uses the open space below the kitchen.
+// Two evenly spaced rows with a wide open walkway between them (nothing in it), and wide aisles between neighbors.
+const SEATS = [{ tx: 520, ty: 250 }, { tx: 700, ty: 250 }, { tx: 880, ty: 250 },                      // back row, right of the kitchen
+  { tx: 150, ty: 482 }, { tx: 380, ty: 482 }, { tx: 610, ty: 482 }, { tx: 840, ty: 482 }]             // front row, from below the kitchen to the far right
   .map(s => Object.assign(s, { sy: s.ty - 14 }));                     // each customer sits just behind their table, facing you
 const KITCHEN = { x: 400, y: 300 };  // the kitchen is the back-left corner (x < 400, y < 300): walking in hangs your orders on the rail
 const COUNTER = { x: 286, y0: 288, y1: 318 };   // the kitchen's front counter - walk around its right end to get in
@@ -197,7 +199,7 @@ function newWorld(mode, level, kinds) {
     mode, level: lv, kinds: kinds || null, startServed: (lv - 1) * ORDERS_PER_LEVEL, served: (lv - 1) * ORDERS_PER_LEVEL,
     correct: 0, wrong: 0, streak: 0, bestStreak: 0, stars: 0, reviews: 0, t: 0,
     custs: [], leavers: [], particles: [], activeId: null, nextT: 1, arrivals: 0, cooking: false, pending: null,
-    chef: { x: 320, y: 350, dir: 1, walking: false, notepad: [], carry: null, target: null }, missed: [], state: 'play'
+    chef: { x: 360, y: 345, dir: 1, walking: false, notepad: [], carry: null, target: null }, missed: [], state: 'play'
   };
 }
 const shiftServed = () => G.served - G.startServed;
@@ -255,10 +257,18 @@ function nearCustomer() {                                             // the cus
   return found;
 }
 // walls, the kitchen counter and the tables (with the customer's chair behind each one) block the chef
+// (each table's footprint is scaled to how big it's drawn, so there are no invisible walls around the far-away tables)
+const tableFoot = s => { const k = depth(s.ty); return { x: s.tx, y: s.ty - 10, rx: 56 * k, ry: 24 * k }; };
 function blocked(x, y) {
   if (x < COUNTER.x + 8 && y > COUNTER.y0 && y < COUNTER.y1) return true;
-  for (const s of SEATS) { const dx = (x - s.tx) / 54, dy = (y - s.ty + 14) / 30; if (dx * dx + dy * dy < 1) return true; }
+  for (const s of SEATS) { const f = tableFoot(s), dx = (x - f.x) / f.rx, dy = (y - f.y) / f.ry; if (dx * dx + dy * dy < 1) return true; }
   return false;
+}
+function obstacleNear(x, y) {                                         // the center of whatever the chef just bumped into
+  if (x < COUNTER.x + 30 && Math.abs(y - (COUNTER.y0 + COUNTER.y1) / 2) < 40) return { x: 0, y: (COUNTER.y0 + COUNTER.y1) / 2 };   // always slide toward the gap at its right end
+  let best = null, bd = Infinity;
+  for (const s of SEATS) { const f = tableFoot(s), d = Math.hypot((x - f.x) / f.rx, (y - f.y) / f.ry); if (d < bd) { bd = d; best = f; } }
+  return bd < 1.6 ? best : null;
 }
 
 /* ===================== WHAT SPACE DOES (take the order, cook, serve) ===================== */
@@ -709,6 +719,8 @@ function update(dt) {
     else { vx = dx / CHEF_SPEED; vy = dy / CHEF_SPEED_Y; }
   }
   if (G.cooking || paused) vx = vy = 0;
+  // pushing into the kitchen counter (from inside or outside the kitchen): walk along it to the way through at its right end
+  if (vy && !ch.path && ch.x < COUNTER.x + 8 && ch.y > COUNTER.y0 - 20 && ch.y < COUNTER.y1 + 20 && blocked(ch.x, ch.y + Math.sign(vy) * 4)) { vx = 1; vy = 0; }
   const n = Math.hypot(vx, vy);
   ch.walking = n > 0;
   if (n) {
@@ -718,7 +730,20 @@ function update(dt) {
     let moved = false;
     if (!blocked(nx, ch.y)) { moved = moved || nx !== ch.x; ch.x = nx; }
     if (!blocked(ch.x, ny)) { moved = moved || ny !== ch.y; ch.y = ny; }
-    if (!moved) { ch.path = null; ch.walking = false; }               // walked into a table or the counter
+    if (!moved && !ch.path) {
+      // bumped straight into a table or the counter: slide around its edge (toward whichever side is nearer) instead of stopping dead
+      const o = obstacleNear(ch.x, ch.y), sx = CHEF_SPEED * dt, sy = CHEF_SPEED_Y * dt;
+      if (o && vx && !vy) { const s = ch.y < o.y ? -1 : 1; for (const d of [s, -s]) if (!blocked(ch.x, ch.y + d * sy)) { ch.y += d * sy; moved = true; break; } }
+      else if (o && vy && !vx) { const s = ch.x < o.x ? -1 : 1; for (const d of [s, -s]) if (!blocked(ch.x + d * sx, ch.y)) { ch.x += d * sx; moved = true; break; } }
+      else if (o && !o.rx && vy) { if (!blocked(ch.x + sx, ch.y)) { ch.x += sx; moved = true; } }   // pushing into the kitchen counter: slide toward the way out
+      else if (o && o.rx) {                                             // walking diagonally into a table: glide along its edge
+        const nx0 = (ch.x - o.x) / (o.rx * o.rx), ny0 = (ch.y - o.y) / (o.ry * o.ry), nl = Math.hypot(nx0, ny0) || 1;
+        let tx = -ny0 / nl, ty = nx0 / nl;                              // go around whichever side of the table is nearer
+        if (Math.abs(vy) >= Math.abs(vx) ? tx * (ch.x - o.x) < 0 : ty * (ch.y - o.y) < 0) { tx = -tx; ty = -ty; }
+        for (const f of [1, 0.6, 0.3]) { const gx = clamp(ch.x + tx * sy * f + nx0 / nl * 2, 24, W - 24), gy = clamp(ch.y + ty * sy * f + ny0 / nl * 2, FLOOR_Y + 14, H - 14); if (!blocked(gx, gy)) { ch.x = gx; ch.y = gy; moved = true; break; } }
+      }
+    }
+    if (!moved) { ch.path = null; ch.walking = false; }               // walked into a wall
   }
   if (inKitchen() && ch.notepad.length) hangOrders();
   if (G.cooking && (G.waitT = (G.waitT || 0) + dt) > 0.3) { G.waitT = 0; renderWaiting(); }
@@ -1055,7 +1080,7 @@ function draw() {
   const items = [{ y: COUNTER.y1, f: drawCounter }];
   if (!G) {                                                            // the title / menu backdrop: a calm evening at the restaurant
     const fake = (i, mood, look) => ({ look, mood, num: i + 1, color: TICKET_COLORS[i + 1], bubble: mood === 'happy' ? 'Yum!' : '', state: 'hung', arrive: 1, patience: 1, patMax: Infinity });
-    const guests = { 6: fake(0, 'happy', { skin: '#c68642', hair: '#2b1b10', shirt: '#5b8cff', style: 'pony' }), 5: fake(1, 'wait', { skin: '#ffd9b0', hair: '#a0522d', shirt: '#2eb872', style: 'curly' }) };
+    const guests = { 6: fake(0, 'happy', { skin: '#c68642', hair: '#2b1b10', shirt: '#5b8cff', style: 'pony' }), 1: fake(1, 'wait', { skin: '#ffd9b0', hair: '#a0522d', shirt: '#2eb872', style: 'curly' }) };
     SEATS.forEach((s, i) => items.push({ y: s.ty, f: () => drawSeat(i, guests[i], t) }));
     items.push({ y: 250, f: () => atDepth(200, 250, depth(250), () => drawChef({ x: 0, dir: 1, walking: false, notepad: [], carry: null, worry: 0 }, t, true)) });
     items.sort((a, b) => a.y - b.y).forEach(it => it.f());
