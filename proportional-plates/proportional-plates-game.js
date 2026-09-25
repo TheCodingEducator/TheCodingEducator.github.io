@@ -177,7 +177,9 @@ const depth = y => 0.6 + 0.47 * (y - FLOOR_Y) / 320;                  // drawing
 // No table stands right in front of another table or its serving spot (the dashed circle beside it), so nothing is ever hidden:
 // the front row is too far forward to overlap the back row, and the middle row only uses the open space below the kitchen.
 // Two evenly spaced rows with a wide open walkway between them (nothing in it), and wide aisles between neighbors.
-const SEATS = [{ tx: 520, ty: 250 }, { tx: 700, ty: 250 }, { tx: 880, ty: 250 },                      // back row, right of the kitchen
+// (side: which side of the table the chef stands on to serve - the back row serves from the right, where the front row's
+//  customers never reach, so their dashed circles stay in the open)
+const SEATS = [{ tx: 440, ty: 290, side: 1 }, { tx: 640, ty: 290, side: 1 }, { tx: 830, ty: 290, side: 1 },   // back row, right of the kitchen
   { tx: 150, ty: 482 }, { tx: 380, ty: 482 }, { tx: 610, ty: 482 }, { tx: 840, ty: 482 }]             // front row, from below the kitchen to the far right
   .map(s => Object.assign(s, { sy: s.ty - 14 }));                     // each customer sits just behind their table, facing you
 const KITCHEN = { x: 400, y: 300 };  // the kitchen is the back-left corner (x < 400, y < 300): walking in hangs your orders on the rail
@@ -244,7 +246,7 @@ function addReview(C) {
 const railOrders = () => G.custs.filter(c => c.state === 'hung');
 const inKitchen = () => G.chef.x < KITCHEN.x && G.chef.y < KITCHEN.y;
 const atStove = inKitchen;                                            // anywhere in the kitchen counts as "at the stove"
-const serveSpot = seat => ({ x: SEATS[seat].tx - 72, y: SEATS[seat].ty + 4 });   // where the chef stands to serve a table: beside its left edge
+const serveSpot = seat => ({ x: SEATS[seat].tx + 72 * (SEATS[seat].side || -1), y: SEATS[seat].ty + 4 });   // where the chef stands to serve a table: beside it
 const KITCHEN_SPOT = { x: 330, y: 250 };                                         // just inside the kitchen, past the end of the counter
 function nearCustomer() {                                             // the customer at the table the chef is standing next to (any side of it)
   if (inKitchen()) return null;
@@ -275,6 +277,7 @@ function obstacleNear(x, y) {                                         // the cen
 function interact() {
   if (!G || G.state !== 'play' || paused || G.cooking) return;
   const ch = G.chef, near = nearCustomer();
+  if (near) ch.dir = SEATS[near.seat].tx < ch.x ? -1 : 1;              // turn to face the table
   if (ch.carry && near === ch.carry) { deliver(near); return; }
   if (near && near.state === 'ready') { takeOrder(near); return; }
   if (ch.carry && atStove()) { redoPlate(); return; }
