@@ -1422,7 +1422,7 @@ function computeGreenArms(pts, normalAng) {
   } else {
     s = diff >= 0 ? 1 : -1;
   }
-  return { v: v, a1: a1, diff: diff, mid: a1 + diff / 2, s: s };
+  return { v: v, a1: a1, a2: a2, diff: diff, mid: a1 + diff / 2, s: s };
 }
 
 // Gold arc between the two green lines, kept close to the vertex so the green
@@ -1465,7 +1465,12 @@ function drawGreenAngleArc() {
   var g = getGreenArms();
   if (!g) return;
   var span = shownAngleDeg();
-  var a2 = g.a1 + g.s * span;
+  // For a real bounce (WALL etc.), g.a2 is the actual outgoing line's measured
+  // angle - using it instead of reconstructing a1 + s*span keeps the arc's far
+  // edge locked to where the second green line really is, instead of drifting
+  // to the wall's normal (half the bend) partway there. STRAIGHT has no real
+  // second line to match, so it keeps the constructed reference ray.
+  var a2 = g.a2 !== undefined ? g.a2 : g.a1 + g.s * span;
   push();
   noFill();
   strokeCap(ROUND);
@@ -1540,7 +1545,10 @@ function drawResolvedAngleLabels() {
   // green; a wrong answer shows only the angle the player typed, in red.
   var wrong = resolvedInfo.typed !== null && !resolvedInfo.correct;
   var gArms = getGreenArms();
-  var lblAng = gArms ? gArms.a1 + gArms.s * shownAngleDeg() / 2 : 0; // middle of the arc
+  // middle of the arc: for a real bounce, gArms.mid is the true bisector between
+  // the two green lines (the wall's normal); STRAIGHT has no real second line,
+  // so it keeps the constructed reference ray's own midpoint.
+  var lblAng = gArms ? (gArms.a2 !== undefined ? gArms.mid : gArms.a1 + gArms.s * shownAngleDeg() / 2) : 0;
   var cx = gArms ? gArms.v.x + cos(lblAng) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
   var cy = gArms ? gArms.v.y + sin(lblAng) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
   var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
