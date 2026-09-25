@@ -177,9 +177,9 @@ const depth = y => 0.6 + 0.47 * (y - FLOOR_Y) / 320;                  // drawing
 // No table stands right in front of another table or its serving spot (the dashed circle beside it), so nothing is ever hidden:
 // the front row is too far forward to overlap the back row, and the middle row only uses the open space below the kitchen.
 // Two evenly spaced rows with a wide open walkway between them (nothing in it), and wide aisles between neighbors.
-// (side: which side of the table the chef stands on to serve - the back row serves from the right, where the front row's
-//  customers never reach, so their dashed circles stay in the open)
-const SEATS = [{ tx: 440, ty: 290, side: 1 }, { tx: 640, ty: 290, side: 1 }, { tx: 830, ty: 290, side: 1 },   // back row, right of the kitchen
+// (side: which side of the table the chef stands on to serve - each back table uses the side the front row's customers
+//  never reach, so every dashed circle stays in the open)
+const SEATS = [{ tx: 540, ty: 320, side: -1 }, { tx: 695, ty: 320, side: 1 }, { tx: 860, ty: 320, side: 1 },  // back row, clear of the kitchen
   { tx: 150, ty: 482 }, { tx: 380, ty: 482 }, { tx: 610, ty: 482 }, { tx: 840, ty: 482 }]             // front row, from below the kitchen to the far right
   .map(s => Object.assign(s, { sy: s.ty - 14 }));                     // each customer sits just behind their table, facing you
 const KITCHEN = { x: 400, y: 300 };  // the kitchen is the back-left corner (x < 400, y < 300): walking in hangs your orders on the rail
