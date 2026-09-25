@@ -29,7 +29,16 @@
       '<button class="mc-num" data-key="7">7</button><button class="mc-num" data-key="8">8</button><button class="mc-num" data-key="9">9</button>' +
       '<button class="mc-num" id="mc-sign" data-key="sign">+/&minus;</button><button class="mc-num" data-key="0">0</button><button class="mc-num" id="mc-backspace" data-key="backspace">&#9003;</button>' +
     '</div>';
-  document.body.appendChild(wrap);
+  // Appended inside #game-canvas-slot, not document.body: the real Fullscreen
+  // API renders the fullscreened element's own subtree in the browser's "top
+  // layer", above every other element in the page regardless of z-index - a
+  // body-level sibling here would simply not be visible at all once real
+  // fullscreen engaged. Being a descendant of the slot keeps it visible (and
+  // still overlay-positioned via position:fixed, which continues to resolve
+  // against the viewport) in every state: normal, real fullscreen, and the
+  // CSS-only pseudo-fullscreen fallback, whose own opaque background would
+  // otherwise paint over a body-level sibling at a lower z-index.
+  document.getElementById('game-canvas-slot').appendChild(wrap);
 
   var style = document.createElement('style');
   style.textContent =

@@ -12,7 +12,16 @@
   wrap.innerHTML =
     '<div id="mc-joy-base"><div id="mc-joy-stick"></div></div>' +
     '<button id="mc-action" aria-label="Action">GO</button>';
-  document.body.appendChild(wrap);
+  // Appended inside #game-canvas-slot, not document.body: the real Fullscreen
+  // API renders the fullscreened element's own subtree in the browser's "top
+  // layer", above every other element in the page regardless of z-index - a
+  // body-level sibling here would simply not be visible at all once real
+  // fullscreen engaged. Being a descendant of the slot keeps it visible (and
+  // still overlay-positioned via position:fixed, which continues to resolve
+  // against the viewport) in every state: normal, real fullscreen, and the
+  // CSS-only pseudo-fullscreen fallback, whose own opaque background would
+  // otherwise paint over a body-level sibling at a lower z-index.
+  document.getElementById('game-canvas-slot').appendChild(wrap);
 
   var style = document.createElement('style');
   style.textContent =

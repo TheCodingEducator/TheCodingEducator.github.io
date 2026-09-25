@@ -83,6 +83,21 @@
      JS file) is the second, load-bearing half of this fix. */
   @media (hover: none) and (pointer: coarse) {
     #game-canvas-slot { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; }
+    /* Fullscreen/pseudo-fullscreen centered the canvas vertically and let it grow
+       up to 100vh, so on a tall/portrait phone its bottom edge could land inside
+       (or right up against) the fixed 240px numpad strip - the exact overlap the
+       top-align trick above already prevents in the normal layout. Reserving
+       240px off the canvas's own height and top-aligning it here guarantees that
+       same clearance in fullscreen too, in any orientation.
+       html-prefixed to outrank the plain (non-mobile) #game-canvas-slot:fullscreen
+       rules further down this file at equal !important specificity otherwise. */
+    html #game-canvas-slot:fullscreen, html #game-canvas-slot:-webkit-full-screen, html #game-canvas-slot.pseudo-fullscreen {
+      align-items: flex-start;
+    }
+    html #game-canvas-slot:fullscreen canvas, html #game-canvas-slot:-webkit-full-screen canvas, html #game-canvas-slot.pseudo-fullscreen canvas {
+      width: min(100vw, calc(100vh - 240px)) !important;
+      height: min(100vw, calc(100vh - 240px)) !important;
+    }
   }
   .standards-panel {
     background: var(--panel);

@@ -137,25 +137,54 @@ function mouseWentDown() { return _glMouseNow && !_glMousePrev; }
 // Code.org. This looks for a same-named file in a local
 // exponent-racer-sounds/ folder instead, and fails silently if it isn't
 // there - see exponent-racer-sounds/README.txt.
+// _glSoundCache maps each url to a small POOL of Audio elements rather than
+// a single shared one - two effects that overlap in time (a coin ding right
+// as a correct answer plays, or the same effect firing twice in quick
+// succession) used to fight over one <audio> element: restarting it via
+// currentTime=0 while it was still finishing its previous play could cut
+// the first play off or get silently dropped by the browser, which is
+// exactly what "sound doesn't always work" looks like from the outside.
 var _glSoundCache = {};
+var _glSoundPoolSize = 3;
 
 function _glSoundFile(url) {
   var parts = url.split('/');
   return 'exponent-racer-sounds/' + parts[parts.length - 1];
 }
 
+function _glSoundInstance(url) {
+  var pool = _glSoundCache[url];
+  if (!pool) { pool = []; _glSoundCache[url] = pool; }
+  for (var i = 0; i < pool.length; i++) {
+    if (pool[i].paused || pool[i].ended) return pool[i];
+  }
+  if (pool.length < _glSoundPoolSize) {
+    var a = new Audio(_glSoundFile(url));
+    pool.push(a);
+    return a;
+  }
+  return pool[0]; // every instance is busy - reuse the oldest rather than not play at all
+}
+
 function playSound(url, loop) {
   try {
-    var audio = _glSoundCache[url];
-    if (!audio) { audio = new Audio(_glSoundFile(url)); _glSoundCache[url] = audio; }
+    var audio = _glSoundInstance(url);
     audio.loop = !!loop;
-    audio.currentTime = 0;
-    var p = audio.play();
-    if (p && p.catch) p.catch(function () {});
+    var start = function () {
+      try { audio.currentTime = 0; } catch (e) {} // can throw if the file isn't seekable yet - play() still works from 0 either way
+      var p = audio.play();
+      if (p && p.catch) p.catch(function () {});
+    };
+    // Setting currentTime before the browser has even loaded metadata can
+    // throw and skip playback entirely (silently, since it's caught above) -
+    // this is the other half of "sound doesn't always work": it depended on
+    // whether the file happened to already be loaded from an earlier play.
+    if (audio.readyState >= 1) start();
+    else audio.addEventListener('loadedmetadata', start, { once: true });
   } catch (e) {}
 }
 
 function stopSound(url) {
-  var audio = _glSoundCache[url];
-  if (audio) { audio.pause(); audio.currentTime = 0; }
+  var pool = _glSoundCache[url];
+  if (pool) { for (var i = 0; i < pool.length; i++) { pool[i].pause(); pool[i].currentTime = 0; } }
 }
