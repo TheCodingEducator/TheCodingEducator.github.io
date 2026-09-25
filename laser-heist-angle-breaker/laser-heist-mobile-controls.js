@@ -34,16 +34,7 @@
       '<button class="mc-num" data-key="7">7</button><button class="mc-num" data-key="8">8</button><button class="mc-num" data-key="9">9</button>' +
       '<button class="mc-num" data-key="backspace" id="mc-backspace">&#9003;</button><button class="mc-num" data-key="0">0</button><button class="mc-num" id="mc-enter" data-key="enter">&#9166;</button>' +
     '</div>';
-  // Appended inside #game-canvas-slot, not document.body: the real Fullscreen
-  // API renders the fullscreened element's own subtree in the browser's "top
-  // layer", above every other element in the page regardless of z-index - a
-  // body-level sibling here would simply not be visible at all once real
-  // fullscreen engaged. Being a descendant of the slot keeps it visible (and
-  // still overlay-positioned via position:fixed, which continues to resolve
-  // against the viewport) in every state: normal, real fullscreen, and the
-  // CSS-only pseudo-fullscreen fallback, whose own opaque background would
-  // otherwise paint over a body-level sibling at a lower z-index.
-  document.getElementById('game-canvas-slot').appendChild(wrap);
+  document.body.appendChild(wrap);
 
   var style = document.createElement('style');
   style.textContent =
@@ -61,7 +52,12 @@
     // teaching notes), which could trigger the browser's native text-
     // selection/callout mid-drag -- see laser-heist-angle-breaker.html's
     // own layout comment for the other half of this fix.
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 1000; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    // z-index 10001: above the pseudo-fullscreen slot's own z-index:9999
+    // opaque background (see the HTML file), which otherwise painted over
+    // this body-level bar once pseudo-fullscreen made the canvas grow -
+    // that, not anything about the joystick/numpad itself, was why the
+    // controls appeared to sit "inside" the game instead of below it.
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 10001; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
     // pointer-events starts at none, not auto - an always-on "auto"
     // here would permanently swallow every tap/scroll in this
     // full-width bottom strip even on screens where neither the joystick

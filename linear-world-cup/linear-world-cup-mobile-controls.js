@@ -29,16 +29,7 @@
       '<button class="mc-num" data-key="7">7</button><button class="mc-num" data-key="8">8</button><button class="mc-num" data-key="9">9</button>' +
       '<button class="mc-num" id="mc-sign" data-key="sign">+/&minus;</button><button class="mc-num" data-key="0">0</button><button class="mc-num" id="mc-backspace" data-key="backspace">&#9003;</button>' +
     '</div>';
-  // Appended inside #game-canvas-slot, not document.body: the real Fullscreen
-  // API renders the fullscreened element's own subtree in the browser's "top
-  // layer", above every other element in the page regardless of z-index - a
-  // body-level sibling here would simply not be visible at all once real
-  // fullscreen engaged. Being a descendant of the slot keeps it visible (and
-  // still overlay-positioned via position:fixed, which continues to resolve
-  // against the viewport) in every state: normal, real fullscreen, and the
-  // CSS-only pseudo-fullscreen fallback, whose own opaque background would
-  // otherwise paint over a body-level sibling at a lower z-index.
-  document.getElementById('game-canvas-slot').appendChild(wrap);
+  document.body.appendChild(wrap);
 
   var style = document.createElement('style');
   style.textContent =
@@ -50,7 +41,12 @@
     // screens where the numpad itself isn't shown. .mc-active (toggled
     // alongside mc-visible in refreshVisibility below) re-enables it
     // only while the numpad is actually up.
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 1000; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    // z-index 10001: above the pseudo-fullscreen slot's own z-index:9999
+    // opaque background (see the HTML file), which otherwise painted over
+    // this body-level bar once pseudo-fullscreen made the canvas grow -
+    // that, not anything about the joystick/numpad itself, was why the
+    // controls appeared to sit "inside" the game instead of below it.
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 10001; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
     '#mobile-controls.mc-active { pointer-events: auto; }' +
     '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
     '#mc-numpad.mc-visible { display: grid; }' +
