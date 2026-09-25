@@ -110,24 +110,29 @@ const TABLE_PAIRS = [[2, 3], [3, 2], [3, 4], [4, 3], [2, 5], [5, 2], [3, 5], [5,
 function genTable() {
   for (let n = 0; n < 400; n++) {
     // kept small: go down to the amount for 1 (or 2) dishes, then back up - e.g. 3 muffins use 6 cups, so 1 uses 2, so 5 use 10
-    const d = pick(DISHES), ing = pick(d.ings), g = pick([1, 1, 2]), [a, b] = pick(TABLE_PAIRS), v = rnd(1, 5);
+    // always through a WHOLE amount for 1 dish, so no fractions or decimals ever show up along the way
+    const d = pick(DISHES), ing = pick(d.ings), g = 1, [a, b] = pick(TABLE_PAIRS), v = rnd(2, 6);
     return mk('table', d, ing, g * a, F(v * a), g * b, { extraCol: null });
   }
 }
 function genRate() {
   for (let n = 0; n < 400; n++) {
-    const it = pick(STORE_ITEMS), p = rnd(1, 10), baseN = rnd(2, 10), tgtN = rnd(1, 10);   // total ÷ baseN = price of 1, then × tgtN
+    // kept friendly: a whole-dollar price of $1-$5 each, 2-5 items on the sign, up to 10 in the order (total ÷ items = price of 1, then × order)
+    const it = pick(STORE_ITEMS), p = rnd(1, 5), baseN = rnd(2, 5), tgtN = rnd(1, 10);
     if (tgtN === baseN) continue;
     return mk('rate', dishById(it.dish), null, baseN, F(p * baseN), tgtN, { item: it, money: true });
   }
 }
 const FRAC_PAIRS = [[4, 6], [2, 3], [4, 2], [6, 4], [6, 9], [8, 12], [4, 10], [2, 5], [6, 3], [8, 6], [3, 2], [4, 3], [6, 8], [2, 1], [4, 8], [3, 6]];
-const FRAC_Q = [F(1, 2), F(3, 4), F(1), F(3, 2), F(2), F(5, 2), F(3), F(1, 3), F(2, 3), F(4, 3), F(1, 4)];
+const FRAC_Q = [F(1, 2), F(1), F(3, 2), F(2), F(5, 2), F(3), F(1, 3), F(4, 3), F(1, 4), F(5, 4), F(1, 5), F(6, 5)];
+// the only fractions students ever see are 1/2, 1/3, 1/4 and 1/5 (on their own or after a whole number, like 1 1/2)
+const simpleFrac = x => x.d === 1 || ([2, 3, 4, 5].includes(x.d) && x.n % x.d === 1);
 function genFrac() {
-  for (let n = 0; n < 800; n++) {
+  for (let n = 0; n < 2000; n++) {
     const d = pick(DISHES), ing = pick(d.ings.filter(i => !i.c)), [baseN, tgtN] = pick(FRAC_PAIRS), baseQ = pick(FRAC_Q);
     const P = mk('frac', d, ing, baseN, baseQ, tgtN);
-    if (![1, 2, 3, 4].includes(P.ans.d) || fval(P.ans) > 12 || (P.ans.d === 1 && baseQ.d === 1)) continue;
+    if (fval(P.ans) > 12 || (P.ans.d === 1 && baseQ.d === 1)) continue;
+    if (![P.baseQ, P.ans, F(tgtN, baseN), blocksOf(P).v].every(simpleFrac)) continue;   // the amounts, the scale factor and each step
     return P;
   }
   return genUp();
@@ -169,7 +174,9 @@ let G = null, screen = 'title', paused = false, cardAt = 0, orderNo = 0;
 // meets the floor at y = 200; bigger y = closer to you). Everyone is drawn smaller the further back they are.
 const FLOOR_Y = 200;
 const depth = y => 0.6 + 0.47 * (y - FLOOR_Y) / 320;                  // drawing scale at floor depth y
-const SEATS = [{ tx: 600, ty: 322 }, { tx: 838, ty: 296 }, { tx: 712, ty: 446 }, { tx: 890, ty: 478 }]   // tables spread out at different depths
+const SEATS = [{ tx: 540, ty: 298 }, { tx: 715, ty: 288 }, { tx: 885, ty: 316 },                      // back row, right of the kitchen
+  { tx: 110, ty: 395 }, { tx: 390, ty: 410 },                                                         // middle row, below the kitchen
+  { tx: 240, ty: 490 }, { tx: 620, ty: 470 }, { tx: 820, ty: 458 }]                                   // front row: tables spread from the far left to the far right
   .map(s => Object.assign(s, { sy: s.ty - 14 }));                     // each customer sits just behind their table, facing you
 const KITCHEN = { x: 400, y: 300 };  // the kitchen is the back-left corner (x < 400, y < 300): walking in hangs your orders on the rail
 const COUNTER = { x: 286, y0: 288, y1: 318 };   // the kitchen's front counter - walk around its right end to get in
@@ -190,7 +197,7 @@ function newWorld(mode, level, kinds) {
     mode, level: lv, kinds: kinds || null, startServed: (lv - 1) * ORDERS_PER_LEVEL, served: (lv - 1) * ORDERS_PER_LEVEL,
     correct: 0, wrong: 0, streak: 0, bestStreak: 0, stars: 0, reviews: 0, t: 0,
     custs: [], leavers: [], particles: [], activeId: null, nextT: 1, arrivals: 0, cooking: false, pending: null,
-    chef: { x: 340, y: 390, dir: 1, walking: false, notepad: [], carry: null, target: null }, missed: [], state: 'play'
+    chef: { x: 320, y: 350, dir: 1, walking: false, notepad: [], carry: null, target: null }, missed: [], state: 'play'
   };
 }
 const shiftServed = () => G.served - G.startServed;
@@ -200,7 +207,7 @@ const shiftServed = () => G.served - G.startServed;
 //   -> carry (cooked, on the chef's plate) -> served (they react, then leave)
 function spawnCustomer() {
   const used = new Set(G.custs.map(c => c.seat).concat(G.leavers.filter(l => l.walk < 0).map(l => l.seat)));
-  const free = [0, 1, 2, 3].filter(s => !used.has(s));
+  const free = SEATS.map((_, i) => i).filter(s => !used.has(s));
   if (!free.length) return false;
   const kind = G.kinds ? pick(G.kinds) : pick(KINDS_BY_LEVEL[G.level - 1]);
   const P = genProblem(kind), pat = G.mode === 'run' ? PATIENCE_SEC[G.level - 1] : Infinity;
@@ -260,8 +267,9 @@ function interact() {
   const ch = G.chef, near = nearCustomer();
   if (ch.carry && near === ch.carry) { deliver(near); return; }
   if (near && near.state === 'ready') { takeOrder(near); return; }
+  if (ch.carry && atStove()) { redoPlate(); return; }
   if (ch.carry) {
-    toast(near ? `This plate is for order #${ch.carry.num} - look for the #${ch.carry.num} flag.` : atStove() ? `Serve order #${ch.carry.num} first - your hands are full!` : `Carry the plate to order #${ch.carry.num}'s table, then press Space.`, near ? 'bad' : '');
+    toast(near ? `This plate is for order #${ch.carry.num} - look for the #${ch.carry.num} flag.` : `Carry the plate to order #${ch.carry.num}'s table, then press Space.`, near ? 'bad' : '');
     return;
   }
   if (atStove() && railOrders().length) { openCook(); return; }
@@ -289,6 +297,13 @@ function openCook() {
   $('ans').value = '';
   renderRail(); renderCook();
   if (!coarse()) setTimeout(() => $('ans').focus(), 20);
+}
+function redoPlate() {                                                // brought a plate back to the kitchen: back on the stove to change the answer
+  const C = G.chef.carry;
+  G.chef.carry = null; C.state = 'hung'; G.activeId = C.id;
+  openCook();
+  $('ans').value = C.ansText || '';
+  sfx.go(); toast(`Fix your answer for order #${C.num}, then press Enter.`, '');
 }
 function closeCook() { if (!G) return; G.cooking = false; $('ans').blur(); renderRail(); renderCook(); }
 function setActive(id) {
@@ -379,11 +394,32 @@ function renderCook() {
     ask = `Order #${C.num} wants ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}. How many ${b_(P.ing.q)}?`;
   }
   if ((P.kind === 'up' || P.kind === 'down') && (G.mode === 'practice' || G.level <= 2))   // beginning levels: the recipe and the order as a picture
-    rec = `<div class="rc"><div class="rcHead">${P.dish.name} recipe &middot; uses ${P.ing.q.replace(/^\w+ of /, '')}</div>${vizHTML(P)}</div>`;
+    rec = `<div class="rc">${vizHTML(P)}</div>`;
   $('ckRecipe').innerHTML = rec; $('ckAsk').innerHTML = ask;
+  // the answer row is the proportion itself: recipe amount / recipe size = [ answer ] / order size
+  const per = n => P.money ? `<b>${n}</b> ${n === 1 ? P.item.short.replace(/s$/, '') : P.item.short}` : `<b>${n}</b> ${nounOf(P, n)}`;
+  $('propL').innerHTML = `<span class="pn">${P.money ? '<b>$' + fhtml(P.baseQ) + '</b>' : `<b>${fhtml(P.baseQ)}</b> ${fval(P.baseQ) === 1 ? P.ing.u1 : P.ing.u}`}</span><span class="pd">${per(P.baseN)}</span>`;
+  $('propR').innerHTML = per(P.tgtN);
   $('ansPre').textContent = P.money ? '$' : '';
   $('ansUnit').textContent = P.money ? '' : P.ing.u;
   $('ans').setAttribute('aria-label', 'Your answer' + (P.money ? ' in dollars' : ' in ' + P.ing.u));
+  requestAnimationFrame(fitCook); setTimeout(fitCook, 150);
+  renderWaiting();
+}
+// while cooking, the card covers part of the dining room - so its top bar shows every waiting customer's patience
+function renderWaiting() {
+  const el = $('ckWait'); if (!el) return;
+  if (!G || !G.cooking || G.mode !== 'run') { el.innerHTML = ''; return; }
+  el.innerHTML = G.custs.filter(c => c.arrive >= 1 && c.state !== 'served').sort((a, b) => a.patience - b.patience).map(c => {
+    const fr = clamp(c.patience / c.patMax, 0, 1), col = fr > 0.5 ? '#35b24a' : fr > 0.25 ? '#e8a33a' : '#e0483c';
+    return `<span class="wChip" title="Order #${c.num}"><b style="background:${c.color}">#${c.num}</b><i><u style="width:${Math.round(fr * 100)}%;background:${col}"></u></i></span>`;
+  }).join('');
+}
+function fitCook() {                                                  // on a really crowded card, shrink the contents a little so nothing is cut off
+  const ck = $('cook'), parts = [...ck.children];
+  parts.forEach(p => { p.style.zoom = ''; });
+  if (ck.classList.contains('hidden')) return;
+  for (let z = 1, i = 0; i < 12 && ck.scrollHeight > ck.clientHeight + 1 && z > 0.7; i++) { z *= 0.96; parts.forEach(p => { p.style.zoom = z.toFixed(3); }); }
 }
 
 /* ===================== COOKING & SERVING ===================== */
@@ -393,11 +429,11 @@ function submit() {
   const val = parseAns($('ans').value);
   if (!isFinite(val)) { const a = $('ans'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); return; }
   C.userAns = val; C.result = verdict(C.P, val); C.mistake = C.result === 'ok' ? '' : mistakeOf(C.P, val);
-  C.state = 'carry'; G.chef.carry = C;
+  C.state = 'carry'; G.chef.carry = C; C.ansText = $('ans').value.trim();
   $('ans').value = ''; G.activeId = null;
   closeCook();
   sfx.go();
-  toast(`Order #${C.num} is plated - carry it to their table →`, '');
+  toast(`Order #${C.num} is plated - carry it to their table. (Changed your mind? Press Space here to fix it.)`, '');
 }
 function deliver(C) {                                                 // plate on the table: the customer reacts
   const ok = C.result === 'ok', P = C.P, over = C.userAns > fval(P.ans);
@@ -685,6 +721,7 @@ function update(dt) {
     if (!moved) { ch.path = null; ch.walking = false; }               // walked into a table or the counter
   }
   if (inKitchen() && ch.notepad.length) hangOrders();
+  if (G.cooking && (G.waitT = (G.waitT || 0) + dt) > 0.3) { G.waitT = 0; renderWaiting(); }
   // customers slowly lose patience from the moment they sit down until their food arrives
   if (G.mode === 'run') for (const C of G.custs.slice()) {
     if (C.arrive < 1 || C.state === 'served') continue;
@@ -990,6 +1027,7 @@ function hintInfo() {                                                 // the lit
   const to = p => dirArrow(p.x - ch.x, p.y - ch.y);
   if (ch.carry && near === ch.carry) return { t: 'Space: Serve!', key: true };
   if (near && near.state === 'ready') return { t: 'Space: Take order', key: true };
+  if (ch.carry && atStove()) return { t: `Serve #${ch.carry.num} ${to(serveSpot(ch.carry.seat))}  ·  Space: fix it` };
   if (ch.carry) return { t: `Serve #${ch.carry.num} ${to(serveSpot(ch.carry.seat))}` };
   if (ch.notepad.length) return { t: `To the kitchen ${to(KITCHEN_SPOT)}` };
   if (r.length) return atStove() ? { t: 'Space: Cook', key: true } : { t: `To the stove ${to(KITCHEN_SPOT)}` };
@@ -1017,7 +1055,7 @@ function draw() {
   const items = [{ y: COUNTER.y1, f: drawCounter }];
   if (!G) {                                                            // the title / menu backdrop: a calm evening at the restaurant
     const fake = (i, mood, look) => ({ look, mood, num: i + 1, color: TICKET_COLORS[i + 1], bubble: mood === 'happy' ? 'Yum!' : '', state: 'hung', arrive: 1, patience: 1, patMax: Infinity });
-    const guests = { 0: fake(0, 'happy', { skin: '#c68642', hair: '#2b1b10', shirt: '#5b8cff', style: 'pony' }), 3: fake(1, 'wait', { skin: '#ffd9b0', hair: '#a0522d', shirt: '#2eb872', style: 'curly' }) };
+    const guests = { 6: fake(0, 'happy', { skin: '#c68642', hair: '#2b1b10', shirt: '#5b8cff', style: 'pony' }), 5: fake(1, 'wait', { skin: '#ffd9b0', hair: '#a0522d', shirt: '#2eb872', style: 'curly' }) };
     SEATS.forEach((s, i) => items.push({ y: s.ty, f: () => drawSeat(i, guests[i], t) }));
     items.push({ y: 250, f: () => atDepth(200, 250, depth(250), () => drawChef({ x: 0, dir: 1, walking: false, notepad: [], carry: null, worry: 0 }, t, true)) });
     items.sort((a, b) => a.y - b.y).forEach(it => it.f());
@@ -1209,7 +1247,7 @@ addEventListener('keydown', e => {
     }
     if (enter) { e.preventDefault(); if (!e.repeat) submit(); return; }
     if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !$('ans').value) { e.preventDefault(); closeCook(); keys[e.code === 'ArrowLeft' ? 'left' : 'right'] = true; return; }
-    if (document.activeElement !== $('ans') && /^[0-9./ $]$/.test(e.key)) $('ans').focus();       // typing anywhere goes into the answer box
+    if (document.activeElement !== $('ans') && /^[0-9./]$/.test(e.key)) $('ans').focus();       // typing anywhere goes into the answer box
     return;
   }
   // walking around the restaurant
@@ -1258,6 +1296,16 @@ cv.addEventListener('pointerdown', e => {
   b.addEventListener('contextmenu', e => e.preventDefault());
 });
 $('tAct').onclick = () => { audioInit(); interact(); };
+// the answer box only takes numbers: digits, a decimal point, "/" for fractions and a space for mixed numbers like 1 1/2
+const ANS_CHAR = /[0-9./ ]/;
+const shakeAns = () => { const a = $('ans'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); };
+$('ans').addEventListener('keydown', e => {
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !ANS_CHAR.test(e.key)) { e.preventDefault(); shakeAns(); toast('Numbers only - use / for fractions (like 3/4) and . for decimals', ''); }
+});
+$('ans').addEventListener('input', () => {                             // catches pasting and phone keyboards too
+  const a = $('ans'), v = a.value.replace(/[^0-9./ ]/g, '').replace(/ {2,}/g, ' ').replace(/^ /, '');
+  if (v !== a.value) { a.value = v; shakeAns(); }
+});
 (function keypad() {
   const kp = $('keypad');
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', '/', 'space', '⌫'].forEach(k => {
