@@ -316,10 +316,13 @@
     var isFs = document.fullscreenElement || document.webkitFullscreenElement || el.classList.contains('pseudo-fullscreen');
     if (!isFs) {
       // Some devices (notably managed school Chromebooks) expose
-      // requestFullscreen but block it via policy, causing it to throw or
-      // silently reject instead of entering fullscreen. Fall back to a
-      // CSS-only pseudo-fullscreen whenever that happens so the button
-      // always does something.
+      // requestFullscreen but block it via policy, causing it to throw,
+      // silently reject, or - on some locked-down devices - just silently
+      // no-op without throwing OR rejecting at all, which the try/catch and
+      // the promise .catch() below both miss. The timeout after the call
+      // double-checks fullscreen actually engaged and falls back to
+      // CSS-only pseudo-fullscreen if not, so the button always does
+      // something.
       var req = el.requestFullscreen || el.webkitRequestFullscreen;
       var launched = false;
       if (req && document.fullscreenEnabled !== false) {
@@ -333,7 +336,12 @@
           launched = false;
         }
       }
-      if (!launched) enterPseudoFullscreen();
+      if (!launched) { enterPseudoFullscreen(); return; }
+      setTimeout(function () {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !el.classList.contains('pseudo-fullscreen')) {
+          enterPseudoFullscreen();
+        }
+      }, 350);
     } else if (el.classList.contains('pseudo-fullscreen')) {
       exitPseudoFullscreen();
     } else {
