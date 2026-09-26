@@ -606,12 +606,12 @@
 </div>
 
 <div class="site-topbar">
-  <a class="site-back-link" href="../index.html">&larr; All games</a>
+  <a class="site-back-link" href="../index.html" tabindex="-1">&larr; All games</a>
   <div class="topbar-right">
-    <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
-    <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
+    <button type="button" class="fullscreen-btn" id="fullscreen-btn" tabindex="-1">&#10021; Fullscreen</button>
+    <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" tabindex="-1">&#10021; Exit Fullscreen</button>
     <div class="ccss-widget">
-      <button class="ccss-toggle" data-action="toggleCcssPanel" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
+      <button class="ccss-toggle" data-action="toggleCcssPanel" tabindex="-1" aria-expanded="false" aria-controls="ccss-panel">&#128207; Standards</button>
       <div id="ccss-panel" class="ccss-panel hidden">
         <h4>Common Core Standards</h4>
         <div class="ccss-entry">
@@ -2186,6 +2186,11 @@
       if (score < bestScore) { bestScore = score; best = el; }
     });
     if (best) best.focus();
+  });
+  // All games, Fullscreen and Standards are mouse-only here: they're out of the Tab order (tabindex="-1"), and
+  // clicking them doesn't leave keyboard focus on them either, so Enter / Space always stay with the game
+  Array.prototype.forEach.call(document.querySelectorAll('.site-back-link, .fullscreen-btn, .pseudo-fullscreen-exit-btn, .ccss-toggle'), function (el) {
+    el.addEventListener('mousedown', function (e) { e.preventDefault(); });
   });
   // the difficulty cards aren't real buttons, so Enter / Space press them from the keyboard
   document.addEventListener('keydown', function (e) {
