@@ -322,8 +322,17 @@ var plates = {
   stars: readNum('proportionalplates_stars', 0)
 };
 
-var gamesPlayedCount = [lgttp.played, exprace.played, laser.played, piggy.played, bridge.played, plates.played].filter(Boolean).length;
-var hasAnyBestTime = lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 || piggy.bestEasy !== null || piggy.bestHard !== null || laser.highScore > 0 || bridge.bestMeters > 0 || plates.bestServed > 0;
+// ---- Grapple Rope ----
+// Saved when a world is finished: best score, best combo, and which of the 3 worlds are done.
+var rope = {
+  played: localStorage.getItem('grapplerope_best_score') !== null,
+  bestScore: readNum('grapplerope_best_score', 0),
+  bestCombo: readNum('grapplerope_best_combo', 0),
+  worlds: (readJSON('grapplerope_worlds_done', []) || []).length
+};
+
+var gamesPlayedCount = [lgttp.played, exprace.played, laser.played, piggy.played, bridge.played, plates.played, rope.played].filter(Boolean).length;
+var hasAnyBestTime = lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 || piggy.bestEasy !== null || piggy.bestHard !== null || laser.highScore > 0 || bridge.bestMeters > 0 || plates.bestServed > 0 || rope.bestScore > 0;
 var totalCoinsCombined = lgttp.coins + exprace.coins + bridge.coins;
 var lgttpSkinCount = (lgttp.ownedSkins || [0]).length;
 var laserSkinCount = (laser.unlockedSkins || [0]).length;
@@ -336,7 +345,7 @@ var laserSkinCount = (laser.unlockedSkins || [0]).length;
 var BADGES = [
   { icon: "🎮", name: "First Steps", desc: "Play any game once", earned: gamesPlayedCount >= 1 },
   { icon: "🕹️", name: "Multi-Gamer", desc: "Save progress in 2+ games", earned: gamesPlayedCount >= 2 },
-  { icon: "🏆", name: "Completionist", desc: "Save progress in all 6 tracked games", earned: gamesPlayedCount >= 6 },
+  { icon: "🏆", name: "Completionist", desc: "Save progress in all 7 tracked games", earned: gamesPlayedCount >= 7 },
   { icon: "⏱️", name: "Personal Best", desc: "Record a best time or high score", earned: hasAnyBestTime },
   { icon: "🔥", name: "Streak Starter", desc: "Reach a streak of 3 in Let's Get to the Point", earned: lgttp.streak >= 3 },
   { icon: "🌟", name: "Streak Master", desc: "Reach a streak of 10", earned: lgttp.streak >= 10 },
@@ -353,7 +362,10 @@ var BADGES = [
   { icon: "🏗️", name: "Full Crew", desc: "Hire all 40 bridge-building crew looks", earned: bridge.crew >= BRIDGE_CREW_TOTAL },
   { icon: "🍳", name: "Order Up!", desc: "Play a shift in Proportional Plates", earned: plates.played },
   { icon: "🍽️", name: "Head Chef", desc: "Serve 15+ orders in one Proportional Plates shift", earned: plates.bestServed >= 15 },
-  { icon: "⭐", name: "Five-Star Diner", desc: "Reach level 5 in Proportional Plates", earned: plates.bestLevel >= 5 }
+  { icon: "⭐", name: "Five-Star Diner", desc: "Reach level 5 in Proportional Plates", earned: plates.bestLevel >= 5 },
+  { icon: "🧗", name: "First Swing", desc: "Finish a world in Grapple Rope", earned: rope.worlds >= 1 },
+  { icon: "🔥", name: "Swing Streak", desc: "Get a combo of 15+ in Grapple Rope", earned: rope.bestCombo >= 15 },
+  { icon: "🛕", name: "Temple Explorer", desc: "Finish all 3 worlds in Grapple Rope", earned: rope.worlds >= 3 }
 ];
 
 var badgesHtml = BADGES.map(function (b) {
@@ -438,6 +450,16 @@ if (plates.played) {
 }
 gamesHtml += '<a class="play-link" href="proportional-plates/proportional-plates.html">Play &rarr;</a></div>';
 
+gamesHtml += '<div class="game-card"><h3>🧗 Grapple Rope</h3>';
+if (rope.played) {
+  gamesHtml += statRow('Best Score', rope.bestScore);
+  gamesHtml += statRow('Best Combo', 'x' + rope.bestCombo);
+  gamesHtml += statRow('Worlds Finished', rope.worlds + ' / 3');
+} else {
+  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
+}
+gamesHtml += '<a class="play-link" href="grapple-rope/grapple-rope.html">Play &rarr;</a></div>';
+
 document.getElementById('games').innerHTML = gamesHtml;
 
 // ---------------------------------------------------------------
@@ -449,7 +471,7 @@ document.getElementById('games').innerHTML = gamesHtml;
 function resetAllProgress() {
   var ok = confirm("This will erase all saved coins, streaks, unlocks, and best times for every game on this device. This can't be undone. Continue?");
   if (!ok) return;
-  var prefixes = ['lgttp_', 'exprace_', 'laserheist_', 'piggybank_', 'similaritybuilder_', 'proportionalplates_'];
+  var prefixes = ['lgttp_', 'exprace_', 'laserheist_', 'piggybank_', 'similaritybuilder_', 'proportionalplates_', 'grapplerope_'];
   var keysToRemove = [];
   for (var i = 0; i < localStorage.length; i++) {
     var k = localStorage.key(i);

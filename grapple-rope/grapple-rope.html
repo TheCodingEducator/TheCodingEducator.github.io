@@ -3,9 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Swing through the jungle by solving the Pythagorean theorem one step at a time, watching the squares on each side of the triangle fill and pour. A free browser game for students.">
-<link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <title>Grapple Rope</title>
+<meta name="description" content="Swing through the jungle with the Pythagorean theorem: find the length of your rope or the distance to the next platform, one step per swing, and watch the squares on each side of the triangle fill and pour. A free, COPPA-compliant browser game for students.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#10261a">
+<meta property="og:title" content="Grapple Rope">
+<meta property="og:description" content="Swing through the jungle with the Pythagorean theorem: find your rope length or the distance to the next platform.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thecodingeducator.github.io/grapple-rope/grapple-rope.html">
+<meta name="twitter:card" content="summary">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+     crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800&display=swap">
@@ -18,6 +26,7 @@
     --line: #2f5c3e;
     --text: #f4ecd2;
     --muted: #b7c7a8;
+    --accent: #f2b530;
     --gold: #f2b530;
     --gold-deep: #c98a12;
     --clay: #e0734a;
@@ -27,29 +36,224 @@
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  html, body { height: 100%; }
-  body {
+  html, body {
+    margin: 0;
+    padding: 0;
     background: var(--ground);
-    color: var(--text);
-    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-    font-size: 15px;
-    line-height: 1.4;
-    overflow: hidden;
+    min-height: 100%;
   }
-  /* one-screen app: header row, then the game and a sidebar filling the rest */
-  .app {
-    height: 100%;
-    max-width: 1500px;
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
     margin: 0 auto;
-    padding-inline: 16px;
-    padding-block: 10px;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .reset-progress {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .reset-progress h2 {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .reset-progress p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .reset-progress-btn {
+    background: transparent;
+    border: 1px solid #7a3030;
+    color: #e0a0a0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .reset-progress-btn:hover {
+    background: rgba(220,80,80,0.12);
+    border-color: #b04848;
+    color: #ffb3b3;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .pseudo-fullscreen-exit-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10000;
+    display: none;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+  }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+  .pseudo-fullscreen-exit-btn:hover, .pseudo-fullscreen-exit-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  /* The game box (the site's back link and fullscreen buttons sit above it). In fullscreen it fills the screen. */
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; }
+  #game-canvas-slot.pseudo-fullscreen {
+    position: fixed; top: 0; left: 0; margin: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ground); width: 100vw; height: 100vh;
+  }
+  .app {
+    width: min(94vw, 980px);
+    height: clamp(460px, calc(100vh - 88px), 720px);
+    background: var(--ground);
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    padding: 10px 14px;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
   }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-  h1 {
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+  #game-canvas-slot:fullscreen .app header, #game-canvas-slot.pseudo-fullscreen .app header { padding-left: 160px; }   /* room for the Exit Fullscreen button */
+  #game-canvas-slot:-webkit-full-screen .app header { padding-left: 160px; }
+  .app header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .app .title {
     font-family: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
     font-weight: 400;
     font-size: clamp(22px, 2.6vw, 32px);
@@ -190,14 +394,46 @@
     .strip, .cap { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+  /* Rotate-device prompt: small touchscreens held upright only (the scene is wide, so it needs landscape) */
+  .rotate-prompt {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: #0f172a; color: #f1f5f9;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-tilt 1.6s ease-in-out infinite; }
+  @keyframes rotate-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+  .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
+  .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
+  .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
+    .rotate-prompt { display: flex; }
+  }
 </style>
+<script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </head>
-<body style="margin:0">
+<body>
+<div class="rotate-prompt" id="rotate-prompt" role="alert">
+  <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
+  <h2>Rotate Your Device</h2>
+  <p>Grapple Rope works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../index.html">&larr; All games</a>
+</div>
 
+<a class="back-link" href="../index.html">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Grapple Rope</h1>
+<p class="sr-only">A jungle game about the Pythagorean theorem. Each canyon is a right triangle: leg a is the distance straight across to the next platform, leg b is how high the vine's anchor is above you, and the hypotenuse c is your rope. Solve one step of the Pythagorean theorem at a time by choosing the correct line of the written solution (tap it, or press the left or right arrow key); each correct step swings you to the next platform, and a wrong step drops you in the quicksand with a hint. The last step is the big swing: time slows down for a close-up that labels all three sides and reveals the missing length, and you land one rope length below the anchor, so short ropes keep you high in the trees and long ropes swing you low. World 1 walks through every step with tile squares, World 2 estimates square roots that are not whole numbers, and World 3 finds a missing leg, the distance to the next platform, from numbers carved on a temple door.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
 <div class="app">
   <header>
-    <h1>Grapple Rope</h1>
-    <span class="tag">Test build #8</span>
+    <div class="title">Grapple Rope</div>
     <div class="modes" role="tablist" aria-label="World">
       <button role="tab" id="tab-w1" aria-selected="true" data-mode="w1">World 1<span class="wname"> · Tile Grove</span><small>Every step · tile squares</small></button>
       <button role="tab" id="tab-w2" aria-selected="false" data-mode="w2">World 2<span class="wname"> · Waterfall Cliffs</span><small>Formula given · estimate roots</small></button>
@@ -249,6 +485,49 @@
     </div>
   </div>
 </div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.B.6</span>
+      <p>Explain a proof of the Pythagorean Theorem and its converse.</p>
+      <p class="applies">Applies to: every canyon - the squares on the two legs pour into the square on the rope and fill it exactly.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.B.7</span>
+      <p>Apply the Pythagorean Theorem to determine unknown side lengths in right triangles in real-world and mathematical problems.</p>
+      <p class="applies">Applies to: every world - the rope length (hypotenuse) in Worlds 1 and 2, the distance to the next platform (a leg) in World 3.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.EE.A.2</span>
+      <p>Use square root symbols to represent solutions to equations of the form x&sup2; = p. Evaluate square roots of small perfect squares.</p>
+      <p class="applies">Applies to: the last step of every problem.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.NS.A.2</span>
+      <p>Use rational approximations of irrational numbers to compare their size and estimate their value.</p>
+      <p class="applies">Applies to: World 2 (estimating square roots that are not whole numbers).</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Students swing across a jungle by solving the Pythagorean theorem one written step at a time. Every canyon is a right triangle made from the scene itself, so the numbers always describe something they can see.</p>
+  <ul>
+    <li><strong>The triangle:</strong> leg a (coral) is the distance straight across to the next platform, leg b (green) is how high the vine's anchor is above the explorer, and the hypotenuse c (blue) is the rope. The same three colors are used for every number on screen.</li>
+    <li><strong>One step per swing:</strong> students choose the right line of the written solution - plug in, square, add (or subtract), take the square root - and each correct line swings them forward. Each wrong choice is a common mistake with its own hint, such as adding the sides, doubling instead of squaring, or forgetting the square root.</li>
+    <li><strong>Why squares:</strong> a square is built on each side of the canyon triangle. As students work, the squares on the two legs fill with tiles and pour into the square on the rope, which they fill exactly - a visual proof of a&sup2; + b&sup2; = c&sup2;.</li>
+    <li><strong>Answers you can see:</strong> the big swing lands one rope length below the anchor, drawn to scale, so short ropes keep the explorer high in the trees and long ropes swing low. After the final step, a slow-motion close-up labels all three sides and reveals the missing length.</li>
+    <li><strong>Three worlds:</strong> World 1 walks through every step with 3-4-5 triangles and unit tiles. World 2 gives the formula and adds estimating square roots that are not whole numbers. World 3 finds a missing leg - the distance to the next platform - from numbers carved on a temple door.</li>
+  </ul>
+</section>
+
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases your saved best score, best combo, and completed worlds for Grapple Rope on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+</section>
 
 <script>
 (() => {
@@ -296,6 +575,17 @@
   new ResizeObserver(resize).observe(cvs);
   resize();
 
+  // saved progress (this device only): best score, best combo, and the worlds finished - shown on the site's My Stats page
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('grapplerope_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { if (window.grappleRopeResetting) return; try { localStorage.setItem('grapplerope_' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+  function saveWin() {
+    const done = store.get('worlds_done', []);
+    if (!done.includes(mode)) { done.push(mode); store.set('worlds_done', done); }
+    store.set('best_score', Math.max(store.get('best_score', 0), score));
+    store.set('best_combo', Math.max(store.get('best_combo', 0), bestCombo));
+  }
   const rnd = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const fmt = n => Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1);
 
@@ -506,7 +796,7 @@
     endEl.hidden = state !== 'win';
     if (state === 'win') {
       workEl.innerHTML = '';
-      promptEl.innerHTML = `Temple reached! ${perfects} steps right, best combo x${bestCombo}, score ${score}.`;
+      promptEl.innerHTML = `Temple reached! ${perfects} steps right, best combo x${bestCombo}, score ${score} (your best: ${store.get('best_score', score)}).`;
       choicesEl.hidden = true;
       otherBtn.hidden = mode === 'w3';
       nbCap.textContent = 'Nice work. The next world gives you less help.';
@@ -593,6 +883,7 @@
   otherBtn.addEventListener('click', () => startGame(mode === 'w1' ? 'w2' : 'w3'));
   cvs.addEventListener('pointerdown', () => { audio(); if (state === 'explain' && st > 0.4) retry(); });
   document.addEventListener('keydown', e => {
+    if (e.target && e.target.closest && e.target.closest('.reset-progress, .teaching-notes, .standards-panel')) return;   // leave page controls alone
     if (state === 'explain' && st > 0.4 && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); retry(); return; }
     // left/right arrows (or 1/2) pick the left/right answer
     const pickIdx = { ArrowLeft: 0, ArrowRight: 1, '1': 0, '2': 1 }[e.key];
@@ -700,6 +991,7 @@
         idx++;
         if (cur().final) {
           state = 'win'; st = 0; P.x = cur().x; P.y = cur().y; P.rot = 0;
+          saveWin();
           burst(cur().x + 2.5, cur().y - 1, ['#f2b530', '#fff1b8', '#e0734a', '#7ccf6b'], 50, 12);
           sfx.win();
         } else resetSwing(false);
@@ -1499,6 +1791,109 @@
     ledges: () => ledges, P, startGame
   };
 })();
+</script>
+
+<script>
+  function enterPseudoFullscreen() {
+    document.getElementById('game-canvas-slot').classList.add('pseudo-fullscreen');
+    document.getElementById('pseudo-fullscreen-exit-btn').classList.add('visible');
+    updateFullscreenBtn();
+  }
+  function exitPseudoFullscreen() {
+    document.getElementById('game-canvas-slot').classList.remove('pseudo-fullscreen');
+    document.getElementById('pseudo-fullscreen-exit-btn').classList.remove('visible');
+    updateFullscreenBtn();
+  }
+  function toggleFullscreen() {
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = document.fullscreenElement || document.webkitFullscreenElement || el.classList.contains('pseudo-fullscreen');
+    if (!isFs) {
+      // Some devices (notably managed school Chromebooks) expose
+      // requestFullscreen but block it via policy, causing it to throw,
+      // silently reject, or - on some locked-down devices - just silently
+      // no-op without throwing OR rejecting at all, which the try/catch and
+      // the promise .catch() below both miss. The timeout after the call
+      // double-checks fullscreen actually engaged and falls back to
+      // CSS-only pseudo-fullscreen if not, so the button always does
+      // something.
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      var launched = false;
+      if (req && document.fullscreenEnabled !== false) {
+        try {
+          var result = req.call(el);
+          launched = true;
+          if (result && typeof result.catch === 'function') {
+            result.catch(function () { enterPseudoFullscreen(); });
+          }
+        } catch (e) {
+          launched = false;
+        }
+      }
+      if (!launched) { enterPseudoFullscreen(); return; }
+      setTimeout(function () {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !el.classList.contains('pseudo-fullscreen')) {
+          enterPseudoFullscreen();
+        }
+      }, 350);
+    } else if (el.classList.contains('pseudo-fullscreen')) {
+      exitPseudoFullscreen();
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }
+  function exitFullscreenAny() {
+    var el = document.getElementById('game-canvas-slot');
+    if (el.classList.contains('pseudo-fullscreen')) { exitPseudoFullscreen(); return; }
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+  function syncExitBtn(isFs) {
+    var eb = document.getElementById('pseudo-fullscreen-exit-btn');
+    var slot = document.getElementById('game-canvas-slot');
+    if (!eb || !slot) return;
+    if (isFs) { if (eb.parentNode !== slot) slot.appendChild(eb); eb.classList.add('visible'); }
+    else { eb.classList.remove('visible'); }
+  }
+  function updateFullscreenBtn() {
+    var btn = document.getElementById('fullscreen-btn');
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || (el && el.classList.contains('pseudo-fullscreen')));
+    btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+    syncExitBtn(isFs);
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // Wired up via addEventListener instead of an inline onclick= attribute -
+  // some school Chromebook content filters (GoGuardian, Securly, etc.) enforce
+  // a Content-Security-Policy that silently blocks inline event handlers while
+  // still allowing normal script-based listeners, which made this button do
+  // nothing at all on those devices.
+  document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+  document.getElementById('pseudo-fullscreen-exit-btn').addEventListener('click', exitFullscreenAny);
+  // Escape must not leave fullscreen: while in real fullscreen, ask the browser (Chrome/Edge Keyboard Lock) to hand Escape to the page.
+  // Players leave with the Exit Fullscreen button; (the browser itself still allows holding Escape for about 2 seconds as a safety exit).
+  document.addEventListener('fullscreenchange', function () {
+    try {
+      if (!navigator.keyboard) return;
+      if (document.fullscreenElement) navigator.keyboard.lock(['Escape']).catch(function () {});
+      else navigator.keyboard.unlock();
+    } catch (e) {}
+  });
+
+
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    var ok = confirm('Reset your Grapple Rope progress? This erases your saved best score, best combo, and completed worlds on this device. This cannot be undone.');
+    if (!ok) return;
+    window.grappleRopeResetting = true;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('grapplerope_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  });
 </script>
 </body>
 </html>
