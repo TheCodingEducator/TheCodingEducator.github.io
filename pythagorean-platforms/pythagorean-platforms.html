@@ -372,6 +372,19 @@
   .btn.eq { font-size: clamp(15px, 1.35vw, 19px); font-family: "Nunito", system-ui, sans-serif; font-weight: 800; }
   .btn.ghost { background: var(--panel-2); color: var(--text); border-bottom-color: #0f2618; font-size: 18px; }
   :focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  /* World 2: four answers per step, a typed final answer, and the fraying-rope timer */
+  .choices.four .btn.eq { padding: 6px 6px; }
+  .typed { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .typed label, .typed span { font-weight: 800; font-size: 20px; }
+  .typed input { width: 110px; font: 800 22px Nunito, system-ui, sans-serif; padding: 6px 10px; border-radius: 10px; border: 3px solid var(--line); background: var(--paper); color: var(--ink); text-align: center; }
+  .typed input:focus { outline: none; border-color: var(--gold); }
+  .typed .btn { flex: 1 1 120px; }
+  .shake { animation: shake 0.3s; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .fray { position: relative; height: 20px; border-radius: 10px; background: #143020; border: 2px solid var(--line); overflow: hidden; }
+  .fray i { position: absolute; left: 0; top: 0; bottom: 0; background: #b07a42; transition: width 0.1s linear; }
+  .fray.low i { background: #d9432f; }
+  .fray span { position: relative; display: block; text-align: center; font-size: 12px; font-weight: 800; line-height: 16px; color: var(--text); }
   .msg { margin: 0; color: #ffc9b3; font-weight: 700; font-size: 13px; }
   .msg:empty { display: none; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -434,7 +447,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Pythagorean Platforms</h1>
-<p class="sr-only">A jungle game about the Pythagorean theorem. Each canyon is a right triangle: leg a is the distance straight across to the next platform, leg b is how high the vine's anchor is above you, and the hypotenuse c is your rope. Solve one step of the Pythagorean theorem at a time by choosing the correct line of the written solution (tap it, or press the left or right arrow key); each correct step swings you to the next platform, and a wrong step drops you in the quicksand with a hint. The last step is the big swing: time slows down for a close-up that labels all three sides and reveals the missing length, and you land one rope length below the anchor, so short ropes keep you high in the trees and long ropes swing you low. World 1 walks through every step with tile squares, World 2 estimates square roots that are not whole numbers, and World 3 finds a missing leg, the distance to the next platform, from numbers carved on a temple door.</p>
+<p class="sr-only">A jungle game about the Pythagorean theorem. Each canyon is a right triangle: leg a is the distance straight across to the next platform, leg b is how high the vine's anchor is above you, and the hypotenuse c is your rope, all measured in feet. Solve one step of the Pythagorean theorem at a time by choosing the correct line of the written solution (tap it, or press the left or right arrow key); each correct step swings you to the next platform, and a wrong step drops you in the quicksand with a hint. The last step is the big swing: time slows down for a close-up that labels all three sides and reveals the missing length, and you land one rope length below the anchor, so short ropes keep you high in the trees and long ropes swing you low. World 1 walks through every step with tile squares, World 2 estimates square roots that are not whole numbers, and World 3 finds a missing leg, the distance to the next platform, from numbers carved on a temple door.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -443,7 +456,7 @@
     <div class="title">Pythagorean Platforms</div>
     <div class="modes" role="tablist" aria-label="World">
       <button role="tab" id="tab-w1" aria-selected="true" data-mode="w1">World 1<span class="wname"> · Tile Grove</span><small>Every step · tile squares</small></button>
-      <button role="tab" id="tab-w2" aria-selected="false" data-mode="w2">World 2<span class="wname"> · Waterfall Cliffs</span><small>Formula given · estimate roots</small></button>
+      <button role="tab" id="tab-w2" aria-selected="false" data-mode="w2">World 2<span class="wname"> · Waterfall Cliffs</span><small>Count squares · 4 choices · timed</small></button>
       <button role="tab" id="tab-w3" aria-selected="false" data-mode="w3">World 3<span class="wname"> · Temple Ruins</span><small>Formula given · missing legs</small></button>
     </div>
     <button class="help-btn" type="button" id="help-btn" aria-expanded="false" aria-controls="help">?<span class="long"> How to play</span></button>
@@ -458,7 +471,7 @@
           <ul>
             <li><b>One step per swing.</b> Tap the next line of the written solution (or press the left or right arrow key). The right line swings you to the next platform.</li>
             <li>Steps: pick the formula, plug in the legs, square, add, take the square root.</li>
-            <li>Each canyon is a right triangle: <b style="color:#ff9c85">a</b> is the distance across to the next platform, <b style="color:#93e088">b</b> is how high the vine's anchor is above you, and <b style="color:#8cc8ff">c</b> is your rope. Find the rope length or the distance to the next platform.</li>
+            <li>Each canyon is a right triangle: <b style="color:#ff9c85">a</b> is the distance across to the next platform, <b style="color:#93e088">b</b> is how high the vine's anchor is above you, and <b style="color:#8cc8ff">c</b> is your rope. Find the rope length or the distance to the next platform. All lengths are in feet.</li>
             <li>When the problem is solved, time slows down for a close-up of all three sides, and then you take the <b>big swing</b>. The next platform is one rope length under the anchor, so a short rope keeps you high in the trees and a long rope swings you low.</li>
             <li>A wrong line drops you in the quicksand, shows a hint, and you try that step again.</li>
           </ul>
@@ -468,7 +481,7 @@
           <ul>
             <li>a² + b² = c² is about <b>areas</b>: the squares on the two legs exactly fill the square on the hypotenuse. Watch the squares on the canyon change as you solve.</li>
             <li>Each wrong choice is a common mistake, and each one has its own hint.</li>
-            <li><b>Worlds 2 and 3</b> start with the formula already chosen. <b>World 2</b> adds estimation. <b>World 3</b> finds a missing leg: the numbers are carved on a temple door, and solving opens it.</li>
+            <li><b>Worlds 2 and 3</b> start with the formula already chosen. <b>World 2</b> is harder: count the squares along one unlabeled side first, choose from four answers, type the rope length, and beat the fraying rope. <b>World 3</b> finds a missing leg: the numbers are carved on a temple door, and solving opens it.</li>
           </ul>
         </section>
       </div>
@@ -526,7 +539,7 @@
     <li><strong>One step per swing:</strong> students choose the right line of the written solution - plug in, square, add (or subtract), take the square root - and each correct line swings them forward. Each wrong choice is a common mistake with its own hint, such as adding the sides, doubling instead of squaring, or forgetting the square root.</li>
     <li><strong>Why squares:</strong> a square is built on each side of the canyon triangle. As students work, the squares on the two legs fill with tiles and pour into the square on the rope, which they fill exactly - a visual proof of a&sup2; + b&sup2; = c&sup2;.</li>
     <li><strong>Answers you can see:</strong> the big swing lands one rope length below the anchor, drawn to scale, so short ropes keep the explorer high in the trees and long ropes swing low. After the final step, a slow-motion close-up labels all three sides and reveals the missing length.</li>
-    <li><strong>Three worlds:</strong> World 1 walks through every step with 3-4-5 triangles and unit tiles. World 2 gives the formula and adds estimating square roots that are not whole numbers. World 3 finds a missing leg - the distance to the next platform - from numbers carved on a temple door.</li>
+    <li><strong>Three worlds:</strong> World 1 walks through every step with 3-4-5 triangles and unit tiles. World 2 is the challenge round: one side of the triangle isn't labeled, so students first count the 1-ft grid squares along it, choose each step from four answers (every wrong one a common mistake), type the final rope length (to the nearest foot when the square root isn't whole), and work against a fraying-rope timer, with fewer hints and squares that stay "?" until their areas are found. World 3 finds a missing leg - the distance to the next platform - from numbers carved on a temple door.</li>
   </ul>
 </section>
 
@@ -544,7 +557,7 @@
   //   hypotenuse c (blue) = the rope from your hands to the anchor. The next platform sits right under the anchor,
   //   one rope length down - so a short rope keeps you high in the trees and a long one swings you low.
   const VIEW_H = 19, BODY = 1.25, SAND_Y = 33.5, ANCHOR_Y = 11;
-  const WORLD_K = { w1: 2, w2: 1.15, w3: 1 };   // world units per unit of the problem (one fixed scale per world)
+  const WORLD_K = { w1: 1.6, w2: 1.125, w3: 1 };  // world units per foot (one fixed scale per world)
   const GRAV = 85, ROPE_SPEED = 115, THORN_GAP = 0.25;
   const SKIES = {
     w1: ['#9fdcc9', '#f3e4a6', '#7fb89a', '#4f9467'],
@@ -575,7 +588,7 @@
     DPR = Math.min(2, window.devicePixelRatio || 1);
     W = r.width; H = r.height;
     cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
-    baseS = Math.min(H / VIEW_H, W / 26);
+    baseS = Math.min(H / VIEW_H, W / 26) || 20;   // (the box can measure 0 while the page is still laying out)
     applyZoom();
   }
   const viewW = () => W / S;
@@ -619,7 +632,8 @@
   sfx.step = () => tone(660, 990, 0.09, 'triangle', 0.08);
   sfx.pour = () => { tone(300, 600, 0.35, 'sine', 0.06); tone(450, 900, 0.3, 'sine', 0.04, 0.1); };
   sfx.oops = () => tone(260, 180, 0.2, 'square', 0.05);
-  sfx.whoosh = () => { tone(700, 90, 0.9, 'sine', 0.06); tone(220, 60, 1.2, 'triangle', 0.05, 0.05); };
+  // the slow motion starts with a magic sparkle: a quick upward run of bell notes (C E G C E G)
+  sfx.sparkle = () => [1047, 1319, 1568, 2093, 2637, 3136].forEach((f, i) => tone(f, f, 0.35, 'triangle', 0.05, i * 0.07));
   sfx.chime = () => tone(880, 1320, 0.18, 'triangle', 0.07);
   // the BANG: a burst of noise over a deep boom
   sfx.bang = () => {
@@ -670,64 +684,148 @@
     '<path class="thin" d="M0.6 58 L2.6 51"/><path class="thick" d="M2.6 51 L5.4 97"/><path class="thin" d="M5.4 97 L9.3 1.2 L10.5 1.2"/></svg>';
   const rad = inner => `<span class="rad" role="img" aria-label="square root of ${plain(String(inner))}">${RAD_SVG}<span class="ri">${inner}</span></span>`;
   const radHTML = text => text.replace(/√(\d+(?:\.\d+)?)/g, (m, n) => rad(n));
-  const step = (key, name, right, wrong, hint) => ({
-    key, name, line: right,
-    choices: shuffle([{ label: plain(right), html: right, ok: true }, { label: plain(wrong), html: wrong, ok: false, hint }])
-  });
+  // one line of the written solution: the right line plus one wrong line (with its hint), or a list of [wrong, hint] pairs
+  const step = (key, name, right, wrong, hint) => {
+    const wrongs = (Array.isArray(wrong) ? wrong : [[wrong, hint]]).filter(([w], i, all) => plain(w) !== plain(right) && all.findIndex(([v]) => plain(v) === plain(w)) === i);
+    return { key, name, line: right, choices: shuffle([{ label: plain(right), html: right, ok: true }, ...wrongs.map(([w, h]) => ({ label: plain(w), html: w, ok: false, hint: h }))]) };
+  };
 
+  // Problems never repeat back to back: the same triangle (either way round) can't come twice in a row, even across a new game
+  let lastProblemKey = '';
+  const problemKey = p => `${p.type}:${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`;
   function makeProblem(type, i) {
-    let a, b;
-    // World 1 sticks to the smallest whole-number triangle, 3-4-5, flipping which leg is which
-    if (mode === 'w1') [a, b] = i % 2 === 0 ? [3, 4] : [4, 3];
-    else if (type === 'est') { do { a = ri(2, 9); b = ri(3, 10); } while (Number.isInteger(Math.sqrt(a * a + b * b))); }
-    else [a, b] = pick(TRIPLES);
-    const sum = a * a + b * b, c = Math.sqrt(sum);
-    const p = { type, a, b, sum, c, done: 0, work: [] };
+    let p, tries = 0;
+    do { p = rollProblem(type); } while (problemKey(p) === lastProblemKey && ++tries < 50);
+    lastProblemKey = problemKey(p);
     p.steps = buildSteps(p);
     return p;
   }
+  function rollProblem(type) {
+    let a, b;
+    // Worlds 1 and 2 keep the legs to 8 ft (easy to count and to square); World 3 uses the bigger triangles too
+    if (type === 'est') { do { a = ri(2, 7); b = ri(3, 8); } while (Number.isInteger(Math.sqrt(a * a + b * b))); }
+    else [a, b] = pick(mode === 'w3' ? TRIPLES : [[3, 4], [4, 3], [6, 8], [8, 6]]);
+    const sum = a * a + b * b, c = Math.sqrt(sum);
+    const p = { type, a, b, sum, c, done: 0, work: [] };
+    if (mode === 'w2') p.count = pick(['a', 'b']);   // the leg students find by counting squares
+    return p;
+  }
 
+  // Each step's wrong answers are drawn at random from a pool of common mistakes, so they change from problem to problem.
+  // World 2 shows three of them (four answers in all); Worlds 1 and 3 show one.
+  function wrongsFrom(right, pool) {
+    const seen = new Set([plain(right)]);
+    const ok = shuffle(pool.filter(Boolean).slice()).filter(([w]) => { const k = plain(w); if (seen.has(k)) return false; seen.add(k); return true; });
+    return ok.slice(0, mode === 'w2' ? 3 : 1);
+  }
   function buildSteps(p) {
-    const { type, a, b, sum, c } = p;
-    const out = [];
+    const { type, a, b, sum, c } = p, out = [];
+    const add = (key, name, right, pool) => out.push(step(key, name, right, wrongsFrom(right, pool)));
+    const ft = x => x + ' ft';
     if (mode === 'w1') {   // only World 1 asks for the formula
-      const bad = pick([
+      add('formula', 'Pick the formula', `${A('a²')} + ${B('b²')} = ${C('c²')}`, [
         [`${A('a')} + ${B('b')} = ${C('c')}`, 'Adding the sides does not work. The squares of the legs add up to the square of the hypotenuse.'],
         [`(${A('a')} + ${B('b')})² = ${C('c²')}`, 'Square each leg by itself, then add: a² + b² = c².'],
-        [`${A('a²')} + ${B('b²')} = ${C('c')}`, 'The hypotenuse gets squared too: a² + b² = c².']
+        [`${A('a²')} + ${B('b²')} = ${C('c')}`, 'The hypotenuse gets squared too: a² + b² = c².'],
+        [`${A('a²')} + ${C('c²')} = ${B('b²')}`, 'c is the hypotenuse - the rope, across from the right angle. Its square goes by itself: a² + b² = c².'],
+        [`${A('2a')} + ${B('2b')} = ${C('2c')}`, 'Squaring means times itself, not times 2: a² + b² = c².'],
+        [`${A('a²')} × ${B('b²')} = ${C('c²')}`, 'Add the two squares - don\'t multiply them: a² + b² = c².']
       ]);
-      out.push(step('formula', 'Pick the formula', `${A('a²')} + ${B('b²')} = ${C('c²')}`, bad[0], bad[1]));
+    }
+    if (mode === 'w2') {   // World 2: one leg isn't labeled - count the 1-ft squares along it
+      const n = p.count === 'a' ? a : b, L = p.count === 'a' ? A : B, sq = p.count === 'a' ? 'coral' : 'green';
+      const miscount = `Count the squares along one edge of the ${sq} square, corner to corner - there are ${n}.`;
+      add('count', `Count the squares along ${p.count}`, `${L(p.count)} = ${L(ft(n))}`, [
+        [`${L(p.count)} = ${L(ft(n - 1))}`, miscount], [`${L(p.count)} = ${L(ft(n + 1))}`, miscount],
+        n > 2 && [`${L(p.count)} = ${L(ft(n - 2))}`, miscount], [`${L(p.count)} = ${L(ft(n + 2))}`, miscount],
+        [`${L(p.count)} = ${L(ft(n * n))}`, `${n * n} is every square inside the ${sq} square (its area). Count only the ones along one edge: ${n}.`],
+        [`${L(p.count)} = ${L(ft(2 * n))}`, `${2 * n} counts two edges of the ${sq} square. Count just one edge: ${n}.`],
+        [`${L(p.count)} = ${L(ft(4 * n))}`, `${4 * n} goes all the way around the ${sq} square. Count just one edge: ${n}.`]
+      ]);
     }
     if (type === 'leg') {   // the rope c and the anchor height b are known: find a, the distance to the next platform
-      out.push(step('sub', 'Plug in what you know', `${A('a²')} + ${B(b + '²')} = ${C(c + '²')}`, `${B(b + '²')} + ${C(c + '²')} = ${A('a²')}`,
-        `${c} is the rope, the hypotenuse - the longest side. It goes by itself: a² + ${b}² = ${c}².`));
-      out.push(step('square', 'Square the numbers', `${A('a²')} + ${B(b * b)} = ${C(c * c)}`, `${A('a²')} + ${B(2 * b)} = ${C(2 * c)}`,
-        `Squaring means times itself: ${b}² = ${b * b} and ${c}² = ${c * c}.`));
-      out.push(step('subtract', 'Get a² by itself', `${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(a * a)}`, `${A('a²')} = ${C(c * c)} + ${B(b * b)} = ${A(c * c + b * b)}`,
-        `To get a² alone, subtract ${b * b} from both sides: ${c * c} − ${b * b} = ${a * a}.`));
-      out.push(step('root', 'Take the square root', `${A('a')} = ${rad(A(a * a))} = ${A(a)}`, `${A('a')} = ${A(a * a)}`,
-        `${a * a} is a², not a. Take the square root: √${a * a} = ${a}.`));
+      add('sub', 'Plug in what you know', `${A('a²')} + ${B(b + '²')} = ${C(c + '²')}`, [
+        [`${B(b + '²')} + ${C(c + '²')} = ${A('a²')}`, `${c} is the rope, the hypotenuse - the longest side. It goes by itself: a² + ${b}² = ${c}².`],
+        [`${A('a')} + ${B(b)} = ${C(c)}`, `Square every side: a² + ${b}² = ${c}².`],
+        [`${A('a²')} + ${B(b + '²')} = ${C(c)}`, `The rope is squared too: a² + ${b}² = ${c}².`],
+        [`${A('a²')} − ${B(b + '²')} = ${C(c + '²')}`, `The squares of the legs add up to the square of the rope: a² + ${b}² = ${c}².`]
+      ]);
+      add('square', 'Square the numbers', `${A('a²')} + ${B(b * b)} = ${C(c * c)}`, [
+        [`${A('a²')} + ${B(2 * b)} = ${C(2 * c)}`, `Squaring means times itself, not times 2: ${b}² = ${b * b} and ${c}² = ${c * c}.`],
+        [`${A('a²')} + ${B(b * b)} = ${C(c)}`, `Square the rope too: ${c}² = ${c * c}.`],
+        [`${A('a²')} + ${B(b)} = ${C(c * c)}`, `Square the ${b} too: ${b}² = ${b * b}.`],
+        [`${A('a²')} + ${B(b * b)} = ${C(2 * c)}`, `${c}² means ${c} × ${c} = ${c * c}, not ${c} × 2.`]
+      ]);
+      const aa = a * a;
+      add('subtract', 'Get a² by itself', `${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(aa)}`, [
+        [`${A('a²')} = ${C(c * c)} + ${B(b * b)} = ${A(c * c + b * b)}`, `To get a² alone, subtract ${b * b} from both sides: ${c * c} − ${b * b} = ${aa}.`],
+        [`${A('a²')} = (${C(c)} − ${B(b)})² = ${A((c - b) * (c - b))}`, `Subtract the squares, not the sides: ${c * c} − ${b * b} = ${aa}.`],
+        [`${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(aa + 10)}`, `Check the subtraction: ${c * c} − ${b * b} = ${aa}.`],
+        [`${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(aa - 1)}`, `Check the subtraction: ${c * c} − ${b * b} = ${aa}.`],
+        [`${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(aa + 1)}`, `Check the subtraction: ${c * c} − ${b * b} = ${aa}.`]
+      ]);
+      add('root', 'Take the square root', `${A('a')} = ${rad(A(aa))} = ${A(ft(a))}`, [
+        [`${A('a')} = ${A(ft(aa))}`, `${aa} is a², not a. Take the square root: √${aa} = ${a}.`],
+        aa % 2 === 0 && aa / 2 !== a && [`${A('a')} = ${A(ft(aa / 2))}`, `A square root is not half. ${a} × ${a} = ${aa}, so a = ${a}.`],
+        [`${A('a')} = ${C(c)} − ${B(b)} = ${A(ft(c - b))}`, `Sides don't subtract like that - only their squares do. √${aa} = ${a}.`],
+        [`${A('a')} = ${A(ft(a + 1))}`, `Check: ${a + 1} × ${a + 1} = ${(a + 1) * (a + 1)}, not ${aa}. √${aa} = ${a}.`],
+        [`${A('a')} = ${A(ft(a - 1))}`, `Check: ${a - 1} × ${a - 1} = ${(a - 1) * (a - 1)}, not ${aa}. √${aa} = ${a}.`]
+      ]);
       return out;
     }
-    const subBad = pick([
+    add('sub', 'Plug in the legs', `${A(a + '²')} + ${B(b + '²')} = ${C('c²')}`, [
       [`${A(a)} + ${B(b)} = ${C('c²')}`, `Keep the squares: each leg gets squared, so it is ${a}² + ${b}² = c².`],
-      [`${A(a + '²')} + ${B(b + '²')} = ${C('c')}`, `The hypotenuse is squared too: ${a}² + ${b}² = c².`]
+      [`${A(a + '²')} + ${B(b + '²')} = ${C('c')}`, `The hypotenuse is squared too: ${a}² + ${b}² = c².`],
+      [`${A(a + '²')} + ${C('c²')} = ${B(b + '²')}`, `c is the rope - the hypotenuse, across from the right angle. It goes by itself: ${a}² + ${b}² = c².`],
+      [`(${A(a)} + ${B(b)})² = ${C('c²')}`, `Square each leg by itself, then add: ${a}² + ${b}² = c².`],
+      [`${A(a + '²')} × ${B(b + '²')} = ${C('c²')}`, `Add the squares - don't multiply them: ${a}² + ${b}² = c².`]
     ]);
-    out.push(step('sub', 'Plug in the legs', `${A(a + '²')} + ${B(b + '²')} = ${C('c²')}`, subBad[0], subBad[1]));
-    out.push(step('square', 'Square each leg', `${A(a * a)} + ${B(b * b)} = ${C('c²')}`, `${A(2 * a)} + ${B(2 * b)} = ${C('c²')}`,
-      `${a}² means ${a} × ${a} = ${a * a}, not ${a} × 2.`));
-    const slip = sum + (Math.random() < 0.5 && sum > 20 ? -10 : 10);
-    out.push(step('add', 'Add the squares', `${C(sum)} = ${C('c²')}`, `${C(slip)} = ${C('c²')}`, `Check the addition: ${a * a} + ${b * b} = ${sum}.`));
+    add('square', 'Square each leg', `${A(a * a)} + ${B(b * b)} = ${C('c²')}`, [
+      [`${A(2 * a)} + ${B(2 * b)} = ${C('c²')}`, `${a}² means ${a} × ${a} = ${a * a}, not ${a} × 2.`],
+      [`${A(a * a)} + ${B(b)} = ${C('c²')}`, `Square both legs: ${b}² = ${b} × ${b} = ${b * b}.`],
+      [`${A(a)} + ${B(b * b)} = ${C('c²')}`, `Square both legs: ${a}² = ${a} × ${a} = ${a * a}.`],
+      [`${A(a * a)} + ${B(2 * b)} = ${C('c²')}`, `${b}² means ${b} × ${b} = ${b * b}, not ${b} × 2.`],
+      [`${A(2 * a)} + ${B(b * b)} = ${C('c²')}`, `${a}² means ${a} × ${a} = ${a * a}, not ${a} × 2.`],
+      [`${C((a + b) * (a + b))} = ${C('c²')}`, `Square each leg by itself, then add. (${a} + ${b})² is not ${a}² + ${b}².`]
+    ]);
+    const slip = `Check the addition: ${a * a} + ${b * b} = ${sum}.`;
+    add('add', 'Add the squares', `${C(sum)} = ${C('c²')}`, [
+      [`${C(sum + 10)} = ${C('c²')}`, slip], sum > 10 && [`${C(sum - 10)} = ${C('c²')}`, slip],
+      [`${C(sum + 1)} = ${C('c²')}`, slip], [`${C(sum - 1)} = ${C('c²')}`, slip], [`${C(sum + 2)} = ${C('c²')}`, slip],
+      [`${C(a * a * b * b)} = ${C('c²')}`, `Add the squares - don't multiply them: ${a * a} + ${b * b} = ${sum}.`],
+      [`${C((a + b) * (a + b))} = ${C('c²')}`, `Add the squares ${a * a} + ${b * b}, not (${a} + ${b})².`],
+      [`${C(a + b)} = ${C('c²')}`, `Add the squares, not the sides: ${a * a} + ${b * b} = ${sum}.`]
+    ]);
+    if (mode === 'w2') {   // World 2 types the rope length instead of picking it
+      const est = type === 'est';
+      out.push({ key: 'root', name: est ? 'Type c to the nearest foot' : 'Type the rope length c', typed: { c, sum, est },
+        line: est ? `${C('c')} = ${rad(C(sum))} ≈ ${C(ft(Math.round(c)))}` : `${C('c')} = ${rad(C(sum))} = ${C(ft(c))}`, choices: [] });
+      return out;
+    }
     if (type === 'est') {
-      const f = Math.floor(c), up = Math.random() < 0.5 || f < 2, lo = up ? f + 1 : f - 1;
-      out.push(step('root', 'Estimate the square root', `${f} < ${C('c')} < ${f + 1}`, `${lo} < ${C('c')} < ${lo + 1}`,
-        `${f}² = ${f * f} and ${f + 1}² = ${(f + 1) * (f + 1)}. ${sum} is between them, so c is between ${f} and ${f + 1}.`));
+      const f = Math.floor(c), why = `${f}² = ${f * f} and ${f + 1}² = ${(f + 1) * (f + 1)}. ${sum} is between them, so c is between ${f} and ${f + 1}.`;
+      add('root', 'Estimate the square root', `${f} < ${C('c')} < ${f + 1}`, [
+        f > 1 && [`${f - 1} < ${C('c')} < ${f}`, why], [`${f + 1} < ${C('c')} < ${f + 2}`, why], f > 2 && [`${f - 2} < ${C('c')} < ${f - 1}`, why]
+      ]);
     } else {
-      const half = Math.random() < 0.5 && sum / 2 !== c;
-      out.push(step('root', 'Take the square root', `${C('c')} = ${rad(C(sum))} = ${C(c)}`, half ? `${C('c')} = ${C(sum / 2)}` : `${C('c')} = ${C(sum)}`,
-        half ? `A square root is not half. ${c} × ${c} = ${sum}, so c = ${c}.` : `${sum} is c², not c. Take the square root: √${sum} = ${c}.`));
+      add('root', 'Take the square root', `${C('c')} = ${rad(C(sum))} = ${C(ft(c))}`, [
+        [`${C('c')} = ${C(ft(sum))}`, `${sum} is c², not c. Take the square root: √${sum} = ${c}.`],
+        sum % 2 === 0 && sum / 2 !== c && [`${C('c')} = ${C(ft(sum / 2))}`, `A square root is not half. ${c} × ${c} = ${sum}, so c = ${c}.`],
+        [`${C('c')} = ${A(a)} + ${B(b)} = ${C(ft(a + b))}`, `The rope isn't the two legs added together. √${sum} = ${c}.`],
+        [`${C('c')} = ${C(ft(c + 1))}`, `Check: ${c + 1} × ${c + 1} = ${(c + 1) * (c + 1)}, not ${sum}. √${sum} = ${c}.`],
+        [`${C('c')} = ${C(ft(c - 1))}`, `Check: ${c - 1} × ${c - 1} = ${(c - 1) * (c - 1)}, not ${sum}. √${sum} = ${c}.`]
+      ]);
     }
     return out;
+  }
+
+  // how a typed rope length went wrong, for the hint
+  function typedHint(t, v) {
+    const f = Math.floor(t.c), near = t.sum - f * f < (f + 1) * (f + 1) - t.sum ? f : f + 1;
+    if (Math.abs(v - t.sum) < 0.01) return `${t.sum} is c², the area of the big square. Take the square root: √${t.sum}${t.est ? ' ≈ ' + Math.round(t.c) : ' = ' + t.c}.`;
+    if (Math.abs(v - t.sum / 2) < 0.01) return `A square root is not half. Find the number that times itself makes ${t.sum}.`;
+    if (t.est) return `${f}² = ${f * f} and ${f + 1}² = ${(f + 1) * (f + 1)}. ${t.sum} is closer to ${near * near}, so c ≈ ${near}.`;
+    return `Check: c × c has to equal ${t.sum}. ${fmt(v)} × ${fmt(v)} = ${fmt(v * v)}.`;
   }
 
   // Place every platform and anchor. Each problem's step platforms climb or drop evenly from where the last big swing
@@ -784,7 +882,7 @@
     const l = cur();
     P.x = l.x; P.y = l.y; P.vx = P.vy = 0; P.rot = 0;
     rope = null; outcome = null; failKind = null; explain = null;
-    state = 'aim'; st = 0;
+    state = 'aim'; st = 0; fray = 0;
     if (!keepWrongs) wrongs = new Set();
     if (!l.final) {
       const fresh = l.si === 0 && l.prob.done === 0;
@@ -814,12 +912,8 @@
       return;
     }
     const l = cur(), p = l.prob;
-    const lead = `Problem ${l.pi + 1} of ${problems.length} · `;
-    const given = mode === 'w3'
-      ? lead + (p.type === 'leg' ? `Read the temple door: your rope is ${C(p.c)} and the anchor is ${B(p.b)} up. How far is it to the next platform (${A('a')})?`
-        : `Read the temple door: the next platform is ${A(p.a)} across and the anchor is ${B(p.b)} up. How long is your rope (${C('c')})?`)
-      : p.type === 'leg' ? lead + `Your rope is ${C(p.c)} and the anchor is ${B(p.b)} up. How far is it to the next platform (${A('a')})?`
-      : lead + `The next platform is ${A(p.a)} across and the anchor is ${B(p.b)} up. How long is your rope (${C('c')})?`;
+    // just the goal - the side lengths are all labeled on the picture (the problem number is on the game screen)
+    const given = p.type === 'leg' ? `Find the distance ${A('a')}, in feet.` : `Find the rope ${C('c')}, in feet.`;
     workEl.innerHTML = `<li class="given">${given}</li>` + p.work.map(w => `<li class="done">${w}</li>`).join('');
     workEl.scrollTop = workEl.scrollHeight;
     if (state === 'explain') {
@@ -830,6 +924,18 @@
       promptEl.textContent = `Step ${l.si + 1} of ${p.steps.length} · ${s.name}${l.kind === 'canyon' ? (mode === 'w3' ? ' — open the temple door!' : ' — the big swing!') : ''}`;
       choicesEl.hidden = false;
       choicesEl.innerHTML = '';
+      if (s.typed) {   // World 2's last step: type the rope length
+        const f = document.createElement('form');
+        f.className = 'typed';
+        f.innerHTML = `<label for="typed-ans">${C('c')} ${s.typed.est ? '≈' : '='}</label><input id="typed-ans" inputmode="decimal" autocomplete="off" maxlength="6" aria-label="rope length c in feet"><span>ft</span><button class="btn" type="submit">Swing!</button>`;
+        const inp = f.querySelector('input');
+        inp.disabled = !aiming; f.querySelector('button').disabled = !aiming;
+        inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^0-9.]/g, ''); });
+        f.addEventListener('submit', e => { e.preventDefault(); submitTyped(inp); });
+        choicesEl.appendChild(f);
+        if (aiming && !matchMedia('(pointer: coarse)').matches) setTimeout(() => inp.focus({ preventScroll: true }), 30);
+      }
+      choicesEl.classList.toggle('four', s.choices.length > 2);
       s.choices.forEach((ch, i) => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'btn eq' + (wrongs.has(ch.label) ? ' wrong' : '');
@@ -845,13 +951,14 @@
   function caption(l) {
     const p = l.prob;
     if (state === 'explain') return 'Look at the canyon: the two small squares fill the big one exactly.';
+    if (mode === 'w2') return '';   // World 2: no step hints
     const k = p.steps[l.si].key;
-    if (k === 'formula') return mode === 'w3' ? 'The numbers carved on the door are your side lengths. The hypotenuse is across from the right angle.' : 'Square on leg a + square on leg b = square on the hypotenuse c.';
-    if (k === 'sub') return 'Match each number to its side. The hypotenuse is across from the right angle.';
-    if (k === 'square') return 'Each square\'s area is its side times itself.';
-    if (k === 'add') return 'Pour the two small squares into the big stone frame.';
-    if (k === 'subtract') return 'The big square minus the small one leaves the missing square.';
-    return p.type === 'est' ? `Area ${p.sum} is not a perfect square. Which whole squares is it between?` : 'Which side length makes this area?';
+    if (k === 'formula') return 'The two small squares fill the big one.';
+    if (k === 'sub') return 'Use the side lengths on the picture.';
+    if (k === 'square') return 'Area = side × side.';
+    if (k === 'add') return 'Pour both squares into the big one.';
+    if (k === 'subtract') return 'Big square − small square.';
+    return p.type === 'est' ? `Which two squares is ${p.sum} between?` : 'Side = √ area.';
   }
 
   // ---------- actions ----------
@@ -877,9 +984,42 @@
     refreshPanel();
   }
 
-  function fire(ok) {
+  // a typed answer (World 2's last step) is checked like a choice: exact for a whole-number rope, nearest foot for an estimate
+  function submitTyped(inp) {
+    if (state !== 'aim') return;
+    const l = cur(), t = l.prob.steps[l.si].typed, v = parseFloat(inp.value);
+    if (!t) return;
+    if (!isFinite(v)) { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); inp.focus(); return; }
+    const ok = t.est ? Math.abs(v - t.c) <= 0.5 : Math.abs(v - t.c) < 0.01;
+    answer({ label: 'typed ' + v, html: `c = ${fmt(v)} ft`, ok, hint: ok ? '' : typedHint(t, v) });
+  }
+
+  // World 2's fraying rope: each step has a time limit; run out and the rope snaps (you redo the step)
+  let fray = 0;
+  const frayLimit = () => { const l = cur(); return l && !l.final && l.prob.steps[l.si].typed ? 25 : 15; };
+  const frayEl = document.createElement('div');
+  frayEl.className = 'fray'; frayEl.hidden = true; frayEl.innerHTML = '<i></i><span></span>';
+  choicesEl.parentNode.insertBefore(frayEl, choicesEl);
+  function snap() {
+    combo = 0; misses++;
+    guess = { hint: 'Too slow - the rope frayed and snapped! Try that step again a little faster.' };
+    msgEl.textContent = guess.hint;
+    fire(false, 'snap');
+    refreshPanel();
+  }
+  function renderFray() {
+    const l = cur(), on = mode === 'w2' && state === 'aim' && l && !l.final;
+    frayEl.hidden = !on;
+    if (!on) return;
+    const left = Math.max(0, frayLimit() - fray), k = left / frayLimit();
+    frayEl.firstChild.style.width = (k * 100).toFixed(1) + '%';
+    frayEl.classList.toggle('low', k < 0.3);
+    frayEl.lastChild.textContent = `Rope frays in ${Math.ceil(left)}s`;
+  }
+
+  function fire(ok, kind) {
     const l = cur(); const c = l.rope; const A = anchorOf(l);
-    failKind = ok ? null : 'miss';
+    failKind = ok ? null : (kind || 'miss');
     outcome = ok ? 'perfect' : 'short';
     P0 = { x: P.x, y: P.y };
     const dx = A.x - P.x, dy = A.y - P.y, dl = Math.hypot(dx, dy);
@@ -896,12 +1036,27 @@
   document.addEventListener('keydown', e => {
     if (e.target && e.target.closest && e.target.closest('.reset-progress, .teaching-notes, .standards-panel')) return;   // leave page controls alone
     if (state === 'explain' && st > 0.4 && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); retry(); return; }
-    // left/right arrows (or 1/2) pick the left/right answer
-    const pickIdx = { ArrowLeft: 0, ArrowRight: 1, '1': 0, '2': 1 }[e.key];
-    if (state === 'aim' && pickIdx !== undefined && !cur().final) {
+    if (e.target && e.target.id === 'typed-ans') return;   // typing the rope length
+    const l = cur(), s = state === 'aim' && l && !l.final ? l.prob.steps[l.si] : null;
+    if (!s || s.typed) return;
+    const n = s.choices.length;
+    // number keys pick an answer directly (1 = first); with two answers the left/right arrows pick,
+    // with more the arrow keys move between the answers and Enter picks
+    let pickIdx = { '1': 0, '2': 1, '3': 2, '4': 3 }[e.key];
+    if (pickIdx === undefined && n === 2) pickIdx = { ArrowLeft: 0, ArrowRight: 1 }[e.key];
+    if (pickIdx !== undefined && pickIdx < n) {
       e.preventDefault();
-      const ch = cur().prob.steps[cur().si].choices[pickIdx];
+      const ch = s.choices[pickIdx];
       if (ch && !wrongs.has(ch.label)) answer(ch);
+      return;
+    }
+    const dir = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (dir && n > 2) {
+      e.preventDefault();
+      const btns = [...choicesEl.querySelectorAll('button:not(:disabled)')];
+      const i = btns.indexOf(document.activeElement);
+      const next = btns[(i < 0 ? (dir > 0 ? 0 : btns.length - 1) : (i + dir + btns.length) % btns.length)];
+      if (next) next.focus();
     }
   });
 
@@ -956,7 +1111,9 @@
   function fail() {
     const l = cur(), p = l.prob, s = p.steps[l.si];
     misses++; combo = 0;
-    explain = { title: 'Wrong step! The rope missed.', hint: guess && guess.hint ? guess.hint : '', work: `Right step: ${plain(s.line)}`, full: '' };
+    const snapped = failKind === 'snap';   // a snapped rope is about speed, so it doesn't give the answer away
+    explain = { title: snapped ? 'Too slow! The rope snapped.' : 'Wrong step! The rope missed.', hint: guess && guess.hint ? guess.hint : '',
+      work: snapped ? 'You get a fresh rope - same step.' : `Right step: ${plain(s.line)}`, full: '' };
     state = 'explain'; st = 0;
     refreshPanel();
   }
@@ -964,6 +1121,7 @@
   // ---------- update ----------
   function update(dt) {
     st += dt;
+    if (mode === 'w2' && state === 'aim' && cur() && !cur().final && (fray += dt) >= frayLimit()) snap();   // the fraying rope
     const l = cur();
     const A = l && !l.final ? anchorOf(l) : null;
 
@@ -975,7 +1133,7 @@
           rope.tip.x = P0.x + rope.dir.x * rope.len; rope.tip.y = P0.y + rope.dir.y * rope.len;
           if (rope.len >= rope.max) {
             rope.phase = 'limp'; rope.tip.vx = rope.dir.x * 3; rope.tip.vy = 0;
-            popup(failKind === 'miss' ? 'Missed!' : 'Too short!', rope.tip.x, rope.tip.y - 0.8, '#ffd0c0'); sfx.miss();
+            popup(failKind === 'snap' ? 'Snapped!' : failKind === 'miss' ? 'Missed!' : 'Too short!', rope.tip.x, rope.tip.y - 0.8, '#ffd0c0'); sfx.miss();
           }
         } else {
           rope.tip.vy += GRAV * dt; rope.tip.x += rope.tip.vx * dt; rope.tip.y += rope.tip.vy * dt;
@@ -1036,16 +1194,26 @@
     const t = cine.tri;
     return { left: t.x0 - 2.4, right: t.ax + 3.4, top: t.ay - 2.4, bot: t.y0 + 3.4 };
   }
-  const fitZoom = (b, lo, hi) => Math.max(lo, Math.min(hi, H / ((b.bot - b.top) * baseS), W / ((b.right - b.left) * baseS)));
+  // World 2's counting step: frame just the square being counted, close up, so its grid squares are big and easy to count
+  function countBounds() {
+    const l = cur(); if (mode !== 'w2' || !l || l.final || (state !== 'aim' && state !== 'explain')) return null;
+    const p = l.prob; if (p.steps[l.si].key !== 'count') return null;
+    const L = figureLedge(), kk = L.k;
+    if (p.count === 'a') return { left: L.x - 2, right: L.x + p.a * kk + 2, top: L.y - 2.6, bot: L.y + p.a * kk + 1.6 };
+    return { left: L.ax - 3.8, right: L.ax + p.b * kk + 1.6, top: L.ay - 1.8, bot: L.y + 1.8 };
+  }
+  const fitZoom = (b, lo, hi) => { const z = Math.min(hi, H / ((b.bot - b.top) * baseS), W / ((b.right - b.left) * baseS)); return isFinite(z) ? Math.max(lo, z) : 1; };
   function zoomTarget() {
     if (cine && cine.t < CINE.out) return fitZoom(cineBounds(), 0.6, 2.4);   // the slow-motion close-up
+    const cb = countBounds(); if (cb) return fitZoom(cb, 0.8, 1.9);
     const f = figBounds();
     const busy = state === 'aim' || state === 'fire' || state === 'explain' || state === 'swing';
-    return f && busy ? fitZoom({ left: 0, right: 1, top: Math.min(f.top, P.y - 2), bot: Math.max(f.bot, P.y + 3) }, 0.5, 1) : 1;
+    return f && busy ? fitZoom({ left: 0, right: 1, top: Math.min(f.top, P.y - 2), bot: Math.max(f.bot, P.y + 3) }, mode === 'w2' ? 0.75 : 0.5, 1) : 1;
   }
   function camTargetX() {
     const vw = viewW();
     if (cine && cine.t < CINE.out) { const b = cineBounds(); return (b.left + b.right) / 2 - vw / 2; }
+    const cb = countBounds(); if (cb) return (cb.left + cb.right) / 2 - vw / 2;
     const f = figBounds();
     let t = P.x - vw * 0.18;
     if (f && (state === 'aim' || state === 'fire' || state === 'explain')) {
@@ -1056,6 +1224,7 @@
   }
   function camTargetY() {
     if (cine && cine.t < CINE.out) { const b = cineBounds(); return (b.top + b.bot) / 2 - viewH / 2; }
+    const cb = countBounds(); if (cb) return (cb.top + cb.bot) / 2 - viewH / 2;
     const f = figBounds();
     let t = P.y - viewH * 0.62;
     if (f && state !== 'swing' && state !== 'land') t = f.bot - f.top > viewH ? f.top : (f.top + f.bot) / 2 - viewH / 2;
@@ -1064,6 +1233,9 @@
     return Math.min(Math.max(-3, t), SAND_Y + 1.8 - viewH);
   }
   function updateCamera(dt) {
+    // if the camera ever ended up with a bad value (e.g. set before the game box had a size), snap it back into place
+    if (!isFinite(zoom)) { zoom = 1; applyZoom(); }
+    if (!isFinite(camX) || !isFinite(camY)) { camX = camTargetX(); camY = camTargetY(); }
     const kz = 1 - Math.exp(-dt * 3);
     zoom += (zoomTarget() - zoom) * kz; applyZoom();
     const k = 1 - Math.exp(-dt * 3.5);
@@ -1336,6 +1508,15 @@
     c.textAlign = prev;
   }
 
+  // how big chip() will draw a label, so labels can sit right beside a line instead of on top of it
+  function chipSize(text, size = 1) {
+    const fs = Math.max(12, Math.min(22, S * 0.8)) * size;
+    ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`;
+    return { w: mathWidth(ctx, text, fs) + fs * 0.9, h: fs * 1.5 };
+  }
+  // where the a and b labels go: just inside the triangle, beside their side, so they never cover the squares' areas
+  const aTagAt = (text, x, y, size) => [x, y - chipSize(text, size).h / 2 - 5];   // above side a (the ground)
+  const bTagAt = (text, x, y, size) => [x - chipSize(text, size).w / 2 - 6, y];   // left of side b (the cliff)
   function chip(text, x, y, bg = '#1f3a28', fg = '#fff6d8', size = 1) {
     const fs = Math.max(12, Math.min(22, S * 0.8)) * size;
     ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`;
@@ -1345,7 +1526,7 @@
   }
 
   function drawTriangle(time) {
-    const l = cur(); if (!l || l.final || l.kind !== 'canyon' || state !== 'aim' || st < 1.3) return;
+    const l = cur(); if (!l || l.final || l.kind !== 'canyon' || state !== 'aim' || st < 1.3 || mode === 'w2') return;   // (World 2's prompt already says it)
     chip(mode === 'w3' ? 'Last step opens the door!' : 'Last step = big swing!', sx(P.x) - 4.6 * S, sy(P.y) + 2.6 * S, '#1f3a28', '#fff6d8', 1.05);
   }
 
@@ -1500,6 +1681,16 @@
     c.save();
     c.globalAlpha = 1 - cr;
     c.translate(0, cr * cr * 7 * S);
+    // the 1-ft grid inside a square (side n ft) - shown in every world so students can count the squares along a side
+    function gridLines(s, n) {
+      c.strokeStyle = door ? 'rgba(255,248,230,0.32)' : 'rgba(58,42,20,0.38)'; c.lineWidth = Math.max(1, 0.035 * S);
+      c.beginPath();
+      for (let i = 1; i < n; i++) {
+        let p1 = pt(s.O, s.u, s.v, i / n, 0), p2 = pt(s.O, s.u, s.v, i / n, 1); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
+        p1 = pt(s.O, s.u, s.v, 0, i / n); p2 = pt(s.O, s.u, s.v, 1, i / n); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
+      }
+      c.stroke();
+    }
     function legSquare(s, fill, color, label, ink) {
       quad(s.O, s.u, s.v, 0, 1, 0, 1);
       c.fillStyle = door ? 'rgba(45,38,25,0.55)' : 'rgba(255,248,230,0.35)'; c.fill();
@@ -1514,18 +1705,12 @@
           c.strokeStyle = 'rgba(58,42,20,0.35)'; c.lineWidth = 1; c.stroke();
         }
         c.globalAlpha = 1 - cr;
-        c.strokeStyle = 'rgba(58,42,20,0.2)'; c.lineWidth = 1;
-        c.beginPath();
-        for (let i = 1; i < n; i++) {
-          let p1 = pt(s.O, s.u, s.v, i / n, 0), p2 = pt(s.O, s.u, s.v, i / n, 1); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
-          p1 = pt(s.O, s.u, s.v, 0, i / n); p2 = pt(s.O, s.u, s.v, 1, i / n); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
-        }
-        c.stroke();
       } else if (fill > 0) {
         c.globalAlpha = (1 - cr) * drain * Math.min(1, fill);
         quad(s.O, s.u, s.v, 0, 1, 0, 1); c.fillStyle = color; c.fill();
         c.globalAlpha = 1 - cr;
       }
+      gridLines(s, s.n);
       quad(s.O, s.u, s.v, 0, 1, 0, 1);
       c.strokeStyle = door ? '#3b3526' : '#4b4032'; c.lineWidth = edge; c.stroke();
       if (label) {
@@ -1536,7 +1721,9 @@
         c.strokeText(label, lx, ly); c.fillStyle = ink; c.fillText(label, lx, ly);
       }
     }
-    const legLabel = (n, f, letter, known) => f > 0.5 ? `${n * n}` : (nb.num > 0.5 || door) && known ? `${n}²` : nb.sym > 0.5 ? `${letter}²` : '';
+    // each square shows what it stands for from the start (3², or a² when that side is the missing one), then its area once squared
+    const hard = mode === 'w2';   // World 2: the squares show "?" until their areas are worked out
+    const legLabel = (n, f, letter, known) => f > 0.5 ? `${n * n} ft²` : hard ? '?' : known ? `${n}²` : `${letter}²`;
     legSquare(sqA, nb.aF, CORAL, legLabel(a, nb.aF, 'a', p.type !== 'leg'), A_INK);   // in a missing-leg problem, a is the unknown
     legSquare(sqB, nb.bF, GREEN, legLabel(b, nb.bF, 'b', true), B_INK);
 
@@ -1558,16 +1745,7 @@
       quad(sqC.O, sqC.u, sqC.v, 0, 1, 0, f1); c.fillStyle = CORAL; c.fill();
       quad(sqC.O, sqC.u, sqC.v, 0, 1, f1, f2); c.fillStyle = GREEN; c.fill();
     }
-    if (cInt) {
-      // unit grid so the big square's tiles can be counted too
-      c.strokeStyle = door ? 'rgba(255,248,230,0.18)' : 'rgba(58,42,20,0.22)'; c.lineWidth = 1;
-      c.beginPath();
-      for (let i = 1; i < cc; i++) {
-        let p1 = pt(sqC.O, sqC.u, sqC.v, i / cc, 0), p2 = pt(sqC.O, sqC.u, sqC.v, i / cc, 1); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
-        p1 = pt(sqC.O, sqC.u, sqC.v, 0, i / cc); p2 = pt(sqC.O, sqC.u, sqC.v, 1, i / cc); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
-      }
-      c.stroke();
-    }
+    gridLines(sqC, cc);   // 1-ft grid in the rope's square too (when c isn't whole, the last row is partly cut off)
     quad(sqC.O, sqC.u, sqC.v, 0, 1, 0, 1);
     c.strokeStyle = '#4d5b6e'; c.lineWidth = Math.max(4, 0.26 * S); c.setLineDash(nb.pour > 0.5 ? [] : [0.5 * S, 0.35 * S]); c.stroke(); c.setLineDash([]);
     if (p.type === 'est' && nb.side > 0.5) {
@@ -1576,7 +1754,7 @@
       c.strokeStyle = '#8a3b22'; c.lineWidth = 2; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
     }
     const [cx0, cy0] = center(sqC);
-    const cLabel = nb.pour > 0.5 ? `${sum}` : (nb.num > 0.5 || door) && p.type === 'leg' ? `${cc} × ${cc}` : nb.sym > 0.5 ? 'c × c' : '';
+    const cLabel = nb.pour > 0.5 ? `${sum} ft²` : hard ? '?' : p.type === 'leg' ? `${cc}²` : 'c²';
     if (cLabel) {
       const fsC = Math.max(14, Math.min(46, cc * k * 0.24));
       c.font = `800 ${fsC}px Nunito, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -1598,21 +1776,43 @@
 
     // side-length tags on each edge
     const w3 = door;
-    const numOn = nb.num > 0.5 || w3;
-    const unknown = w3 ? '?' : null;
+    // every side is labeled with its length from the start (the missing one reads "?" until it's solved),
+    // so the picture holds everything needed to solve the problem
     const big = w3 ? 1.2 : 1;
     const tagAt = (text, x, y, bg, fg) => chip(text, X(x), Yp(y), bg, fg, big);
-    const aKnown = p.type === 'leg' ? nb.side > 0.5 : numOn;
-    tagAt(aKnown ? String(a) : (p.type === 'leg' && unknown) || 'a', a / 2, 0, '#fff0ec', A_INK);
-    tagAt(numOn ? String(b) : 'b', a, b / 2, '#eaf7e6', B_INK);
-    const known = p.type === 'leg' ? numOn : nb.side > 0.5;
-    const cTxt = known ? (p.type === 'est' ? `√${sum}` : String(cc)) : (unknown || 'c');
-    tagAt(cTxt, a / 2, b / 2, '#e6f0ff', C_INK);
+    const counting = mode === 'w2' && p.done < 1 ? p.count : null;   // World 2: the leg to count reads "?" until it's counted
+    const aKnown = (p.type !== 'leg' || nb.side > 0.5) && counting !== 'a', cKnown = p.type === 'leg' || nb.side > 0.5;
+    const cTxt = cKnown ? (p.type === 'est' ? `√${sum}` : String(cc)) : '?';
+    const aTxt = `a = ${aKnown ? a + ' ft' : '?'}`, bTxt = `b = ${counting === 'b' ? '?' : b + ' ft'}`;
+    chip(aTxt, ...aTagAt(aTxt, X(a / 2), Yp(0), big), '#fff0ec', A_INK, big);
+    chip(bTxt, ...bTagAt(bTxt, X(a), Yp(b / 2), big), '#eaf7e6', B_INK, big);
+    // the rope's label sits a third of the way up the rope and just outside it (toward its square), well clear of the b label
+    const cLab = `c = ${cKnown ? cTxt + ' ft' : cTxt}`, cs = chipSize(cLab, big), nx = -b / cc, ny = a / cc;   // unit normal, out of the triangle
+    const off = (Math.abs(nx) * cs.w / 2 + Math.abs(ny) * cs.h / 2 + 6) / (kk * S);
+    tagAt(cLab, a * 0.34 + nx * off, b * 0.34 + ny * off, '#e6f0ff', C_INK);
     // the big square's other sides are c too: c × c is its area
     const onC = (s0, t0) => pt(sqC.O, sqC.u, sqC.v, s0, t0);
     const [ox, oy] = onC(0.5, 1), [lx2, ly2] = onC(0, 0.5);
     chip(cTxt, ox, oy, '#e6f0ff', C_INK, big * 0.9);
     chip(cTxt, lx2, ly2, '#e6f0ff', C_INK, big * 0.9);
+    c.restore();
+  }
+
+  // World 2's counting step: redraw the square being counted on top of the platforms, so no pillar hides its grid
+  function drawCountSquare() {
+    if (!countBounds()) return;
+    const L = figureLedge(), p = L.prob, kk = L.k, isA = p.count === 'a', n = isA ? p.a : p.b;
+    const x0 = sx(isA ? L.x : L.ax), y0 = sy(isA ? L.y : ANCHOR_Y), side = n * kk * S;
+    const c = ctx;
+    c.save();
+    c.fillStyle = 'rgba(255,248,230,0.94)'; c.fillRect(x0, y0, side, side);
+    c.strokeStyle = 'rgba(58,42,20,0.5)'; c.lineWidth = Math.max(1, 0.04 * S);
+    c.beginPath();
+    for (let i = 1; i < n; i++) { const d = side * i / n; c.moveTo(x0 + d, y0); c.lineTo(x0 + d, y0 + side); c.moveTo(x0, y0 + d); c.lineTo(x0 + side, y0 + d); }
+    c.stroke();
+    c.strokeStyle = isA ? '#e0734a' : '#4fae45'; c.lineWidth = Math.max(3, 0.14 * S); c.strokeRect(x0, y0, side, side);
+    const t = `${p.count} = ?`;   // right over the side's own label, just inside the triangle
+    chip(t, ...(isA ? aTagAt(t, x0 + side / 2, y0, 1.2) : bTagAt(t, x0, y0 + side / 2, 1.2)), isA ? '#fff0ec' : '#eaf7e6', isA ? A_INK : B_INK, 1.2);
     c.restore();
   }
 
@@ -1631,15 +1831,15 @@
   const CINE = { known1: 0.5, known2: 0.9, draw: 1.3, bang: 2.2, out: 2.9, end: 3.5 };
   function startCine(l) {
     cine = { t: 0, p: l.prob, tri: { x0: l.x, y0: l.y, ax: l.ax, ay: l.ay }, banged: false, chimes: 0 };
-    sfx.whoosh();
+    sfx.sparkle();
   }
   const cineScale = t => t < 0.5 ? 1 - 0.9 * t / 0.5 : t < CINE.out ? 0.1 : t < CINE.end ? 0.1 + 0.9 * (t - CINE.out) / (CINE.end - CINE.out) : 1;
   function cineSides() {
     const { p, tri: T } = cine;
     return {
-      a: { p0: [T.x0, T.y0], p1: [T.ax, T.y0], col: '#ff7a5c', ink: A_INK, bg: '#fff0ec', name: 'distance', txt: `a = ${p.a}` },
-      b: { p0: [T.ax, T.y0], p1: [T.ax, T.ay], col: '#5fd35a', ink: B_INK, bg: '#eaf7e6', name: 'height', txt: `b = ${p.b}` },
-      c: { p0: [T.x0, T.y0], p1: [T.ax, T.ay], col: '#5aa9ff', ink: C_INK, bg: '#e6f0ff', name: 'rope', txt: p.type === 'est' ? `c = √${p.sum} ≈ ${fmt(Math.round(p.c * 10) / 10)}` : `c = ${p.c}` }
+      a: { p0: [T.x0, T.y0], p1: [T.ax, T.y0], col: '#ff7a5c', ink: A_INK, bg: '#fff0ec', name: 'distance', txt: `a = ${p.a} ft` },
+      b: { p0: [T.ax, T.y0], p1: [T.ax, T.ay], col: '#5fd35a', ink: B_INK, bg: '#eaf7e6', name: 'height', txt: `b = ${p.b} ft` },
+      c: { p0: [T.x0, T.y0], p1: [T.ax, T.ay], col: '#5aa9ff', ink: C_INK, bg: '#e6f0ff', name: 'rope', txt: p.type === 'est' ? `c = √${p.sum} ≈ ${fmt(Math.round(p.c * 10) / 10)} ft` : `c = ${p.c} ft` }
     };
   }
   const cineMissing = () => cine.p.type === 'leg' ? 'a' : 'c';
@@ -1776,6 +1976,7 @@
       update(dt * timeScale);        // the world slows down during the close-up...
       updateNotebook(dt);
       updateCamera(dt);              // ...but the camera keeps moving in real time
+      renderFray();
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       const sh = shake > 0 && !reduceMotion ? shake * 10 : 0;
       ctx.save();
@@ -1788,6 +1989,7 @@
       drawBrambles();
       drawLedges(time);
       drawSand(time);
+      drawCountSquare();
       drawTriangle(time);
       drawRope();
       drawExplorer(time);
@@ -1807,8 +2009,14 @@
   requestAnimationFrame(frame);
   // small hook for automated checks
   window.GR = {
-    right() { const l = cur(); if (state === 'aim' && !l.final) answer(l.prob.steps[l.si].choices.find(c => c.ok)); },
-    wrong() { const l = cur(); if (state === 'aim' && !l.final) answer(l.prob.steps[l.si].choices.find(c => !c.ok)); },
+    right() { this.pick(true); }, wrong() { this.pick(false); },
+    pick(ok) {
+      const l = cur(); if (state !== 'aim' || l.final) return;
+      const s = l.prob.steps[l.si];
+      if (s.typed) { const inp = document.getElementById('typed-ans'); inp.value = String(ok ? (s.typed.est ? Math.round(s.typed.c) : s.typed.c) : s.typed.sum); submitTyped(inp); }
+      else answer(s.choices.find(c => c.ok === ok));
+    },
+    get fray() { return fray; },
     get state() { return state; }, get cine() { return cine; }, get idx() { return idx; }, get zoom() { return zoom; },
     get cam() { return { camX, camY, S, viewH, W, H }; }, step(dt) { tick(dt); },
     ledges: () => ledges, P, startGame
