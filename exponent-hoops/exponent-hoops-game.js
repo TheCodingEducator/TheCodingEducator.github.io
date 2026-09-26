@@ -90,9 +90,11 @@ function renderWorld() {
   };
 
   drawP(back);
-  var ballDrawn = false;
+  // while a shot is in the air, the ball goes over everything - players, backboard, net and rim
+  var inAir = gameState === "scoring" || gameState === "missing" || gameState === "blocked";
+  var ballDrawn = inAir;
 
-  if (gameState !== "rattling") {
+  if (gameState !== "rattling" && !inAir) {
     if (ball.y < front.y) { drawBallSkins(); ballDrawn = true; }
   }
 
@@ -102,6 +104,7 @@ function renderWorld() {
   if (gameState === "rattling") drawBallSkins();
 
   drawHoopNet(); drawRimFront(); drawSprites();
+  if (inAir) drawBallSkins();
 }
 
 function draw() {

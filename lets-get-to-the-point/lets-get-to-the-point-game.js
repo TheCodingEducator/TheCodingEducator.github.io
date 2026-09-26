@@ -159,8 +159,23 @@ var coins = 0;
 var ownedSkins = [0]; // skin 0 is always owned
 var currentStreak = 0; // consecutive correct answers, non-H2H modes; resets on a miss
 var cheatCoinsUsed = false;
+// Geometry Genius opens up only after Genius in Training has been fully
+// completed (every round) this many times; the count is saved like the rest.
+var GEOMETRY_UNLOCK_RUNS = 3;
+var geniusCompletions = 0;
+var unlockPopup = false;     // the "new mode unlocked!" pop-up, shown once, right after the unlocking run
+var lockNoticeFrame = -999;  // when someone last tried to open the locked mode (flashes a reminder)
+// (anyone who already has a Geometry Genius time from before this lock existed keeps access)
+function geometryLocked() { return geniusCompletions < GEOMETRY_UNLOCK_RUNS && !(hsGeometry > 0); }
+function countGeniusCompletion() {
+  geniusCompletions++;
+  if (geniusCompletions === GEOMETRY_UNLOCK_RUNS) unlockPopup = true;
+  saveCoinsAndSkins();
+}
 function loadCoinsAndSkins() {
   try {
+    var gd = localStorage.getItem('lgttp_genius_done');
+    if (gd!==null) { var gdn=parseInt(gd,10); if (!isNaN(gdn)&&gdn>=0) geniusCompletions=gdn; }
     var c = localStorage.getItem('lgttp_coins');
     if (c!==null) { var n=parseInt(c,10); if (!isNaN(n)&&n>=0) coins=n; }
     var o = localStorage.getItem('lgttp_owned_skins');
@@ -190,6 +205,7 @@ function saveCoinsAndSkins() {
     localStorage.setItem('lgttp_hs_genius', String(hsGenius));
     localStorage.setItem('lgttp_hs_geometry', String(hsGeometry));
     localStorage.setItem('lgttp_cheat_used', String(cheatCoinsUsed));
+    localStorage.setItem('lgttp_genius_done', String(geniusCompletions));
   } catch (e) {}
 }
 // Safety net: flush whatever's in memory the instant the tab is hidden
@@ -2354,6 +2370,7 @@ function h2hFmt(v) { var r=Math.round(v*10)/10; return String(r); }
 // starts, so nobody launches it alone by accident.
 var h2hIntroFrame = 0;
 function beginModeFromMenu() {
+  if (gameMode==="GEOMETRY" && geometryLocked()) { lockNoticeFrame=frameCount; playSound('wrong'); return; }
   if (gameMode==="HEADTOHEAD") { h2hIntroFrame=frameCount; STATE="H2H_INTRO"; }
   else resetGame();
 }
@@ -2818,7 +2835,32 @@ function drawStart(){
     fill(selVisual?10:35); noStroke(); textSize(13); textAlign(CENTER,CENTER);
     text("PLAY",cx,by2+bh-32);
 
+    // Geometry Genius stays locked until Genius in Training is fully completed 3 times
+    var locked=(m.id==="GEOMETRY"&&geometryLocked());
+    if(locked){
+      fill(8,12,30,242); noStroke(); rect(bx2,by2+58,bw,bh-58,0,0,14,14);
+      var shake=(frameCount-lockNoticeFrame<24)?sin(frameCount*60)*3:0;
+      // padlock
+      var lx=cx+shake, ly=by2+112;
+      noFill(); stroke(255,220,60); strokeWeight(5); arc(lx,ly-6,26,30,180,360);
+      noStroke(); fill(255,220,60); rect(lx-17,ly-6,34,28,5);
+      fill(8,12,30); ellipse(lx,ly+5,7,7); rect(lx-1.5,ly+5,3,8);
+      fill(255); textAlign(CENTER,CENTER);
+      fitText("LOCKED", cx, by2+154, bw-12, 15);
+      fill(200,215,255);
+      fitText("Finish Genius", cx, by2+178, bw-10, 11);
+      fitText("in Training", cx, by2+193, bw-10, 11);
+      fitText(GEOMETRY_UNLOCK_RUNS+" times", cx, by2+208, bw-10, 11);
+      // progress toward the unlock
+      fill(0,0,0,140); rect(bx2+14,by2+bh-64,bw-28,16,5);
+      fill(255,220,100); textSize(10);
+      text(Math.min(geniusCompletions,GEOMETRY_UNLOCK_RUNS)+" / "+GEOMETRY_UNLOCK_RUNS+" done",cx,by2+bh-56);
+      fill(90,95,120); rect(bx2+12,by2+bh-46,bw-24,28,10);
+      fill(200); textSize(13); text("LOCKED",cx,by2+bh-32);
+    }
+
     if(hov&&mouseWentDown("left")){
+      if(locked){ lockNoticeFrame=frameCount; playSound('wrong'); continue; }
       gameMode=m.id; modeIndex=mi;
       if(gameMode==="PRACTICE"){
         skillTranslations=true; skillRotations=true; skillReflections=true;
@@ -2852,6 +2894,32 @@ function drawStart(){
 }
 
 // ---------- SPEED RESULT SCREEN ----------
+// Shown over the results screen right after the third full Genius in Training run
+function drawUnlockPopup(){
+  var t=frameCount, p2=(sin(t*3)+1)*0.5;
+  fill(0,0,0,170); noStroke(); rect(0,0,400,400);
+  // confetti
+  for(var ci=0;ci<30;ci++){
+    var cfx=((ci*71)+Math.floor(sin(t*0.9+ci*20)*25)+400)%400, cfy=(ci*29+t*1.1)%400;
+    var crs=[255,255,0,80,60,200], cgs=[60,200,255,200,255,60], cbs=[60,60,255,60,100,255];
+    fill(crs[ci%6],cgs[ci%6],cbs[ci%6]); rect(cfx,cfy,7,7,2);
+  }
+  var s=1+0.04*p2;
+  push(); translate(200,200); scale(s);
+  fill(0,150,65,Math.floor(40+p2*40)); rect(-160,-128,320,256,22);
+  fill(12,40,28); stroke(140,255,180); strokeWeight(3); rect(-150,-118,300,236,18);
+  noStroke(); textAlign(CENTER,CENTER);
+  fill(255,220,60); textSize(15); text("NEW MODE UNLOCKED!",0,-92);
+  fill(140,255,180,Math.floor(170+p2*85)); textSize(46); text("◆",0,-44);
+  fill(255); textSize(28); text("Geometry Genius",0,4);
+  fill(200,235,215); textSize(12);
+  text("You finished Genius in Training "+GEOMETRY_UNLOCK_RUNS+" times.",0,38);
+  text("The challenge mode is now open on the menu!",0,56);
+  fill(255,220,60,Math.floor(150+p2*105)); textSize(12);
+  text("Press SPACE or click to continue",0,92);
+  pop();
+}
+
 function drawSpeedResult(){
   var t=frameCount;
   background(6,10,26);
@@ -3116,6 +3184,11 @@ function draw(){
     return;
   }
 
+  // ---- The "new mode unlocked!" pop-up: any key or click closes it (and does nothing else) ----
+  if(unlockPopup && STATE==="SPEED_RESULT"){
+    if(keyWentDown("space")||keyWentDown("enter")||mouseWentDown("left")){ unlockPopup=false; return; }
+  }
+
   // ---- SPACE (or the on-screen touch action button) ----
   if(keyWentDown("space")){
     if(STATE==="START"){
@@ -3190,6 +3263,7 @@ function draw(){
           }
           if(newHighScore) saveCoinsAndSkins();
           playSound(newHighScore?'newRecord':'correct');
+          if(gameMode==="GENIUS") countGeniusCompletion();   // a full Genius in Training run counts toward unlocking Geometry Genius
           srSel=1; STATE="SPEED_RESULT";
         } else if(gameMode==="PRACTICE"){
           buildPracticeOrder(); round=0; loadRound();
@@ -3278,6 +3352,7 @@ function draw(){
             }
             if(newHighScore) saveCoinsAndSkins();
             playSound(newHighScore?'newRecord':'correct');
+            if(gameMode==="GENIUS") countGeniusCompletion();   // a full Genius in Training run counts toward unlocking Geometry Genius
             srSel=1; STATE="SPEED_RESULT";
           } else if(gameMode==="PRACTICE"){
             buildPracticeOrder(); round=0; loadRound();
@@ -3310,7 +3385,7 @@ function draw(){
   if(STATE==="SHOP"){drawShop();return;}
   if(STATE==="H2H_INTRO"){drawH2HIntro();return;}
   if(STATE==="SKILL_SELECT"){drawSkillSelect();return;}
-  if(STATE==="SPEED_RESULT"){drawSpeedResult();return;}
+  if(STATE==="SPEED_RESULT"){drawSpeedResult(); if(unlockPopup) drawUnlockPopup(); return;}
   if(STATE==="WIN"){drawWin();return;}
   if(STATE==="GAMEOVER"){drawGameOver();return;}
 

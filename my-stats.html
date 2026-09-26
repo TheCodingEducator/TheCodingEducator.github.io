@@ -323,7 +323,7 @@ var plates = {
 };
 
 // ---- Pythagorean Platforms ----
-// Saved when a world is finished: best score, best combo, and which of the 4 worlds are done.
+// Saved when a world is finished: best score, best combo, and which of the 5 worlds are done.
 var rope = {
   played: localStorage.getItem('grapplerope_best_score') !== null,
   bestScore: readNum('grapplerope_best_score', 0),
@@ -365,7 +365,7 @@ var BADGES = [
   { icon: "⭐", name: "Five-Star Diner", desc: "Reach level 5 in Proportional Plates", earned: plates.bestLevel >= 5 },
   { icon: "🧗", name: "First Swing", desc: "Finish a world in Pythagorean Platforms", earned: rope.worlds >= 1 },
   { icon: "🔥", name: "Swing Streak", desc: "Get a combo of 15+ in Pythagorean Platforms", earned: rope.bestCombo >= 15 },
-  { icon: "🛕", name: "Temple Explorer", desc: "Finish all 4 worlds in Pythagorean Platforms", earned: rope.worlds >= 4 }
+  { icon: "🛕", name: "Temple Explorer", desc: "Finish all 5 worlds in Pythagorean Platforms", earned: rope.worlds >= 5 }
 ];
 
 var badgesHtml = BADGES.map(function (b) {
@@ -454,7 +454,7 @@ gamesHtml += '<div class="game-card"><h3>🧗 Pythagorean Platforms</h3>';
 if (rope.played) {
   gamesHtml += statRow('Best Score', rope.bestScore);
   gamesHtml += statRow('Best Combo', 'x' + rope.bestCombo);
-  gamesHtml += statRow('Worlds Finished', rope.worlds + ' / 4');
+  gamesHtml += statRow('Worlds Finished', rope.worlds + ' / 5');
 } else {
   gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
 }

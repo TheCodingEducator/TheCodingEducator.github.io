@@ -308,7 +308,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Let's Get to the Point</h1>
-<p class="sr-only">A coordinate-grid game where you slide, spin, and flip a point to match a target using translations, rotations, and reflections. Play solo in Practice, Genius in Training, or Geometry Genius modes, or race a friend head-to-head. Controls: arrow keys or WASD to move, space or enter to confirm answers, mouse to click menu buttons.</p>
+<p class="sr-only">A coordinate-grid game where you slide, spin, and flip a point to match a target using translations, rotations, and reflections. Play solo in Practice, Genius in Training, or Geometry Genius modes (Geometry Genius unlocks after finishing Genius in Training three times), or race a friend head-to-head. Controls: arrow keys or WASD to move, space or enter to confirm answers, mouse to click menu buttons.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot"></div>
@@ -333,6 +333,7 @@
     <li><strong>Rigid motions:</strong> these moves keep size and shape, so the moved figure is congruent to the original.</li>
     <li><strong>Hands-on rotation:</strong> the tracing paper overlay works like the paper manipulative, with the center pinned by a pencil and exact feedback.</li>
     <li><strong>Common mistakes are named:</strong> the wrong direction, the wrong axis, swapped coordinates, and moving only one coordinate each get their own explanation.</li>
+    <li><strong>Earning the challenge mode:</strong> Geometry Genius unlocks after a student fully completes Genius in Training three times, so they build the skills with supports before trying it without them.</li>
     <li><strong>Real life:</strong> animation, video game characters, robot arms, maps, and tile patterns all use these same moves.</li>
   </ul>
 </section>
@@ -437,9 +438,9 @@
   });
 
   document.getElementById('reset-progress-btn').addEventListener('click', function () {
-    var ok = confirm("Reset your Let's Get to the Point progress? This erases your saved coins, owned skins, equipped skin, streak, and best times on this device. This cannot be undone.");
+    var ok = confirm("Reset your Let's Get to the Point progress? This erases your saved coins, owned skins, equipped skin, streak, best times, and Geometry Genius unlock on this device. This cannot be undone.");
     if (!ok) return;
-    ['lgttp_coins', 'lgttp_owned_skins', 'lgttp_skin', 'lgttp_streak', 'lgttp_hs_genius', 'lgttp_hs_geometry', 'lgttp_cheat_used'].forEach(function (k) {
+    ['lgttp_coins', 'lgttp_owned_skins', 'lgttp_skin', 'lgttp_streak', 'lgttp_hs_genius', 'lgttp_hs_geometry', 'lgttp_cheat_used', 'lgttp_genius_done'].forEach(function (k) {
       localStorage.removeItem(k);
     });
     // The game also saves on tab-hide/unload as a safety net against losing
@@ -455,6 +456,8 @@
       hsGenius = 0;
       hsGeometry = 0;
       cheatCoinsUsed = false;
+      geniusCompletions = 0;
+      unlockPopup = false;
     }
     location.reload();
   });
