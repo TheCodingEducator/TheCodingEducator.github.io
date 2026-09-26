@@ -832,6 +832,8 @@
   };
 
   sfx.step = () => tone(660, 990, 0.09, 'triangle', 0.08);
+  // a correct answer's rope throw and swing: a soft rising swoosh with a little sparkle (G, C, E) on top
+  sfx.whoosh = () => { tone(300, 900, 0.35, 'sine', 0.06); tone(450, 1350, 0.3, 'triangle', 0.035, 0.04); [1568, 2093, 2637].forEach((f, i) => tone(f, f, 0.18, 'sine', 0.035, 0.22 + i * 0.06)); };
   sfx.pour = () => { tone(300, 600, 0.35, 'sine', 0.06); tone(450, 900, 0.3, 'sine', 0.04, 0.1); };
   sfx.oops = () => tone(260, 180, 0.2, 'square', 0.05);
   // the slow motion starts with a magic sparkle: a quick upward run of bell notes (C E G C E G)
@@ -1330,7 +1332,7 @@
     rope = { len: 0, max: ok ? c : c * 0.55, dir: { x: dx / dl, y: dy / dl }, tip: { x: P.x, y: P.y, vx: 0, vy: 0 }, phase: 'extend' };
     if (!ok) { P.vx = 5; P.vy = -8; }
     state = 'fire'; st = 0;
-    sfx.thwip();
+    if (ok) sfx.whoosh(); else sfx.thwip();   // the sparkle whoosh is saved for a right answer
   }
 
   againBtn.addEventListener('click', () => startGame(mode));
