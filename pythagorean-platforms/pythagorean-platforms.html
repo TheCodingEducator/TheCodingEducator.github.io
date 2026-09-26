@@ -280,9 +280,15 @@
   .screen[hidden] { display: none; }
   .title-screen { background: #1d4a33; }
   .title-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .title-scene .swing { transform-origin: 842px 0; animation: tSwing 3.2s ease-in-out infinite alternate; }
+  /* stand on the right platform, swing, land on the hanging platform, pause, swing back (angles put the feet exactly on each plank) */
+  .title-scene .swing { transform-origin: 832px 0; animation: tRope 7s ease-in-out infinite; }
+  .title-scene .swinger { transform-origin: 832px 169px; animation: tBody 7s ease-in-out infinite; }
+  @keyframes tRope { 0%, 14% { transform: rotate(-35.45deg); } 50%, 64% { transform: rotate(51.35deg); } 100% { transform: rotate(-35.45deg); } }
+  @keyframes tBody { 0%, 14% { transform: rotate(35.45deg); } 50%, 64% { transform: rotate(-51.35deg); } 100% { transform: rotate(35.45deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .title-scene .swing { animation: none; transform: rotate(-35.45deg); } .title-scene .swinger { animation: none; transform: rotate(35.45deg); }
+  }
   .title-scene .leaf-sway { transform-box: fill-box; transform-origin: top center; animation: tSway 4s ease-in-out infinite alternate; }
-  @keyframes tSwing { from { transform: rotate(26deg); } to { transform: rotate(-26deg); } }
   @keyframes tSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
   .t-content { position: absolute; left: 5%; top: 0; bottom: 0; width: min(46%, 420px); display: flex; flex-direction: column; justify-content: center; gap: 14px; }
   .sign { position: relative; align-self: flex-start; margin: 34px 0 0; font-weight: 400; padding: 16px 26px 14px; border-radius: 14px;
@@ -591,7 +597,10 @@
         <rect x="304" y="492" width="12" height="60" fill="#6e4526"/><rect x="270" y="484" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="268" y="481" width="84" height="6" rx="3" fill="#5fae55"/>
         <rect x="414" y="474" width="12" height="80" fill="#6e4526"/><rect x="380" y="466" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="378" y="463" width="84" height="6" rx="3" fill="#5fae55"/>
         <rect x="524" y="456" width="12" height="100" fill="#6e4526"/><rect x="490" y="448" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="488" y="445" width="84" height="6" rx="3" fill="#5fae55"/>
-        <rect x="934" y="318" width="12" height="230" fill="#6e4526"/><rect x="900" y="310" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="898" y="307" width="84" height="6" rx="3" fill="#5fae55"/>
+        <!-- the explorer's two platforms: a tall post on the right, and one hanging from vines above the triangle -->
+        <rect x="924" y="232" width="12" height="320" fill="#6e4526"/><rect x="890" y="224" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="888" y="222" width="84" height="6" rx="3" fill="#5fae55"/>
+        <line x1="668" y1="0" x2="668" y2="196" stroke="#4f8a36" stroke-width="4"/><line x1="732" y1="0" x2="732" y2="196" stroke="#4f8a36" stroke-width="4"/>
+        <rect x="660" y="192" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="658" y="190" width="84" height="6" rx="3" fill="#5fae55"/>
       </g>
       <!-- the 3-4-5 triangle with its squares: 16 + 9 = 25 -->
       <g transform="translate(620 380)" font-family="Lilita One, system-ui, sans-serif" text-anchor="middle">
@@ -604,14 +613,32 @@
         <text x="132" y="-24" font-size="34" fill="#17661f" stroke="#fffbe8" stroke-width="6" paint-order="stroke">9</text>
       </g>
       <!-- the explorer, swinging on a vine -->
+      <!-- the rope turns about its anchor; the explorer turns back the other way about the hands, so they stay upright
+           and stand flat on each platform. Both hands grip the rope, and its loose end hangs below the fists. -->
       <g class="swing">
-        <line x1="842" y1="0" x2="842" y2="236" stroke="#5b8f3a" stroke-width="5" stroke-linecap="round"/>
-        <g transform="translate(842 250)">
-          <rect x="-9" y="-2" width="18" height="24" rx="5" fill="#c77a3a"/>
-          <rect x="-9" y="18" width="7" height="14" rx="3" fill="#6b4a2a"/><rect x="2" y="18" width="7" height="14" rx="3" fill="#6b4a2a"/>
-          <circle cx="0" cy="-12" r="10" fill="#f2c79a"/>
-          <path d="M-15 -17 H15 L10 -21 H-10Z" fill="#a0692c"/><rect x="-9" y="-29" width="18" height="10" rx="4" fill="#a0692c"/>
-          <line x1="-6" y1="2" x2="0" y2="-14" stroke="#f2c79a" stroke-width="5" stroke-linecap="round"/>
+        <line x1="832" y1="0" x2="832" y2="169" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
+        <g class="swinger">
+          <g transform="translate(832 169)">
+            <!-- the rope runs through both fists; its loose end dangles below them -->
+            <line x1="0" y1="-4" x2="0" y2="29" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
+            <path d="M0 28 Q-3 36 -20 45" fill="none" stroke="#3f7a2a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="0" cy="42" r="9" fill="#f2c79a"/>
+            <circle cx="3" cy="43" r="1.4" fill="#3a2a14"/>
+            <path d="M-14 35 H14 L10 31 H-10Z" fill="#a0692c"/><rect x="-8" y="24" width="16" height="10" rx="4" fill="#a0692c"/>
+            <rect x="-11" y="51" width="22" height="21" rx="5" fill="#c77a3a"/>
+            <rect x="-9" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/><rect x="1" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/>
+            <rect x="-11" y="81" width="10" height="4" rx="2" fill="#3a2a14"/><rect x="1" y="81" width="10" height="4" rx="2" fill="#3a2a14"/>
+            <!-- both arms reach up to the rope: sleeve, then forearm, then a fist wrapped around it -->
+            <path d="M-11 55 L-14 34" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M-14 34 L-7 6" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M11 55 L14 38" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M14 38 L7 25" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
+            <rect x="-7.5" y="-4" width="15" height="12" rx="4" fill="#f2c79a" stroke="#7a4a24" stroke-width="2"/>
+            <rect x="-7.5" y="16" width="15" height="12" rx="4" fill="#f2c79a" stroke="#7a4a24" stroke-width="2"/>
+            <path d="M-2.5 -2 V6 M1.5 -2 V6 M5 -1 V5 M-2.5 18 V26 M1.5 18 V26 M5 19 V25" stroke="#7a4a24" stroke-width="1.3" stroke-linecap="round"/>
+            <ellipse cx="-6" cy="-3.5" rx="3.2" ry="2.3" fill="#f2c79a" stroke="#7a4a24" stroke-width="1.5"/>
+            <ellipse cx="-6" cy="16.5" rx="3.2" ry="2.3" fill="#f2c79a" stroke="#7a4a24" stroke-width="1.5"/>
+          </g>
         </g>
       </g>
     </svg>
