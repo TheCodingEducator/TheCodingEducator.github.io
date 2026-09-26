@@ -628,7 +628,7 @@
               <rect x="0" y="70" width="24" height="4" fill="#6b4a24"/><rect x="1" y="73" width="22" height="9" rx="3" fill="#8a6a3e"/>
               <rect x="4" y="81" width="6" height="9" fill="#e8b88a"/><rect x="14" y="81" width="6" height="9" fill="#e8b88a"/>
               <rect x="2" y="89" width="10" height="7" rx="2.5" fill="#4a3320"/><rect x="13" y="89" width="10" height="7" rx="2.5" fill="#4a3320"/>
-              <path d="M21 55 L30 61" stroke="#c9a86a" stroke-width="8" stroke-linecap="round"/><path d="M30 61 L39 57" stroke="#e8b88a" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="56.5" r="3.6" fill="#e8b88a"/>
+              <path d="M21 55 L24 66" stroke="#c9a86a" stroke-width="8" stroke-linecap="round"/><path d="M24 66 L25.5 76" stroke="#e8b88a" stroke-width="6" stroke-linecap="round"/><circle cx="25.8" cy="78.5" r="3.6" fill="#e8b88a"/>
               <circle cx="12" cy="41" r="10" fill="#e8b88a"/>
               <path d="M3 56 L2 32" stroke="#c9a86a" stroke-width="9" stroke-linecap="round"/><path d="M2 32 L0.5 7" stroke="#e8b88a" stroke-width="7" stroke-linecap="round"/>
               <g class="face" data-mirror="translate(24 0) scale(-1 1)" transform="translate(24 0) scale(-1 1)">
@@ -1953,7 +1953,7 @@
       const w = Math.sin(time * 18) * 0.15 * u;
       ctx.moveTo(-0.16 * u, 0.62 * u); ctx.lineTo(-0.38 * u, 0.2 * u + w); ctx.moveTo(0.16 * u, 0.62 * u); ctx.lineTo(0.38 * u, 0.2 * u - w);
     } else {
-      ctx.moveTo(-0.16 * u, 0.62 * u); ctx.lineTo(-0.05 * u, 0.02 * u); ctx.moveTo(0.16 * u, 0.62 * u); ctx.lineTo(0.05 * u, 0.02 * u);
+      ctx.moveTo(-0.16 * u, 0.62 * u); ctx.lineTo(-0.02 * u, 0.02 * u); ctx.moveTo(0.16 * u, 0.62 * u); ctx.lineTo(0.22 * u, 0.9 * u);   // one hand on the rope, the other down at the side
     }
     ctx.stroke();
     // head
@@ -1967,7 +1967,7 @@
     ctx.beginPath(); ctx.ellipse(0.02 * u, 0.28 * u, 0.19 * u, 0.16 * u, 0, Math.PI, 0); ctx.fill();
     ctx.fillStyle = '#b9864a'; ctx.fillRect(-0.17 * u, 0.25 * u, 0.38 * u, 0.04 * u);
     // hands
-    if (!flail) { ctx.fillStyle = '#e8b98d'; ctx.beginPath(); ctx.arc(0, 0, 0.08 * u, 0, TAU); ctx.fill(); }
+    if (!flail) { ctx.fillStyle = '#e8b98d'; ctx.beginPath(); ctx.arc(0, 0, 0.08 * u, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0.225 * u, 0.93 * u, 0.06 * u, 0, TAU); ctx.fill(); }
     ctx.restore();
   }
 
