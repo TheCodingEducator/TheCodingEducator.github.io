@@ -547,7 +547,7 @@
             <li>a² + b² = c² is about <b>areas</b>: the squares on the two legs exactly fill the square on the hypotenuse. Watch the squares on the canyon change as you solve.</li>
             <li>Each wrong choice is a common mistake, and each one has its own hint.</li>
             <li><b>World 1</b> is one question per canyon: count the row of 1-ft squares along the rope and type the rope length c. Only the side lengths are shown - no areas yet.</li>
-            <li><b>Worlds 3 and 4</b> start with the formula already chosen. <b>World 3</b> is harder: count the squares along one unlabeled side first, choose from four answers, type the rope length, and beat the fraying rope. <b>World 4</b> finds a missing leg: the numbers are carved on a temple door, and solving opens it. <b>World 5</b> is the summit: bigger triangles, and every step is a line of math with a blank to fill in.</li>
+            <li><b>Worlds 3 and 4</b> start with the formula already chosen. <b>World 3</b> is harder: count the squares along one unlabeled side first, choose from four answers, type the rope length, and beat the fraying rope. <b>World 4</b> finds a missing leg: the numbers are carved on a temple door, and solving opens it. Like World 3, it has the fraying-rope timer. <b>World 5</b> is the summit: bigger triangles, and every step is a line of math with a blank to fill in.</li>
           </ul>
         </section>
       </div>
@@ -734,7 +734,7 @@
     <li><strong>One step per swing:</strong> students choose the right line of the written solution - plug in, square, add (or subtract), take the square root - and each correct line swings them forward. Each wrong choice is a common mistake with its own hint, such as adding the sides, doubling instead of squaring, or forgetting the square root.</li>
     <li><strong>Why squares:</strong> a square is built on each side of the canyon triangle. As students work, the squares on the two legs fill with tiles and pour into the square on the rope, which they fill exactly - a visual proof of a&sup2; + b&sup2; = c&sup2;.</li>
     <li><strong>Answers you can see:</strong> the big swing lands one rope length below the anchor, drawn to scale, so short ropes keep the explorer high in the trees and long ropes swing low. After the final step, a slow-motion close-up labels all three sides and reveals the missing length.</li>
-    <li><strong>Five worlds:</strong> World 1 is the starting point: one question per canyon, where students count the 1-ft squares along the edge of the square on the rope and type its length - the hypotenuse, found by counting. World 2 walks through every step with unit tiles. Each world uses four different triangles (in Worlds 1 to 3: 3-4-5, 6-8-10, 5-12-13 and 9-12-15), so no question repeats within a world. World 3 is the challenge round: one side of the triangle isn't labeled, so students first count the 1-ft grid squares along it, choose each step from four answers (every wrong one a common mistake), type the final rope length, and work against a fraying-rope timer (20 seconds per choice on the first problem, 3 seconds less on each problem after), with fewer hints and squares that stay "?" until their areas are found. World 4 finds a missing leg - the distance to the next platform - from numbers carved on a temple door. World 5 is the summit challenge: bigger triangles (6-8-10, 5-12-13, 9-12-15 and 8-15-17), a random mix of rope and distance problems, and no answer choices, with step hints and a perfect-squares list for support - each step is a line of the solution with one number blanked out, and students type what belongs there.</li>
+    <li><strong>Five worlds:</strong> World 1 is the starting point: one question per canyon, where students count the 1-ft squares along the edge of the square on the rope and type its length - the hypotenuse, found by counting. World 2 walks through every step with unit tiles. Each world uses four different triangles (in Worlds 1 to 3: 3-4-5, 6-8-10, 5-12-13 and 9-12-15), so no question repeats within a world. World 3 is the challenge round: one side of the triangle isn't labeled, so students first count the 1-ft grid squares along it, choose each step from four answers (every wrong one a common mistake), type the final rope length, and work against a fraying-rope timer (20 seconds per choice on the first problem, 3 seconds less on each problem after), with fewer hints and squares that stay "?" until their areas are found. World 4 finds a missing leg - the distance to the next platform - from numbers carved on a temple door, with the same fraying-rope timer as World 3. World 5 is the summit challenge: bigger triangles (6-8-10, 5-12-13, 9-12-15 and 8-15-17), a random mix of rope and distance problems, and no answer choices, with step hints and a perfect-squares list for support - each step is a line of the solution with one number blanked out, and students type what belongs there.</li>
   </ul>
 </section>
 
@@ -822,8 +822,9 @@
     o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
   }
   const sfx = {
-    thwip: () => tone(900, 180, 0.18, 'sawtooth', 0.05),
-    clack: () => tone(1400, 700, 0.07, 'square', 0.05),
+    // the rope throw and the swing: a bright rising "whee" (it used to be a falling buzz, which sounded like a mistake)
+    thwip: () => { tone(520, 1040, 0.18, 'triangle', 0.07); tone(780, 1560, 0.16, 'sine', 0.04, 0.05); },
+    clack: () => tone(1320, 1760, 0.08, 'triangle', 0.05),   // the rope catches: a short rising chime
     perfect: () => { tone(523, 523, 0.12, 'triangle', 0.1); tone(659, 659, 0.12, 'triangle', 0.1, 0.08); tone(784, 784, 0.22, 'triangle', 0.1, 0.16); },
     miss: () => tone(320, 70, 0.45, 'sawtooth', 0.06),
     splash: () => tone(200, 50, 0.5, 'sine', 0.15),
@@ -888,8 +889,8 @@
       blurb: 'Solve a² + b² = c² one step at a time while tiles fill the squares on each side.', chips: ['Every step', '2 choices', 'Tile squares'], sample: '<span class="ca">3²</span> + <span class="cb">4²</span> = <span class="cc">c²</span> → <span class="cc">c</span> = √25 = 5 ft' },
     { m: 'w2', name: 'Waterfall Cliffs', short: 'Count squares · 4 choices · timed',
       blurb: 'Count one unlabeled side, pick from four answers, and type the rope length before the rope frays.', chips: ['4 choices', 'Timed', 'Fewer hints'], sample: 'Count <span class="cb">b</span> = 8, then type <span class="cc">c</span> = <span class="bl">10</span> ft' },
-    { m: 'w3', name: 'Temple Ruins', short: 'Formula given · missing legs',
-      blurb: 'The numbers are carved on a temple door. Find the missing distance a to open it.', chips: ['Missing legs', 'Formula given', 'Subtract squares'], sample: '<span class="ca">a²</span> = <span class="cc">13²</span> − <span class="cb">5²</span> → <span class="ca">a</span> = 12 ft' },
+    { m: 'w3', name: 'Temple Ruins', short: 'Formula given · missing legs · timed',
+      blurb: 'The numbers are carved on a temple door. Find the missing distance a to open it before the rope frays.', chips: ['Missing legs', 'Timed', 'Subtract squares'], sample: '<span class="ca">a²</span> = <span class="cc">13²</span> − <span class="cb">5²</span> → <span class="ca">a</span> = 12 ft' },
     { m: 'w4', name: 'Summit', short: 'Fill in the blanks · step hints',
       blurb: 'Type the missing number in every line of the math. Step hints and the perfect-squares list are there to help.', chips: ['Fill in the blanks', 'Bigger triangles', 'Step hints'], sample: '<span class="ca">a²</span> + <span class="bl">576</span> = <span class="cc">625</span>' }
   ];
@@ -1298,6 +1299,7 @@
   // World 2's fraying rope: each step has a time limit; run out and the rope snaps (you redo the step)
   let fray = 0;
   // typed answers get 25 s; answer choices get 20 s on problem 1, then 3 s less on each problem after (20, 17, 14, 11)
+  const timedWorld = () => mode === 'w2' || mode === 'w3';   // Worlds 3 and 4 race the fraying rope
   const frayLimit = () => { const l = cur(); if (!l || l.final) return 20; return l.prob.steps[l.si].typed ? 25 : Math.max(5, 20 - 3 * l.pi); };
   const frayEl = document.createElement('div');
   frayEl.className = 'fray'; frayEl.hidden = true; frayEl.innerHTML = '<i></i><span></span>';
@@ -1310,7 +1312,7 @@
     refreshPanel();
   }
   function renderFray() {
-    const l = cur(), on = mode === 'w2' && state === 'aim' && l && !l.final;
+    const l = cur(), on = timedWorld() && state === 'aim' && l && !l.final;
     frayEl.hidden = !on;
     if (!on) return;
     const left = Math.max(0, frayLimit() - fray), k = left / frayLimit();
@@ -1598,7 +1600,7 @@
   // ---------- update ----------
   function update(dt) {
     st += dt;
-    if (mode === 'w2' && state === 'aim' && cur() && !cur().final && (fray += dt) >= frayLimit()) snap();   // the fraying rope
+    if (timedWorld() && state === 'aim' && cur() && !cur().final && (fray += dt) >= frayLimit()) snap();   // the fraying rope
     const l = cur();
     const A = l && !l.final ? anchorOf(l) : null;
 
