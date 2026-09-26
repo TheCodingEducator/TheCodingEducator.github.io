@@ -92,9 +92,15 @@
   }
 
   window.addEventListener('keydown', function (e) {
+    if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen...)
     var rs = null;
     try { rs = regions(); } catch (err) { rs = null; }
     if (!rs) return;
+    if (e.code === 'Tab') {
+      // Tab steps through the screen's buttons; past the last one (or before the first) it leaves the game for the page
+      var inGame = !window.gameHasKeyboard || window.gameHasKeyboard(e), at = rs.indexOf(current(rs));
+      if (!inGame || (active && (e.shiftKey ? at === 0 : at === rs.length - 1))) { active = false; return; }
+    }
     var isExit = typeof exitConfirmPending !== 'undefined' && exitConfirmPending;
     if (e.code === 'Escape' && isExit) {                                                      // Escape = Cancel on the exit box
       e.preventDefault(); e.stopImmediatePropagation();

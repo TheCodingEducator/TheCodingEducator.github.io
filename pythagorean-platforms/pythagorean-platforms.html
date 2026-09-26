@@ -500,6 +500,7 @@
 </style>
 <script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<script src="../site-keyboard.js"></script>
 </head>
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
@@ -1374,6 +1375,7 @@
   document.getElementById('map-end-btn').addEventListener('click', () => showMap('game'));
   // keys on the two screens: the title starts with Enter / Space; the map walks the trail with the arrows (or 1-5)
   document.addEventListener('keydown', e => {
+    if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
     if (!screenOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
     const onBtn = e.target && e.target.tagName === 'BUTTON';
     if (!titleScreen.hidden) {
@@ -1390,6 +1392,7 @@
   }, true);
 
   document.addEventListener('keydown', e => {
+    if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
     if (e.key === 'Escape' && !helpEl.hidden) {   // the How-to-play panel closes from the keyboard too
       helpEl.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); helpBtn.focus(); return;
     }

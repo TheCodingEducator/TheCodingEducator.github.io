@@ -128,6 +128,7 @@ function _glNormalizeKey(k) {
 // since it fights the player and shoves the canvas out from under them.
 var _glScrollKeys = { ' ': true, 'ArrowUp': true, 'ArrowDown': true, 'ArrowLeft': true, 'ArrowRight': true, 'Spacebar': true };
 window.addEventListener('keydown', function (e) {
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // a key meant for the page's own controls (see site-keyboard.js)
   if (_glScrollKeys[e.key]) e.preventDefault();
   _glKeysNow[_glNormalizeKey(e.key)] = true;
 });

@@ -344,7 +344,8 @@ var keyTapped = false;
 function mouseClicked() {
   tappedX = mouseX; tappedY = mouseY;
 }
-function keyPressed() {
+function keyPressed(e) {
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // Enter / Space on the page's own controls
   if (keyCode === 13 || keyCode === 32) keyTapped = true;
 }
 
@@ -383,11 +384,15 @@ function kbMove(dx, dy) {
 }
 window.addEventListener("keydown", function (e) {
   if (e.ctrlKey || e.metaKey || e.altKey || !kbMenus()) return;
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls
   var d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
   if (d) { e.preventDefault(); e.stopPropagation(); kbMove(d[0], d[1]); return; }
   if (e.key === "Tab") {
+    // Tab steps through the game's buttons; past the last one (or before the first) it leaves the game for the page
+    var n = kbPrevButtons.length, atEnd = e.shiftKey ? kbFocus === 0 : kbFocus === n - 1;
+    if (!n || atEnd || (window.gameHasKeyboard && !window.gameHasKeyboard(e))) { kbFocus = -1; return; }
     e.preventDefault(); e.stopPropagation(); kbUsed = true;
-    var n = kbPrevButtons.length; if (n) kbFocus = kbFocus < 0 ? 0 : (kbFocus + (e.shiftKey ? -1 : 1) + n) % n;
+    kbFocus = kbFocus < 0 ? (e.shiftKey ? n - 1 : 0) : kbFocus + (e.shiftKey ? -1 : 1);
     return;
   }
   if ((e.key === "Enter" || e.key === " ") && kbFocus >= 0 && kbFocus < kbPrevButtons.length) {

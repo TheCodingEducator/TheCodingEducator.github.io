@@ -447,6 +447,7 @@ function kbKeyPressed() {
 
 // held arrow keys steer the keyboard aim every frame
 function kbUpdateAim() {
+  if (window.isPageControlKey && window.isPageControlKey({ target: document.activeElement })) return;   // arrows belong to a focused page control
   if (gameState !== 'PLAYING' || holePhase !== 'AIMING' || confirmExitOpen || explainOpen) { if (kbAim) { kbAim = null; dragging = false; } return; }
   var turn = (keyIsDown(RIGHT_ARROW) ? 1 : 0) - (keyIsDown(LEFT_ARROW) ? 1 : 0);
   var push = (keyIsDown(UP_ARROW) ? 1 : 0) - (keyIsDown(DOWN_ARROW) ? 1 : 0);
@@ -2313,6 +2314,8 @@ function touchEnded() { mouseReleased(); return false; }
 // uses the on-screen keypad in bank-shot-angle-golf-mobile-controls.js,
 // which calls handleAnswerKey() directly.
 function keyPressed(ev) {
+  // Tab and any key aimed at the page's own controls (All games, Fullscreen...) keep their normal behavior
+  if (keyCode === 9 || (window.isPageControlKey && window.isPageControlKey(ev))) return true;
   // Returning false below cancels a key's default action, which would also
   // swallow browser shortcuts (Ctrl+R / Ctrl+Shift+R hard refresh, F5, etc).
   // Let any Ctrl/Cmd/Alt combo and function key through untouched.

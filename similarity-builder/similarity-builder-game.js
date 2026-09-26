@@ -2317,6 +2317,7 @@ addEventListener('keydown', e => {
 });
 function jump() { if (G && G.state === 'run' && !paused) G.jumpBuf = .12; }
 addEventListener('keydown', e => {
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
   if (screen === 'title') {                                          // Enter / Space on the title screen = Play
     if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') { e.preventDefault(); audioInit(); showScreen('menu'); buildMenu(); }
     return;

@@ -1223,6 +1223,7 @@ addEventListener('keydown', e => {
 const MOVE_KEYS = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
 addEventListener('keyup', e => { if (MOVE_KEYS[e.code]) keys[MOVE_KEYS[e.code]] = false; });
 addEventListener('keydown', e => {
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
   const vis = id => !$(id).classList.contains('hidden'), enter = e.code === 'Enter' || e.code === 'NumpadEnter', space = e.code === 'Space', age = performance.now() - cardAt;
   if (screen === 'title') { if (enter || space) { e.preventDefault(); audioInit(); buildMenu(); showScreen('menu'); } return; }
   if (e.code === 'Escape') {

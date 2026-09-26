@@ -595,6 +595,7 @@
   </style>
 <script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<script src="../site-keyboard.js"></script>
 </head>
 <body>
 
@@ -998,6 +999,7 @@
 
     // Global Keydown Listener for Hotkeys (Space/Enter -> Submit/Next Level)
     document.addEventListener('keydown', (event) => {
+        if (window.isPageControlKey && window.isPageControlKey(event)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
         if (event.key === 'Escape') {
             if (!document.getElementById('exit-confirm-layer').classList.contains('hidden')) {
                 cancelExitConfirm();

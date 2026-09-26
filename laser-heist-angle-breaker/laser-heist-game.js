@@ -526,7 +526,8 @@ function enterKeyEdge() {
 // is held at the instant each draw() frame happens to check), this
 // can't ever miss a fast tap. Queues exactly one maze step; see
 // stepQueued/stepQueuedDGr/stepQueuedDGc and updateSneakingPhase.
-function keyPressed() {
+function keyPressed(e) {
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;
   if (gameState !== STATE_PLAYING || puzzlePhase !== PUZZLE_PHASE_SNEAKING) { return; }
   if (safeKeyDown("left") || safeKeyDown("a")) {
     stepQueued = true; stepQueuedDGr = 0; stepQueuedDGc = -2;
@@ -588,8 +589,14 @@ function kbMove(dir) {
 }
 window.addEventListener("keydown", function (e) {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls
   var menus = !kbInPlay() || exitConfirmPending;
-  if (e.key === "Tab") { e.preventDefault(); e.stopPropagation(); kbMove(e.shiftKey ? -1 : 1); return; }
+  if (e.key === "Tab") {
+    // Tab steps through the game's buttons; past the last one (or before the first) it leaves the game for the page
+    var n = kbPrevButtons.length, atEnd = e.shiftKey ? kbFocus === 0 : kbFocus === n - 1;
+    if (!n || atEnd || (window.gameHasKeyboard && !window.gameHasKeyboard(e))) { kbFocus = -1; return; }
+    e.preventDefault(); e.stopPropagation(); kbMove(e.shiftKey ? -1 : 1); return;
+  }
   if (menus && (e.key === "ArrowDown" || e.key === "ArrowRight")) { e.preventDefault(); e.stopPropagation(); kbMove(1); return; }
   if (menus && (e.key === "ArrowUp" || e.key === "ArrowLeft")) { e.preventDefault(); e.stopPropagation(); kbMove(-1); return; }
   if ((e.key === "Enter" || (e.key === " " && menus)) && kbFocus >= 0 && kbFocus < kbPrevButtons.length) {

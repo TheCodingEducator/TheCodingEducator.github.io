@@ -107,6 +107,7 @@ function _glNormalizeKey(k) {
 // Enter and space scroll/submit by default - block that while playing.
 var _glScrollKeys = { ' ': true, 'Spacebar': true, 'Enter': true };
 window.addEventListener('keydown', function (e) {
+  if (window.isPageControlKey && window.isPageControlKey(e)) return;   // a key meant for the page's own controls (see site-keyboard.js)
   if (_glScrollKeys[e.key]) e.preventDefault();
   _glKeysNow[_glNormalizeKey(e.key)] = true;
 });
