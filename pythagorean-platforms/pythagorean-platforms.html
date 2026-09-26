@@ -624,7 +624,12 @@
             <circle cx="32.5" cy="77" r="3.8" fill="#f2c79a"/>
             <!-- head beside the raised arm -->
             <circle cx="13" cy="42" r="9" fill="#f2c79a"/>
-            <circle cx="16" cy="43" r="1.4" fill="#3a2a14"/>
+            <!-- the face (eye, nose, smile) is drawn looking right and mirrored across the head to look left -->
+            <g class="face" transform="translate(26 0) scale(-1 1)">
+              <circle cx="16.5" cy="42.5" r="1.5" fill="#3a2a14"/>
+              <path d="M21.2 41.2 Q24.8 44 21.2 46.4" fill="#e8b384" stroke="#c98f5e" stroke-width="1"/>
+              <path d="M14.5 47.6 Q17.2 49.4 19.8 47.6" fill="none" stroke="#a0522d" stroke-width="1.2" stroke-linecap="round"/>
+            </g>
             <path d="M-1 35 H27 L23 31 H3Z" fill="#a0692c"/><rect x="5" y="24" width="16" height="10" rx="4" fill="#a0692c"/>
             <!-- the holding arm goes straight up from the shoulder to the rope: sleeve, forearm, then the fist -->
             <path d="M2 56 L1.5 38" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
@@ -1362,11 +1367,11 @@
   // The explorer leans back, pushes off one platform with just enough speed to reach the other, and lands. The body
   // hangs from one hand and follows the rope like a spring with damping, so it trails through the swing, and on
   // landing it keeps some of its momentum and sways before settling upright.
-  const tRope = titleScreen.querySelector('.swing'), tBody = titleScreen.querySelector('.swinger');
+  const tRope = titleScreen.querySelector('.swing'), tBody = titleScreen.querySelector('.swinger'), tFace = titleScreen.querySelector('.face');
   const T_ENDS = [-28.75 * Math.PI / 180, 53.64 * Math.PI / 180];   // rope angles that put the feet on each plank
   const T_K = 4.2;                                                  // gravity / rope length
   const T_STAND = 1.6, T_CROUCH = 0.4;                              // seconds on a platform; the lean before pushing off
-  const tsw = { th: T_ENDS[0], om: 0, phi: 0, phv: 0, at: 0, state: 'stand', t: 0 };
+  const tsw = { th: T_ENDS[0], om: 0, phi: 0, phv: 0, at: 0, state: 'stand', t: 0.5, lookLeft: true };
   function titleTick(dt) {
     if (reduceMotion) return;
     const s = tsw, dir = s.at === 0 ? 1 : -1;
@@ -1395,6 +1400,9 @@
     s.phv += (55 * (phiGoal - s.phi) - 8 * s.phv) * dt;
     s.phi += s.phv * dt;
     const deg = r => (r * 180 / Math.PI).toFixed(2);
+    // look toward the next platform: where the swing is going, and after landing (a moment later) back the other way
+    const lookLeft = s.state === 'swing' ? s.om > 0 : (s.t < 0.35 ? s.at === 1 : s.at === 0);
+    if (lookLeft !== s.lookLeft) { s.lookLeft = lookLeft; tFace.setAttribute('transform', lookLeft ? 'translate(26 0) scale(-1 1)' : ''); }
     tRope.setAttribute('transform', `rotate(${deg(s.th)} 832 0)`);
     tBody.setAttribute('transform', `rotate(${deg(s.phi - s.th)} 832 179)`);
   }
