@@ -215,7 +215,8 @@
           <ul>
             <li><b>One step per swing.</b> Tap the next line of the written solution (or press the left or right arrow key). The right line swings you to the next platform.</li>
             <li>Steps: pick the formula, plug in the legs, square, add, take the square root.</li>
-            <li>When the problem is solved, you use that rope for a <b>big swing across the canyon</b>.</li>
+            <li>Each canyon is a right triangle: <b style="color:#ff9c85">a</b> is the distance across to the next platform, <b style="color:#93e088">b</b> is how high the vine's anchor is above you, and <b style="color:#8cc8ff">c</b> is your rope. Find the rope length or the distance to the next platform.</li>
+            <li>When the problem is solved, time slows down for a close-up of all three sides, and then you take the <b>big swing</b>. The next platform is one rope length under the anchor, so a short rope keeps you high in the trees and a long rope swings you low.</li>
             <li>A wrong line drops you in the quicksand, shows a hint, and you try that step again.</li>
           </ul>
         </section>
@@ -252,7 +253,12 @@
 <script>
 (() => {
   const TAU = Math.PI * 2;
-  const VIEW_H = 19, LEDGE_Y = 17, BODY = 1.25, SAND_Y = 28.3;
+  // Every vine hangs from the canopy at the same height (ANCHOR_Y). A problem's triangle is the jungle itself:
+  //   leg a (coral) = distance straight across to the next platform, leg b (green) = how far the anchor is above you,
+  //   hypotenuse c (blue) = the rope from your hands to the anchor. The next platform sits right under the anchor,
+  //   one rope length down - so a short rope keeps you high in the trees and a long one swings you low.
+  const VIEW_H = 19, BODY = 1.25, SAND_Y = 33.5, ANCHOR_Y = 11;
+  const WORLD_K = { w1: 2, w2: 1.15, w3: 1 };   // world units per unit of the problem (one fixed scale per world)
   const GRAV = 85, ROPE_SPEED = 115, THORN_GAP = 0.25;
   const SKIES = {
     w1: ['#9fdcc9', '#f3e4a6', '#7fb89a', '#4f9467'],
@@ -275,14 +281,16 @@
   helpEl.addEventListener('pointerdown', e => { e.stopPropagation(); helpEl.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); });
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let W = 0, H = 0, S = 20, DPR = 1, viewH = VIEW_H;
+  let W = 0, H = 0, S = 20, baseS = 20, DPR = 1, viewH = VIEW_H;
+  let zoom = 1;                       // camera zoom: <1 to fit a big triangle, >1 for the slow-motion close-up
+  const applyZoom = () => { S = baseS * zoom; viewH = H / S; };
   function resize() {
     const r = cvs.getBoundingClientRect();
     DPR = Math.min(2, window.devicePixelRatio || 1);
     W = r.width; H = r.height;
     cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
-    S = Math.min(H / VIEW_H, W / 26);
-    viewH = H / S;
+    baseS = Math.min(H / VIEW_H, W / 26);
+    applyZoom();
   }
   const viewW = () => W / S;
   new ResizeObserver(resize).observe(cvs);
@@ -314,6 +322,20 @@
   sfx.step = () => tone(660, 990, 0.09, 'triangle', 0.08);
   sfx.pour = () => { tone(300, 600, 0.35, 'sine', 0.06); tone(450, 900, 0.3, 'sine', 0.04, 0.1); };
   sfx.oops = () => tone(260, 180, 0.2, 'square', 0.05);
+  sfx.whoosh = () => { tone(700, 90, 0.9, 'sine', 0.06); tone(220, 60, 1.2, 'triangle', 0.05, 0.05); };
+  sfx.chime = () => tone(880, 1320, 0.18, 'triangle', 0.07);
+  // the BANG: a burst of noise over a deep boom
+  sfx.bang = () => {
+    const a = audio(); if (!a) return;
+    try {
+      const n = Math.floor(a.sampleRate * 0.6), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const src = a.createBufferSource(), g = a.createGain(); src.buffer = buf; g.gain.value = 0.35;
+      src.connect(g).connect(a.destination); src.start();
+    } catch (e) {}
+    tone(95, 32, 0.9, 'sine', 0.4); tone(170, 45, 0.45, 'square', 0.08);
+    [784, 988, 1175].forEach((f, i) => tone(f, f, 0.3, 'triangle', 0.07, 0.12 + i * 0.07));
+  };
 
   // ---------- state ----------
   let mode = 'w1', ledges = [], problems = [];
@@ -331,14 +353,15 @@
 
   const HOP_A = 2, HOP_B = 3.2;   // small swings between step platforms
   const cur = () => ledges[idx];
-  const anchorOf = l => ({ x: l.x + l.a, y: LEDGE_Y - l.b });
-  const hyp = l => Math.hypot(l.a, l.b);
+  const anchorOf = l => ({ x: l.ax, y: l.ay });
+  let cine = null, timeScale = 1;  // the slow-motion close-up after the final answer
   const ri = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 
   // ---------- problems: each step of the written solution is one swing ----------
-  const TRIPLES = [[3, 4], [4, 3], [6, 8], [8, 6], [5, 12], [12, 5], [9, 12], [12, 9], [8, 15]];
+  // [a, b]: a = distance across (kept to 9 or less so the square on the rope stays below the canopy), b = anchor height
+  const TRIPLES = [[3, 4], [4, 3], [6, 8], [8, 6], [5, 12], [9, 12], [8, 15]];
   const PLAN = { w1: ['hyp', 'hyp', 'hyp', 'hyp'], w2: ['hyp', 'est', 'hyp', 'est'], w3: ['leg', 'hyp', 'leg', 'leg'] };
   // color coding: leg a = coral, leg b = green, hypotenuse c = blue, everywhere a number appears
   const A = x => `<span class="ca">${x}</span>`, B = x => `<span class="cb">${x}</span>`, C = x => `<span class="cc">${x}</span>`;
@@ -374,15 +397,15 @@
       ]);
       out.push(step('formula', 'Pick the formula', `${A('a²')} + ${B('b²')} = ${C('c²')}`, bad[0], bad[1]));
     }
-    if (type === 'leg') {
-      out.push(step('sub', 'Plug in what you know', `${A(a + '²')} + ${B('b²')} = ${C(c + '²')}`, `${A(a + '²')} + ${C(c + '²')} = ${B('b²')}`,
-        `${c} is the hypotenuse, the longest side. It goes by itself: ${a}² + b² = ${c}².`));
-      out.push(step('square', 'Square the numbers', `${A(a * a)} + ${B('b²')} = ${C(c * c)}`, `${A(2 * a)} + ${B('b²')} = ${C(2 * c)}`,
-        `Squaring means times itself: ${a}² = ${a * a} and ${c}² = ${c * c}.`));
-      out.push(step('subtract', 'Get b² by itself', `${B('b²')} = ${C(c * c)} − ${A(a * a)} = ${B(b * b)}`, `${B('b²')} = ${C(c * c)} + ${A(a * a)} = ${B(c * c + a * a)}`,
-        `To get b² alone, subtract ${a * a} from both sides: ${c * c} − ${a * a} = ${b * b}.`));
-      out.push(step('root', 'Take the square root', `${B('b')} = ${rad(B(b * b))} = ${B(b)}`, `${B('b')} = ${B(b * b)}`,
-        `${b * b} is b², not b. Take the square root: √${b * b} = ${b}.`));
+    if (type === 'leg') {   // the rope c and the anchor height b are known: find a, the distance to the next platform
+      out.push(step('sub', 'Plug in what you know', `${A('a²')} + ${B(b + '²')} = ${C(c + '²')}`, `${B(b + '²')} + ${C(c + '²')} = ${A('a²')}`,
+        `${c} is the rope, the hypotenuse - the longest side. It goes by itself: a² + ${b}² = ${c}².`));
+      out.push(step('square', 'Square the numbers', `${A('a²')} + ${B(b * b)} = ${C(c * c)}`, `${A('a²')} + ${B(2 * b)} = ${C(2 * c)}`,
+        `Squaring means times itself: ${b}² = ${b * b} and ${c}² = ${c * c}.`));
+      out.push(step('subtract', 'Get a² by itself', `${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(a * a)}`, `${A('a²')} = ${C(c * c)} + ${B(b * b)} = ${A(c * c + b * b)}`,
+        `To get a² alone, subtract ${b * b} from both sides: ${c * c} − ${b * b} = ${a * a}.`));
+      out.push(step('root', 'Take the square root', `${A('a')} = ${rad(A(a * a))} = ${A(a)}`, `${A('a')} = ${A(a * a)}`,
+        `${a * a} is a², not a. Take the square root: √${a * a} = ${a}.`));
       return out;
     }
     const subBad = pick([
@@ -406,8 +429,23 @@
     return out;
   }
 
-  function relayout(from) {
-    for (let i = from; i < ledges.length - 1; i++) ledges[i + 1].x = ledges[i].x + 2 * ledges[i].a;
+  // Place every platform and anchor. Each problem's step platforms climb or drop evenly from where the last big swing
+  // landed to its own canyon edge, which sits b below the canopy anchors. The big swing lands right under the anchor,
+  // c below it - so the answer decides how high or low you swing.
+  function layout(K) {
+    let x = 3, y = ANCHOR_Y + ledges[0].prob.b * K, startY = y;
+    for (const l of ledges) {
+      l.x = x;
+      if (l.final) { l.y = y; break; }
+      const p = l.prob, last = p.steps.length - 1, edgeY = ANCHOR_Y + p.b * K;
+      if (l.si === 0) startY = y;
+      const levelAt = si => last ? startY + (edgeY - startY) * si / last : edgeY;
+      l.y = levelAt(l.si);
+      if (l.kind === 'canyon') { l.k = K; l.ax = x + p.a * K; l.ay = ANCHOR_Y; x = l.ax; y = ANCHOR_Y + p.c * K; }
+      else { x += 2 * HOP_A; y = levelAt(l.si + 1); l.ax = l.x + HOP_A; l.ay = Math.min(l.y, y) - HOP_B; }
+      l.nx = x; l.ny = y;                      // where this swing lands
+      l.rope = Math.hypot(l.x - l.ax, l.y - l.ay);
+    }
   }
 
   function startGame(m) {
@@ -417,18 +455,15 @@
     ledges = [];
     problems.forEach((p, pi) => {
       const last = p.steps.length - 1;
-      p.steps.forEach((s, si) => { if (si < last) ledges.push({ x: 0, a: HOP_A, b: HOP_B, kind: 'hop', prob: p, pi, si }); });
+      p.steps.forEach((s, si) => { if (si < last) ledges.push({ kind: 'hop', prob: p, pi, si }); });
       // the last step is answered at the canyon edge, and the right answer is the big swing.
-      // The canyon is a scale drawing of the triangle, enlarged so small triangles still feel big.
-      // sized so the whole figure (triangle plus its three squares) fits on screen
-      const k = Math.max(0.4, Math.min(16 / (2 * p.a + p.b), 30 / (p.a + 2 * p.b), 16.5 / (p.a + p.b), 10.5 / p.a, 2));
-      ledges.push({ x: 0, a: p.a * k, b: p.b * k, kind: 'canyon', prob: p, pi, si: last });
+      // The canyon is a true scale drawing of the triangle (one scale per world), so bigger answers really are bigger swings.
+      ledges.push({ kind: 'canyon', prob: p, pi, si: last });
     });
-    ledges[0].x = 3;
-    ledges.push({ x: 0, final: true });
-    relayout(0);
+    ledges.push({ final: true });
+    layout(WORLD_K[m]);
     idx = 0; score = 0; combo = 0; bestCombo = 0; perfects = 0; misses = 0;
-    popups = []; parts = []; explain = null;
+    popups = []; parts = []; explain = null; cine = null; timeScale = 1;
     renderStrip();
     resetSwing(false);
     camX = P.x - viewW() * 0.18; camY = camTargetY();
@@ -439,14 +474,14 @@
   function notebookTargets(p) {
     const done = new Set(p.steps.slice(0, p.done).map(s => s.key));
     const t = { sym: mode !== 'w1' || done.has('formula') ? 1 : 0, num: done.has('sub') ? 1 : 0, reveal: 1, aF: 0, bF: 0, pour: 0, side: done.has('root') ? 1 : 0, crumble: 0 };
-    if (p.type === 'leg') { t.aF = done.has('square') ? 1 : 0; t.pour = t.aF; t.bF = done.has('subtract') ? 1 : 0; }
+    if (p.type === 'leg') { t.bF = done.has('square') ? 1 : 0; t.pour = t.bF; t.aF = done.has('subtract') ? 1 : 0; }
     else { t.aF = t.bF = done.has('square') ? 1 : 0; t.pour = done.has('add') ? 1 : 0; }
     return t;
   }
 
   function resetSwing(keepWrongs) {
     const l = cur();
-    P.x = l.x; P.y = LEDGE_Y; P.vx = P.vy = 0; P.rot = 0;
+    P.x = l.x; P.y = l.y; P.vx = P.vy = 0; P.rot = 0;
     rope = null; outcome = null; failKind = null; explain = null;
     state = 'aim'; st = 0;
     if (!keepWrongs) wrongs = new Set();
@@ -478,7 +513,12 @@
       return;
     }
     const l = cur(), p = l.prob;
-    const given = mode === 'w3' ? `Problem ${l.pi + 1} of ${problems.length} · Read the side lengths on the temple door. Find the ${p.type === 'leg' ? 'missing leg b' : 'hypotenuse c'}.` : p.type === 'leg' ? `Problem ${l.pi + 1} of ${problems.length} · hypotenuse ${p.c}, leg ${p.a}. Find the other leg b.` : `Problem ${l.pi + 1} of ${problems.length} · legs ${p.a} and ${p.b}. Find the hypotenuse c.`;
+    const lead = `Problem ${l.pi + 1} of ${problems.length} · `;
+    const given = mode === 'w3'
+      ? lead + (p.type === 'leg' ? `Read the temple door: your rope is ${C(p.c)} and the anchor is ${B(p.b)} up. How far is it to the next platform (${A('a')})?`
+        : `Read the temple door: the next platform is ${A(p.a)} across and the anchor is ${B(p.b)} up. How long is your rope (${C('c')})?`)
+      : p.type === 'leg' ? lead + `Your rope is ${C(p.c)} and the anchor is ${B(p.b)} up. How far is it to the next platform (${A('a')})?`
+      : lead + `The next platform is ${A(p.a)} across and the anchor is ${B(p.b)} up. How long is your rope (${C('c')})?`;
     workEl.innerHTML = `<li class="given">${given}</li>` + p.work.map(w => `<li class="done">${w}</li>`).join('');
     workEl.scrollTop = workEl.scrollHeight;
     if (state === 'explain') {
@@ -537,7 +577,7 @@
   }
 
   function fire(ok) {
-    const l = cur(); const c = hyp(l); const A = anchorOf(l);
+    const l = cur(); const c = l.rope; const A = anchorOf(l);
     failKind = ok ? null : 'miss';
     outcome = ok ? 'perfect' : 'short';
     P0 = { x: P.x, y: P.y };
@@ -574,25 +614,30 @@
     }
   }
 
-  function startSwing(R, vy) {
-    const A = anchorOf(cur());
-    const th = Math.atan2(P.x - A.x, P.y - A.y);
-    rope.phase = 'attached'; rope.R = R; rope.th = th;
-    rope.om = (vy * -Math.sin(th)) / R;
+  // A swing is an arc around the anchor, from where you stand to where you land (the rope lets out or reels in a little
+  // on the small hops between platforms at different heights). The big swing starts from rest and speeds up toward the
+  // bottom of the arc, straight under the anchor, like a real pendulum.
+  function startSwing() {
+    const l = cur(), A = anchorOf(l), big = l.kind === 'canyon';
+    const th0 = Math.atan2(P.x - A.x, P.y - A.y), th1 = Math.atan2(l.nx - A.x, l.ny - A.y);
+    const r0 = Math.hypot(P.x - A.x, P.y - A.y), r1 = Math.hypot(l.nx - A.x, l.ny - A.y);
+    rope.phase = 'attached'; rope.R = r0;
+    rope.kin = { A, th0, th1, r0, r1, u: 0, T: big ? 1.1 + 0.035 * r0 : 0.55 + 0.03 * r0, big };
     state = 'swing'; st = 0;
+    if (big) startCine(l);
   }
 
   function land() {
     const l = cur();
     state = 'land'; st = 0; landFrom = { x: P.x, y: P.y };
     rope = null;
-    const lx = l.x + 2 * l.a;
+    const lx = l.nx, ly = l.ny;
     if (l.kind === 'canyon') {
       combo++; bestCombo = Math.max(bestCombo, combo); perfects++;
       const pts = 200 + 10 * (combo - 1);
       score += pts;
-      popup(`+${pts}  Canyon crossed!`, lx, LEDGE_Y - 1.4, '#f2b530', 1.2);
-      burst(lx, LEDGE_Y, ['#f2b530', '#fff1b8', '#7ccf6b', '#e0734a'], 30, 10);
+      popup(`+${pts}  Canyon crossed!`, lx, ly - 1.4, '#f2b530', 1.2);
+      burst(lx, ly, ['#f2b530', '#fff1b8', '#7ccf6b', '#e0734a'], 30, 10);
       sfx.win();
       return;
     }
@@ -600,9 +645,9 @@
     const fast = aimTime < 2 ? 50 : aimTime < 4 ? 20 : 0;
     const pts = 50 + 10 * (combo - 1) + fast;
     score += pts;
-    popup(`+${pts}`, lx, LEDGE_Y - 1.2, '#f2b530', 0.95);
-    if (combo >= 3 && combo % 3 === 0) popup(`Combo x${combo}`, lx, LEDGE_Y - 2.4, '#ffffff', 0.85);
-    burst(lx, LEDGE_Y, ['#f2b530', '#fff1b8'], 8, 5);
+    popup(`+${pts}`, lx, ly - 1.2, '#f2b530', 0.95);
+    if (combo >= 3 && combo % 3 === 0) popup(`Combo x${combo}`, lx, ly - 2.4, '#ffffff', 0.85);
+    burst(lx, ly, ['#f2b530', '#fff1b8'], 8, 5);
     sfx.perfect();
   }
 
@@ -636,44 +681,26 @@
         if (P.y + BODY > SAND_Y) { state = 'sink'; st = 0; burst(P.x, SAND_Y, ['#e0c07a', '#b98f4f'], 16, 6); sfx.splash(); shake = 0.3; }
       } else {
         rope.tip.x = P0.x + rope.dir.x * rope.len; rope.tip.y = P0.y + rope.dir.y * rope.len;
-        if (rope.len >= rope.max) {
-          sfx.clack();
-          if (outcome === 'long') { rope.phase = 'slack'; rope.R = guess.rope; state = 'drop'; st = 0; P.vy = 0; }
-          else startSwing(hyp(l), 0);
-        }
+        if (rope.len >= rope.max) { sfx.clack(); startSwing(); }
       }
-    } else if (state === 'drop') {
-      P.vy += GRAV * dt; P.y += P.vy * dt;
-      const dx = P.x - A.x, need = Math.sqrt(Math.max(0, rope.R * rope.R - dx * dx));
-      if (P.y >= A.y + need) { P.y = A.y + need; startSwing(rope.R, P.vy); }
-      if (P.y + BODY > SAND_Y) { state = 'sink'; st = 0; burst(P.x, SAND_Y, ['#e0c07a', '#b98f4f'], 16, 6); sfx.splash(); popup('Too long!', P.x, SAND_Y - 2, '#ffd0c0'); }
     } else if (state === 'swing') {
-      const steps = Math.max(1, Math.ceil(dt * 240)), h = dt / steps;
-      const thLand = Math.atan2(l.a, l.b);
-      const thornTop = A.y + hyp(l) + BODY + THORN_GAP;
-      for (let i = 0; i < steps && state === 'swing'; i++) {
-        rope.om += -(GRAV / rope.R) * Math.sin(rope.th) * h;
-        rope.th += rope.om * h;
-        P.x = A.x + rope.R * Math.sin(rope.th); P.y = A.y + rope.R * Math.cos(rope.th); P.rot = -rope.th;
-        if (outcome === 'long') {
-          if ((P.y + BODY > thornTop && Math.abs(P.x - A.x) < 0.95) || (rope.th > 0 && rope.om <= 0)) {
-            state = 'hurt'; st = 0; shake = 0.4; P.vx = -4; P.vy = -8;
-            burst(P.x, P.y + BODY, ['#c0452e', '#2b4a2a', '#f4ecd2'], 16, 7);
-            popup('Too long! Ouch!', P.x, P.y - 1, '#ffd0c0'); sfx.miss();
-          }
-        } else if (rope.th > 0 && (rope.om <= 0 || rope.th >= thLand)) {
-          land();
-        }
-      }
+      const k = rope.kin;
+      k.u = Math.min(1, k.u + dt / k.T);
+      // the big swing starts from rest and is fastest at the bottom; the small hops ease in and out
+      const e = k.big ? 1 - Math.cos(k.u * Math.PI / 2) : (1 - Math.cos(k.u * Math.PI)) / 2;
+      const th = k.th0 + (k.th1 - k.th0) * e, r = k.r0 + (k.r1 - k.r0) * e;
+      rope.R = r;
+      P.x = k.A.x + r * Math.sin(th); P.y = k.A.y + r * Math.cos(th); P.rot = -th * 0.8;
+      if (k.u >= 1) land();
     } else if (state === 'land') {
       const k = Math.min(1, st / 0.18), e = 1 - (1 - k) * (1 - k);
-      const L = { x: l.x + 2 * l.a, y: LEDGE_Y };
+      const L = { x: l.nx, y: l.ny };
       P.x = landFrom.x + (L.x - landFrom.x) * e; P.y = landFrom.y + (L.y - landFrom.y) * e; P.rot *= (1 - k);
       if (st > 0.32) {
         idx++;
         if (cur().final) {
-          state = 'win'; st = 0; P.x = cur().x; P.y = LEDGE_Y; P.rot = 0;
-          burst(cur().x + 2.5, LEDGE_Y - 1, ['#f2b530', '#fff1b8', '#e0734a', '#7ccf6b'], 50, 12);
+          state = 'win'; st = 0; P.x = cur().x; P.y = cur().y; P.rot = 0;
+          burst(cur().x + 2.5, cur().y - 1, ['#f2b530', '#fff1b8', '#e0734a', '#7ccf6b'], 50, 12);
           sfx.win();
         } else resetSwing(false);
         refreshPanel();
@@ -693,21 +720,30 @@
     parts = parts.filter(p => p.t < p.life);
     popups.forEach(p => p.t += dt);
     popups = popups.filter(p => p.t < 1.6);
-    shake = Math.max(0, shake - dt);
-
-    const k = 1 - Math.exp(-dt * 3.5);
-    camX += (camTargetX() - camX) * k;
-    camY += (camTargetY() - camY) * k;
   }
 
-  // keep the explorer and the canyon figure in view together; follow a fall into the quicksand
+  // ---------- camera (runs on real time, so it keeps moving smoothly during slow motion) ----------
+  // keep the explorer and the canyon figure in view together, zooming out for big triangles; follow a fall into the quicksand
   function figBounds() {
     const L = figureLedge(); if (!L) return null;
-    const p = L.prob, kk = L.a / p.a;
-    return { left: L.x - p.b * kk - 0.8, right: L.x + (p.a + Math.max(p.a, p.b)) * kk + 1.2, top: LEDGE_Y - (p.a + p.b) * kk - 1.4, bot: LEDGE_Y + p.a * kk + 1.2 };
+    const p = L.prob, kk = L.k;
+    return { left: L.x - p.b * kk - 0.8, right: L.x + (p.a + Math.max(p.a, p.b)) * kk + 1.2, top: L.y - (p.a + p.b) * kk - 1.4, bot: Math.max(L.y + p.a * kk, L.ny + BODY) + 1.2 };
+  }
+  function cineBounds() {
+    const t = cine.tri;
+    return { left: t.x0 - 2.4, right: t.ax + 3.4, top: t.ay - 2.4, bot: t.y0 + 3.4 };
+  }
+  const fitZoom = (b, lo, hi) => Math.max(lo, Math.min(hi, H / ((b.bot - b.top) * baseS), W / ((b.right - b.left) * baseS)));
+  function zoomTarget() {
+    if (cine && cine.t < CINE.out) return fitZoom(cineBounds(), 0.6, 2.4);   // the slow-motion close-up
+    const f = figBounds();
+    const busy = state === 'aim' || state === 'fire' || state === 'explain' || state === 'swing';
+    return f && busy ? fitZoom({ left: 0, right: 1, top: Math.min(f.top, P.y - 2), bot: Math.max(f.bot, P.y + 3) }, 0.5, 1) : 1;
   }
   function camTargetX() {
-    const vw = viewW(), f = figBounds();
+    const vw = viewW();
+    if (cine && cine.t < CINE.out) { const b = cineBounds(); return (b.left + b.right) / 2 - vw / 2; }
+    const f = figBounds();
     let t = P.x - vw * 0.18;
     if (f && (state === 'aim' || state === 'fire' || state === 'explain')) {
       if (cur().kind === 'canyon' && f.right - f.left <= vw) t = (f.left + f.right) / 2 - vw / 2;
@@ -716,11 +752,21 @@
     return Math.max(0, t);
   }
   function camTargetY() {
+    if (cine && cine.t < CINE.out) { const b = cineBounds(); return (b.top + b.bot) / 2 - viewH / 2; }
     const f = figBounds();
-    let t = LEDGE_Y - viewH * 0.62;
-    if (f) t = f.bot - f.top > viewH ? f.top : (f.top + f.bot) / 2 - viewH / 2;
+    let t = P.y - viewH * 0.62;
+    if (f && state !== 'swing' && state !== 'land') t = f.bot - f.top > viewH ? f.top : (f.top + f.bot) / 2 - viewH / 2;
     t = Math.max(t, P.y + 3 - viewH);
+    t = Math.min(t, P.y - 2.5);
     return Math.min(Math.max(-3, t), SAND_Y + 1.8 - viewH);
+  }
+  function updateCamera(dt) {
+    const kz = 1 - Math.exp(-dt * 3);
+    zoom += (zoomTarget() - zoom) * kz; applyZoom();
+    const k = 1 - Math.exp(-dt * 3.5);
+    camX += (camTargetX() - camX) * k;
+    camY += (camTargetY() - camY) * k;
+    shake = Math.max(0, shake - dt);
   }
 
   // ---------- drawing ----------
@@ -774,8 +820,10 @@
   }
 
   function drawAnchors(time) {
+    const now = cur();
     ledges.forEach((l, i) => {
       if (l.final) return;
+      if (!now.final && l.pi > now.pi) return;     // later problems' vines stay hidden so the canyon figure reads clearly
       const A = anchorOf(l);
       if (sx(A.x) < -60 || sx(A.x) > W + 60) return;
       ctx.strokeStyle = '#356e36'; ctx.lineWidth = 0.16 * S; ctx.lineCap = 'round';
@@ -796,7 +844,7 @@
   function drawBrambles() {
     ledges.forEach(l => {
       if (l.final || l.kind === 'canyon') return;
-      const A = anchorOf(l); const top = A.y + hyp(l) + BODY + THORN_GAP;
+      const A = anchorOf(l); const top = A.y + l.rope + BODY + THORN_GAP;
       const x = sx(A.x); if (x < -80 || x > W + 80) return;
       const w = 0.8 * S;
       ctx.fillStyle = '#29472a';
@@ -816,13 +864,13 @@
 
   function drawLedges(time) {
     ledges.forEach(l => {
-      const x = sx(l.x); const top = sy(LEDGE_Y + BODY);
+      const x = sx(l.x); const top = sy(l.y + BODY);
       if (l.final) {
         if (x > W + 40) return;
         const w = 7 * S, left = x - 1.2 * S;
         ctx.fillStyle = '#8e937c'; ctx.fillRect(left, top, w, sy(SAND_Y) - top);
         ctx.strokeStyle = '#6e725f'; ctx.lineWidth = 2;
-        for (let r = 0; r * 0.9 < SAND_Y - LEDGE_Y - BODY; r++) {
+        for (let r = 0; r * 0.9 < SAND_Y - l.y - BODY; r++) {
           const y = top + r * 0.9 * S; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + w, y); ctx.stroke();
           for (let c = (r % 2) * 0.9; c < 7; c += 1.8) { ctx.beginPath(); ctx.moveTo(left + c * S, y); ctx.lineTo(left + c * S, y + 0.9 * S); ctx.stroke(); }
         }
@@ -1095,9 +1143,9 @@
   function drawProofWorld(time) {
     const L = figureLedge(); if (!L) return;
     const p = L.prob, a = p.a, b = p.b, sum = p.sum, cc = p.c;
-    const kk = L.a / a;                 // world units per unit of the problem
+    const kk = L.k;                      // world units per unit of the problem
     const k = kk * S;                   // pixels per unit
-    const X = x => sx(L.x + x * kk), Yp = y => sy(LEDGE_Y - y * kk);
+    const X = x => sx(L.x + x * kk), Yp = y => sy(L.y - y * kk);
     const c = ctx;
     const tiles = mode === 'w1', door = mode === 'w3';
     const cr = nb.crumble;
@@ -1174,8 +1222,8 @@
       }
     }
     const legLabel = (n, f, letter, known) => f > 0.5 ? `${n * n}` : (nb.num > 0.5 || door) && known ? `${n}²` : nb.sym > 0.5 ? `${letter}²` : '';
-    legSquare(sqA, nb.aF, CORAL, legLabel(a, nb.aF, 'a', true), A_INK);
-    legSquare(sqB, nb.bF, GREEN, legLabel(b, nb.bF, 'b', p.type !== 'leg'), B_INK);
+    legSquare(sqA, nb.aF, CORAL, legLabel(a, nb.aF, 'a', p.type !== 'leg'), A_INK);   // in a missing-leg problem, a is the unknown
+    legSquare(sqB, nb.bF, GREEN, legLabel(b, nb.bF, 'b', true), B_INK);
 
     // the big stone frame on the hypotenuse; the leg squares pour into it from the rope side outward
     quad(sqC.O, sqC.u, sqC.v, 0, 1, 0, 1);
@@ -1239,9 +1287,9 @@
     const unknown = w3 ? '?' : null;
     const big = w3 ? 1.2 : 1;
     const tagAt = (text, x, y, bg, fg) => chip(text, X(x), Yp(y), bg, fg, big);
-    tagAt(numOn ? String(a) : 'a', a / 2, 0, '#fff0ec', A_INK);
-    const bKnown = p.type === 'leg' ? nb.side > 0.5 : numOn;
-    tagAt(bKnown ? String(b) : (unknown || 'b'), a, b / 2, '#eaf7e6', B_INK);
+    const aKnown = p.type === 'leg' ? nb.side > 0.5 : numOn;
+    tagAt(aKnown ? String(a) : (p.type === 'leg' && unknown) || 'a', a / 2, 0, '#fff0ec', A_INK);
+    tagAt(numOn ? String(b) : 'b', a, b / 2, '#eaf7e6', B_INK);
     const known = p.type === 'leg' ? numOn : nb.side > 0.5;
     const cTxt = known ? (p.type === 'est' ? `√${sum}` : String(cc)) : (unknown || 'c');
     tagAt(cTxt, a / 2, b / 2, '#e6f0ff', C_INK);
@@ -1262,6 +1310,131 @@
     nb.crumble = nbT.crumble > nb.crumble ? Math.min(1, nb.crumble + (reduceMotion ? 1 : dt * 0.9)) : nbT.crumble;
   }
 
+  // ---------- the slow-motion close-up after the final answer ----------
+  // Time slows, the camera zooms onto the triangle, the two known sides light up with their lengths, the missing side
+  // draws itself in... and BANG - its length pops onto it. Then time speeds back up and the swing finishes.
+  const CINE = { known1: 0.5, known2: 0.9, draw: 1.3, bang: 2.2, out: 2.9, end: 3.5 };
+  function startCine(l) {
+    cine = { t: 0, p: l.prob, tri: { x0: l.x, y0: l.y, ax: l.ax, ay: l.ay }, banged: false, chimes: 0 };
+    sfx.whoosh();
+  }
+  const cineScale = t => t < 0.5 ? 1 - 0.9 * t / 0.5 : t < CINE.out ? 0.1 : t < CINE.end ? 0.1 + 0.9 * (t - CINE.out) / (CINE.end - CINE.out) : 1;
+  function cineSides() {
+    const { p, tri: T } = cine;
+    return {
+      a: { p0: [T.x0, T.y0], p1: [T.ax, T.y0], col: '#ff7a5c', ink: A_INK, bg: '#fff0ec', name: 'distance', txt: `a = ${p.a}` },
+      b: { p0: [T.ax, T.y0], p1: [T.ax, T.ay], col: '#5fd35a', ink: B_INK, bg: '#eaf7e6', name: 'height', txt: `b = ${p.b}` },
+      c: { p0: [T.x0, T.y0], p1: [T.ax, T.ay], col: '#5aa9ff', ink: C_INK, bg: '#e6f0ff', name: 'rope', txt: p.type === 'est' ? `c = √${p.sum} ≈ ${fmt(Math.round(p.c * 10) / 10)}` : `c = ${p.c}` }
+    };
+  }
+  const cineMissing = () => cine.p.type === 'leg' ? 'a' : 'c';
+  function stepCine(dt) {
+    if (!cine) return;
+    const before = cine.t;
+    cine.t += dt;
+    timeScale = cineScale(cine.t);
+    // a soft chime as each known side lights up
+    [CINE.known1, CINE.known2].forEach(t0 => { if (before < t0 && cine.t >= t0) sfx.chime(); });
+    if (!cine.banged && cine.t >= CINE.bang) {
+      cine.banged = true;
+      const s = cineSides()[cineMissing()], mx = (s.p0[0] + s.p1[0]) / 2, my = (s.p0[1] + s.p1[1]) / 2;
+      sfx.bang(); shake = reduceMotion ? 0 : 0.6;
+      burst(mx, my, [s.col, '#ffffff', '#f2b530', s.col], 70, 16);
+      cine.boom = { x: mx, y: my };
+    }
+    if (cine.t >= CINE.end) { cine = null; timeScale = 1; }
+  }
+  function sideLabelPos(key, s) {
+    const T = cine.tri, mx = (s.p0[0] + s.p1[0]) / 2, my = (s.p0[1] + s.p1[1]) / 2;
+    if (key === 'a') return [T.x0 + (T.ax - T.x0) * 0.62, my - 0.95];   // inside the triangle near the right angle, clear of the explorer
+    if (key === 'b') return [mx + 1.9, my];
+    const vx = mx - T.ax, vy = my - T.y0, vl = Math.hypot(vx, vy) || 1;   // away from the right angle
+    return [mx + vx / vl * 1.5, my + vy / vl * 1.5];
+  }
+  // drawn in the world (moves with the camera and the shake)
+  function drawCine() {
+    if (!cine) return;
+    const t = cine.t, sides = cineSides(), miss = cineMissing();
+    const known = ['a', 'b', 'c'].filter(k => k !== miss);
+    const appear = { [known[0]]: CINE.known1, [known[1]]: CINE.known2, [miss]: CINE.draw };
+    const fade = t > CINE.out ? Math.max(0, 1 - (t - CINE.out) / (CINE.end - CINE.out)) : 1;
+    const T = cine.tri, rq = 0.7;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    // right-angle marker
+    ctx.strokeStyle = '#fffbe8'; ctx.lineWidth = Math.max(2, 0.08 * S);
+    ctx.beginPath(); ctx.moveTo(sx(T.ax - rq), sy(T.y0)); ctx.lineTo(sx(T.ax - rq), sy(T.y0 - rq)); ctx.lineTo(sx(T.ax), sy(T.y0 - rq)); ctx.stroke();
+    ['a', 'b', 'c'].forEach(key => {
+      const s = sides[key], t0 = appear[key];
+      if (t < t0) return;
+      const isMiss = key === miss;
+      const f = isMiss ? Math.min(1, (t - t0) / (CINE.bang - 0.05 - t0)) : Math.min(1, (t - t0) / 0.3);
+      const ex = s.p0[0] + (s.p1[0] - s.p0[0]) * f, ey = s.p0[1] + (s.p1[1] - s.p0[1]) * f;
+      // the side: a dark outline, then a glowing colored stroke
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(20,20,20,0.55)'; ctx.lineWidth = Math.max(7, 0.42 * S);
+      ctx.beginPath(); ctx.moveTo(sx(s.p0[0]), sy(s.p0[1])); ctx.lineTo(sx(ex), sy(ey)); ctx.stroke();
+      if (!reduceMotion) { ctx.shadowColor = s.col; ctx.shadowBlur = S * (isMiss && cine.banged ? 1.4 : 0.7); }
+      ctx.strokeStyle = s.col; ctx.lineWidth = Math.max(5, 0.28 * S);
+      ctx.beginPath(); ctx.moveTo(sx(s.p0[0]), sy(s.p0[1])); ctx.lineTo(sx(ex), sy(ey)); ctx.stroke();
+      ctx.shadowBlur = 0;
+      if (isMiss && f < 1) {   // a spark racing along the side as it draws in
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(sx(ex), sy(ey), 0.26 * S * (1 + 0.3 * Math.sin(time * 40)), 0, TAU); ctx.fill();
+      }
+      // the label: known sides fade in; the missing side reads "?" until the BANG, then its length pops on
+      const [lx, ly] = sideLabelPos(key, s);
+      if (isMiss && !cine.banged) {
+        ctx.globalAlpha = fade * Math.min(1, (t - t0) / 0.3);
+        chip(`${key} = ?`, sx(lx), sy(ly), s.bg, s.ink, 1.35);
+      } else {
+        const k = isMiss ? Math.min(1, (t - CINE.bang) / 0.25) : f;
+        const pop = isMiss ? 1 + 0.6 * Math.max(0, 1 - (t - CINE.bang) / 0.35) : 1;
+        ctx.globalAlpha = fade * k;
+        chip(s.txt, sx(lx), sy(ly), isMiss ? s.col : s.bg, isMiss ? '#ffffff' : s.ink, 1.35 * pop);
+      }
+      ctx.globalAlpha = fade;
+    });
+    // the shockwave
+    if (cine.boom && !reduceMotion) {
+      const k = Math.min(1, (t - CINE.bang) / 0.7);
+      ctx.globalAlpha = (1 - k) * fade;
+      ctx.strokeStyle = sides[miss].col; ctx.lineWidth = Math.max(3, 0.35 * S * (1 - k));
+      ctx.beginPath(); ctx.arc(sx(cine.boom.x), sy(cine.boom.y), (0.5 + k * 7) * S, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, 0.15 * S * (1 - k));
+      ctx.beginPath(); ctx.arc(sx(cine.boom.x), sy(cine.boom.y), (0.3 + k * 4.5) * S, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // drawn over everything (no shake): movie letterbox bars, the flash, and the headline
+  function drawCineOverlay() {
+    if (!cine) return;
+    const t = cine.t;
+    const bars = Math.min(1, t / 0.4) * (t > CINE.out ? Math.max(0, 1 - (t - CINE.out) / 0.5) : 1);
+    const bh = H * 0.09 * bars;
+    ctx.fillStyle = '#05080a'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+    if (bars > 0.3 && !cine.banged) {
+      ctx.globalAlpha = Math.min(1, (bars - 0.3) * 2);
+      const fs = Math.max(11, bh * 0.36);
+      ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f2b530'; ctx.fillText('● SLOW MOTION', 16, H - bh / 2);   // in the bottom bar, clear of the score badges
+      ctx.globalAlpha = 1;
+    }
+    if (cine.banged) {
+      const k = (t - CINE.bang);
+      if (!reduceMotion && k < 0.35) { ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - k / 0.35)})`; ctx.fillRect(0, 0, W, H); }
+      const s = cineSides()[cineMissing()];
+      const fade = t > CINE.out ? Math.max(0, 1 - (t - CINE.out) / 0.5) : 1;
+      const fs = Math.max(22, Math.min(54, W / 14)) * (1 + 0.5 * Math.max(0, 1 - k / 0.3));
+      ctx.globalAlpha = fade;
+      ctx.font = `400 ${fs}px "Lilita One", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const head = cineMissing() === 'a' ? `DISTANCE ${s.txt}!` : `ROPE ${s.txt}!`;
+      ctx.lineWidth = fs * 0.2; ctx.strokeStyle = '#1a1206'; ctx.lineJoin = 'round';
+      const y = Math.max(bh + fs * 0.8, H * 0.2);
+      ctx.strokeText(head, W / 2, y); ctx.fillStyle = s.col; ctx.fillText(head, W / 2, y);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function drawWin(time) {
     if (state !== 'win') return;
     const fs = Math.max(22, Math.min(46, W / 16));
@@ -1277,10 +1450,17 @@
 
   let last = performance.now(), time = 0;
   function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    tick(dt);
+    requestAnimationFrame(frame);
+  }
+  function tick(dt) {
+    time += dt;
     if (W > 0 && H > 0) {
-      update(dt);
+      stepCine(dt);
+      update(dt * timeScale);        // the world slows down during the close-up...
       updateNotebook(dt);
+      updateCamera(dt);              // ...but the camera keeps moving in real time
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       const sh = shake > 0 && !reduceMotion ? shake * 10 : 0;
       ctx.save();
@@ -1296,19 +1476,28 @@
       drawTriangle(time);
       drawRope();
       drawExplorer(time);
+      drawCine();
       drawParts();
       drawPopups();
       drawLeaves(time, dt);
       ctx.restore();
+      drawCineOverlay();
       drawHUD();
       drawExplain();
       drawWin(time);
     }
-    requestAnimationFrame(frame);
   }
 
   startGame('w1');
   requestAnimationFrame(frame);
+  // small hook for automated checks
+  window.GR = {
+    right() { const l = cur(); if (state === 'aim' && !l.final) answer(l.prob.steps[l.si].choices.find(c => c.ok)); },
+    wrong() { const l = cur(); if (state === 'aim' && !l.final) answer(l.prob.steps[l.si].choices.find(c => !c.ok)); },
+    get state() { return state; }, get cine() { return cine; }, get idx() { return idx; }, get zoom() { return zoom; },
+    get cam() { return { camX, camY, S, viewH, W, H }; }, step(dt) { tick(dt); },
+    ledges: () => ledges, P, startGame
+  };
 })();
 </script>
 </body>
