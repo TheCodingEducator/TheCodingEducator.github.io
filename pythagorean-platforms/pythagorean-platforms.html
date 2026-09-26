@@ -407,6 +407,7 @@
     transition: transform 0.06s;
   }
   .btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+  .btn:focus-visible { outline: 3px solid #fff4d6; outline-offset: 2px; }
   .btn:disabled { opacity: 0.45; cursor: default; }
   .btn.wrong { background: #6d3a2a; color: #f0c3b2; border-bottom-color: #4a2419; text-decoration: line-through; }
   .btn .key { font-family: "Nunito", sans-serif; font-size: 10px; font-weight: 800; opacity: 0.6; margin-right: 4px; vertical-align: middle; }
@@ -733,7 +734,7 @@
     <li><strong>One step per swing:</strong> students choose the right line of the written solution - plug in, square, add (or subtract), take the square root - and each correct line swings them forward. Each wrong choice is a common mistake with its own hint, such as adding the sides, doubling instead of squaring, or forgetting the square root.</li>
     <li><strong>Why squares:</strong> a square is built on each side of the canyon triangle. As students work, the squares on the two legs fill with tiles and pour into the square on the rope, which they fill exactly - a visual proof of a&sup2; + b&sup2; = c&sup2;.</li>
     <li><strong>Answers you can see:</strong> the big swing lands one rope length below the anchor, drawn to scale, so short ropes keep the explorer high in the trees and long ropes swing low. After the final step, a slow-motion close-up labels all three sides and reveals the missing length.</li>
-    <li><strong>Five worlds:</strong> World 1 is the starting point: one question per canyon, where students count the 1-ft squares along the edge of the square on the rope and type its length - the hypotenuse, found by counting. World 2 walks through every step with 3-4-5 and 6-8-10 triangles and unit tiles. World 3 is the challenge round: one side of the triangle isn't labeled, so students first count the 1-ft grid squares along it, choose each step from four answers (every wrong one a common mistake), type the final rope length, and work against a fraying-rope timer (20 seconds per choice on the first problem, 3 seconds less on each problem after), with fewer hints and squares that stay "?" until their areas are found. World 4 finds a missing leg - the distance to the next platform - from numbers carved on a temple door. World 5 is the summit challenge: bigger triangles (6-8-10, 5-12-13, 9-12-15 and 8-15-17), a random mix of rope and distance problems, and no answer choices, with step hints and a perfect-squares list for support - each step is a line of the solution with one number blanked out, and students type what belongs there.</li>
+    <li><strong>Five worlds:</strong> World 1 is the starting point: one question per canyon, where students count the 1-ft squares along the edge of the square on the rope and type its length - the hypotenuse, found by counting. World 2 walks through every step with unit tiles. Each world uses four different triangles (in Worlds 1 to 3: 3-4-5, 6-8-10, 5-12-13 and 9-12-15), so no question repeats within a world. World 3 is the challenge round: one side of the triangle isn't labeled, so students first count the 1-ft grid squares along it, choose each step from four answers (every wrong one a common mistake), type the final rope length, and work against a fraying-rope timer (20 seconds per choice on the first problem, 3 seconds less on each problem after), with fewer hints and squares that stay "?" until their areas are found. World 4 finds a missing leg - the distance to the next platform - from numbers carved on a temple door. World 5 is the summit challenge: bigger triangles (6-8-10, 5-12-13, 9-12-15 and 8-15-17), a random mix of rope and distance problems, and no answer choices, with step hints and a perfect-squares list for support - each step is a line of the solution with one number blanked out, and students type what belongs there.</li>
   </ul>
 </section>
 
@@ -751,10 +752,10 @@
   //   hypotenuse c (blue) = the rope from your hands to the anchor. The next platform sits right under the anchor,
   //   one rope length down - so a short rope keeps you high in the trees and a long one swings you low.
   const VIEW_H = 19, BODY = 1.25, SAND_Y = 33.5, ANCHOR_Y = 11;
-  // world units per foot: one fixed scale per world, except Worlds 3 and 5, which size each triangle so its whole figure
+  // world units per foot: World 4 uses one fixed scale; the other worlds size each triangle so its whole figure
   // (rope square above, leg square hanging below: 2a + b feet tall) fits on screen as big as possible
   const fitK = p => Math.min(1.6, 17 / (2 * p.a + p.b));
-  const WORLD_K = { w0: 1.6, w1: 1.6, w2: fitK, w3: 1, w4: fitK };
+  const WORLD_K = { w0: fitK, w1: fitK, w2: fitK, w3: 1, w4: fitK };
   const GRAV = 85, ROPE_SPEED = 115, THORN_GAP = 0.25;
   const SKIES = {
     w0: ['#b3e6d6', '#f8eebb', '#8cc6a6', '#5aa272'],
@@ -873,6 +874,8 @@
   // ---------- problems: each step of the written solution is one swing ----------
   // [a, b]: a = distance across (kept to 9 or less so the square on the rope stays below the canopy), b = anchor height
   const TRIPLES = [[3, 4], [4, 3], [6, 8], [8, 6], [5, 12], [9, 12], [8, 15]];
+  // Worlds 1 to 3: four different small triangles, one for each problem (the smallest first-world favorites plus 5-12-13 and 9-12-15)
+  const SMALL_TRIPLES = [[3, 4], [4, 3], [6, 8], [8, 6], [5, 12], [12, 5], [9, 12], [12, 9]];
   // World 5's triangles: bigger than 3-4-5, but every square is on the perfect-squares list (up to 17² = 289)
   const BIG_TRIPLES = [[6, 8], [8, 6], [5, 12], [12, 5], [9, 12], [12, 9], [8, 15], [15, 8]];
   const PLAN = { w0: ['hyp', 'hyp', 'hyp', 'hyp'], w1: ['hyp', 'hyp', 'hyp', 'hyp'], w2: ['hyp', 'hyp', 'hyp', 'hyp'], w3: ['leg', 'hyp', 'leg', 'leg'],
@@ -908,24 +911,24 @@
 
   // Problems never repeat: no question comes twice in one world, and the same triangle (either way round)
   // can't come twice in a row, even across a new game
-  let lastProblemKey = '', usedQuestions = new Set();
-  const problemKey = p => `${p.type}:${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`;
-  const questionKey = p => `${p.type}:${p.a}-${p.b}:${p.count || ''}`;
+  // A triangle is one question, whichever way round it's drawn and whether it asks for the rope or the distance:
+  // each world uses every triangle at most once, and a new world doesn't start with the triangle the last one ended on.
+  let usedTriangles = new Set(), lastTriangle = '';
+  const triangleKey = ([a, b]) => `${Math.min(a, b)}-${Math.max(a, b)}`;
   function makeProblem(type, i) {
-    if (i === 0) usedQuestions = new Set();   // a new world
-    let p, tries = 0;
-    do { p = rollProblem(type); }
-    while ((usedQuestions.has(questionKey(p)) || (problemKey(p) === lastProblemKey && tries < 150)) && ++tries < 300);
-    usedQuestions.add(questionKey(p));
-    lastProblemKey = problemKey(p);
+    if (i === 0) usedTriangles = new Set();   // a new world
+    const pool = mode === 'w4' ? BIG_TRIPLES : mode === 'w3' ? TRIPLES : SMALL_TRIPLES;
+    let choices = pool.filter(t => !usedTriangles.has(triangleKey(t)));
+    if (!choices.length) choices = pool;   // (never happens: every pool has at least 4 different triangles)
+    const notLast = choices.filter(t => triangleKey(t) !== lastTriangle);
+    if (notLast.length) choices = notLast;
+    const [a, b] = pick(choices);
+    usedTriangles.add(triangleKey([a, b])); lastTriangle = triangleKey([a, b]);
+    const p = problemFor(type, a, b);
     p.steps = buildSteps(p);
     return p;
   }
-  function rollProblem(type) {
-    let a, b;
-    // Worlds 1 and 2 keep the legs to 8 ft (easy to count and to square); World 3 uses the bigger triangles too
-    if (type === 'est') { do { a = ri(2, 7); b = ri(3, 8); } while (Number.isInteger(Math.sqrt(a * a + b * b))); }
-    else [a, b] = pick(mode === 'w4' ? BIG_TRIPLES : mode === 'w3' ? TRIPLES : [[3, 4], [4, 3], [6, 8], [8, 6]]);
+  function problemFor(type, a, b) {
     const sum = a * a + b * b, c = Math.sqrt(sum);
     const p = { type, a, b, sum, c, done: 0, work: [] };
     if (mode === 'w2') p.count = pick(['a', 'b']);   // the leg students find by counting squares
@@ -1196,6 +1199,8 @@
       promptEl.innerHTML = `Temple reached! ${perfects} steps right, best combo x${bestCombo}, score ${score} (your best: ${store.get('best_score', score)}).`;
       choicesEl.hidden = true;
       otherBtn.hidden = mode === 'w4';
+      // keyboard players land on a button right away (the next world, or Play again after the last world)
+      if (!screenOpen()) setTimeout(() => { if (state === 'win' && !screenOpen()) (otherBtn.hidden ? againBtn : otherBtn).focus({ preventScroll: true }); }, 60);
       nbCap.textContent = 'Nice work. The next world gives you less help.';
       return;
     }
@@ -1487,6 +1492,14 @@
     }
     if (e.target && e.target.closest && e.target.closest('.reset-progress, .teaching-notes, .standards-panel')) return;   // leave page controls alone
     if (e.key === 'Escape' && state !== 'explain') { e.preventDefault(); showMap('game'); return; }   // Esc in a world opens the World Map
+    if (state === 'win') {   // world finished: the arrow keys move between Play again / Next world / World map, Enter or Space picks
+      const btns = [...endEl.querySelectorAll('button')].filter(b => !b.hidden);
+      const dir = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+      const at = btns.indexOf(document.activeElement);
+      if (dir && btns.length) { e.preventDefault(); btns[at < 0 ? 0 : (at + dir + btns.length) % btns.length].focus(); }
+      else if ((e.key === 'Enter' || e.key === ' ') && at < 0 && btns.length) { e.preventDefault(); btns[0].click(); }
+      return;
+    }
     if (state === 'explain' && st > 0.4 && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); retry(); return; }
     if (e.target && e.target.id === 'typed-ans') return;   // typing the rope length
     const l = cur(), s = state === 'aim' && l && !l.final ? l.prob.steps[l.si] : null;
@@ -1502,13 +1515,25 @@
       if (ch && !wrongs.has(ch.label)) answer(ch);
       return;
     }
-    const dir = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    // four answers sit in a 2 x 2 grid: each arrow key moves to the answer in that direction (up goes up, and so on)
+    const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
     if (dir && n > 2) {
       e.preventDefault();
       const btns = [...choicesEl.querySelectorAll('button:not(:disabled)')];
-      const i = btns.indexOf(document.activeElement);
-      const next = btns[(i < 0 ? (dir > 0 ? 0 : btns.length - 1) : (i + dir + btns.length) % btns.length)];
-      if (next) next.focus();
+      const cur = btns.indexOf(document.activeElement);
+      if (cur < 0) { if (btns[0]) btns[0].focus(); return; }
+      const box = b => { const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+      const from = box(btns[cur]);
+      let best = null, bestScore = Infinity;
+      btns.forEach((b, i) => {
+        if (i === cur) return;
+        const to = box(b), along = (to.x - from.x) * dir[0] + (to.y - from.y) * dir[1];
+        const across = Math.abs(dir[0] ? to.y - from.y : to.x - from.x);
+        if (along <= 4) return;                       // only answers that really are in that direction
+        const score = along + across * 3;
+        if (score < bestScore) { bestScore = score; best = b; }
+      });
+      if (best) best.focus();
     }
   });
 
@@ -1641,7 +1666,7 @@
     const L = figureLedge(); if (!L) return null;
     if (mode === 'w0') { const r = rowBounds(L, 1.2); r.bot = Math.max(r.bot, L.ny + BODY + 1.2); return r; }
     const p = L.prob, kk = L.k;
-    return { left: L.x - p.b * kk - 0.8, right: L.x + (p.a + Math.max(p.a, p.b)) * kk + 1.2, top: L.y - (p.a + p.b) * kk - 1.4, bot: Math.max(L.y + p.a * kk, L.ny + BODY) + 1.2 };
+    return { left: L.x - p.b * kk - 0.6, right: L.x + (p.a + Math.max(p.a, p.b)) * kk + 0.6, top: L.y - (p.a + p.b) * kk - 0.6, bot: Math.max(L.y + p.a * kk, L.ny + BODY) + 0.5 };
   }
   // World 1 draws just a row of unit squares along each side, so its figure is much smaller than the big squares
   function rowBounds(L, pad) {
@@ -1666,11 +1691,14 @@
   function zoomTarget() {
     if (cine && cine.t < CINE.out) return fitZoom(cineBounds(), 0.6, 2.4);   // the slow-motion close-up
     const cb = countBounds(); if (cb) return fitZoom(cb, 0.8, 1.9);
-    const f = figBounds();
+    const f = focusBounds();
     const busy = state === 'aim' || state === 'fire' || state === 'explain' || state === 'swing';
-    if (f && busy && (mode === 'w2' || mode === 'w4'))   // Worlds 3 and 5: zoom in as close as the explorer and the whole figure allow
-      return fitZoom({ left: Math.min(f.left, P.x - 2), right: f.right, top: Math.min(f.top, P.y - 2), bot: Math.max(f.bot, P.y + 3) }, 0.75, 1.5);
-    return f && busy ? fitZoom({ left: 0, right: 1, top: Math.min(f.top, P.y - 2), bot: Math.max(f.bot, P.y + 3) }, 0.5, 1) : 1;
+    return f && busy ? fitZoom(f, 0.5, 1.8) : 1;   // as close as the squares and the explorer allow - no room for the platforms ahead
+  }
+  // what the camera frames while a problem is being solved: the canyon's squares plus the explorer, and nothing further on
+  function focusBounds() {
+    const f = figBounds(); if (!f) return null;
+    return { left: Math.min(f.left, P.x - 1.6), right: Math.max(f.right, P.x + 1.6), top: Math.min(f.top, P.y - 1.6), bot: Math.max(f.bot, P.y + 2.2) };
   }
   function camTargetX() {
     const vw = viewW();
@@ -1679,8 +1707,8 @@
     const f = figBounds();
     let t = P.x - vw * 0.18;
     if (f && (state === 'aim' || state === 'fire' || state === 'explain')) {
-      if (cur().kind === 'canyon' && f.right - f.left <= vw) t = (f.left + f.right) / 2 - vw / 2;
-      else t = Math.min(P.x - 2, Math.max(t, f.right - vw));
+      const b = focusBounds();   // keep the squares and the explorer centered
+      t = (b.left + b.right) / 2 - vw / 2;
     }
     return Math.max(0, t);
   }
