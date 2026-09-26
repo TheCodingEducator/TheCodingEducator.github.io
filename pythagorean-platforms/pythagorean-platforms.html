@@ -280,14 +280,6 @@
   .screen[hidden] { display: none; }
   .title-screen { background: #1d4a33; }
   .title-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
-  /* stand on the right platform, swing, land on the hanging platform, pause, swing back (angles put the feet exactly on each plank) */
-  .title-scene .swing { transform-origin: 832px 0; animation: tRope 7s ease-in-out infinite; }
-  .title-scene .swinger { transform-origin: 832px 169px; animation: tBody 7s ease-in-out infinite; }
-  @keyframes tRope { 0%, 14% { transform: rotate(-35.45deg); } 50%, 64% { transform: rotate(51.35deg); } 100% { transform: rotate(-35.45deg); } }
-  @keyframes tBody { 0%, 14% { transform: rotate(35.45deg); } 50%, 64% { transform: rotate(-51.35deg); } 100% { transform: rotate(35.45deg); } }
-  @media (prefers-reduced-motion: reduce) {
-    .title-scene .swing { animation: none; transform: rotate(-35.45deg); } .title-scene .swinger { animation: none; transform: rotate(35.45deg); }
-  }
   .title-scene .leaf-sway { transform-box: fill-box; transform-origin: top center; animation: tSway 4s ease-in-out infinite alternate; }
   @keyframes tSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
   .t-content { position: absolute; left: 5%; top: 0; bottom: 0; width: min(46%, 420px); display: flex; flex-direction: column; justify-content: center; gap: 14px; }
@@ -613,32 +605,31 @@
         <text x="48" y="62" font-size="38" fill="#a3230c" stroke="#fffbe8" stroke-width="6" paint-order="stroke">16</text>
         <text x="132" y="-24" font-size="34" fill="#17661f" stroke="#fffbe8" stroke-width="6" paint-order="stroke">9</text>
       </g>
-      <!-- the explorer, swinging on a vine -->
-      <!-- the rope turns about its anchor; the explorer turns back the other way about the hands, so they stay upright
-           and stand flat on each platform. Both hands grip the rope, and its loose end hangs below the fists. -->
-      <g class="swing">
+      <!-- the explorer on a vine, moved by a pendulum simulation (titleTick in the script): the rope turns about its anchor,
+           and the body hangs from one hand, tilting with the swing and settling upright on each platform -->
+      <g class="swing" transform="rotate(-35.45 832 0)">
         <line x1="832" y1="0" x2="832" y2="169" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
-        <g class="swinger">
+        <g class="swinger" transform="rotate(35.45 832 169)">
           <g transform="translate(832 169)">
-            <!-- the rope runs through both fists; its loose end dangles below them -->
-            <line x1="0" y1="-4" x2="0" y2="29" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
-            <path d="M0 28 Q-3 36 -20 45" fill="none" stroke="#3f7a2a" stroke-width="6" stroke-linecap="round"/>
+            <!-- the rope runs through the fist; its loose end dangles below it -->
+            <line x1="0" y1="-4" x2="0" y2="9" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
+            <path d="M0 8 Q14 14 20 32" fill="none" stroke="#3f7a2a" stroke-width="6" stroke-linecap="round"/>
             <circle cx="0" cy="42" r="9" fill="#f2c79a"/>
             <circle cx="3" cy="43" r="1.4" fill="#3a2a14"/>
             <path d="M-14 35 H14 L10 31 H-10Z" fill="#a0692c"/><rect x="-8" y="24" width="16" height="10" rx="4" fill="#a0692c"/>
             <rect x="-11" y="51" width="22" height="21" rx="5" fill="#c77a3a"/>
             <rect x="-9" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/><rect x="1" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/>
             <rect x="-11" y="81" width="10" height="4" rx="2" fill="#3a2a14"/><rect x="1" y="81" width="10" height="4" rx="2" fill="#3a2a14"/>
-            <!-- both arms reach up to the rope: sleeve, then forearm, then a fist wrapped around it -->
-            <path d="M-11 55 L-14 34" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
-            <path d="M-14 34 L-7 6" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
-            <path d="M11 55 L14 38" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
-            <path d="M14 38 L7 25" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
+            <!-- the free arm is held out for balance -->
+            <path d="M11 55 L22 50" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M22 50 L33 57" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="34" cy="58" r="3.8" fill="#f2c79a"/>
+            <!-- the holding arm reaches straight up: sleeve, forearm, then a fist wrapped around the rope -->
+            <path d="M-11 55 L-13 34" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M-13 34 L-6 6" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
             <rect x="-7.5" y="-4" width="15" height="12" rx="4" fill="#f2c79a" stroke="#7a4a24" stroke-width="2"/>
-            <rect x="-7.5" y="16" width="15" height="12" rx="4" fill="#f2c79a" stroke="#7a4a24" stroke-width="2"/>
-            <path d="M-2.5 -2 V6 M1.5 -2 V6 M5 -1 V5 M-2.5 18 V26 M1.5 18 V26 M5 19 V25" stroke="#7a4a24" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M-2.5 -2 V6 M1.5 -2 V6 M5 -1 V5" stroke="#7a4a24" stroke-width="1.3" stroke-linecap="round"/>
             <ellipse cx="-6" cy="-3.5" rx="3.2" ry="2.3" fill="#f2c79a" stroke="#7a4a24" stroke-width="1.5"/>
-            <ellipse cx="-6" cy="16.5" rx="3.2" ry="2.3" fill="#f2c79a" stroke="#7a4a24" stroke-width="1.5"/>
           </g>
         </g>
       </g>
@@ -1364,6 +1355,47 @@
     selectWorld(from === 'game' ? WORLDS.findIndex(w => w.m === mode) : next < 0 ? 0 : next, false);
     titleScreen.hidden = true; mapScreen.hidden = false; setInert(true);
     nodes[mapSel].focus({ preventScroll: true });
+  }
+  // ---------- the title screen's explorer: a real pendulum ----------
+  // The rope swings under gravity (angle'' = -k·sin(angle)), so it speeds up on the way down and slows as it climbs.
+  // The explorer leans back, pushes off one platform with just enough speed to reach the other, and lands. The body
+  // hangs from one hand and follows the rope like a spring with damping, so it trails through the swing, and on
+  // landing it keeps some of its momentum and sways before settling upright.
+  const tRope = titleScreen.querySelector('.swing'), tBody = titleScreen.querySelector('.swinger');
+  const T_ENDS = [-35.45 * Math.PI / 180, 51.35 * Math.PI / 180];   // rope angles that put the feet on each plank
+  const T_K = 4.2;                                                  // gravity / rope length
+  const T_STAND = 1.6, T_CROUCH = 0.4;                              // seconds on a platform; the lean before pushing off
+  const tsw = { th: T_ENDS[0], om: 0, phi: 0, phv: 0, at: 0, state: 'stand', t: 0 };
+  function titleTick(dt) {
+    if (reduceMotion) return;
+    const s = tsw, dir = s.at === 0 ? 1 : -1;
+    let phiGoal = 0;
+    if (s.state === 'stand') {
+      s.t += dt;
+      if (s.t > T_STAND - T_CROUCH) phiGoal = -0.16 * dir;   // lean back, ready to push off
+      if (s.t >= T_STAND) {
+        const a = T_ENDS[s.at], b = T_ENDS[1 - s.at];
+        // just enough speed to climb to the far platform, plus a little, so it arrives still moving
+        s.om = dir * Math.sqrt(0.16 + Math.max(0, 2 * T_K * (Math.cos(a) - Math.cos(b))));
+        s.state = 'swing';
+      }
+    } else {
+      const n = Math.ceil(dt / 0.004), h = dt / n;   // small steps keep the motion smooth on a slow frame
+      for (let i = 0; i < n && s.state === 'swing'; i++) {
+        s.om += -T_K * Math.sin(s.th) * h;
+        s.th += s.om * h;
+        const goal = T_ENDS[1 - s.at];
+        if ((s.om > 0 && s.th >= goal) || (s.om < 0 && s.th <= goal)) {   // landed: the body carries on a little
+          s.th = goal; s.phv += s.om * 0.9; s.om = 0; s.at = 1 - s.at; s.state = 'stand'; s.t = 0;
+        }
+      }
+      if (s.state === 'swing') phiGoal = 0.45 * s.th;   // hanging from the hand, the body leans with the rope
+    }
+    s.phv += (55 * (phiGoal - s.phi) - 8 * s.phv) * dt;
+    s.phi += s.phv * dt;
+    const deg = r => (r * 180 / Math.PI).toFixed(2);
+    tRope.setAttribute('transform', `rotate(${deg(s.th)} 832 0)`);
+    tBody.setAttribute('transform', `rotate(${deg(s.phi - s.th)} 832 169)`);
   }
   function hideScreens() { titleScreen.hidden = true; mapScreen.hidden = true; setInert(false); last = performance.now(); }
   function startWorld(i) { audio(); hideScreens(); startGame(WORLDS[i].m); }
@@ -2361,6 +2393,7 @@
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (!screenOpen()) tick(dt);   // the world waits (timer and all) while the title or map is up
+    else if (!titleScreen.hidden) titleTick(dt);
     requestAnimationFrame(frame);
   }
   function tick(dt) {
@@ -2416,7 +2449,7 @@
     get fray() { return fray; },
     get state() { return state; }, get cine() { return cine; }, get idx() { return idx; }, get zoom() { return zoom; },
     get cam() { return { camX, camY, S, viewH, W, H }; }, step(dt) { tick(dt); },
-    ledges: () => ledges, P, startGame, showTitle, showMap, startWorld, get screen() { return !titleScreen.hidden ? 'title' : !mapScreen.hidden ? 'map' : 'game'; }
+    ledges: () => ledges, P, startGame, showTitle, showMap, startWorld, titleTick, get tsw() { return tsw; }, get screen() { return !titleScreen.hidden ? 'title' : !mapScreen.hidden ? 'map' : 'game'; }
   };
 })();
 </script>
