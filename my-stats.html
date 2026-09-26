@@ -322,7 +322,7 @@ var plates = {
   stars: readNum('proportionalplates_stars', 0)
 };
 
-// ---- Grapple Rope ----
+// ---- Pythagorean Platforms ----
 // Saved when a world is finished: best score, best combo, and which of the 3 worlds are done.
 var rope = {
   played: localStorage.getItem('grapplerope_best_score') !== null,
@@ -363,9 +363,9 @@ var BADGES = [
   { icon: "🍳", name: "Order Up!", desc: "Play a shift in Proportional Plates", earned: plates.played },
   { icon: "🍽️", name: "Head Chef", desc: "Serve 15+ orders in one Proportional Plates shift", earned: plates.bestServed >= 15 },
   { icon: "⭐", name: "Five-Star Diner", desc: "Reach level 5 in Proportional Plates", earned: plates.bestLevel >= 5 },
-  { icon: "🧗", name: "First Swing", desc: "Finish a world in Grapple Rope", earned: rope.worlds >= 1 },
-  { icon: "🔥", name: "Swing Streak", desc: "Get a combo of 15+ in Grapple Rope", earned: rope.bestCombo >= 15 },
-  { icon: "🛕", name: "Temple Explorer", desc: "Finish all 3 worlds in Grapple Rope", earned: rope.worlds >= 3 }
+  { icon: "🧗", name: "First Swing", desc: "Finish a world in Pythagorean Platforms", earned: rope.worlds >= 1 },
+  { icon: "🔥", name: "Swing Streak", desc: "Get a combo of 15+ in Pythagorean Platforms", earned: rope.bestCombo >= 15 },
+  { icon: "🛕", name: "Temple Explorer", desc: "Finish all 3 worlds in Pythagorean Platforms", earned: rope.worlds >= 3 }
 ];
 
 var badgesHtml = BADGES.map(function (b) {
@@ -450,7 +450,7 @@ if (plates.played) {
 }
 gamesHtml += '<a class="play-link" href="proportional-plates/proportional-plates.html">Play &rarr;</a></div>';
 
-gamesHtml += '<div class="game-card"><h3>🧗 Grapple Rope</h3>';
+gamesHtml += '<div class="game-card"><h3>🧗 Pythagorean Platforms</h3>';
 if (rope.played) {
   gamesHtml += statRow('Best Score', rope.bestScore);
   gamesHtml += statRow('Best Combo', 'x' + rope.bestCombo);
@@ -458,7 +458,7 @@ if (rope.played) {
 } else {
   gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
 }
-gamesHtml += '<a class="play-link" href="grapple-rope/grapple-rope.html">Play &rarr;</a></div>';
+gamesHtml += '<a class="play-link" href="pythagorean-platforms/pythagorean-platforms.html">Play &rarr;</a></div>';
 
 document.getElementById('games').innerHTML = gamesHtml;
 

@@ -1,0 +1,1922 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pythagorean Platforms</title>
+<meta name="description" content="Swing through the jungle with the Pythagorean theorem: find the length of your rope or the distance to the next platform, one step per swing, and watch the squares on each side of the triangle fill and pour. A free, COPPA-compliant browser game for students.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#10261a">
+<meta property="og:title" content="Pythagorean Platforms">
+<meta property="og:description" content="Swing through the jungle with the Pythagorean theorem: find your rope length or the distance to the next platform.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thecodingeducator.github.io/pythagorean-platforms/pythagorean-platforms.html">
+<meta name="twitter:card" content="summary">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9666635716144263"
+     crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --ground: #10261a;
+    --panel: #1a3a27;
+    --panel-2: #22492f;
+    --line: #2f5c3e;
+    --text: #f4ecd2;
+    --muted: #b7c7a8;
+    --accent: #f2b530;
+    --gold: #f2b530;
+    --gold-deep: #c98a12;
+    --clay: #e0734a;
+    --leaf: #7ccf6b;
+    --paper: #fff4d6;
+    --ink: #3a2a14;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--ground);
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .reset-progress {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .reset-progress h2 {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .reset-progress p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .reset-progress-btn {
+    background: transparent;
+    border: 1px solid #7a3030;
+    color: #e0a0a0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .reset-progress-btn:hover {
+    background: rgba(220,80,80,0.12);
+    border-color: #b04848;
+    color: #ffb3b3;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .pseudo-fullscreen-exit-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10000;
+    display: none;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+  }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+  .pseudo-fullscreen-exit-btn:hover, .pseudo-fullscreen-exit-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  /* The game box (the site's back link and fullscreen buttons sit above it). In fullscreen it fills the screen. */
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; }
+  #game-canvas-slot.pseudo-fullscreen {
+    position: fixed; top: 0; left: 0; margin: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ground); width: 100vw; height: 100vh;
+  }
+  .app {
+    width: min(94vw, 980px);
+    height: clamp(460px, calc(100vh - 88px), 720px);
+    background: var(--ground);
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    padding: 10px 14px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+  #game-canvas-slot:fullscreen .app header, #game-canvas-slot.pseudo-fullscreen .app header { padding-left: 160px; }   /* room for the Exit Fullscreen button */
+  #game-canvas-slot:-webkit-full-screen .app header { padding-left: 160px; }
+  .app header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .app .title {
+    font-family: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    font-weight: 400;
+    font-size: clamp(19px, 2.1vw, 27px);
+    margin: 0;
+    color: var(--gold);
+    white-space: nowrap;
+    text-shadow: 0 2px 0 #6b3f10;
+    line-height: 1;
+  }
+  .tag {
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--clay); color: #2a1206; font-weight: 800;
+    padding: 2px 7px; border-radius: 6px;
+  }
+  .modes { display: flex; gap: 6px; flex: 1 1 420px; min-width: 0; }
+  .modes button {
+    flex: 1 1 0;
+    min-width: 0;
+    font-family: "Lilita One", system-ui, sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-bottom-width: 4px;
+    border-radius: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .modes button small {
+    display: block;
+    font-family: "Nunito", system-ui, sans-serif;
+    font-weight: 700; font-size: 12px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .modes button[aria-selected="true"] { background: var(--panel-2); border-color: var(--gold); }
+  .help-btn {
+    font-family: "Lilita One", system-ui, sans-serif; font-size: 15px;
+    background: transparent; color: var(--muted); border: 2px solid var(--line);
+    border-radius: 10px; padding: 6px 12px; cursor: pointer;
+  }
+  .help-btn[aria-expanded="true"] { color: var(--gold); border-color: var(--gold); }
+
+  .main { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 8px; min-height: 0; }
+  .stage {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 3px solid #0a1a10;
+    background: #9fdcc9;
+    min-height: 0;
+  }
+  #game { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+  .help {
+    position: absolute; inset: 12px;
+    background: rgba(16, 38, 26, 0.96);
+    border: 2px solid var(--gold); border-radius: 14px;
+    padding: 14px 18px; overflow: auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 20px; align-content: start;
+  }
+  .help h2 { font-family: "Lilita One", system-ui, sans-serif; font-weight: 400; font-size: 18px; margin: 0 0 4px; color: var(--leaf); }
+  .help ul { margin: 0; padding-left: 18px; color: var(--muted); }
+  .help li { margin-bottom: 4px; }
+  .help b { color: var(--text); }
+
+  .bar {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 6px 16px;
+    align-items: start;
+  }
+  .solution { display: grid; gap: 4px; min-width: 0; }
+  .ask { display: grid; gap: 6px; min-width: 0; }
+  .cap { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .cap:empty { display: none; }
+  .work { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; font-variant-numeric: tabular-nums; max-height: 22vh; overflow: auto; }
+  .work li { font-weight: 800; font-size: 14px; padding: 2px 8px; border-radius: 7px; background: #143020; }
+  .work li.given { background: transparent; color: var(--muted); padding-left: 0; font-weight: 700; font-size: 13px; flex-basis: 100%; }
+  .work li.done::before { content: "✓ "; color: var(--leaf); }
+  .prompt { font-size: 16px; font-weight: 800; margin: 0; color: var(--gold); }
+  .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .btn {
+    font-family: "Lilita One", system-ui, sans-serif;
+    font-size: 22px;
+    color: #2a1a04;
+    background: var(--gold);
+    border: 0;
+    border-bottom: 4px solid var(--gold-deep);
+    border-radius: 11px;
+    padding: 8px 8px;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.06s;
+  }
+  .btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn.wrong { background: #6d3a2a; color: #f0c3b2; border-bottom-color: #4a2419; text-decoration: line-through; }
+  .btn .key { font-family: "Nunito", sans-serif; font-size: 10px; font-weight: 800; opacity: 0.6; margin-right: 4px; vertical-align: middle; }
+  .work .ca, .strip .ca { color: #ff9c85; } .work .cb { color: #93e088; } .work .cc { color: #8cc8ff; }
+  .btn .ca { color: #a3230c; } .btn .cb { color: #17661f; } .btn .cc { color: #0b4aa8; }
+  .btn.wrong .ca, .btn.wrong .cb, .btn.wrong .cc { color: inherit; }
+  /* a textbook square root: the radical sign is drawn (not a font character) so its hook meets the bar exactly,
+     and the bar runs over the whole number and a little past it */
+  .rad { display: inline-flex; align-items: flex-start; white-space: nowrap; vertical-align: -0.24em; }
+  /* exactly as tall as the number's box (line + padding + bar), so the hook's top meets the bar */
+  .rad .rs { width: 0.62em; height: calc(1.05em + 0.12em + 0.075em); flex: 0 0 auto; overflow: visible; display: block; }
+  .rad .rs path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .rad .rs .thin { stroke-width: 0.075em; }
+  .rad .rs .thick { stroke-width: 0.13em; }
+  .rad .ri { border-top: 0.075em solid currentColor; padding: 0.1em 0.1em 0.02em 0.06em; line-height: 1.05; }
+  .btn.eq { font-size: clamp(15px, 1.35vw, 19px); font-family: "Nunito", system-ui, sans-serif; font-weight: 800; }
+  .btn.ghost { background: var(--panel-2); color: var(--text); border-bottom-color: #0f2618; font-size: 18px; }
+  :focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .msg { margin: 0; color: #ffc9b3; font-weight: 700; font-size: 13px; }
+  .msg:empty { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .strip { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; grid-column: 1 / -1; }
+  .strip span.lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+  .strip span.sq { font-size: 11px; font-weight: 800; padding: 1px 5px; border-radius: 5px; background: #143020; color: var(--text); font-variant-numeric: tabular-nums; }
+  .strip span.sq i { font-style: normal; color: var(--muted); font-weight: 700; }
+
+  /* phones and narrow windows: tighter spacing, one-column answer bar */
+  @media (max-width: 760px) {
+    .app { padding-inline: 10px; padding-block: 6px; gap: 6px; }
+    header { gap: 6px; }
+    .tag, .help-btn .long { display: none; }
+    .modes { flex-basis: 100%; order: 3; }
+    .modes button small, .modes .wname { display: none; }
+    .modes button { text-align: center; }
+    .main { gap: 6px; }
+    .bar { grid-template-columns: minmax(0, 1fr); padding: 6px 8px; gap: 5px; }
+    .cap { display: none; }
+    .work { max-height: 12vh; }
+    .work li { font-size: 12px; }
+    .prompt { font-size: 14px; }
+    .strip { display: none; }
+    .btn.eq { font-size: 14px; padding: 6px 4px; }
+  }
+  @media (max-height: 640px) and (min-width: 761px) {
+    .strip, .cap { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+  /* Rotate-device prompt: small touchscreens held upright only (the scene is wide, so it needs landscape) */
+  .rotate-prompt {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: #0f172a; color: #f1f5f9;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-tilt 1.6s ease-in-out infinite; }
+  @keyframes rotate-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+  .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
+  .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
+  .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
+    .rotate-prompt { display: flex; }
+  }
+</style>
+<script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+<div class="rotate-prompt" id="rotate-prompt" role="alert">
+  <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
+  <h2>Rotate Your Device</h2>
+  <p>Pythagorean Platforms works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../index.html">&larr; All games</a>
+</div>
+
+<a class="back-link" href="../index.html">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Pythagorean Platforms</h1>
+<p class="sr-only">A jungle game about the Pythagorean theorem. Each canyon is a right triangle: leg a is the distance straight across to the next platform, leg b is how high the vine's anchor is above you, and the hypotenuse c is your rope. Solve one step of the Pythagorean theorem at a time by choosing the correct line of the written solution (tap it, or press the left or right arrow key); each correct step swings you to the next platform, and a wrong step drops you in the quicksand with a hint. The last step is the big swing: time slows down for a close-up that labels all three sides and reveals the missing length, and you land one rope length below the anchor, so short ropes keep you high in the trees and long ropes swing you low. World 1 walks through every step with tile squares, World 2 estimates square roots that are not whole numbers, and World 3 finds a missing leg, the distance to the next platform, from numbers carved on a temple door.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
+<div class="app">
+  <header>
+    <div class="title">Pythagorean Platforms</div>
+    <div class="modes" role="tablist" aria-label="World">
+      <button role="tab" id="tab-w1" aria-selected="true" data-mode="w1">World 1<span class="wname"> · Tile Grove</span><small>Every step · tile squares</small></button>
+      <button role="tab" id="tab-w2" aria-selected="false" data-mode="w2">World 2<span class="wname"> · Waterfall Cliffs</span><small>Formula given · estimate roots</small></button>
+      <button role="tab" id="tab-w3" aria-selected="false" data-mode="w3">World 3<span class="wname"> · Temple Ruins</span><small>Formula given · missing legs</small></button>
+    </div>
+    <button class="help-btn" type="button" id="help-btn" aria-expanded="false" aria-controls="help">?<span class="long"> How to play</span></button>
+  </header>
+
+  <div class="main">
+    <div class="stage">
+      <canvas id="game" aria-label="Pythagorean Platforms game. An explorer swings on ropes between jungle platforms. Each correct step of the Pythagorean theorem swings the explorer to the next platform."></canvas>
+      <div class="help" id="help" hidden>
+        <section>
+          <h2>How to play</h2>
+          <ul>
+            <li><b>One step per swing.</b> Tap the next line of the written solution (or press the left or right arrow key). The right line swings you to the next platform.</li>
+            <li>Steps: pick the formula, plug in the legs, square, add, take the square root.</li>
+            <li>Each canyon is a right triangle: <b style="color:#ff9c85">a</b> is the distance across to the next platform, <b style="color:#93e088">b</b> is how high the vine's anchor is above you, and <b style="color:#8cc8ff">c</b> is your rope. Find the rope length or the distance to the next platform.</li>
+            <li>When the problem is solved, time slows down for a close-up of all three sides, and then you take the <b>big swing</b>. The next platform is one rope length under the anchor, so a short rope keeps you high in the trees and a long rope swings you low.</li>
+            <li>A wrong line drops you in the quicksand, shows a hint, and you try that step again.</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Why squares?</h2>
+          <ul>
+            <li>a² + b² = c² is about <b>areas</b>: the squares on the two legs exactly fill the square on the hypotenuse. Watch the squares on the canyon change as you solve.</li>
+            <li>Each wrong choice is a common mistake, and each one has its own hint.</li>
+            <li><b>Worlds 2 and 3</b> start with the formula already chosen. <b>World 2</b> adds estimation. <b>World 3</b> finds a missing leg: the numbers are carved on a temple door, and solving opens it.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <div class="bar" id="panel">
+      <div class="solution">
+        <ol class="work" id="work"></ol>
+        <p class="cap" id="nb-cap"></p>
+      </div>
+      <div class="ask">
+        <p class="prompt" id="prompt"></p>
+        <div class="choices" id="choices"></div>
+        <div class="row" id="end-actions" hidden>
+          <button class="btn" type="button" id="again-btn">Play again</button>
+          <button class="btn ghost" type="button" id="other-btn">Next world</button>
+        </div>
+        <p class="msg" id="msg" aria-live="polite"></p>
+      </div>
+      <div class="strip" id="strip"></div>
+    </div>
+  </div>
+</div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.B.6</span>
+      <p>Explain a proof of the Pythagorean Theorem and its converse.</p>
+      <p class="applies">Applies to: every canyon - the squares on the two legs pour into the square on the rope and fill it exactly.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.B.7</span>
+      <p>Apply the Pythagorean Theorem to determine unknown side lengths in right triangles in real-world and mathematical problems.</p>
+      <p class="applies">Applies to: every world - the rope length (hypotenuse) in Worlds 1 and 2, the distance to the next platform (a leg) in World 3.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.EE.A.2</span>
+      <p>Use square root symbols to represent solutions to equations of the form x&sup2; = p. Evaluate square roots of small perfect squares.</p>
+      <p class="applies">Applies to: the last step of every problem.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.NS.A.2</span>
+      <p>Use rational approximations of irrational numbers to compare their size and estimate their value.</p>
+      <p class="applies">Applies to: World 2 (estimating square roots that are not whole numbers).</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Teaching Notes for Educators</h2>
+  <p>Students swing across a jungle by solving the Pythagorean theorem one written step at a time. Every canyon is a right triangle made from the scene itself, so the numbers always describe something they can see.</p>
+  <ul>
+    <li><strong>The triangle:</strong> leg a (coral) is the distance straight across to the next platform, leg b (green) is how high the vine's anchor is above the explorer, and the hypotenuse c (blue) is the rope. The same three colors are used for every number on screen.</li>
+    <li><strong>One step per swing:</strong> students choose the right line of the written solution - plug in, square, add (or subtract), take the square root - and each correct line swings them forward. Each wrong choice is a common mistake with its own hint, such as adding the sides, doubling instead of squaring, or forgetting the square root.</li>
+    <li><strong>Why squares:</strong> a square is built on each side of the canyon triangle. As students work, the squares on the two legs fill with tiles and pour into the square on the rope, which they fill exactly - a visual proof of a&sup2; + b&sup2; = c&sup2;.</li>
+    <li><strong>Answers you can see:</strong> the big swing lands one rope length below the anchor, drawn to scale, so short ropes keep the explorer high in the trees and long ropes swing low. After the final step, a slow-motion close-up labels all three sides and reveals the missing length.</li>
+    <li><strong>Three worlds:</strong> World 1 walks through every step with 3-4-5 triangles and unit tiles. World 2 gives the formula and adds estimating square roots that are not whole numbers. World 3 finds a missing leg - the distance to the next platform - from numbers carved on a temple door.</li>
+  </ul>
+</section>
+
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases your saved best score, best combo, and completed worlds for Pythagorean Platforms on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+</section>
+
+<script>
+(() => {
+  const TAU = Math.PI * 2;
+  // Every vine hangs from the canopy at the same height (ANCHOR_Y). A problem's triangle is the jungle itself:
+  //   leg a (coral) = distance straight across to the next platform, leg b (green) = how far the anchor is above you,
+  //   hypotenuse c (blue) = the rope from your hands to the anchor. The next platform sits right under the anchor,
+  //   one rope length down - so a short rope keeps you high in the trees and a long one swings you low.
+  const VIEW_H = 19, BODY = 1.25, SAND_Y = 33.5, ANCHOR_Y = 11;
+  const WORLD_K = { w1: 2, w2: 1.15, w3: 1 };   // world units per unit of the problem (one fixed scale per world)
+  const GRAV = 85, ROPE_SPEED = 115, THORN_GAP = 0.25;
+  const SKIES = {
+    w1: ['#9fdcc9', '#f3e4a6', '#7fb89a', '#4f9467'],
+    w2: ['#a6d3e8', '#e2f0dc', '#86b7a8', '#4c8a6c'],
+    w3: ['#e7b98a', '#f6dca4', '#b99a7a', '#8a7a55']
+  };
+  const cvs = document.getElementById('game');
+  const ctx = cvs.getContext('2d');
+  const nbCap = document.getElementById('nb-cap');
+  const workEl = document.getElementById('work');
+  const promptEl = document.getElementById('prompt');
+  const choicesEl = document.getElementById('choices');
+  const msgEl = document.getElementById('msg');
+  const stripEl = document.getElementById('strip');
+  const endEl = document.getElementById('end-actions');
+  const againBtn = document.getElementById('again-btn');
+  const otherBtn = document.getElementById('other-btn');
+  const helpBtn = document.getElementById('help-btn'), helpEl = document.getElementById('help');
+  helpBtn.addEventListener('click', () => { helpEl.hidden = !helpEl.hidden; helpBtn.setAttribute('aria-expanded', String(!helpEl.hidden)); });
+  helpEl.addEventListener('pointerdown', e => { e.stopPropagation(); helpEl.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); });
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0, H = 0, S = 20, baseS = 20, DPR = 1, viewH = VIEW_H;
+  let zoom = 1;                       // camera zoom: <1 to fit a big triangle, >1 for the slow-motion close-up
+  const applyZoom = () => { S = baseS * zoom; viewH = H / S; };
+  function resize() {
+    const r = cvs.getBoundingClientRect();
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
+    baseS = Math.min(H / VIEW_H, W / 26);
+    applyZoom();
+  }
+  const viewW = () => W / S;
+  new ResizeObserver(resize).observe(cvs);
+  resize();
+
+  // saved progress (this device only): best score, best combo, and the worlds finished - shown on the site's My Stats page
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('grapplerope_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { if (window.grappleRopeResetting) return; try { localStorage.setItem('grapplerope_' + k, JSON.stringify(v)); } catch (e) {} }
+  };
+  function saveWin() {
+    const done = store.get('worlds_done', []);
+    if (!done.includes(mode)) { done.push(mode); store.set('worlds_done', done); }
+    store.set('best_score', Math.max(store.get('best_score', 0), score));
+    store.set('best_combo', Math.max(store.get('best_combo', 0), bestCombo));
+  }
+  const rnd = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+  const fmt = n => Math.abs(n - Math.round(n)) < 1e-9 ? String(Math.round(n)) : n.toFixed(1);
+
+  // ---------- sound ----------
+  let ac = null;
+  function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } return ac; }
+  function tone(f1, f2, dur, type = 'sine', vol = 0.12, delay = 0) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + delay;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(Math.max(30, f2), t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+  const sfx = {
+    thwip: () => tone(900, 180, 0.18, 'sawtooth', 0.05),
+    clack: () => tone(1400, 700, 0.07, 'square', 0.05),
+    perfect: () => { tone(523, 523, 0.12, 'triangle', 0.1); tone(659, 659, 0.12, 'triangle', 0.1, 0.08); tone(784, 784, 0.22, 'triangle', 0.1, 0.16); },
+    miss: () => tone(320, 70, 0.45, 'sawtooth', 0.06),
+    splash: () => tone(200, 50, 0.5, 'sine', 0.15),
+    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.25, 'triangle', 0.1, i * 0.11))
+  };
+
+  sfx.step = () => tone(660, 990, 0.09, 'triangle', 0.08);
+  sfx.pour = () => { tone(300, 600, 0.35, 'sine', 0.06); tone(450, 900, 0.3, 'sine', 0.04, 0.1); };
+  sfx.oops = () => tone(260, 180, 0.2, 'square', 0.05);
+  sfx.whoosh = () => { tone(700, 90, 0.9, 'sine', 0.06); tone(220, 60, 1.2, 'triangle', 0.05, 0.05); };
+  sfx.chime = () => tone(880, 1320, 0.18, 'triangle', 0.07);
+  // the BANG: a burst of noise over a deep boom
+  sfx.bang = () => {
+    const a = audio(); if (!a) return;
+    try {
+      const n = Math.floor(a.sampleRate * 0.6), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const src = a.createBufferSource(), g = a.createGain(); src.buffer = buf; g.gain.value = 0.35;
+      src.connect(g).connect(a.destination); src.start();
+    } catch (e) {}
+    tone(95, 32, 0.9, 'sine', 0.4); tone(170, 45, 0.45, 'square', 0.08);
+    [784, 988, 1175].forEach((f, i) => tone(f, f, 0.3, 'triangle', 0.07, 0.12 + i * 0.07));
+  };
+
+  // ---------- state ----------
+  let mode = 'w1', ledges = [], problems = [];
+  let idx = 0, score = 0, combo = 0, bestCombo = 0, perfects = 0, misses = 0;
+  let state = 'aim', st = 0;
+  const P = { x: 0, y: 0, vx: 0, vy: 0, rot: 0 };
+  let rope = null, outcome = null, failKind = null, guess = null, P0 = null, landFrom = null;
+  let camX = 0, camY = 0, shake = 0;
+  let popups = [], parts = [], explain = null;
+  let wrongs = new Set(), aimTime = 0;
+  // canyon-figure animation: current values ease toward targets
+  const nb = { aF: 0, bF: 0, pour: 0, side: 0, reveal: 1, sym: 0, num: 0, crumble: 0 };
+  const nbT = { aF: 0, bF: 0, pour: 0, side: 0, reveal: 1, sym: 0, num: 0, crumble: 0 };
+  const leaves = Array.from({ length: 14 }, (_, i) => ({ x: rnd(i), y: rnd(i + 50), s: 0.6 + rnd(i + 9) * 0.8, p: rnd(i + 3) * TAU }));
+
+  const HOP_A = 2, HOP_B = 3.2;   // small swings between step platforms
+  const cur = () => ledges[idx];
+  const anchorOf = l => ({ x: l.ax, y: l.ay });
+  let cine = null, timeScale = 1;  // the slow-motion close-up after the final answer
+  const ri = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+
+  // ---------- problems: each step of the written solution is one swing ----------
+  // [a, b]: a = distance across (kept to 9 or less so the square on the rope stays below the canopy), b = anchor height
+  const TRIPLES = [[3, 4], [4, 3], [6, 8], [8, 6], [5, 12], [9, 12], [8, 15]];
+  const PLAN = { w1: ['hyp', 'hyp', 'hyp', 'hyp'], w2: ['hyp', 'est', 'hyp', 'est'], w3: ['leg', 'hyp', 'leg', 'leg'] };
+  // color coding: leg a = coral, leg b = green, hypotenuse c = blue, everywhere a number appears
+  const A = x => `<span class="ca">${x}</span>`, B = x => `<span class="cb">${x}</span>`, C = x => `<span class="cc">${x}</span>`;
+  const plain = html => html.replace(/<[^>]+>/g, '');
+  // a real square root: the sign plus a bar that runs over the whole number
+  // the radical sign as a drawing stretched to the height of the number: a small tick, a thick stroke down to the
+  // bottom, and a thin stroke up that meets the bar (the bar is the top border of the number)
+  const RAD_SVG = '<svg class="rs" viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path class="thin" d="M0.6 58 L2.6 51"/><path class="thick" d="M2.6 51 L5.4 97"/><path class="thin" d="M5.4 97 L9.3 1.2 L10.5 1.2"/></svg>';
+  const rad = inner => `<span class="rad" role="img" aria-label="square root of ${plain(String(inner))}">${RAD_SVG}<span class="ri">${inner}</span></span>`;
+  const radHTML = text => text.replace(/√(\d+(?:\.\d+)?)/g, (m, n) => rad(n));
+  const step = (key, name, right, wrong, hint) => ({
+    key, name, line: right,
+    choices: shuffle([{ label: plain(right), html: right, ok: true }, { label: plain(wrong), html: wrong, ok: false, hint }])
+  });
+
+  function makeProblem(type, i) {
+    let a, b;
+    // World 1 sticks to the smallest whole-number triangle, 3-4-5, flipping which leg is which
+    if (mode === 'w1') [a, b] = i % 2 === 0 ? [3, 4] : [4, 3];
+    else if (type === 'est') { do { a = ri(2, 9); b = ri(3, 10); } while (Number.isInteger(Math.sqrt(a * a + b * b))); }
+    else [a, b] = pick(TRIPLES);
+    const sum = a * a + b * b, c = Math.sqrt(sum);
+    const p = { type, a, b, sum, c, done: 0, work: [] };
+    p.steps = buildSteps(p);
+    return p;
+  }
+
+  function buildSteps(p) {
+    const { type, a, b, sum, c } = p;
+    const out = [];
+    if (mode === 'w1') {   // only World 1 asks for the formula
+      const bad = pick([
+        [`${A('a')} + ${B('b')} = ${C('c')}`, 'Adding the sides does not work. The squares of the legs add up to the square of the hypotenuse.'],
+        [`(${A('a')} + ${B('b')})² = ${C('c²')}`, 'Square each leg by itself, then add: a² + b² = c².'],
+        [`${A('a²')} + ${B('b²')} = ${C('c')}`, 'The hypotenuse gets squared too: a² + b² = c².']
+      ]);
+      out.push(step('formula', 'Pick the formula', `${A('a²')} + ${B('b²')} = ${C('c²')}`, bad[0], bad[1]));
+    }
+    if (type === 'leg') {   // the rope c and the anchor height b are known: find a, the distance to the next platform
+      out.push(step('sub', 'Plug in what you know', `${A('a²')} + ${B(b + '²')} = ${C(c + '²')}`, `${B(b + '²')} + ${C(c + '²')} = ${A('a²')}`,
+        `${c} is the rope, the hypotenuse - the longest side. It goes by itself: a² + ${b}² = ${c}².`));
+      out.push(step('square', 'Square the numbers', `${A('a²')} + ${B(b * b)} = ${C(c * c)}`, `${A('a²')} + ${B(2 * b)} = ${C(2 * c)}`,
+        `Squaring means times itself: ${b}² = ${b * b} and ${c}² = ${c * c}.`));
+      out.push(step('subtract', 'Get a² by itself', `${A('a²')} = ${C(c * c)} − ${B(b * b)} = ${A(a * a)}`, `${A('a²')} = ${C(c * c)} + ${B(b * b)} = ${A(c * c + b * b)}`,
+        `To get a² alone, subtract ${b * b} from both sides: ${c * c} − ${b * b} = ${a * a}.`));
+      out.push(step('root', 'Take the square root', `${A('a')} = ${rad(A(a * a))} = ${A(a)}`, `${A('a')} = ${A(a * a)}`,
+        `${a * a} is a², not a. Take the square root: √${a * a} = ${a}.`));
+      return out;
+    }
+    const subBad = pick([
+      [`${A(a)} + ${B(b)} = ${C('c²')}`, `Keep the squares: each leg gets squared, so it is ${a}² + ${b}² = c².`],
+      [`${A(a + '²')} + ${B(b + '²')} = ${C('c')}`, `The hypotenuse is squared too: ${a}² + ${b}² = c².`]
+    ]);
+    out.push(step('sub', 'Plug in the legs', `${A(a + '²')} + ${B(b + '²')} = ${C('c²')}`, subBad[0], subBad[1]));
+    out.push(step('square', 'Square each leg', `${A(a * a)} + ${B(b * b)} = ${C('c²')}`, `${A(2 * a)} + ${B(2 * b)} = ${C('c²')}`,
+      `${a}² means ${a} × ${a} = ${a * a}, not ${a} × 2.`));
+    const slip = sum + (Math.random() < 0.5 && sum > 20 ? -10 : 10);
+    out.push(step('add', 'Add the squares', `${C(sum)} = ${C('c²')}`, `${C(slip)} = ${C('c²')}`, `Check the addition: ${a * a} + ${b * b} = ${sum}.`));
+    if (type === 'est') {
+      const f = Math.floor(c), up = Math.random() < 0.5 || f < 2, lo = up ? f + 1 : f - 1;
+      out.push(step('root', 'Estimate the square root', `${f} < ${C('c')} < ${f + 1}`, `${lo} < ${C('c')} < ${lo + 1}`,
+        `${f}² = ${f * f} and ${f + 1}² = ${(f + 1) * (f + 1)}. ${sum} is between them, so c is between ${f} and ${f + 1}.`));
+    } else {
+      const half = Math.random() < 0.5 && sum / 2 !== c;
+      out.push(step('root', 'Take the square root', `${C('c')} = ${rad(C(sum))} = ${C(c)}`, half ? `${C('c')} = ${C(sum / 2)}` : `${C('c')} = ${C(sum)}`,
+        half ? `A square root is not half. ${c} × ${c} = ${sum}, so c = ${c}.` : `${sum} is c², not c. Take the square root: √${sum} = ${c}.`));
+    }
+    return out;
+  }
+
+  // Place every platform and anchor. Each problem's step platforms climb or drop evenly from where the last big swing
+  // landed to its own canyon edge, which sits b below the canopy anchors. The big swing lands right under the anchor,
+  // c below it - so the answer decides how high or low you swing.
+  function layout(K) {
+    let x = 3, y = ANCHOR_Y + ledges[0].prob.b * K, startY = y;
+    for (const l of ledges) {
+      l.x = x;
+      if (l.final) { l.y = y; break; }
+      const p = l.prob, last = p.steps.length - 1, edgeY = ANCHOR_Y + p.b * K;
+      if (l.si === 0) startY = y;
+      const levelAt = si => last ? startY + (edgeY - startY) * si / last : edgeY;
+      l.y = levelAt(l.si);
+      if (l.kind === 'canyon') { l.k = K; l.ax = x + p.a * K; l.ay = ANCHOR_Y; x = l.ax; y = ANCHOR_Y + p.c * K; }
+      else { x += 2 * HOP_A; y = levelAt(l.si + 1); l.ax = l.x + HOP_A; l.ay = Math.min(l.y, y) - HOP_B; }
+      l.nx = x; l.ny = y;                      // where this swing lands
+      l.rope = Math.hypot(l.x - l.ax, l.y - l.ay);
+    }
+  }
+
+  function startGame(m) {
+    mode = m;
+    document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)));
+    problems = PLAN[m].map((type, i) => makeProblem(type, i));
+    ledges = [];
+    problems.forEach((p, pi) => {
+      const last = p.steps.length - 1;
+      p.steps.forEach((s, si) => { if (si < last) ledges.push({ kind: 'hop', prob: p, pi, si }); });
+      // the last step is answered at the canyon edge, and the right answer is the big swing.
+      // The canyon is a true scale drawing of the triangle (one scale per world), so bigger answers really are bigger swings.
+      ledges.push({ kind: 'canyon', prob: p, pi, si: last });
+    });
+    ledges.push({ final: true });
+    layout(WORLD_K[m]);
+    idx = 0; score = 0; combo = 0; bestCombo = 0; perfects = 0; misses = 0;
+    popups = []; parts = []; explain = null; cine = null; timeScale = 1;
+    renderStrip();
+    resetSwing(false);
+    camX = P.x - viewW() * 0.18; camY = camTargetY();
+    msgEl.textContent = '';
+    refreshPanel();
+  }
+
+  function notebookTargets(p) {
+    const done = new Set(p.steps.slice(0, p.done).map(s => s.key));
+    const t = { sym: mode !== 'w1' || done.has('formula') ? 1 : 0, num: done.has('sub') ? 1 : 0, reveal: 1, aF: 0, bF: 0, pour: 0, side: done.has('root') ? 1 : 0, crumble: 0 };
+    if (p.type === 'leg') { t.bF = done.has('square') ? 1 : 0; t.pour = t.bF; t.aF = done.has('subtract') ? 1 : 0; }
+    else { t.aF = t.bF = done.has('square') ? 1 : 0; t.pour = done.has('add') ? 1 : 0; }
+    return t;
+  }
+
+  function resetSwing(keepWrongs) {
+    const l = cur();
+    P.x = l.x; P.y = l.y; P.vx = P.vy = 0; P.rot = 0;
+    rope = null; outcome = null; failKind = null; explain = null;
+    state = 'aim'; st = 0;
+    if (!keepWrongs) wrongs = new Set();
+    if (!l.final) {
+      const fresh = l.si === 0 && l.prob.done === 0;
+      Object.assign(nbT, notebookTargets(l.prob));
+      if (fresh) Object.assign(nb, nbT);
+    }
+  }
+
+  function renderStrip() {
+    if (mode === 'w3') { stripEl.hidden = true; return; }
+    stripEl.hidden = false;
+    let h = '<span class="lbl">Perfect squares</span>';
+    for (let n = 1; n <= 15; n++) h += `<span class="sq"><i>${n}²=</i>${n * n}</span>`;
+    stripEl.innerHTML = h;
+  }
+
+  // ---------- panel ----------
+  function refreshPanel() {
+    const aiming = state === 'aim';
+    endEl.hidden = state !== 'win';
+    if (state === 'win') {
+      workEl.innerHTML = '';
+      promptEl.innerHTML = `Temple reached! ${perfects} steps right, best combo x${bestCombo}, score ${score} (your best: ${store.get('best_score', score)}).`;
+      choicesEl.hidden = true;
+      otherBtn.hidden = mode === 'w3';
+      nbCap.textContent = 'Nice work. The next world gives you less help.';
+      return;
+    }
+    const l = cur(), p = l.prob;
+    const lead = `Problem ${l.pi + 1} of ${problems.length} · `;
+    const given = mode === 'w3'
+      ? lead + (p.type === 'leg' ? `Read the temple door: your rope is ${C(p.c)} and the anchor is ${B(p.b)} up. How far is it to the next platform (${A('a')})?`
+        : `Read the temple door: the next platform is ${A(p.a)} across and the anchor is ${B(p.b)} up. How long is your rope (${C('c')})?`)
+      : p.type === 'leg' ? lead + `Your rope is ${C(p.c)} and the anchor is ${B(p.b)} up. How far is it to the next platform (${A('a')})?`
+      : lead + `The next platform is ${A(p.a)} across and the anchor is ${B(p.b)} up. How long is your rope (${C('c')})?`;
+    workEl.innerHTML = `<li class="given">${given}</li>` + p.work.map(w => `<li class="done">${w}</li>`).join('');
+    workEl.scrollTop = workEl.scrollHeight;
+    if (state === 'explain') {
+      promptEl.textContent = 'Tap the game or press Enter to try that step again.';
+      choicesEl.hidden = true;
+    } else {
+      const s = p.steps[l.si];
+      promptEl.textContent = `Step ${l.si + 1} of ${p.steps.length} · ${s.name}${l.kind === 'canyon' ? (mode === 'w3' ? ' — open the temple door!' : ' — the big swing!') : ''}`;
+      choicesEl.hidden = false;
+      choicesEl.innerHTML = '';
+      s.choices.forEach((ch, i) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn eq' + (wrongs.has(ch.label) ? ' wrong' : '');
+        b.innerHTML = ch.html;
+        b.disabled = !aiming || wrongs.has(ch.label);
+        b.addEventListener('click', () => answer(ch));
+        choicesEl.appendChild(b);
+      });
+    }
+    nbCap.textContent = caption(l);
+  }
+
+  function caption(l) {
+    const p = l.prob;
+    if (state === 'explain') return 'Look at the canyon: the two small squares fill the big one exactly.';
+    const k = p.steps[l.si].key;
+    if (k === 'formula') return mode === 'w3' ? 'The numbers carved on the door are your side lengths. The hypotenuse is across from the right angle.' : 'Square on leg a + square on leg b = square on the hypotenuse c.';
+    if (k === 'sub') return 'Match each number to its side. The hypotenuse is across from the right angle.';
+    if (k === 'square') return 'Each square\'s area is its side times itself.';
+    if (k === 'add') return 'Pour the two small squares into the big stone frame.';
+    if (k === 'subtract') return 'The big square minus the small one leaves the missing square.';
+    return p.type === 'est' ? `Area ${p.sum} is not a perfect square. Which whole squares is it between?` : 'Which side length makes this area?';
+  }
+
+  // ---------- actions ----------
+  function answer(ch) {
+    if (state !== 'aim') return;
+    audio();
+    const l = cur(); if (l.final || wrongs.has(ch.label)) return;
+    const p = l.prob, s = p.steps[l.si];
+    guess = ch; aimTime = st;
+    if (ch.ok) {
+      p.work.push(s.line);
+      p.done = l.si + 1;
+      Object.assign(nbT, notebookTargets(p));
+      if (l.kind === 'canyon') nbT.crumble = 1;   // job done: the squares fall away (or the door slides open)
+      if (s.key === 'add' || (s.key === 'square' && p.type === 'leg')) sfx.pour(); else sfx.step();
+      msgEl.textContent = '';
+      fire(true);
+    } else {
+      wrongs.add(ch.label); combo = 0;
+      msgEl.innerHTML = radHTML(ch.hint);
+      fire(false);
+    }
+    refreshPanel();
+  }
+
+  function fire(ok) {
+    const l = cur(); const c = l.rope; const A = anchorOf(l);
+    failKind = ok ? null : 'miss';
+    outcome = ok ? 'perfect' : 'short';
+    P0 = { x: P.x, y: P.y };
+    const dx = A.x - P.x, dy = A.y - P.y, dl = Math.hypot(dx, dy);
+    rope = { len: 0, max: ok ? c : c * 0.55, dir: { x: dx / dl, y: dy / dl }, tip: { x: P.x, y: P.y, vx: 0, vy: 0 }, phase: 'extend' };
+    if (!ok) { P.vx = 5; P.vy = -8; }
+    state = 'fire'; st = 0;
+    sfx.thwip();
+  }
+
+  document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { audio(); startGame(b.dataset.mode); }));
+  againBtn.addEventListener('click', () => startGame(mode));
+  otherBtn.addEventListener('click', () => startGame(mode === 'w1' ? 'w2' : 'w3'));
+  cvs.addEventListener('pointerdown', () => { audio(); if (state === 'explain' && st > 0.4) retry(); });
+  document.addEventListener('keydown', e => {
+    if (e.target && e.target.closest && e.target.closest('.reset-progress, .teaching-notes, .standards-panel')) return;   // leave page controls alone
+    if (state === 'explain' && st > 0.4 && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); retry(); return; }
+    // left/right arrows (or 1/2) pick the left/right answer
+    const pickIdx = { ArrowLeft: 0, ArrowRight: 1, '1': 0, '2': 1 }[e.key];
+    if (state === 'aim' && pickIdx !== undefined && !cur().final) {
+      e.preventDefault();
+      const ch = cur().prob.steps[cur().si].choices[pickIdx];
+      if (ch && !wrongs.has(ch.label)) answer(ch);
+    }
+  });
+
+  function retry() { resetSwing(true); msgEl.textContent = ''; refreshPanel(); }
+
+  function popup(text, x, y, color, size = 1) { popups.push({ text, x, y, t: 0, color, size }); }
+  function burst(x, y, colors, n, speed = 8) {
+    if (reduceMotion) n = Math.ceil(n / 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, s = speed * (0.3 + Math.random());
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, life: 0.6 + Math.random() * 0.6, t: 0, c: colors[i % colors.length], r: 0.12 + Math.random() * 0.14 });
+    }
+  }
+
+  // A swing is an arc around the anchor, from where you stand to where you land (the rope lets out or reels in a little
+  // on the small hops between platforms at different heights). The big swing starts from rest and speeds up toward the
+  // bottom of the arc, straight under the anchor, like a real pendulum.
+  function startSwing() {
+    const l = cur(), A = anchorOf(l), big = l.kind === 'canyon';
+    const th0 = Math.atan2(P.x - A.x, P.y - A.y), th1 = Math.atan2(l.nx - A.x, l.ny - A.y);
+    const r0 = Math.hypot(P.x - A.x, P.y - A.y), r1 = Math.hypot(l.nx - A.x, l.ny - A.y);
+    rope.phase = 'attached'; rope.R = r0;
+    rope.kin = { A, th0, th1, r0, r1, u: 0, T: big ? 1.1 + 0.035 * r0 : 0.55 + 0.03 * r0, big };
+    state = 'swing'; st = 0;
+    if (big) startCine(l);
+  }
+
+  function land() {
+    const l = cur();
+    state = 'land'; st = 0; landFrom = { x: P.x, y: P.y };
+    rope = null;
+    const lx = l.nx, ly = l.ny;
+    if (l.kind === 'canyon') {
+      combo++; bestCombo = Math.max(bestCombo, combo); perfects++;
+      const pts = 200 + 10 * (combo - 1);
+      score += pts;
+      popup(`+${pts}  Canyon crossed!`, lx, ly - 1.4, '#f2b530', 1.2);
+      burst(lx, ly, ['#f2b530', '#fff1b8', '#7ccf6b', '#e0734a'], 30, 10);
+      sfx.win();
+      return;
+    }
+    combo++; bestCombo = Math.max(bestCombo, combo); perfects++;
+    const fast = aimTime < 2 ? 50 : aimTime < 4 ? 20 : 0;
+    const pts = 50 + 10 * (combo - 1) + fast;
+    score += pts;
+    popup(`+${pts}`, lx, ly - 1.2, '#f2b530', 0.95);
+    if (combo >= 3 && combo % 3 === 0) popup(`Combo x${combo}`, lx, ly - 2.4, '#ffffff', 0.85);
+    burst(lx, ly, ['#f2b530', '#fff1b8'], 8, 5);
+    sfx.perfect();
+  }
+
+  function fail() {
+    const l = cur(), p = l.prob, s = p.steps[l.si];
+    misses++; combo = 0;
+    explain = { title: 'Wrong step! The rope missed.', hint: guess && guess.hint ? guess.hint : '', work: `Right step: ${plain(s.line)}`, full: '' };
+    state = 'explain'; st = 0;
+    refreshPanel();
+  }
+
+  // ---------- update ----------
+  function update(dt) {
+    st += dt;
+    const l = cur();
+    const A = l && !l.final ? anchorOf(l) : null;
+
+    if (state === 'fire') {
+      rope.len = Math.min(rope.max, rope.len + ROPE_SPEED * dt);
+      if (outcome === 'short') {
+        P.vy += GRAV * dt; P.x += P.vx * dt; P.y += P.vy * dt;
+        if (rope.phase === 'extend') {
+          rope.tip.x = P0.x + rope.dir.x * rope.len; rope.tip.y = P0.y + rope.dir.y * rope.len;
+          if (rope.len >= rope.max) {
+            rope.phase = 'limp'; rope.tip.vx = rope.dir.x * 3; rope.tip.vy = 0;
+            popup(failKind === 'miss' ? 'Missed!' : 'Too short!', rope.tip.x, rope.tip.y - 0.8, '#ffd0c0'); sfx.miss();
+          }
+        } else {
+          rope.tip.vy += GRAV * dt; rope.tip.x += rope.tip.vx * dt; rope.tip.y += rope.tip.vy * dt;
+        }
+        if (P.y + BODY > SAND_Y) { state = 'sink'; st = 0; burst(P.x, SAND_Y, ['#e0c07a', '#b98f4f'], 16, 6); sfx.splash(); shake = 0.3; }
+      } else {
+        rope.tip.x = P0.x + rope.dir.x * rope.len; rope.tip.y = P0.y + rope.dir.y * rope.len;
+        if (rope.len >= rope.max) { sfx.clack(); startSwing(); }
+      }
+    } else if (state === 'swing') {
+      const k = rope.kin;
+      k.u = Math.min(1, k.u + dt / k.T);
+      // the big swing starts from rest and is fastest at the bottom; the small hops ease in and out
+      const e = k.big ? 1 - Math.cos(k.u * Math.PI / 2) : (1 - Math.cos(k.u * Math.PI)) / 2;
+      const th = k.th0 + (k.th1 - k.th0) * e, r = k.r0 + (k.r1 - k.r0) * e;
+      rope.R = r;
+      P.x = k.A.x + r * Math.sin(th); P.y = k.A.y + r * Math.cos(th); P.rot = -th * 0.8;
+      if (k.u >= 1) land();
+    } else if (state === 'land') {
+      const k = Math.min(1, st / 0.18), e = 1 - (1 - k) * (1 - k);
+      const L = { x: l.nx, y: l.ny };
+      P.x = landFrom.x + (L.x - landFrom.x) * e; P.y = landFrom.y + (L.y - landFrom.y) * e; P.rot *= (1 - k);
+      if (st > 0.32) {
+        idx++;
+        if (cur().final) {
+          state = 'win'; st = 0; P.x = cur().x; P.y = cur().y; P.rot = 0;
+          saveWin();
+          burst(cur().x + 2.5, cur().y - 1, ['#f2b530', '#fff1b8', '#e0734a', '#7ccf6b'], 50, 12);
+          sfx.win();
+        } else resetSwing(false);
+        refreshPanel();
+      }
+    } else if (state === 'hurt') {
+      P.vy += GRAV * dt; P.x += P.vx * dt; P.y += P.vy * dt; P.rot += dt * 6;
+      if (rope) rope.phase = 'limp-attached';
+      if (P.y + BODY > SAND_Y) { P.y = SAND_Y - BODY; state = 'sink'; st = 0; burst(P.x, SAND_Y, ['#e0c07a', '#b98f4f'], 12, 5); sfx.splash(); }
+    } else if (state === 'sink') {
+      P.y += dt * 1.4;
+      if (st > 0.7) fail();
+    } else if (state === 'explain') {
+      if (st > 8) retry();
+    }
+
+    parts.forEach(p => { p.t += dt; p.vy += 25 * dt; p.x += p.vx * dt; p.y += p.vy * dt; });
+    parts = parts.filter(p => p.t < p.life);
+    popups.forEach(p => p.t += dt);
+    popups = popups.filter(p => p.t < 1.6);
+  }
+
+  // ---------- camera (runs on real time, so it keeps moving smoothly during slow motion) ----------
+  // keep the explorer and the canyon figure in view together, zooming out for big triangles; follow a fall into the quicksand
+  function figBounds() {
+    const L = figureLedge(); if (!L) return null;
+    const p = L.prob, kk = L.k;
+    return { left: L.x - p.b * kk - 0.8, right: L.x + (p.a + Math.max(p.a, p.b)) * kk + 1.2, top: L.y - (p.a + p.b) * kk - 1.4, bot: Math.max(L.y + p.a * kk, L.ny + BODY) + 1.2 };
+  }
+  function cineBounds() {
+    const t = cine.tri;
+    return { left: t.x0 - 2.4, right: t.ax + 3.4, top: t.ay - 2.4, bot: t.y0 + 3.4 };
+  }
+  const fitZoom = (b, lo, hi) => Math.max(lo, Math.min(hi, H / ((b.bot - b.top) * baseS), W / ((b.right - b.left) * baseS)));
+  function zoomTarget() {
+    if (cine && cine.t < CINE.out) return fitZoom(cineBounds(), 0.6, 2.4);   // the slow-motion close-up
+    const f = figBounds();
+    const busy = state === 'aim' || state === 'fire' || state === 'explain' || state === 'swing';
+    return f && busy ? fitZoom({ left: 0, right: 1, top: Math.min(f.top, P.y - 2), bot: Math.max(f.bot, P.y + 3) }, 0.5, 1) : 1;
+  }
+  function camTargetX() {
+    const vw = viewW();
+    if (cine && cine.t < CINE.out) { const b = cineBounds(); return (b.left + b.right) / 2 - vw / 2; }
+    const f = figBounds();
+    let t = P.x - vw * 0.18;
+    if (f && (state === 'aim' || state === 'fire' || state === 'explain')) {
+      if (cur().kind === 'canyon' && f.right - f.left <= vw) t = (f.left + f.right) / 2 - vw / 2;
+      else t = Math.min(P.x - 2, Math.max(t, f.right - vw));
+    }
+    return Math.max(0, t);
+  }
+  function camTargetY() {
+    if (cine && cine.t < CINE.out) { const b = cineBounds(); return (b.top + b.bot) / 2 - viewH / 2; }
+    const f = figBounds();
+    let t = P.y - viewH * 0.62;
+    if (f && state !== 'swing' && state !== 'land') t = f.bot - f.top > viewH ? f.top : (f.top + f.bot) / 2 - viewH / 2;
+    t = Math.max(t, P.y + 3 - viewH);
+    t = Math.min(t, P.y - 2.5);
+    return Math.min(Math.max(-3, t), SAND_Y + 1.8 - viewH);
+  }
+  function updateCamera(dt) {
+    const kz = 1 - Math.exp(-dt * 3);
+    zoom += (zoomTarget() - zoom) * kz; applyZoom();
+    const k = 1 - Math.exp(-dt * 3.5);
+    camX += (camTargetX() - camX) * k;
+    camY += (camTargetY() - camY) * k;
+    shake = Math.max(0, shake - dt);
+  }
+
+  // ---------- drawing ----------
+  const sx = x => (x - camX) * S, sy = y => (y - camY) * S;
+  function blob(x, y, r) { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU); }
+  function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+
+  function drawSky(time) {
+    const sk = SKIES[mode];
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, sk[0]); g.addColorStop(0.7, sk[1]); g.addColorStop(1, sk[1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // sun
+    ctx.fillStyle = 'rgba(255,248,210,0.7)';
+    ctx.beginPath(); ctx.arc(W * 0.78, H * 0.28, S * 2.4, 0, TAU); ctx.fill();
+    layer(0.15, 7, 17, sk[2], 3, 7, 1.6, 2.6, 11);
+    layer(0.4, 5.5, 21, sk[3], 4, 9, 1.8, 2.8, 37);
+  }
+  function layer(f, spacing, baseY, color, hMin, hMax, rMin, rMax, seed) {
+    const off = camX * f, start = Math.floor(off / spacing) - 2, n = Math.ceil(viewW() / spacing) + 5;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, sy(baseY), W, H - sy(baseY));
+    ctx.beginPath();
+    for (let i = start; i < start + n; i++) {
+      const x = (i * spacing + rnd(i * 3 + seed) * spacing * 0.6 - off) * S;
+      const h = hMin + (hMax - hMin) * rnd(i * 7 + seed), r = (rMin + (rMax - rMin) * rnd(i * 11 + seed)) * S;
+      const top = sy(baseY - h);
+      ctx.rect(x - 0.22 * S, top, 0.44 * S, sy(baseY) - top);
+      blob(x, top, r); blob(x - r * 0.75, top + r * 0.4, r * 0.72); blob(x + r * 0.75, top + r * 0.35, r * 0.78);
+    }
+    ctx.fill();
+  }
+
+  function drawGrid() {
+    ctx.strokeStyle = 'rgba(20,50,30,0.07)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const x0 = Math.floor(camX);
+    for (let x = x0; x <= x0 + viewW() + 1; x++) { ctx.moveTo(sx(x), 0); ctx.lineTo(sx(x), sy(SAND_Y)); }
+    for (let y = 1; y < SAND_Y; y++) { ctx.moveTo(0, sy(y)); ctx.lineTo(W, sy(y)); }
+    ctx.stroke();
+  }
+
+  function drawCanopy() {
+    const start = Math.floor(camX / 1.6) - 2, n = Math.ceil(viewW() / 1.6) + 4;
+    ctx.fillStyle = '#2e6b3f'; ctx.beginPath();
+    for (let i = start; i < start + n; i++) blob(sx(i * 1.6 + rnd(i) * 0.6), sy(0.2 + rnd(i + 5) * 0.7), (1.1 + rnd(i + 9) * 0.6) * S);
+    ctx.fill();
+    ctx.fillStyle = '#3f8a52'; ctx.beginPath();
+    for (let i = start; i < start + n; i++) blob(sx(i * 1.6 + 0.5 + rnd(i + 2) * 0.4), sy(0.1 + rnd(i + 7) * 0.4), (0.7 + rnd(i + 4) * 0.4) * S);
+    ctx.fill();
+  }
+
+  function drawAnchors(time) {
+    const now = cur();
+    ledges.forEach((l, i) => {
+      if (l.final) return;
+      if (!now.final && l.pi > now.pi) return;     // later problems' vines stay hidden so the canyon figure reads clearly
+      const A = anchorOf(l);
+      if (sx(A.x) < -60 || sx(A.x) > W + 60) return;
+      ctx.strokeStyle = '#356e36'; ctx.lineWidth = 0.16 * S; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(sx(A.x), sy(0.6));
+      ctx.quadraticCurveTo(sx(A.x + 0.5), sy((A.y + 0.6) / 2), sx(A.x), sy(A.y - 0.35)); ctx.stroke();
+      // leaves on vine
+      ctx.fillStyle = '#4f9a4a';
+      for (let k = 1; k < A.y - 0.5; k += 1.3) { ctx.beginPath(); ctx.ellipse(sx(A.x + (k % 2 ? 0.3 : -0.1) + 0.2), sy(k), 0.28 * S, 0.12 * S, k % 2 ? 0.5 : -0.5, 0, TAU); ctx.fill(); }
+      const active = i === idx && (state === 'aim' || state === 'fire');
+      if (active && !reduceMotion) { ctx.shadowColor = '#ffe27a'; ctx.shadowBlur = S * (0.8 + 0.5 * Math.sin(time * 5)); }
+      ctx.strokeStyle = i < idx ? '#b9913f' : '#f2b530'; ctx.lineWidth = 0.14 * S;
+      ctx.beginPath(); ctx.arc(sx(A.x), sy(A.y), 0.34 * S, 0, TAU); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fff4c2'; ctx.beginPath(); ctx.arc(sx(A.x - 0.12), sy(A.y - 0.14), 0.07 * S, 0, TAU); ctx.fill();
+    });
+  }
+
+  function drawBrambles() {
+    ledges.forEach(l => {
+      if (l.final || l.kind === 'canyon') return;
+      const A = anchorOf(l); const top = A.y + l.rope + BODY + THORN_GAP;
+      const x = sx(A.x); if (x < -80 || x > W + 80) return;
+      const w = 0.8 * S;
+      ctx.fillStyle = '#29472a';
+      ctx.beginPath(); ctx.moveTo(x - w, sy(SAND_Y)); ctx.lineTo(x - w * 0.8, sy(top + 0.5));
+      ctx.quadraticCurveTo(x, sy(top - 0.3), x + w * 0.8, sy(top + 0.5)); ctx.lineTo(x + w, sy(SAND_Y)); ctx.fill();
+      ctx.fillStyle = '#b3462f';
+      for (let y = top; y < SAND_Y - 0.3; y += 0.7) {
+        const side = ((y - top) / 0.7) % 2 < 1 ? -1 : 1;
+        const ex = x + side * w * 0.85;
+        ctx.beginPath(); ctx.moveTo(ex, sy(y)); ctx.lineTo(ex + side * 0.45 * S, sy(y + 0.1)); ctx.lineTo(ex, sy(y + 0.3)); ctx.fill();
+      }
+      for (let k = -1; k <= 1; k++) {
+        ctx.beginPath(); ctx.moveTo(x + k * 0.4 * S - 0.12 * S, sy(top + 0.15)); ctx.lineTo(x + k * 0.4 * S, sy(top - 0.35)); ctx.lineTo(x + k * 0.4 * S + 0.12 * S, sy(top + 0.15)); ctx.fill();
+      }
+    });
+  }
+
+  function drawLedges(time) {
+    ledges.forEach(l => {
+      const x = sx(l.x); const top = sy(l.y + BODY);
+      if (l.final) {
+        if (x > W + 40) return;
+        const w = 7 * S, left = x - 1.2 * S;
+        ctx.fillStyle = '#8e937c'; ctx.fillRect(left, top, w, sy(SAND_Y) - top);
+        ctx.strokeStyle = '#6e725f'; ctx.lineWidth = 2;
+        for (let r = 0; r * 0.9 < SAND_Y - l.y - BODY; r++) {
+          const y = top + r * 0.9 * S; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + w, y); ctx.stroke();
+          for (let c = (r % 2) * 0.9; c < 7; c += 1.8) { ctx.beginPath(); ctx.moveTo(left + c * S, y); ctx.lineTo(left + c * S, y + 0.9 * S); ctx.stroke(); }
+        }
+        // temple doorway
+        ctx.fillStyle = '#a6ab93'; ctx.fillRect(left + 3.2 * S, top - 4.6 * S, 3.4 * S, 4.6 * S);
+        ctx.fillStyle = '#3b3d31'; ctx.beginPath(); ctx.moveTo(left + 4.1 * S, top); ctx.lineTo(left + 4.1 * S, top - 2.8 * S);
+        ctx.arc(left + 4.9 * S, top - 2.8 * S, 0.8 * S, Math.PI, 0); ctx.lineTo(left + 5.7 * S, top); ctx.fill();
+        // chest
+        const cx = x + 2.2 * S;
+        if (!reduceMotion) { ctx.shadowColor = '#ffd55a'; ctx.shadowBlur = S * (1 + 0.4 * Math.sin(time * 3)); }
+        ctx.fillStyle = '#8a4e22'; ctx.fillRect(cx - 0.8 * S, top - 1.1 * S, 1.6 * S, 1.1 * S);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#f2b530'; ctx.fillRect(cx - 0.8 * S, top - 0.75 * S, 1.6 * S, 0.16 * S); ctx.fillRect(cx - 0.12 * S, top - 0.9 * S, 0.24 * S, 0.34 * S);
+        ctx.fillStyle = '#a4642e'; ctx.beginPath(); ctx.ellipse(cx, top - 1.1 * S, 0.8 * S, 0.35 * S, 0, Math.PI, 0); ctx.fill();
+        return;
+      }
+      if (x < -80 || x > W + 80) return;
+      ctx.fillStyle = '#6e4526'; ctx.fillRect(x - 0.45 * S, top, 0.9 * S, sy(SAND_Y) - top);
+      ctx.strokeStyle = '#5a371d'; ctx.lineWidth = Math.max(1, 0.06 * S);
+      for (let y = top + S; y < sy(SAND_Y); y += 1.1 * S) { ctx.beginPath(); ctx.moveTo(x - 0.3 * S, y); ctx.quadraticCurveTo(x, y + 0.2 * S, x + 0.3 * S, y); ctx.stroke(); }
+      ctx.fillStyle = '#9b6a3a'; rrect(x - 1.3 * S, top, 2.6 * S, 0.5 * S, 0.2 * S); ctx.fill();
+      ctx.fillStyle = '#5fae55'; rrect(x - 1.35 * S, top - 0.08 * S, 2.7 * S, 0.2 * S, 0.1 * S); ctx.fill();
+    });
+  }
+
+  function drawSand(time) {
+    const y0 = sy(SAND_Y);
+    ctx.fillStyle = '#d6b06a';
+    ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(0, y0);
+    for (let x = 0; x <= W + 10; x += 10) ctx.lineTo(x, y0 + Math.sin((x / S + camX) * 1.3 + time * 1.5) * 0.12 * S);
+    ctx.lineTo(W, H); ctx.fill();
+    ctx.strokeStyle = 'rgba(150,110,50,0.45)'; ctx.lineWidth = 2;
+    for (let r = 0; r < 3; r++) {
+      ctx.beginPath();
+      for (let x = 0; x <= W + 10; x += 12) {
+        const yy = y0 + (0.5 + r * 0.55) * S + Math.sin((x / S + camX) * 0.9 + time + r * 2) * 0.1 * S;
+        x ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    // ferns along the edge
+    ctx.fillStyle = '#3c7d3f';
+    const start = Math.floor(camX / 2.3) - 1, n = Math.ceil(viewW() / 2.3) + 3;
+    for (let i = start; i < start + n; i++) {
+      const fx = sx(i * 2.3 + rnd(i + 21)); const h = (0.6 + rnd(i + 31) * 0.6) * S;
+      ctx.beginPath(); ctx.moveTo(fx - 0.5 * S, y0 + 2); ctx.quadraticCurveTo(fx - 0.3 * S, y0 - h, fx, y0 - h * 1.1);
+      ctx.quadraticCurveTo(fx + 0.3 * S, y0 - h, fx + 0.5 * S, y0 + 2); ctx.fill();
+    }
+  }
+
+  function drawRope() {
+    if (!rope) return;
+    const hx = sx(P.x), hy = sy(P.y);
+    let tx, ty, sag = 0;
+    const A = anchorOf(cur());
+    if (rope.phase === 'extend' || rope.phase === 'limp') { tx = sx(rope.tip.x); ty = sy(rope.tip.y); if (rope.phase === 'limp') sag = 1.2 * S; }
+    else {
+      tx = sx(A.x); ty = sy(A.y);
+      if (rope.phase === 'slack') sag = Math.max(0, rope.R - Math.hypot(P.x - A.x, P.y - A.y)) * 0.55 * S;
+      if (rope.phase === 'limp-attached') sag = 1.5 * S;
+    }
+    const mx = (hx + tx) / 2, my = (hy + ty) / 2 + sag;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#6b4423'; ctx.lineWidth = Math.max(2, 0.17 * S);
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+    ctx.strokeStyle = '#b07a42'; ctx.lineWidth = Math.max(1, 0.07 * S); ctx.setLineDash([0.25 * S, 0.25 * S]);
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+    ctx.setLineDash([]);
+    if (rope.phase === 'extend' || rope.phase === 'limp') {
+      ctx.fillStyle = '#c9ced6'; ctx.beginPath(); ctx.arc(tx, ty, 0.2 * S, 0, TAU); ctx.fill();
+    }
+  }
+
+  function drawExplorer(time) {
+    const x = sx(P.x), y = sy(P.y);
+    const u = S;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(P.rot);
+    const bob = state === 'aim' && !reduceMotion ? Math.sin(time * 3) * 0.03 * u : 0;
+    ctx.translate(0, bob);
+    const flail = (state === 'fire' && outcome === 'short') || state === 'hurt' || state === 'drop';
+    // backpack
+    ctx.fillStyle = '#8a5a2e'; rrect(-0.34 * u, 0.58 * u, 0.2 * u, 0.36 * u, 0.06 * u); ctx.fill();
+    // legs
+    ctx.strokeStyle = '#6b4a2b'; ctx.lineWidth = 0.13 * u; ctx.lineCap = 'round';
+    const kick = flail ? Math.sin(time * 20) * 0.12 * u : (state === 'swing' ? 0.08 * u : 0);
+    ctx.beginPath(); ctx.moveTo(-0.08 * u, 0.95 * u); ctx.lineTo(-0.1 * u - kick, 1.18 * u); ctx.moveTo(0.08 * u, 0.95 * u); ctx.lineTo(0.1 * u + kick, 1.18 * u); ctx.stroke();
+    ctx.fillStyle = '#3d2a17';
+    ctx.beginPath(); ctx.ellipse(-0.1 * u - kick + 0.03 * u, 1.2 * u, 0.1 * u, 0.06 * u, 0, 0, TAU); ctx.ellipse(0.1 * u + kick + 0.05 * u, 1.2 * u, 0.1 * u, 0.06 * u, 0, 0, TAU); ctx.fill();
+    // torso
+    ctx.fillStyle = '#d9b26f'; rrect(-0.19 * u, 0.56 * u, 0.38 * u, 0.42 * u, 0.1 * u); ctx.fill();
+    ctx.fillStyle = '#7a5a33'; ctx.fillRect(-0.19 * u, 0.86 * u, 0.38 * u, 0.07 * u);
+    ctx.fillStyle = '#d2553a'; ctx.beginPath(); ctx.moveTo(-0.13 * u, 0.56 * u); ctx.lineTo(0.13 * u, 0.56 * u); ctx.lineTo(0, 0.7 * u); ctx.fill();
+    // arms
+    ctx.strokeStyle = '#e8b98d'; ctx.lineWidth = 0.1 * u;
+    ctx.beginPath();
+    if (flail) {
+      const w = Math.sin(time * 18) * 0.15 * u;
+      ctx.moveTo(-0.16 * u, 0.62 * u); ctx.lineTo(-0.38 * u, 0.2 * u + w); ctx.moveTo(0.16 * u, 0.62 * u); ctx.lineTo(0.38 * u, 0.2 * u - w);
+    } else {
+      ctx.moveTo(-0.16 * u, 0.62 * u); ctx.lineTo(-0.05 * u, 0.02 * u); ctx.moveTo(0.16 * u, 0.62 * u); ctx.lineTo(0.05 * u, 0.02 * u);
+    }
+    ctx.stroke();
+    // head
+    ctx.fillStyle = '#e8b98d'; ctx.beginPath(); ctx.arc(0.02 * u, 0.4 * u, 0.17 * u, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2a1a0c'; ctx.beginPath(); ctx.arc(0.1 * u, 0.4 * u, 0.028 * u, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#2a1a0c'; ctx.lineWidth = 0.025 * u;
+    ctx.beginPath(); ctx.arc(0.08 * u, 0.46 * u, 0.05 * u, 0.2, Math.PI - 0.6); ctx.stroke();
+    // pith helmet
+    ctx.fillStyle = '#efe0b4';
+    ctx.beginPath(); ctx.ellipse(0.02 * u, 0.3 * u, 0.3 * u, 0.07 * u, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0.02 * u, 0.28 * u, 0.19 * u, 0.16 * u, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#b9864a'; ctx.fillRect(-0.17 * u, 0.25 * u, 0.38 * u, 0.04 * u);
+    // hands
+    if (!flail) { ctx.fillStyle = '#e8b98d'; ctx.beginPath(); ctx.arc(0, 0, 0.08 * u, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+
+  // canvas text where "√N" is drawn as a radical sign with a bar over N (textBaseline must be 'middle')
+  function mathParts(text) {
+    const parts = []; let last = 0;
+    text.replace(/√(\d+(?:\.\d+)?)/g, (m, n, i) => { if (i > last) parts.push({ t: text.slice(last, i) }); parts.push({ r: n }); last = i + m.length; });
+    if (last < text.length) parts.push({ t: text.slice(last) });
+    return parts;
+  }
+  // a textbook radical: sign width, gap before the digits, and how far the bar runs past them (all in font sizes)
+  const RAD = { w: 0.56, gap: 0.06, over: 0.12 };
+  function mathWidth(c, text, fs) {
+    return mathParts(text).reduce((w, p) => w + (p.t !== undefined ? c.measureText(p.t).width : c.measureText(p.r).width + fs * (RAD.w + RAD.gap + RAD.over)), 0);
+  }
+  function fillMath(c, text, x, y, fs, align = 'center', stroke = false) {
+    const w = mathWidth(c, text, fs);
+    let cx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+    const prev = c.textAlign; c.textAlign = 'left';
+    for (const p of mathParts(text)) {
+      if (p.t !== undefined) { if (stroke) c.strokeText(p.t, cx, y); c.fillText(p.t, cx, y); cx += c.measureText(p.t).width; continue; }
+      // size the sign to the digits' real height, so the bar sits just above them and the hook reaches just below
+      const m = c.measureText(p.r), aw = m.width;
+      const asc = m.actualBoundingBoxAscent || fs * 0.36, desc = m.actualBoundingBoxDescent || fs * 0.36;
+      const top = y - asc - fs * 0.16, bot = y + desc + fs * 0.1, h = bot - top, rw = fs * RAD.w;
+      const tick = [cx, top + 0.6 * h], knee = [cx + rw * 0.2, top + 0.52 * h], foot = [cx + rw * 0.46, bot], peak = [cx + rw * 0.94, top];
+      const barEnd = cx + rw + fs * RAD.gap + aw + fs * RAD.over;
+      const thin = Math.max(1.4, fs * 0.075), thick = Math.max(2.2, fs * 0.13);
+      c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+      if (stroke) {   // the same outline the surrounding text gets, drawn underneath
+        c.lineWidth = thick + c.lineWidth;
+        c.beginPath(); c.moveTo(...tick); c.lineTo(...knee); c.lineTo(...foot); c.lineTo(...peak); c.lineTo(barEnd, top); c.stroke();
+      }
+      c.strokeStyle = c.fillStyle;
+      c.lineWidth = thin; c.beginPath(); c.moveTo(...tick); c.lineTo(...knee); c.stroke();                          // small tick
+      c.lineWidth = thick; c.beginPath(); c.moveTo(...knee); c.lineTo(...foot); c.stroke();                         // thick stroke down
+      c.lineWidth = thin; c.beginPath(); c.moveTo(...foot); c.lineTo(...peak); c.lineTo(barEnd, top); c.stroke();  // thin stroke up, then the bar
+      c.restore();
+      const dx = cx + rw + fs * RAD.gap;
+      if (stroke) c.strokeText(p.r, dx, y);
+      c.fillText(p.r, dx, y);
+      cx = barEnd;
+    }
+    c.textAlign = prev;
+  }
+
+  function chip(text, x, y, bg = '#1f3a28', fg = '#fff6d8', size = 1) {
+    const fs = Math.max(12, Math.min(22, S * 0.8)) * size;
+    ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`;
+    const w = mathWidth(ctx, text, fs) + fs * 0.9, h = fs * 1.5;
+    ctx.fillStyle = bg; rrect(x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+    ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; fillMath(ctx, text, x, y + 1, fs);
+  }
+
+  function drawTriangle(time) {
+    const l = cur(); if (!l || l.final || l.kind !== 'canyon' || state !== 'aim' || st < 1.3) return;
+    chip(mode === 'w3' ? 'Last step opens the door!' : 'Last step = big swing!', sx(P.x) - 4.6 * S, sy(P.y) + 2.6 * S, '#1f3a28', '#fff6d8', 1.05);
+  }
+
+  function drawPopups() {
+    popups.forEach(p => {
+      const k = p.t / 1.6;
+      ctx.globalAlpha = Math.min(1, (1 - k) * 2);
+      const fs = Math.max(14, S * 0.95) * p.size;
+      ctx.font = `400 ${fs}px "Lilita One", system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const x = sx(p.x), y = sy(p.y) - k * 1.8 * S;
+      ctx.lineWidth = fs * 0.22; ctx.strokeStyle = 'rgba(20,30,15,0.85)'; ctx.lineJoin = 'round';
+      ctx.strokeText(p.text, x, y); ctx.fillStyle = p.color; ctx.fillText(p.text, x, y);
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  function drawParts() {
+    parts.forEach(p => {
+      ctx.globalAlpha = Math.max(0, 1 - p.t / p.life);
+      ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), p.r * S, 0, TAU); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawLeaves(time, dt) {
+    if (reduceMotion) return;
+    ctx.fillStyle = 'rgba(70,140,70,0.55)';
+    leaves.forEach(f => {
+      f.y += dt * 0.04 * f.s; if (f.y > 1.05) { f.y = -0.05; f.x = Math.random(); }
+      const x = ((f.x * W + Math.sin(time + f.p) * 20 - camX * S * 0.6) % W + W) % W;
+      ctx.save(); ctx.translate(x, f.y * H); ctx.rotate(Math.sin(time * 2 + f.p));
+      ctx.beginPath(); ctx.ellipse(0, 0, 0.3 * S * f.s, 0.13 * S * f.s, 0, 0, TAU); ctx.fill(); ctx.restore();
+    });
+  }
+
+  function drawHUD() {
+    const fs = Math.max(13, Math.min(20, S * 0.75));
+    ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const pad = fs * 0.7, h = fs * 1.9;
+    const items = [`Score ${score}`, `Combo x${combo}`];
+    let x = 12;
+    items.forEach((t, i) => {
+      const w = ctx.measureText(t).width + pad * 2;
+      ctx.fillStyle = 'rgba(16,38,26,0.78)'; rrect(x, 12, w, h, h / 2); ctx.fill();
+      ctx.fillStyle = i === 1 && combo >= 2 ? '#f2b530' : '#f4ecd2'; ctx.fillText(t, x + pad, 12 + h / 2 + 1);
+      x += w + 8;
+    });
+    const total = ledges.length - 1;
+    const l0 = cur(); const t = l0.final ? 'Temple!' : l0.kind === 'canyon' ? `Problem ${l0.pi + 1} / ${problems.length} · big swing` : `Problem ${l0.pi + 1} / ${problems.length} · step ${l0.si + 1}`;
+    const w = ctx.measureText(t).width + pad * 2;
+    // on narrow screens the problem counter drops to a second row instead of overlapping
+    const ry = x + w + 8 > W - 12 ? 12 + h + 6 : 12, rx = ry === 12 ? W - w - 12 : 12;
+    ctx.fillStyle = 'rgba(16,38,26,0.78)'; rrect(rx, ry, w, h, h / 2); ctx.fill();
+    ctx.fillStyle = '#f4ecd2'; ctx.fillText(t, rx + pad, ry + h / 2 + 1);
+  }
+
+  function wrapLines(c, text, maxW) {
+    const words = text.split(' '), out = [];
+    let line = '';
+    words.forEach(w => {
+      const t = line ? line + ' ' + w : w;
+      if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+    });
+    if (line) out.push(line);
+    return out;
+  }
+
+  function drawExplain() {
+    if (state !== 'explain' || !explain) return;
+    const e = explain;
+    ctx.fillStyle = 'rgba(10,25,15,0.45)'; ctx.fillRect(0, 0, W, H);
+    const cw = Math.min(W - 32, 560);
+    const big = Math.max(18, Math.min(32, cw / 16)), mid = Math.max(14, Math.min(20, cw / 27)), sm = Math.max(12, Math.min(15, cw / 36));
+    ctx.font = `700 ${mid}px Nunito, system-ui, sans-serif`;
+    const hint = e.hint ? wrapLines(ctx, e.hint, cw - 40) : [];
+    ctx.font = `800 ${mid}px Nunito, system-ui, sans-serif`;
+    const full = e.full ? wrapLines(ctx, e.full, cw - 40) : [];
+    const workL = wrapLines(ctx, e.work, cw - 40);
+    const lh = mid * 1.45;
+    const ch = big * 2.1 + (hint.length + full.length + workL.length) * lh + mid * 0.8 + sm * 2.6;
+    const x = (W - cw) / 2, y = Math.max(8, (H - ch) / 2);
+    ctx.fillStyle = '#fff4d6'; rrect(x, y, cw, ch, 18); ctx.fill();
+    ctx.strokeStyle = '#6b3f10'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#c4512c'; ctx.font = `400 ${big}px "Lilita One", system-ui, sans-serif`;
+    ctx.fillText(e.title, W / 2, y + big * 1.1, cw - 24);
+    let yy = y + big * 2.1 + lh / 2;
+    ctx.fillStyle = '#4a3a20'; ctx.font = `700 ${mid}px Nunito, system-ui, sans-serif`;
+    hint.forEach(t => { fillMath(ctx, t, W / 2, yy, mid); yy += lh; });
+    yy += mid * 0.4;
+    ctx.fillStyle = '#1f6b34'; ctx.font = `800 ${mid}px Nunito, system-ui, sans-serif`;
+    full.forEach(t => { fillMath(ctx, t, W / 2, yy, mid); yy += lh; });
+    workL.forEach(t => { fillMath(ctx, t, W / 2, yy, mid); yy += lh; });
+    ctx.fillStyle = '#6b5a3a'; ctx.font = `700 ${sm}px Nunito, system-ui, sans-serif`;
+    ctx.fillText('Tap or press Enter to try that step again.', W / 2, yy + sm * 0.6, cw - 24);
+  }
+
+  // ---------- the proof, built into the canyon: a square on every side of the triangle ----------
+  const GOLD = '#f2b530', GREEN = '#6cc05c', INK = '#3a2a14';
+  const CORAL = '#f4917a', A_INK = '#b0351f', B_INK = '#1d6b25', C_INK = '#1f5fbf';
+
+  // the canyon for the problem being solved right now
+  function figureLedge() {
+    const l = cur(); if (!l || l.final) return null;
+    return ledges.find(q => q.kind === 'canyon' && q.pi === l.pi) || null;
+  }
+
+  function drawProofWorld(time) {
+    const L = figureLedge(); if (!L) return;
+    const p = L.prob, a = p.a, b = p.b, sum = p.sum, cc = p.c;
+    const kk = L.k;                      // world units per unit of the problem
+    const k = kk * S;                   // pixels per unit
+    const X = x => sx(L.x + x * kk), Yp = y => sy(L.y - y * kk);
+    const c = ctx;
+    const tiles = mode === 'w1', door = mode === 'w3';
+    const cr = nb.crumble;
+    const pt = (O, u, v, s, t) => [X(O[0] + u[0] * s + v[0] * t), Yp(O[1] + u[1] * s + v[1] * t)];
+    function quad(O, u, v, s0, s1, t0, t1) {
+      const q = [pt(O, u, v, s0, t0), pt(O, u, v, s1, t0), pt(O, u, v, s1, t1), pt(O, u, v, s0, t1)];
+      c.beginPath(); c.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) c.lineTo(q[i][0], q[i][1]); c.closePath();
+    }
+    const sqA = { O: [0, 0], u: [a, 0], v: [0, -a], n: a };
+    const sqB = { O: [a, 0], u: [0, b], v: [b, 0], n: b };
+    const sqC = { O: [0, 0], u: [a, b], v: [-b, a] };
+    const center = s => pt(s.O, s.u, s.v, 0.5, 0.5);
+    const edge = Math.max(2, 0.1 * S);
+
+    // World 3: the figure is carved into a temple door that slides down into the canyon once solved
+    if (door) {
+      const pad = 0.8;
+      const x0 = X(-b - pad), x1 = X(a + b + pad), y0 = Yp(a + b + pad), y1 = Yp(-a - pad);
+      const drop = cr * cr * 24 * S;
+      c.save();
+      c.globalAlpha = 1 - cr * 0.7;
+      c.translate(0, drop);
+      c.fillStyle = '#9a9478'; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+      c.strokeStyle = 'rgba(70,62,45,0.35)'; c.lineWidth = 1.5;
+      const bh = Math.max(14, 0.9 * S);
+      for (let y = y0, r = 0; y < y1; y += bh, r++) {
+        c.beginPath(); c.moveTo(x0, y); c.lineTo(x1, y); c.stroke();
+        for (let x = x0 + (r % 2 ? bh : 0); x < x1; x += bh * 2) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, Math.min(y1, y + bh)); c.stroke(); }
+      }
+      c.strokeStyle = '#5a5340'; c.lineWidth = Math.max(4, 0.3 * S); c.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      c.fillStyle = '#5a5340'; c.font = `400 ${Math.max(14, 0.75 * S)}px "Lilita One", system-ui, sans-serif`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('TEMPLE DOOR', (x0 + x1) / 2, y0 + Math.max(14, 0.75 * S));
+      c.restore();
+    }
+
+    c.save();
+    c.globalAlpha = 1 - cr;
+    c.translate(0, cr * cr * 7 * S);
+    function legSquare(s, fill, color, label, ink) {
+      quad(s.O, s.u, s.v, 0, 1, 0, 1);
+      c.fillStyle = door ? 'rgba(45,38,25,0.55)' : 'rgba(255,248,230,0.35)'; c.fill();
+      const drain = 1 - 0.6 * nb.pour;
+      if (tiles) {
+        const n = s.n, shown = Math.round(n * n * fill);
+        c.globalAlpha = (1 - cr) * drain;
+        for (let t = 0; t < shown; t++) {
+          const i = t % n, j = Math.floor(t / n);
+          quad(s.O, s.u, s.v, (i + 0.06) / n, (i + 0.94) / n, (j + 0.06) / n, (j + 0.94) / n);
+          c.fillStyle = color; c.fill();
+          c.strokeStyle = 'rgba(58,42,20,0.35)'; c.lineWidth = 1; c.stroke();
+        }
+        c.globalAlpha = 1 - cr;
+        c.strokeStyle = 'rgba(58,42,20,0.2)'; c.lineWidth = 1;
+        c.beginPath();
+        for (let i = 1; i < n; i++) {
+          let p1 = pt(s.O, s.u, s.v, i / n, 0), p2 = pt(s.O, s.u, s.v, i / n, 1); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
+          p1 = pt(s.O, s.u, s.v, 0, i / n); p2 = pt(s.O, s.u, s.v, 1, i / n); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
+        }
+        c.stroke();
+      } else if (fill > 0) {
+        c.globalAlpha = (1 - cr) * drain * Math.min(1, fill);
+        quad(s.O, s.u, s.v, 0, 1, 0, 1); c.fillStyle = color; c.fill();
+        c.globalAlpha = 1 - cr;
+      }
+      quad(s.O, s.u, s.v, 0, 1, 0, 1);
+      c.strokeStyle = door ? '#3b3526' : '#4b4032'; c.lineWidth = edge; c.stroke();
+      if (label) {
+        const [lx, ly] = center(s);
+        const fs = Math.max(13, Math.min(40, s.n * k * 0.3));
+        c.font = `800 ${fs}px Nunito, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.lineWidth = Math.max(3, fs * 0.22); c.strokeStyle = 'rgba(255,248,230,0.95)'; c.lineJoin = 'round';
+        c.strokeText(label, lx, ly); c.fillStyle = ink; c.fillText(label, lx, ly);
+      }
+    }
+    const legLabel = (n, f, letter, known) => f > 0.5 ? `${n * n}` : (nb.num > 0.5 || door) && known ? `${n}²` : nb.sym > 0.5 ? `${letter}²` : '';
+    legSquare(sqA, nb.aF, CORAL, legLabel(a, nb.aF, 'a', p.type !== 'leg'), A_INK);   // in a missing-leg problem, a is the unknown
+    legSquare(sqB, nb.bF, GREEN, legLabel(b, nb.bF, 'b', true), B_INK);
+
+    // the big stone frame on the hypotenuse; the leg squares pour into it from the rope side outward
+    quad(sqC.O, sqC.u, sqC.v, 0, 1, 0, 1);
+    c.fillStyle = door ? 'rgba(45,38,25,0.55)' : 'rgba(230,240,255,0.3)'; c.fill();
+    const cInt = Number.isInteger(cc);
+    if (tiles && cInt) {
+      // World 1: the big square is a grid of unit tiles; a² coral tiles then b² green tiles pour in one by one
+      const n = cc, shown = Math.round(sum * nb.pour);
+      for (let t = 0; t < shown; t++) {
+        const i = t % n, j = Math.floor(t / n);
+        quad(sqC.O, sqC.u, sqC.v, (i + 0.06) / n, (i + 0.94) / n, (j + 0.06) / n, (j + 0.94) / n);
+        c.fillStyle = t < a * a ? CORAL : GREEN; c.fill();
+        c.strokeStyle = 'rgba(58,42,20,0.35)'; c.lineWidth = 1; c.stroke();
+      }
+    } else if (nb.pour > 0.001) {
+      const f1 = nb.pour * (a * a) / sum, f2 = nb.pour;
+      quad(sqC.O, sqC.u, sqC.v, 0, 1, 0, f1); c.fillStyle = CORAL; c.fill();
+      quad(sqC.O, sqC.u, sqC.v, 0, 1, f1, f2); c.fillStyle = GREEN; c.fill();
+    }
+    if (cInt) {
+      // unit grid so the big square's tiles can be counted too
+      c.strokeStyle = door ? 'rgba(255,248,230,0.18)' : 'rgba(58,42,20,0.22)'; c.lineWidth = 1;
+      c.beginPath();
+      for (let i = 1; i < cc; i++) {
+        let p1 = pt(sqC.O, sqC.u, sqC.v, i / cc, 0), p2 = pt(sqC.O, sqC.u, sqC.v, i / cc, 1); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
+        p1 = pt(sqC.O, sqC.u, sqC.v, 0, i / cc); p2 = pt(sqC.O, sqC.u, sqC.v, 1, i / cc); c.moveTo(p1[0], p1[1]); c.lineTo(p2[0], p2[1]);
+      }
+      c.stroke();
+    }
+    quad(sqC.O, sqC.u, sqC.v, 0, 1, 0, 1);
+    c.strokeStyle = '#4d5b6e'; c.lineWidth = Math.max(4, 0.26 * S); c.setLineDash(nb.pour > 0.5 ? [] : [0.5 * S, 0.35 * S]); c.stroke(); c.setLineDash([]);
+    if (p.type === 'est' && nb.side > 0.5) {
+      const f = Math.floor(cc) / cc;
+      quad(sqC.O, sqC.u, sqC.v, 0, f, 0, f);
+      c.strokeStyle = '#8a3b22'; c.lineWidth = 2; c.setLineDash([6, 5]); c.stroke(); c.setLineDash([]);
+    }
+    const [cx0, cy0] = center(sqC);
+    const cLabel = nb.pour > 0.5 ? `${sum}` : (nb.num > 0.5 || door) && p.type === 'leg' ? `${cc} × ${cc}` : nb.sym > 0.5 ? 'c × c' : '';
+    if (cLabel) {
+      const fsC = Math.max(14, Math.min(46, cc * k * 0.24));
+      c.font = `800 ${fsC}px Nunito, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineWidth = Math.max(3, fsC * 0.22); c.strokeStyle = 'rgba(255,248,230,0.95)'; c.lineJoin = 'round';
+      c.strokeText(cLabel, cx0, cy0); c.fillStyle = C_INK; c.fillText(cLabel, cx0, cy0);
+    }
+
+    // triangle edges: ground, cliff wall, and the rope line
+    c.strokeStyle = '#fffbe8'; c.lineWidth = Math.max(2, 0.09 * S);
+    c.beginPath(); c.moveTo(X(0), Yp(0)); c.lineTo(X(a), Yp(0)); c.lineTo(X(a), Yp(b)); c.stroke();
+    const rq = Math.min(0.6 * S, k * 0.5);
+    c.beginPath(); c.moveTo(X(a) - rq, Yp(0)); c.lineTo(X(a) - rq, Yp(0) - rq); c.lineTo(X(a), Yp(0) - rq); c.stroke();
+    if (nb.side > 0.02) {
+      c.globalAlpha = (1 - cr) * nb.side;
+      c.strokeStyle = '#8cc8ff'; c.lineWidth = Math.max(4, 0.22 * S);
+      c.beginPath(); c.moveTo(X(0), Yp(0)); c.lineTo(X(a), Yp(b)); c.stroke();
+      c.globalAlpha = 1 - cr;
+    }
+
+    // side-length tags on each edge
+    const w3 = door;
+    const numOn = nb.num > 0.5 || w3;
+    const unknown = w3 ? '?' : null;
+    const big = w3 ? 1.2 : 1;
+    const tagAt = (text, x, y, bg, fg) => chip(text, X(x), Yp(y), bg, fg, big);
+    const aKnown = p.type === 'leg' ? nb.side > 0.5 : numOn;
+    tagAt(aKnown ? String(a) : (p.type === 'leg' && unknown) || 'a', a / 2, 0, '#fff0ec', A_INK);
+    tagAt(numOn ? String(b) : 'b', a, b / 2, '#eaf7e6', B_INK);
+    const known = p.type === 'leg' ? numOn : nb.side > 0.5;
+    const cTxt = known ? (p.type === 'est' ? `√${sum}` : String(cc)) : (unknown || 'c');
+    tagAt(cTxt, a / 2, b / 2, '#e6f0ff', C_INK);
+    // the big square's other sides are c too: c × c is its area
+    const onC = (s0, t0) => pt(sqC.O, sqC.u, sqC.v, s0, t0);
+    const [ox, oy] = onC(0.5, 1), [lx2, ly2] = onC(0, 0.5);
+    chip(cTxt, ox, oy, '#e6f0ff', C_INK, big * 0.9);
+    chip(cTxt, lx2, ly2, '#e6f0ff', C_INK, big * 0.9);
+    c.restore();
+  }
+
+  function updateNotebook(dt) {
+    const rate = reduceMotion ? 1 : 1 - Math.exp(-dt * 3.2);
+    ['aF', 'bF', 'side', 'reveal', 'sym', 'num'].forEach(key => { nb[key] += (nbT[key] - nb[key]) * rate; });
+    // pour at a steady speed so it reads as tiles flowing in
+    const step = reduceMotion ? 1 : dt * 1.4;
+    nb.pour = nbT.pour > nb.pour ? Math.min(nbT.pour, nb.pour + step) : nbT.pour;
+    nb.crumble = nbT.crumble > nb.crumble ? Math.min(1, nb.crumble + (reduceMotion ? 1 : dt * 0.9)) : nbT.crumble;
+  }
+
+  // ---------- the slow-motion close-up after the final answer ----------
+  // Time slows, the camera zooms onto the triangle, the two known sides light up with their lengths, the missing side
+  // draws itself in... and BANG - its length pops onto it. Then time speeds back up and the swing finishes.
+  const CINE = { known1: 0.5, known2: 0.9, draw: 1.3, bang: 2.2, out: 2.9, end: 3.5 };
+  function startCine(l) {
+    cine = { t: 0, p: l.prob, tri: { x0: l.x, y0: l.y, ax: l.ax, ay: l.ay }, banged: false, chimes: 0 };
+    sfx.whoosh();
+  }
+  const cineScale = t => t < 0.5 ? 1 - 0.9 * t / 0.5 : t < CINE.out ? 0.1 : t < CINE.end ? 0.1 + 0.9 * (t - CINE.out) / (CINE.end - CINE.out) : 1;
+  function cineSides() {
+    const { p, tri: T } = cine;
+    return {
+      a: { p0: [T.x0, T.y0], p1: [T.ax, T.y0], col: '#ff7a5c', ink: A_INK, bg: '#fff0ec', name: 'distance', txt: `a = ${p.a}` },
+      b: { p0: [T.ax, T.y0], p1: [T.ax, T.ay], col: '#5fd35a', ink: B_INK, bg: '#eaf7e6', name: 'height', txt: `b = ${p.b}` },
+      c: { p0: [T.x0, T.y0], p1: [T.ax, T.ay], col: '#5aa9ff', ink: C_INK, bg: '#e6f0ff', name: 'rope', txt: p.type === 'est' ? `c = √${p.sum} ≈ ${fmt(Math.round(p.c * 10) / 10)}` : `c = ${p.c}` }
+    };
+  }
+  const cineMissing = () => cine.p.type === 'leg' ? 'a' : 'c';
+  function stepCine(dt) {
+    if (!cine) return;
+    const before = cine.t;
+    cine.t += dt;
+    timeScale = cineScale(cine.t);
+    // a soft chime as each known side lights up
+    [CINE.known1, CINE.known2].forEach(t0 => { if (before < t0 && cine.t >= t0) sfx.chime(); });
+    if (!cine.banged && cine.t >= CINE.bang) {
+      cine.banged = true;
+      const s = cineSides()[cineMissing()], mx = (s.p0[0] + s.p1[0]) / 2, my = (s.p0[1] + s.p1[1]) / 2;
+      sfx.bang(); shake = reduceMotion ? 0 : 0.6;
+      burst(mx, my, [s.col, '#ffffff', '#f2b530', s.col], 70, 16);
+      cine.boom = { x: mx, y: my };
+    }
+    if (cine.t >= CINE.end) { cine = null; timeScale = 1; }
+  }
+  function sideLabelPos(key, s) {
+    const T = cine.tri, mx = (s.p0[0] + s.p1[0]) / 2, my = (s.p0[1] + s.p1[1]) / 2;
+    if (key === 'a') return [T.x0 + (T.ax - T.x0) * 0.62, my - 0.95];   // inside the triangle near the right angle, clear of the explorer
+    if (key === 'b') return [mx + 1.9, my];
+    const vx = mx - T.ax, vy = my - T.y0, vl = Math.hypot(vx, vy) || 1;   // away from the right angle
+    return [mx + vx / vl * 1.5, my + vy / vl * 1.5];
+  }
+  // drawn in the world (moves with the camera and the shake)
+  function drawCine() {
+    if (!cine) return;
+    const t = cine.t, sides = cineSides(), miss = cineMissing();
+    const known = ['a', 'b', 'c'].filter(k => k !== miss);
+    const appear = { [known[0]]: CINE.known1, [known[1]]: CINE.known2, [miss]: CINE.draw };
+    const fade = t > CINE.out ? Math.max(0, 1 - (t - CINE.out) / (CINE.end - CINE.out)) : 1;
+    const T = cine.tri, rq = 0.7;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    // right-angle marker
+    ctx.strokeStyle = '#fffbe8'; ctx.lineWidth = Math.max(2, 0.08 * S);
+    ctx.beginPath(); ctx.moveTo(sx(T.ax - rq), sy(T.y0)); ctx.lineTo(sx(T.ax - rq), sy(T.y0 - rq)); ctx.lineTo(sx(T.ax), sy(T.y0 - rq)); ctx.stroke();
+    ['a', 'b', 'c'].forEach(key => {
+      const s = sides[key], t0 = appear[key];
+      if (t < t0) return;
+      const isMiss = key === miss;
+      const f = isMiss ? Math.min(1, (t - t0) / (CINE.bang - 0.05 - t0)) : Math.min(1, (t - t0) / 0.3);
+      const ex = s.p0[0] + (s.p1[0] - s.p0[0]) * f, ey = s.p0[1] + (s.p1[1] - s.p0[1]) * f;
+      // the side: a dark outline, then a glowing colored stroke
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(20,20,20,0.55)'; ctx.lineWidth = Math.max(7, 0.42 * S);
+      ctx.beginPath(); ctx.moveTo(sx(s.p0[0]), sy(s.p0[1])); ctx.lineTo(sx(ex), sy(ey)); ctx.stroke();
+      if (!reduceMotion) { ctx.shadowColor = s.col; ctx.shadowBlur = S * (isMiss && cine.banged ? 1.4 : 0.7); }
+      ctx.strokeStyle = s.col; ctx.lineWidth = Math.max(5, 0.28 * S);
+      ctx.beginPath(); ctx.moveTo(sx(s.p0[0]), sy(s.p0[1])); ctx.lineTo(sx(ex), sy(ey)); ctx.stroke();
+      ctx.shadowBlur = 0;
+      if (isMiss && f < 1) {   // a spark racing along the side as it draws in
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(sx(ex), sy(ey), 0.26 * S * (1 + 0.3 * Math.sin(time * 40)), 0, TAU); ctx.fill();
+      }
+      // the label: known sides fade in; the missing side reads "?" until the BANG, then its length pops on
+      const [lx, ly] = sideLabelPos(key, s);
+      if (isMiss && !cine.banged) {
+        ctx.globalAlpha = fade * Math.min(1, (t - t0) / 0.3);
+        chip(`${key} = ?`, sx(lx), sy(ly), s.bg, s.ink, 1.35);
+      } else {
+        const k = isMiss ? Math.min(1, (t - CINE.bang) / 0.25) : f;
+        const pop = isMiss ? 1 + 0.6 * Math.max(0, 1 - (t - CINE.bang) / 0.35) : 1;
+        ctx.globalAlpha = fade * k;
+        chip(s.txt, sx(lx), sy(ly), isMiss ? s.col : s.bg, isMiss ? '#ffffff' : s.ink, 1.35 * pop);
+      }
+      ctx.globalAlpha = fade;
+    });
+    // the shockwave
+    if (cine.boom && !reduceMotion) {
+      const k = Math.min(1, (t - CINE.bang) / 0.7);
+      ctx.globalAlpha = (1 - k) * fade;
+      ctx.strokeStyle = sides[miss].col; ctx.lineWidth = Math.max(3, 0.35 * S * (1 - k));
+      ctx.beginPath(); ctx.arc(sx(cine.boom.x), sy(cine.boom.y), (0.5 + k * 7) * S, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(2, 0.15 * S * (1 - k));
+      ctx.beginPath(); ctx.arc(sx(cine.boom.x), sy(cine.boom.y), (0.3 + k * 4.5) * S, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // drawn over everything (no shake): movie letterbox bars, the flash, and the headline
+  function drawCineOverlay() {
+    if (!cine) return;
+    const t = cine.t;
+    const bars = Math.min(1, t / 0.4) * (t > CINE.out ? Math.max(0, 1 - (t - CINE.out) / 0.5) : 1);
+    const bh = H * 0.09 * bars;
+    ctx.fillStyle = '#05080a'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+    if (bars > 0.3 && !cine.banged) {
+      ctx.globalAlpha = Math.min(1, (bars - 0.3) * 2);
+      const fs = Math.max(11, bh * 0.36);
+      ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f2b530'; ctx.fillText('● SLOW MOTION', 16, H - bh / 2);   // in the bottom bar, clear of the score badges
+      ctx.globalAlpha = 1;
+    }
+    if (cine.banged) {
+      const k = (t - CINE.bang);
+      if (!reduceMotion && k < 0.35) { ctx.fillStyle = `rgba(255,255,255,${0.85 * (1 - k / 0.35)})`; ctx.fillRect(0, 0, W, H); }
+      const s = cineSides()[cineMissing()];
+      const fade = t > CINE.out ? Math.max(0, 1 - (t - CINE.out) / 0.5) : 1;
+      const fs = Math.max(22, Math.min(54, W / 14)) * (1 + 0.5 * Math.max(0, 1 - k / 0.3));
+      ctx.globalAlpha = fade;
+      ctx.font = `400 ${fs}px "Lilita One", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const head = cineMissing() === 'a' ? `DISTANCE ${s.txt}!` : `ROPE ${s.txt}!`;
+      ctx.lineWidth = fs * 0.2; ctx.strokeStyle = '#1a1206'; ctx.lineJoin = 'round';
+      const y = Math.max(bh + fs * 0.8, H * 0.2);
+      ctx.fillStyle = s.col; fillMath(ctx, head, W / 2, y, fs, 'center', true);   // outlined, with a drawn radical for √
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawWin(time) {
+    if (state !== 'win') return;
+    const fs = Math.max(22, Math.min(46, W / 16));
+    ctx.font = `400 ${fs}px "Lilita One", system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const y = H * 0.32 + (reduceMotion ? 0 : Math.sin(time * 2) * 4);
+    ctx.lineWidth = fs * 0.2; ctx.strokeStyle = '#3b2208'; ctx.lineJoin = 'round';
+    ctx.strokeText('Temple treasure reached!', W / 2, y); ctx.fillStyle = '#f2b530'; ctx.fillText('Temple treasure reached!', W / 2, y);
+    ctx.font = `800 ${fs * 0.45}px Nunito, system-ui, sans-serif`;
+    const line = `${perfects} perfect · ${misses} misses · best combo x${bestCombo} · score ${score}`;
+    ctx.lineWidth = fs * 0.12; ctx.strokeText(line, W / 2, y + fs * 0.9); ctx.fillStyle = '#fff6d8'; ctx.fillText(line, W / 2, y + fs * 0.9);
+  }
+
+  let last = performance.now(), time = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    tick(dt);
+    requestAnimationFrame(frame);
+  }
+  function tick(dt) {
+    time += dt;
+    if (W > 0 && H > 0) {
+      stepCine(dt);
+      update(dt * timeScale);        // the world slows down during the close-up...
+      updateNotebook(dt);
+      updateCamera(dt);              // ...but the camera keeps moving in real time
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      const sh = shake > 0 && !reduceMotion ? shake * 10 : 0;
+      ctx.save();
+      if (sh) ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+      drawSky(time);
+      drawGrid();
+      drawCanopy();
+      drawProofWorld(time);
+      drawAnchors(time);
+      drawBrambles();
+      drawLedges(time);
+      drawSand(time);
+      drawTriangle(time);
+      drawRope();
+      drawExplorer(time);
+      drawCine();
+      drawParts();
+      drawPopups();
+      drawLeaves(time, dt);
+      ctx.restore();
+      drawCineOverlay();
+      drawHUD();
+      drawExplain();
+      drawWin(time);
+    }
+  }
+
+  startGame('w1');
+  requestAnimationFrame(frame);
+  // small hook for automated checks
+  window.GR = {
+    right() { const l = cur(); if (state === 'aim' && !l.final) answer(l.prob.steps[l.si].choices.find(c => c.ok)); },
+    wrong() { const l = cur(); if (state === 'aim' && !l.final) answer(l.prob.steps[l.si].choices.find(c => !c.ok)); },
+    get state() { return state; }, get cine() { return cine; }, get idx() { return idx; }, get zoom() { return zoom; },
+    get cam() { return { camX, camY, S, viewH, W, H }; }, step(dt) { tick(dt); },
+    ledges: () => ledges, P, startGame
+  };
+})();
+</script>
+
+<script>
+  function enterPseudoFullscreen() {
+    document.getElementById('game-canvas-slot').classList.add('pseudo-fullscreen');
+    document.getElementById('pseudo-fullscreen-exit-btn').classList.add('visible');
+    updateFullscreenBtn();
+  }
+  function exitPseudoFullscreen() {
+    document.getElementById('game-canvas-slot').classList.remove('pseudo-fullscreen');
+    document.getElementById('pseudo-fullscreen-exit-btn').classList.remove('visible');
+    updateFullscreenBtn();
+  }
+  function toggleFullscreen() {
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = document.fullscreenElement || document.webkitFullscreenElement || el.classList.contains('pseudo-fullscreen');
+    if (!isFs) {
+      // Some devices (notably managed school Chromebooks) expose
+      // requestFullscreen but block it via policy, causing it to throw,
+      // silently reject, or - on some locked-down devices - just silently
+      // no-op without throwing OR rejecting at all, which the try/catch and
+      // the promise .catch() below both miss. The timeout after the call
+      // double-checks fullscreen actually engaged and falls back to
+      // CSS-only pseudo-fullscreen if not, so the button always does
+      // something.
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      var launched = false;
+      if (req && document.fullscreenEnabled !== false) {
+        try {
+          var result = req.call(el);
+          launched = true;
+          if (result && typeof result.catch === 'function') {
+            result.catch(function () { enterPseudoFullscreen(); });
+          }
+        } catch (e) {
+          launched = false;
+        }
+      }
+      if (!launched) { enterPseudoFullscreen(); return; }
+      setTimeout(function () {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !el.classList.contains('pseudo-fullscreen')) {
+          enterPseudoFullscreen();
+        }
+      }, 350);
+    } else if (el.classList.contains('pseudo-fullscreen')) {
+      exitPseudoFullscreen();
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) exit.call(document);
+    }
+  }
+  function exitFullscreenAny() {
+    var el = document.getElementById('game-canvas-slot');
+    if (el.classList.contains('pseudo-fullscreen')) { exitPseudoFullscreen(); return; }
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+  function syncExitBtn(isFs) {
+    var eb = document.getElementById('pseudo-fullscreen-exit-btn');
+    var slot = document.getElementById('game-canvas-slot');
+    if (!eb || !slot) return;
+    if (isFs) { if (eb.parentNode !== slot) slot.appendChild(eb); eb.classList.add('visible'); }
+    else { eb.classList.remove('visible'); }
+  }
+  function updateFullscreenBtn() {
+    var btn = document.getElementById('fullscreen-btn');
+    var el = document.getElementById('game-canvas-slot');
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || (el && el.classList.contains('pseudo-fullscreen')));
+    btn.innerHTML = isFs ? '&#10021; Exit Fullscreen' : '&#10021; Fullscreen';
+    syncExitBtn(isFs);
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // Wired up via addEventListener instead of an inline onclick= attribute -
+  // some school Chromebook content filters (GoGuardian, Securly, etc.) enforce
+  // a Content-Security-Policy that silently blocks inline event handlers while
+  // still allowing normal script-based listeners, which made this button do
+  // nothing at all on those devices.
+  document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
+  document.getElementById('pseudo-fullscreen-exit-btn').addEventListener('click', exitFullscreenAny);
+  // Escape must not leave fullscreen: while in real fullscreen, ask the browser (Chrome/Edge Keyboard Lock) to hand Escape to the page.
+  // Players leave with the Exit Fullscreen button; (the browser itself still allows holding Escape for about 2 seconds as a safety exit).
+  document.addEventListener('fullscreenchange', function () {
+    try {
+      if (!navigator.keyboard) return;
+      if (document.fullscreenElement) navigator.keyboard.lock(['Escape']).catch(function () {});
+      else navigator.keyboard.unlock();
+    } catch (e) {}
+  });
+
+
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    var ok = confirm('Reset your Pythagorean Platforms progress? This erases your saved best score, best combo, and completed worlds on this device. This cannot be undone.');
+    if (!ok) return;
+    window.grappleRopeResetting = true;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('grapplerope_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  });
+</script>
+</body>
+</html>
