@@ -591,7 +591,7 @@
         <rect x="414" y="474" width="12" height="80" fill="#6e4526"/><rect x="380" y="466" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="378" y="463" width="84" height="6" rx="3" fill="#5fae55"/>
         <rect x="524" y="456" width="12" height="100" fill="#6e4526"/><rect x="490" y="448" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="488" y="445" width="84" height="6" rx="3" fill="#5fae55"/>
         <!-- the explorer's two platforms: a tall post on the right, and one hanging from vines above the triangle -->
-        <rect x="924" y="232" width="12" height="320" fill="#6e4526"/><rect x="890" y="224" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="888" y="222" width="84" height="6" rx="3" fill="#5fae55"/>
+        <rect x="924" y="251" width="12" height="320" fill="#6e4526"/><rect x="890" y="243" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="888" y="241" width="84" height="6" rx="3" fill="#5fae55"/>
         <line x1="668" y1="0" x2="668" y2="196" stroke="#4f8a36" stroke-width="4"/><line x1="732" y1="0" x2="732" y2="196" stroke="#4f8a36" stroke-width="4"/>
         <rect x="660" y="192" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="658" y="190" width="84" height="6" rx="3" fill="#5fae55"/>
       </g>
@@ -607,26 +607,28 @@
       </g>
       <!-- the explorer on a vine, moved by a pendulum simulation (titleTick in the script): the rope turns about its anchor,
            and the body hangs from one hand, tilting with the swing and settling upright on each platform -->
-      <g class="swing" transform="rotate(-35.45 832 0)">
-        <line x1="832" y1="0" x2="832" y2="169" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
-        <g class="swinger" transform="rotate(35.45 832 169)">
-          <g transform="translate(832 169)">
-            <!-- the rope runs through the fist; its loose end dangles below it -->
+      <g class="swing" transform="rotate(-28.75 832 0)">
+        <line x1="832" y1="0" x2="832" y2="179" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
+        <g class="swinger" transform="rotate(28.75 832 179)">
+          <g transform="translate(832 179)">
+            <!-- the rope runs through the fist; its loose end dangles below it, away from the body -->
             <line x1="0" y1="-4" x2="0" y2="9" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
-            <path d="M0 8 Q14 14 20 32" fill="none" stroke="#3f7a2a" stroke-width="6" stroke-linecap="round"/>
-            <circle cx="0" cy="42" r="9" fill="#f2c79a"/>
-            <circle cx="3" cy="43" r="1.4" fill="#3a2a14"/>
-            <path d="M-14 35 H14 L10 31 H-10Z" fill="#a0692c"/><rect x="-8" y="24" width="16" height="10" rx="4" fill="#a0692c"/>
-            <rect x="-11" y="51" width="22" height="21" rx="5" fill="#c77a3a"/>
-            <rect x="-9" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/><rect x="1" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/>
-            <rect x="-11" y="81" width="10" height="4" rx="2" fill="#3a2a14"/><rect x="1" y="81" width="10" height="4" rx="2" fill="#3a2a14"/>
-            <!-- the free arm is held out for balance -->
-            <path d="M11 55 L22 50" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
-            <path d="M22 50 L33 57" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
-            <circle cx="34" cy="58" r="3.8" fill="#f2c79a"/>
-            <!-- the holding arm reaches straight up: sleeve, forearm, then a fist wrapped around the rope -->
-            <path d="M-11 55 L-13 34" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
-            <path d="M-13 34 L-6 6" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
+            <path d="M0 8 Q-5 18 -9 34" fill="none" stroke="#3f7a2a" stroke-width="6" stroke-linecap="round"/>
+            <!-- the body hangs under the holding shoulder (so the feet sit 12 to the right of the hand) -->
+            <rect x="1" y="51" width="22" height="21" rx="5" fill="#c77a3a"/>
+            <rect x="3" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/><rect x="13" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/>
+            <rect x="1" y="81" width="10" height="4" rx="2" fill="#3a2a14"/><rect x="13" y="81" width="10" height="4" rx="2" fill="#3a2a14"/>
+            <!-- the free arm hangs relaxed, a little out from the side -->
+            <path d="M21 55 L28 65" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M28 65 L32 75" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="32.5" cy="77" r="3.8" fill="#f2c79a"/>
+            <!-- head beside the raised arm -->
+            <circle cx="13" cy="42" r="9" fill="#f2c79a"/>
+            <circle cx="16" cy="43" r="1.4" fill="#3a2a14"/>
+            <path d="M-1 35 H27 L23 31 H3Z" fill="#a0692c"/><rect x="5" y="24" width="16" height="10" rx="4" fill="#a0692c"/>
+            <!-- the holding arm goes straight up from the shoulder to the rope: sleeve, forearm, then the fist -->
+            <path d="M2 56 L1.5 38" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
+            <path d="M1.5 38 L0.5 8" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
             <rect x="-7.5" y="-4" width="15" height="12" rx="4" fill="#f2c79a" stroke="#7a4a24" stroke-width="2"/>
             <path d="M-2.5 -2 V6 M1.5 -2 V6 M5 -1 V5" stroke="#7a4a24" stroke-width="1.3" stroke-linecap="round"/>
             <ellipse cx="-6" cy="-3.5" rx="3.2" ry="2.3" fill="#f2c79a" stroke="#7a4a24" stroke-width="1.5"/>
@@ -1361,7 +1363,7 @@
   // hangs from one hand and follows the rope like a spring with damping, so it trails through the swing, and on
   // landing it keeps some of its momentum and sways before settling upright.
   const tRope = titleScreen.querySelector('.swing'), tBody = titleScreen.querySelector('.swinger');
-  const T_ENDS = [-35.45 * Math.PI / 180, 51.35 * Math.PI / 180];   // rope angles that put the feet on each plank
+  const T_ENDS = [-28.75 * Math.PI / 180, 53.64 * Math.PI / 180];   // rope angles that put the feet on each plank
   const T_K = 4.2;                                                  // gravity / rope length
   const T_STAND = 1.6, T_CROUCH = 0.4;                              // seconds on a platform; the lean before pushing off
   const tsw = { th: T_ENDS[0], om: 0, phi: 0, phv: 0, at: 0, state: 'stand', t: 0 };
@@ -1394,7 +1396,7 @@
     s.phi += s.phv * dt;
     const deg = r => (r * 180 / Math.PI).toFixed(2);
     tRope.setAttribute('transform', `rotate(${deg(s.th)} 832 0)`);
-    tBody.setAttribute('transform', `rotate(${deg(s.phi - s.th)} 832 169)`);
+    tBody.setAttribute('transform', `rotate(${deg(s.phi - s.th)} 832 179)`);
   }
   function hideScreens() { titleScreen.hidden = true; mapScreen.hidden = true; setInert(false); last = performance.now(); }
   function startWorld(i) { audio(); hideScreens(); startGame(WORLDS[i].m); }
