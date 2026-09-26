@@ -1,0 +1,83 @@
+/* Shared page layout for every game (set up by site-layout.js):
+   - a slim top bar: All games on the left; Fullscreen, Standards and Teaching notes on the right. Standards and
+     Teaching notes open as pop-out panels (the way Tip the Scales does its Standards), instead of taking up room
+     beside and below the game.
+   - on a computer, the game fills everything under the bar, as big as the screen allows, so students who can't
+     use the Fullscreen button still get a full-size game. (Phones and tablets keep their own layouts.) */
+
+.site-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 44px; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 0 10px; box-sizing: border-box;
+  background: rgba(8, 11, 18, 0.94); border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font: 700 13px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.site-bar .sb-right { display: flex; align-items: center; gap: 8px; }
+html .site-bar .back-link, html .site-bar .fullscreen-btn, .site-bar .sb-toggle {
+  position: static !important; display: inline-flex !important; align-items: center; gap: 6px;
+  margin: 0 !important; padding: 6px 12px !important; box-sizing: border-box;
+  font: 700 13px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  color: #fff !important; background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important; border-radius: 999px !important;
+  text-decoration: none; cursor: pointer; box-shadow: none !important; white-space: nowrap;
+}
+html .site-bar .back-link:hover, html .site-bar .fullscreen-btn:hover, .site-bar .sb-toggle:hover,
+.site-bar .sb-toggle[aria-expanded="true"] { background: rgba(255, 255, 255, 0.18) !important; border-color: rgba(255, 255, 255, 0.5) !important; }
+.site-bar .sb-toggle:focus-visible, html .site-bar .back-link:focus-visible, html .site-bar .fullscreen-btn:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+
+/* the pop-out panels */
+.sb-panel {
+  position: fixed; top: 52px; right: 10px; z-index: 60; box-sizing: border-box;
+  width: min(460px, calc(100vw - 20px)); max-height: calc(100vh - 64px); max-height: calc(100dvh - 64px); overflow-y: auto;
+  padding: 16px 18px; border-radius: 14px;
+  background: #151b28; color: #e8ecf5; border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+  font: 400 14px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.sb-panel[hidden] { display: none !important; }
+.sb-panel .sb-close {
+  float: right; margin: -6px -8px 0 8px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08); color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); font-size: 16px; line-height: 1;
+}
+/* the moved sections keep their own inner styles, but not their old page placement */
+html .sb-panel .standards-panel, html .sb-panel .teaching-notes, html .sb-panel .reset-progress {
+  position: static !important; clip: auto !important; overflow: visible !important; white-space: normal !important;
+  width: auto !important; max-width: none !important; height: auto !important; min-height: 0 !important;
+  margin: 0 !important; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important;
+  display: block !important; flex: none !important;
+}
+html .sb-panel .reset-progress { margin-top: 18px !important; padding-top: 14px !important; border-top: 1px solid rgba(255, 255, 255, 0.14) !important; }
+html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-top: 0 !important; }
+
+/* On a computer, the game fills the page under the bar */
+@media (hover: hover) and (pointer: fine) {
+  html body.site-fit { padding-top: 44px !important; box-sizing: border-box; }
+  html body.site-fit .play-area {
+    padding: 6px 8px !important; gap: 0 !important; flex-wrap: nowrap !important;
+    height: calc(100vh - 44px); height: calc(100dvh - 44px); min-height: 0 !important; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+  }
+  html body.site-fit #game-canvas-slot { display: flex; align-items: center; justify-content: center; }
+  /* square p5 games: the largest square that fits */
+  html body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) canvas.p5Canvas {
+    width: min(calc(100vw - 16px), calc(100vh - 56px)) !important; height: min(calc(100vw - 16px), calc(100vh - 56px)) !important;
+    width: min(calc(100vw - 16px), calc(100dvh - 56px)) !important; height: min(calc(100vw - 16px), calc(100dvh - 56px)) !important;
+    max-width: none !important; max-height: none !important;
+  }
+  /* Proportional Plates and Similarity Builder: the wide 16:9 stage as big as fits, with its HUD above and controls below */
+  html body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) #sb {
+    width: calc(100vw - 16px) !important; max-width: none !important;
+    --stage-w: min(100%, calc((100vh - 44px - 150px) * 16 / 9));
+    --stage-w: min(100%, calc((100dvh - 44px - 150px) * 16 / 9));
+  }
+  /* Pythagorean Platforms: the whole game box fills the page */
+  html body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) .app {
+    width: calc(100vw - 16px) !important; max-width: none !important;
+    height: calc(100vh - 56px) !important; height: calc(100dvh - 56px) !important; max-height: none !important;
+  }
+}
+
+/* Tip the Scales keeps its light top bar, so its Teaching notes panel matches its light Standards panel */
+.sb-panel.sb-light { background: #fff; color: #1e293b; border-color: #e2e8f0; font-family: 'Inter', -apple-system, sans-serif; }
+.sb-panel.sb-light .sb-close { background: #f1f5f9; color: #1e293b; border-color: #e2e8f0; }
+.sb-panel.sb-light .teaching-notes h2 { font-size: 20px !important; }
