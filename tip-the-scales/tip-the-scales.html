@@ -2157,6 +2157,36 @@
     var argsAttr = el.getAttribute('data-args');
     fn.apply(null, argsAttr ? JSON.parse(argsAttr) : []);
   });
+  // Arrow keys move between the buttons on the current screen (inside an open pop-up if there is one), to the
+  // nearest one in that direction; Enter or Space then presses it. The first arrow press picks the first button.
+  var TS_POPUPS = ['exit-confirm-layer', 'warning-layer', 'win-layer'];
+  var TS_CHROME = '.ccss-toggle, .site-back-link, .back-link, .fullscreen-btn, .pseudo-fullscreen-exit-btn, .teaching-notes, .standards-panel, .reset-progress';
+  document.addEventListener('keydown', function (e) {
+    var dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!dir || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (window.isPageControlKey && window.isPageControlKey(e)) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    var popup = null;
+    TS_POPUPS.forEach(function (id) { var el = document.getElementById(id); if (el && !el.classList.contains('hidden')) popup = el; });
+    var els = Array.prototype.slice.call((popup || document).querySelectorAll('button, [role="button"]')).filter(function (el) {
+      return el.offsetParent !== null && !el.disabled && !el.closest(TS_CHROME) && (popup || !el.closest('#' + TS_POPUPS.join(', #')));
+    });
+    if (!els.length) return;
+    e.preventDefault();
+    var cur = els.indexOf(document.activeElement);
+    if (cur < 0) { els[0].focus(); return; }
+    var mid = function (el) { var r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+    var from = mid(els[cur]), best = null, bestScore = Infinity;
+    els.forEach(function (el, i) {
+      if (i === cur) return;
+      var to = mid(el), along = (to.x - from.x) * dir[0] + (to.y - from.y) * dir[1];
+      if (along <= 4) return;
+      var score = along + Math.abs(dir[0] ? to.y - from.y : to.x - from.x) * 2.5;
+      if (score < bestScore) { bestScore = score; best = el; }
+    });
+    if (best) best.focus();
+  });
   // the difficulty cards aren't real buttons, so Enter / Space press them from the keyboard
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;

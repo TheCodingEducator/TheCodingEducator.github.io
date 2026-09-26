@@ -395,7 +395,22 @@ function continueToNextRound() {
   setupNextLevel();
 }
 
+// The end-of-round screens (results and game over): left / right choose Menu or Play again, Enter or Space picks it,
+// with a gold ring on the choice. Starts on Play again, so Enter right away still plays again.
+var endSel = 1;   // 0 = Menu, 1 = Play again / Try again
+function endScreenKey() {
+  if (keyWentDown("left") || keyWentDown("a")) endSel = 0;
+  if (keyWentDown("right") || keyWentDown("d")) endSel = 1;
+  if (mouseIsOver(resultsMenuBtn)) endSel = 0; else if (mouseIsOver(playAgainBtn)) endSel = 1;
+  var b = endSel === 0 ? resultsMenuBtn : playAgainBtn;
+  push(); noFill(); stroke(255, 214, 60); strokeWeight(4);
+  rect(b.x - b.width / 2 - 6, b.y - b.height / 2 - 6, b.width + 12, b.height + 12, 10); pop();
+  if (keyWentDown("enter") || keyWentDown("space")) return endSel === 0 ? "menu" : "play";
+  return null;
+}
+
 function checkResultsClicks() {
+  var k = endScreenKey();
   if (mouseWentDown("leftButton") && mouseIsOver(playAgainBtn)) {
     continueToNextRound();
   }
@@ -407,9 +422,8 @@ function checkResultsClicks() {
     backToMenu();
   }
 
-  if (keyWentDown("enter") || keyWentDown("space")) {
-    continueToNextRound();
-  }
+  if (k === "menu") { resultsMenuBtn.visible = false; playAgainBtn.visible = false; confettiParticles = []; endSel = 1; backToMenu(); }
+  else if (k === "play") { endSel = 1; continueToNextRound(); }
 }
 
 function drawResults() {
@@ -489,6 +503,9 @@ function drawGameOver() {
 }
 
 function checkGameOverClicks() {
+  var k = endScreenKey();
+  if (k === "menu") { resultsMenuBtn.visible = false; playAgainBtn.visible = false; endSel = 1; backToMenu(); return; }
+  if (k === "play") { resultsMenuBtn.visible = false; playAgainBtn.visible = false; endSel = 1; startGame(); return; }
   if (mouseWentDown("leftButton") && mouseIsOver(playAgainBtn)) {
     resultsMenuBtn.visible = false;
     playAgainBtn.visible = false;
@@ -501,11 +518,6 @@ function checkGameOverClicks() {
     backToMenu();
   }
 
-  if (keyWentDown("enter") || keyWentDown("space")) {
-    resultsMenuBtn.visible = false;
-    playAgainBtn.visible = false;
-    startGame();
-  }
 }
 
 function drawPiggyBank() {
