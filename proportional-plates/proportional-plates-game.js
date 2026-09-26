@@ -354,6 +354,32 @@ function vizHTML(P) {
     `<span class="vzGs">${batch().repeat(n)}</span><span class="vzA">&#10140; ${ingIcon(P.ing)} ${amount}</span>`;
   return `<div class="viz">${row('Recipe', a, P.baseN, `<b>${fhtml(P.baseQ)}</b> ${fval(P.baseQ) === 1 ? P.ing.u1 : P.ing.u}`)}${row('Order', b, P.tgtN, `<b class="q">?</b> ${P.ing.u}`)}</div>`;
 }
+// The question as a picture, for every kind of order: the recipe and the order are two bars made of equal boxes
+// (each box is the same number of dishes - or one item at the market), so students can SEE how many recipes the
+// order is, or what part of one. The recipe bar shows its amount; the order bar asks for its amount.
+function qbarHTML(P) {
+  const { g: per, a, b } = blocksOf(P), maxN = Math.max(a, b);
+  const unitLabel = n => P.money ? (n === 1 ? P.item.one : P.item.q) : nounOf(P, n);
+  const box = () => {
+    if (P.money) return `<span class="qbIn">1</span>`;
+    // narrow boxes (more than 5 in a bar) just show how many dishes; wider ones show the dishes themselves
+    const icons = maxN > 5 ? `<b class="qbN">${per}</b>` : per <= 3 ? foodIcon(P.dish).repeat(per) : `${foodIcon(P.dish)}<b>&times;${per}</b>`;
+    return `<span class="qbIn">${icons}</span>`;
+  };
+  const amt = (x, ask) => P.money
+    ? (ask ? `<b class="q">$ ?</b>` : `<b>$${fhtml(x)}</b>`)
+    : `${ingIcon(P.ing)}${ask ? '<b class="q">?</b>' : `<b>${fhtml(x)}</b>`} ${ask ? P.ing.u : (fval(x) === 1 ? P.ing.u1 : P.ing.u)}`;
+  const row = (cls, title, n, count, amount) =>
+    `<div class="qbLab ${cls}">${title}<span><b>${count}</b> ${unitLabel(count)}</span></div>` +
+    `<div class="qbBar ${cls}">${`<span class="qbBox" style="width:${(100 / maxN).toFixed(3)}%">${box()}</span>`.repeat(n)}</div>` +
+    `<div class="qbAmt ${cls}">= ${amount}</div>`;
+  const each = P.money ? `Every box is <b>1 ${P.item.one}</b>.` : `Every box is <b>${per} ${nounOf(P, per)}</b>.`;
+  const how = a === 1 ? ` The order is <b>${b}</b> boxes, so it needs ${b} times as much.`
+    : b === 1 ? ` The order is just <b>1</b> of the recipe's ${a} boxes.`
+    : ` Find what <b>1</b> box needs, then use it ${b} times.`;
+  return `<div class="qbar">${row('rec', P.money ? 'Price' : 'Recipe', a, P.baseN, amt(P.baseQ, false))}${row('ord', P.money ? 'You need' : 'Order', b, P.tgtN, amt(P.ans, true))}` +
+    `<div class="qbNote">${each}${how}</div></div>`;
+}
 function fixActive() {                                              // the order being cooked left (walked out)? cook the next one, or close the stove
   if (!G || !G.cooking || activeOrder()) return;
   const r = railOrders();
@@ -391,23 +417,20 @@ function renderCook() {
   const P = C.P;
   $('ckOrder').innerHTML = `<span class="ckNum" style="background:${C.color}">#${C.num}</span> ${P.money ? 'Supplies for ' + P.dish.name : P.dish.name}`;
   $('ckKind').textContent = G.mode === 'practice' ? 'Practice' : 'Level ' + G.level;
+  // every order is shown as the same picture (qbarHTML): a recipe bar and an order bar made of equal boxes
   let rec = '', ask = '';
   if (P.kind === 'rate') {
-    rec = `<div class="rc market"><div class="rcHead">Market price</div><div class="rcBig">${b_(P.baseN)} ${P.item.q} cost ${b_('$' + fhtml(P.baseQ))}</div></div>`;
+    rec = `<div class="rc market"><div class="rcHead">Market price &middot; ${b_(P.baseN)} ${P.item.q} cost ${b_('$' + fhtml(P.baseQ))}</div>${qbarHTML(P)}</div>`;
     ask = P.tgtN === 1 ? `What does ${b_('1 ' + P.item.one)} cost?` : `This order needs ${b_(P.tgtN + ' ' + P.item.q)}. What do they cost?`;
   } else if (P.kind === 'table') {
     const cols = [[P.baseN, P.baseQ]].concat(P.extraCol ? [P.extraCol] : []);
     rec = `<div class="rc"><div class="rcHead">Recipe ratio table</div><table class="rt"><tr><th>${P.dish.noun}</th>${cols.map(c => `<td>${c[0]}</td>`).join('')}<td class="q">${P.tgtN}</td></tr>` +
-      `<tr><th>${P.ing.q}</th>${cols.map(c => `<td>${fhtml(c[1])}</td>`).join('')}<td class="q">?</td></tr></table>` +
-      (G.mode === 'practice' || G.level <= 3 ? vizHTML(P) : '') + '</div>';        // level 3 also gets the picture of equal groups
+      `<tr><th>${P.ing.q}</th>${cols.map(c => `<td>${fhtml(c[1])}</td>`).join('')}<td class="q">?</td></tr></table>${qbarHTML(P)}</div>`;
     ask = `How many ${b_(P.ing.q)} for ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}?`;
   } else {
-    const one = fval(P.baseQ) === 1 ? P.ing.q.replace(/^cups/, 'cup').replace(/^tablespoons/, 'tablespoon').replace(/^teaspoons/, 'teaspoon') : P.ing.q;
-    rec = `<div class="rc"><div class="rcHead">${P.dish.name} recipe</div><div class="rcLine">Makes ${b_(P.baseN)} ${nounOf(P, P.baseN)}</div><div class="rcLine">Uses ${b_(fhtml(P.baseQ))} ${one}</div></div>`;
+    rec = `<div class="rc"><div class="rcHead">${P.dish.name} recipe</div>${qbarHTML(P)}</div>`;
     ask = `Order #${C.num} wants ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}. How many ${b_(P.ing.q)}?`;
   }
-  if ((P.kind === 'up' || P.kind === 'down') && (G.mode === 'practice' || G.level <= 2))   // beginning levels: the recipe and the order as a picture
-    rec = `<div class="rc">${vizHTML(P)}</div>`;
   $('ckRecipe').innerHTML = rec; $('ckAsk').innerHTML = ask;
   // the answer row is the proportion itself: recipe amount / recipe size = [ answer ] / order size
   const per = n => P.money ? `<b>${n}</b> ${n === 1 ? P.item.short.replace(/s$/, '') : P.item.short}` : `<b>${n}</b> ${nounOf(P, n)}`;
@@ -1117,17 +1140,17 @@ function drawSeat(i, C, t) {                                          // chair, 
   ctx.restore();
 }
 const hexA = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
-// on the floor: a glowing spot beside the table you're carrying a plate to, with a trail leading there
+// on the floor: a glowing spot right under the table you're carrying a plate to, with a trail leading there
 function drawFloorMarks() {
   const ch = G.chef, target = ch.carry && G.custs.includes(ch.carry) ? ch.carry : null;
   if (target) {
-    const sp = serveSpot(target.seat);
+    const s = SEATS[target.seat], sp = { x: s.tx, y: s.ty };
     ctx.save(); ctx.setLineDash([3, 13]); ctx.lineDashOffset = -G.t * 40; ctx.lineCap = 'round'; ctx.strokeStyle = hexA(target.color, 0.85); ctx.lineWidth = 6;
     ctx.beginPath(); ctx.moveTo(ch.x, ch.y); ctx.lineTo(sp.x, sp.y); ctx.stroke(); ctx.restore();
   }
   if (target && target.arrive >= 1 && target.state !== 'served') {
-    const sp = serveSpot(target.seat), k = depth(sp.y), p = 1 + Math.sin(G.t * 6) * 0.1;
-    ctx.save(); ell(sp.x, sp.y, 40 * k * p, 13 * k * p, hexA(target.color, 0.35), target.color, 4); ctx.restore();
+    const s = SEATS[target.seat], k = depth(s.ty), p = 1 + Math.sin(G.t * 6) * 0.1;   // (the table stands on it)
+    ctx.save(); ell(s.tx, s.ty - 3 * k, 52 * k * p, 16 * k * p, hexA(target.color, 0.35), target.color, 4); ctx.restore();
   }
 }
 // big bouncing arrows: over the customer whose plate you're carrying, and over the kitchen when there's cooking to do
@@ -1345,5 +1368,5 @@ window.addEventListener('pagehide', () => { if (G && G.mode === 'run' && shiftSe
 showScreen('title');
 requestAnimationFrame(frame);
 // small hook for automated checks
-window.PP = { genProblem, parseAns, verdict, mistakeOf, explainHTML, tapeSVG, stepsHTML, fstr, F, get G() { return G; }, keys, startGame, startPractice, submit, interact, spawnCustomer, SEATS, step(dt) { update(dt); draw(); } };
+window.PP = { openCook, renderCook, genProblem, parseAns, verdict, mistakeOf, explainHTML, tapeSVG, stepsHTML, fstr, F, get G() { return G; }, keys, startGame, startPractice, submit, interact, spawnCustomer, SEATS, step(dt) { update(dt); draw(); } };
 })();

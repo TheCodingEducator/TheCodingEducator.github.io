@@ -403,6 +403,25 @@
   #sb .vzA { display:flex; align-items:center; gap:0.35cqw; font-size:2.5cqw; white-space:nowrap; }
   #sb .vzA .ic { width:3cqw; height:3cqw; }
   #sb .vzA b.q { color:#fff !important; background:#c2410c; border-radius:0.5cqw; padding:0 0.6cqw; }
+  /* the question picture (qbarHTML): a recipe bar and an order bar made of equal boxes */
+  #sb .qbar { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:0.9cqw 1cqw; margin-top:0.5cqw; }
+  #sb .qbLab { font-size:1.6cqw; font-weight:900; color:#8a5a2a; text-transform:uppercase; letter-spacing:.03em; line-height:1.15; }
+  #sb .qbLab span { display:block; text-transform:none; letter-spacing:0; font-size:2.2cqw; color:#2a2320; font-weight:700; }
+  #sb .qbLab.ord { color:#1e7a44; }
+  #sb .qbBar { display:flex; min-height:5.2cqw; border-radius:0.8cqw; overflow:hidden; }
+  #sb .qbBox { display:flex; align-items:center; justify-content:center; min-height:5.2cqw; border:0.28cqw solid #2f80ed; background:#dbe8ff; margin-right:-0.28cqw; }
+  #sb .qbBar.ord .qbBox { border-color:#1e9e57; background:#d3f5df; }
+  #sb .qbBox:first-child { border-radius:0.8cqw 0 0 0.8cqw; }
+  #sb .qbBox:last-child { border-radius:0 0.8cqw 0.8cqw 0; margin-right:0; }
+  #sb .qbBox:only-child { border-radius:0.8cqw; }
+  #sb .qbIn { display:flex; align-items:center; gap:0.15cqw; font-size:2.4cqw; font-weight:900; color:#2a2320; }
+  #sb .qbIn .ic { width:2.6cqw; height:2.6cqw; display:block; }
+  #sb .qbIn b { font-size:2cqw; color:#2a2320 !important; }
+  #sb .qbIn b.qbN { font-size:2.3cqw; }
+  #sb .qbAmt { display:flex; align-items:center; gap:0.4cqw; font-size:2.6cqw; white-space:nowrap; }
+  #sb .qbAmt .ic { width:3.2cqw; height:3.2cqw; display:block; }
+  #sb .qbAmt b.q { color:#fff !important; background:#c2410c; border-radius:0.6cqw; padding:0 0.7cqw; }
+  #sb .qbNote { grid-column:1 / -1; font-size:1.75cqw; color:#6b4a2a; line-height:1.4; }
   #sb .railEmpty { margin-top:1.6cqw; padding:0.3cqw 1.2cqw; border-radius:99px; background:rgba(255,253,247,.7); color:#8a6a4f; font-weight:800; font-size:1.3cqw; white-space:nowrap; }
   #sb #btnCookClose { margin-left:auto; width:3.6cqw; height:3.6cqw; border-radius:50%; border:0.25cqw solid #8a6a4a; background:#fff; color:#8a6a4a; font-size:1.6cqw; font-weight:900; line-height:1; cursor:pointer; font-family:inherit; padding:0; flex:0 0 auto; }
   #sb #btnCookClose:hover { background:#fbe7c9; }
@@ -418,7 +437,7 @@
   @media (pointer:coarse) { #sb #touch:not(.hidden) { display:flex; } }
   @keyframes tkIn { from { transform:translateY(-110%); } to { transform:none; } }
   @keyframes tkShake { 25% { transform:rotate(-2.5deg); } 75% { transform:rotate(2.5deg); } }
-  #sb #cook { position:absolute; left:1%; top:23.5%; width:54%; bottom:2.4%; background:#fffaf0; border:0.35cqw solid #8a6a4a; border-radius:1.2cqw; color:#2a2320;
+  #sb #cook { position:absolute; left:1%; top:23.5%; width:62%; bottom:2.4%; background:#fffaf0; border:0.35cqw solid #8a6a4a; border-radius:1.2cqw; color:#2a2320;
     padding:1.1cqw 1.5cqw; display:flex; flex-direction:column; gap:0.7cqw; font-size:1.75cqw; box-shadow:0 0.6cqw 1.4cqw rgba(0,0,0,.35); overflow:hidden; }
   #sb .ckTop { display:flex; justify-content:space-between; align-items:center; font-weight:900; font-size:2.3cqw; gap:0.8cqw; }
   #sb .ckNum { color:#fff; border-radius:0.6cqw; padding:0.1cqw 0.7cqw; }
