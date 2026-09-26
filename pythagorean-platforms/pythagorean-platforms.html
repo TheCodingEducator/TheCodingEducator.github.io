@@ -298,6 +298,12 @@
   .t-hint { margin: 0; font-weight: 900; font-size: 15px; color: #143a26; animation: tBlink 1.4s ease-in-out infinite; }
   .t-hint kbd, .map-keys kbd { font-family: inherit; background: rgba(0,0,0,0.35); color: #fff4d6; border: 1px solid rgba(255,255,255,0.35); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; }
   @keyframes tBlink { 50% { opacity: 0.45; } }
+  .t-pick { align-self: flex-start; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 999px; background: rgba(16,38,26,0.78); }
+  .t-pick-lbl { font-weight: 800; font-size: 13px; color: #cfe6c4; padding: 0 8px 0 10px; }
+  .t-pick button { font-family: "Lilita One", system-ui, sans-serif; font-size: 17px; color: #fff4d6; background: transparent; border: 0; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .t-pick button:hover { background: rgba(255,255,255,0.12); }
+  .t-pick button[aria-checked="true"] { background: var(--gold); color: #2a1a04; }
+  .t-pick button:focus-visible { outline: 3px solid #fff4d6; outline-offset: 2px; }
   .t-stats { margin: 0; align-self: flex-start; font-size: 13px; font-weight: 800; color: #fff4d6; background: rgba(16,38,26,0.7); padding: 4px 10px; border-radius: 8px; }
   .t-stats:empty { display: none; }
 
@@ -531,6 +537,7 @@
             <li>When the problem is solved, time slows down for a close-up of all three sides, and then you take the <b>big swing</b>. The next platform is one rope length under the anchor, so a short rope keeps you high in the trees and a long rope swings you low.</li>
             <li>A wrong line drops you in the quicksand, shows a hint, and you try that step again.</li>
             <li><b>World Map:</b> press the map button or <b>Esc</b> to pick a different world. Finished worlds get a ✓.</li>
+            <li><b>Your swinger:</b> on the title screen, choose the safari explorer or the monkey buddy (← → switches).</li>
           </ul>
         </section>
         <section>
@@ -610,33 +617,46 @@
       <g class="swing" transform="rotate(-28.75 832 0)">
         <line x1="832" y1="0" x2="832" y2="179" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
         <g class="swinger" transform="rotate(28.75 832 179)">
+          <!-- both swingers hang from the hand at (0,0) with their feet about 84 below it; only the chosen one is shown.
+               Each face group is drawn looking right, and data-mirror flips it across the head to look left. -->
           <g transform="translate(832 179)">
-            <!-- the rope runs through the fist; its loose end dangles below it, away from the body -->
-            <line x1="0" y1="-4" x2="0" y2="9" stroke="#3f7a2a" stroke-width="7" stroke-linecap="round"/>
-            <path d="M0 8 Q-5 18 -9 34" fill="none" stroke="#3f7a2a" stroke-width="6" stroke-linecap="round"/>
-            <!-- the body hangs under the holding shoulder (so the feet sit 12 to the right of the hand) -->
-            <rect x="1" y="51" width="22" height="21" rx="5" fill="#c77a3a"/>
-            <rect x="3" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/><rect x="13" y="69" width="8" height="14" rx="3" fill="#6b4a2a"/>
-            <rect x="1" y="81" width="10" height="4" rx="2" fill="#3a2a14"/><rect x="13" y="81" width="10" height="4" rx="2" fill="#3a2a14"/>
-            <!-- the free arm hangs relaxed, a little out from the side -->
-            <path d="M21 55 L28 65" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
-            <path d="M28 65 L32 75" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
-            <circle cx="32.5" cy="77" r="3.8" fill="#f2c79a"/>
-            <!-- head beside the raised arm -->
-            <circle cx="13" cy="42" r="9" fill="#f2c79a"/>
-            <!-- the face (eye, nose, smile) is drawn looking right and mirrored across the head to look left -->
-            <g class="face" transform="translate(26 0) scale(-1 1)">
-              <circle cx="16.5" cy="42.5" r="1.5" fill="#3a2a14"/>
-              <path d="M21.2 41.2 Q24.8 44 21.2 46.4" fill="#e8b384" stroke="#c98f5e" stroke-width="1"/>
-              <path d="M14.5 47.6 Q17.2 49.4 19.8 47.6" fill="none" stroke="#a0522d" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- the safari explorer: pith helmet, khaki, backpack; one fist around the rope, free arm out for balance -->
+            <g class="char" data-char="explorer" transform="scale(0.875)">
+              <rect x="-7" y="52" width="10" height="20" rx="3" fill="#7a5a34"/>
+              <path d="M0 6 Q-8 16 -6 30" stroke="#3f7a2a" stroke-width="5" fill="none" stroke-linecap="round"/>
+              <rect x="0" y="50" width="24" height="24" rx="5" fill="#c9a86a"/><rect x="13" y="55" width="7" height="6" rx="1.5" fill="#b8955a"/>
+              <rect x="0" y="70" width="24" height="4" fill="#6b4a24"/><rect x="1" y="73" width="22" height="9" rx="3" fill="#8a6a3e"/>
+              <rect x="4" y="81" width="6" height="9" fill="#e8b88a"/><rect x="14" y="81" width="6" height="9" fill="#e8b88a"/>
+              <rect x="2" y="89" width="10" height="7" rx="2.5" fill="#4a3320"/><rect x="13" y="89" width="10" height="7" rx="2.5" fill="#4a3320"/>
+              <path d="M21 55 L30 61" stroke="#c9a86a" stroke-width="8" stroke-linecap="round"/><path d="M30 61 L39 57" stroke="#e8b88a" stroke-width="6" stroke-linecap="round"/><circle cx="40" cy="56.5" r="3.6" fill="#e8b88a"/>
+              <circle cx="12" cy="41" r="10" fill="#e8b88a"/>
+              <path d="M3 56 L2 32" stroke="#c9a86a" stroke-width="9" stroke-linecap="round"/><path d="M2 32 L0.5 7" stroke="#e8b88a" stroke-width="7" stroke-linecap="round"/>
+              <g class="face" data-mirror="translate(24 0) scale(-1 1)" transform="translate(24 0) scale(-1 1)">
+                <circle cx="16" cy="40" r="1.5" fill="#2b1d10"/><path d="M14 45 Q17 47 20 45" stroke="#8a4a2a" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+              </g>
+              <path d="M0 35 Q12 16 24 35 Z" fill="#efe3c4" stroke="#b9a57a" stroke-width="1.5"/><rect x="-3" y="33.5" width="30" height="3.5" rx="1.75" fill="#e3d4ad" stroke="#b9a57a" stroke-width="1"/><path d="M2.5 31 H21.5" stroke="#8a6a3e" stroke-width="2.5"/>
+              <rect x="-7" y="-5" width="14" height="13" rx="4.5" fill="#e8b88a" stroke="#8a5a32" stroke-width="1.8"/>
+              <path d="M-5.5 -1 H5.5 M-5.5 2.2 H5.5 M-5.5 5.2 H5.5" stroke="#8a5a32" stroke-width="1.1" stroke-linecap="round"/>
+              <ellipse cx="-3" cy="-5" rx="4" ry="2.3" fill="#e8b88a" stroke="#8a5a32" stroke-width="1.4"/>
             </g>
-            <path d="M-1 35 H27 L23 31 H3Z" fill="#a0692c"/><rect x="5" y="24" width="16" height="10" rx="4" fill="#a0692c"/>
-            <!-- the holding arm goes straight up from the shoulder to the rope: sleeve, forearm, then the fist -->
-            <path d="M2 56 L1.5 38" stroke="#c77a3a" stroke-width="8" stroke-linecap="round"/>
-            <path d="M1.5 38 L0.5 8" stroke="#f2c79a" stroke-width="6" stroke-linecap="round"/>
-            <rect x="-7.5" y="-4" width="15" height="12" rx="4" fill="#f2c79a" stroke="#7a4a24" stroke-width="2"/>
-            <path d="M-2.5 -2 V6 M1.5 -2 V6 M5 -1 V5" stroke="#7a4a24" stroke-width="1.3" stroke-linecap="round"/>
-            <ellipse cx="-6" cy="-3.5" rx="3.2" ry="2.3" fill="#f2c79a" stroke="#7a4a24" stroke-width="1.5"/>
+            <!-- the monkey buddy: one long arm on the rope and its tail curled around the rope underneath -->
+            <g class="char" data-char="monkey" transform="scale(0.944)" style="display:none">
+              <line x1="0" y1="4" x2="0" y2="50" stroke="#3f7a2a" stroke-width="5" stroke-linecap="round"/>
+              <path d="M4 74 Q-16 74 -10 54 Q-6 42 4 44 Q9 46 3 50" stroke="#6b4226" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+              <path d="M2 70 L-1 84" stroke="#8b5a33" stroke-width="6" stroke-linecap="round"/><path d="M14 70 L18 84" stroke="#8b5a33" stroke-width="6" stroke-linecap="round"/>
+              <ellipse cx="-2" cy="86" rx="5" ry="3" fill="#e0b98a"/><ellipse cx="19" cy="86" rx="5" ry="3" fill="#e0b98a"/>
+              <ellipse cx="8" cy="58" rx="12" ry="15" fill="#8b5a33"/><ellipse cx="10" cy="61" rx="7" ry="10" fill="#e0b98a"/>
+              <path d="M17 51 L25 64" stroke="#8b5a33" stroke-width="5" stroke-linecap="round"/><circle cx="26" cy="66" r="3.5" fill="#e0b98a"/>
+              <circle cx="-1" cy="32" r="5" fill="#8b5a33"/><circle cx="-1" cy="32" r="2.6" fill="#e0b98a"/><circle cx="21" cy="32" r="5" fill="#8b5a33"/><circle cx="21" cy="32" r="2.6" fill="#e0b98a"/>
+              <circle cx="10" cy="34" r="12" fill="#8b5a33"/>
+              <path d="M2 48 L0.5 7" stroke="#8b5a33" stroke-width="5" stroke-linecap="round"/>
+              <g class="face" data-mirror="translate(20 0) scale(-1 1)" transform="translate(20 0) scale(-1 1)">
+                <ellipse cx="12" cy="38" rx="8.5" ry="7" fill="#e0b98a"/>
+                <circle cx="9.5" cy="34" r="1.6" fill="#2b1d10"/><circle cx="15.5" cy="34" r="1.6" fill="#2b1d10"/>
+                <path d="M9 41 Q12.5 44 16 41" stroke="#6b4226" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+              </g>
+              <rect x="-5" y="-4" width="10" height="11" rx="4" fill="#e0b98a" stroke="#6b4226" stroke-width="1.5"/>
+            </g>
           </g>
         </g>
       </g>
@@ -644,8 +664,13 @@
     <div class="t-content">
       <h2 class="sign" id="title-name"><span class="sign-top">Pythagorean</span><span class="sign-big">Platforms</span></h2>
       <p class="t-tag">Swing across the jungle with <b>a² + b² = c²</b></p>
+      <div class="t-pick" role="radiogroup" aria-label="Choose your swinger">
+        <span class="t-pick-lbl">Swing as</span>
+        <button type="button" role="radio" aria-checked="true" data-char="explorer">&#127890; Explorer</button>
+        <button type="button" role="radio" aria-checked="false" data-char="monkey" tabindex="-1">&#128018; Monkey</button>
+      </div>
       <button class="btn t-start" type="button" id="title-start">&#9654; Start</button>
-      <p class="t-hint">Press <kbd>Enter</kbd> to start</p>
+      <p class="t-hint">Press <kbd>Enter</kbd> to start &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to switch</p>
       <p class="t-stats" id="title-stats"></p>
     </div>
   </div>
@@ -1367,7 +1392,8 @@
   // The explorer leans back, pushes off one platform with just enough speed to reach the other, and lands. The body
   // hangs from one hand and follows the rope like a spring with damping, so it trails through the swing, and on
   // landing it keeps some of its momentum and sways before settling upright.
-  const tRope = titleScreen.querySelector('.swing'), tBody = titleScreen.querySelector('.swinger'), tFace = titleScreen.querySelector('.face');
+  const tRope = titleScreen.querySelector('.swing'), tBody = titleScreen.querySelector('.swinger');
+  let tFace = titleScreen.querySelector('.char[data-char="explorer"] .face');
   const T_ENDS = [-28.75 * Math.PI / 180, 53.64 * Math.PI / 180];   // rope angles that put the feet on each plank
   const T_K = 4.2;                                                  // gravity / rope length
   const T_STAND = 1.6, T_CROUCH = 0.4;                              // seconds on a platform; the lean before pushing off
@@ -1402,10 +1428,28 @@
     const deg = r => (r * 180 / Math.PI).toFixed(2);
     // look toward the next platform: where the swing is going, and after landing (a moment later) back the other way
     const lookLeft = s.state === 'swing' ? s.om > 0 : (s.t < 0.35 ? s.at === 1 : s.at === 0);
-    if (lookLeft !== s.lookLeft) { s.lookLeft = lookLeft; tFace.setAttribute('transform', lookLeft ? 'translate(26 0) scale(-1 1)' : ''); }
+    if (lookLeft !== s.lookLeft) { s.lookLeft = lookLeft; tFace.setAttribute('transform', lookLeft ? tFace.dataset.mirror : ''); }
     tRope.setAttribute('transform', `rotate(${deg(s.th)} 832 0)`);
     tBody.setAttribute('transform', `rotate(${deg(s.phi - s.th)} 832 179)`);
   }
+  // ---------- choose your swinger: the safari explorer or the monkey buddy (saved on this device) ----------
+  let character = 'explorer';
+  const pickBtns = [...titleScreen.querySelectorAll('.t-pick button')];
+  function setCharacter(c, focus) {
+    character = c === 'monkey' ? 'monkey' : 'explorer';
+    store.set('character', character);
+    pickBtns.forEach(b => {
+      const on = b.dataset.char === character;
+      b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1;
+      if (on && focus) b.focus();
+    });
+    titleScreen.querySelectorAll('.title-scene .char').forEach(g => { g.style.display = g.dataset.char === character ? '' : 'none'; });
+    tFace = titleScreen.querySelector(`.title-scene .char[data-char="${character}"] .face`);
+    tsw.lookLeft = undefined;   // re-aim the new face on the next frame
+    tFace.setAttribute('transform', tFace.dataset.mirror);
+  }
+  pickBtns.forEach(b => b.addEventListener('click', () => { audio(); setCharacter(b.dataset.char, true); }));
+  setCharacter(store.get('character', 'explorer'), false);
   function hideScreens() { titleScreen.hidden = true; mapScreen.hidden = true; setInert(false); last = performance.now(); }
   function startWorld(i) { audio(); hideScreens(); startGame(WORLDS[i].m); }
   document.getElementById('title-start').addEventListener('click', () => { audio(); showMap('title'); });
@@ -1420,6 +1464,10 @@
     if (!screenOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
     const onBtn = e.target && e.target.tagName === 'BUTTON';
     if (!titleScreen.hidden) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {   // switch swinger
+        e.preventDefault();
+        setCharacter(character === 'explorer' ? 'monkey' : 'explorer', !!(e.target.closest && e.target.closest('.t-pick')));
+      }
       if ((e.key === 'Enter' || e.key === ' ') && !onBtn) { e.preventDefault(); audio(); showMap('title'); }
       e.stopImmediatePropagation();
       return;
@@ -1833,6 +1881,49 @@
     }
   }
 
+  // the monkey buddy (chosen on the title screen): same size and hand position as the explorer, so every swing,
+  // drop and landing works the same. The hand is at (0,0); the feet are about 1.2 units below it.
+  function drawMonkey(u, flail, time) {
+    const BROWN = '#8b5a33', TAN = '#e0b98a', DARK = '#6b4226';
+    const kick = flail ? Math.sin(time * 20) * 0.12 * u : (state === 'swing' ? 0.08 * u : 0);
+    ctx.lineCap = 'round';
+    // tail, curled up behind
+    ctx.strokeStyle = DARK; ctx.lineWidth = 0.07 * u;
+    ctx.beginPath(); ctx.moveTo(0.02 * u, 0.98 * u); ctx.quadraticCurveTo(-0.34 * u, 1.0 * u, -0.26 * u, 0.72 * u);
+    ctx.quadraticCurveTo(-0.2 * u, 0.56 * u, -0.08 * u, 0.62 * u); ctx.stroke();
+    // legs and feet
+    ctx.strokeStyle = BROWN; ctx.lineWidth = 0.1 * u;
+    ctx.beginPath(); ctx.moveTo(-0.07 * u, 0.94 * u); ctx.lineTo(-0.1 * u - kick, 1.14 * u); ctx.moveTo(0.09 * u, 0.94 * u); ctx.lineTo(0.12 * u + kick, 1.14 * u); ctx.stroke();
+    ctx.fillStyle = TAN;
+    ctx.beginPath(); ctx.ellipse(-0.1 * u - kick, 1.17 * u, 0.08 * u, 0.045 * u, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(0.14 * u + kick, 1.17 * u, 0.08 * u, 0.045 * u, 0, 0, TAU); ctx.fill();
+    // body and belly
+    ctx.fillStyle = BROWN; ctx.beginPath(); ctx.ellipse(0.02 * u, 0.78 * u, 0.17 * u, 0.21 * u, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = TAN; ctx.beginPath(); ctx.ellipse(0.05 * u, 0.81 * u, 0.1 * u, 0.14 * u, 0, 0, TAU); ctx.fill();
+    // arms: one long arm up to the rope, the other hanging out (both wave when it falls)
+    ctx.strokeStyle = BROWN; ctx.lineWidth = 0.075 * u;
+    ctx.beginPath();
+    if (flail) {
+      const w = Math.sin(time * 18) * 0.15 * u;
+      ctx.moveTo(-0.12 * u, 0.64 * u); ctx.lineTo(-0.36 * u, 0.24 * u + w); ctx.moveTo(0.15 * u, 0.64 * u); ctx.lineTo(0.38 * u, 0.24 * u - w);
+    } else {
+      ctx.moveTo(-0.1 * u, 0.64 * u); ctx.lineTo(0, 0.04 * u); ctx.moveTo(0.16 * u, 0.66 * u); ctx.lineTo(0.28 * u, 0.86 * u);
+    }
+    ctx.stroke();
+    if (!flail) { ctx.fillStyle = TAN; ctx.beginPath(); ctx.arc(0.29 * u, 0.89 * u, 0.05 * u, 0, TAU); ctx.fill(); }
+    // ears, head, face
+    ctx.fillStyle = BROWN;
+    ctx.beginPath(); ctx.arc(-0.14 * u, 0.42 * u, 0.075 * u, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0.2 * u, 0.42 * u, 0.075 * u, 0, TAU); ctx.fill();
+    ctx.fillStyle = TAN;
+    ctx.beginPath(); ctx.arc(-0.14 * u, 0.42 * u, 0.04 * u, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0.2 * u, 0.42 * u, 0.04 * u, 0, TAU); ctx.fill();
+    ctx.fillStyle = BROWN; ctx.beginPath(); ctx.arc(0.03 * u, 0.43 * u, 0.17 * u, 0, TAU); ctx.fill();
+    ctx.fillStyle = TAN; ctx.beginPath(); ctx.ellipse(0.07 * u, 0.48 * u, 0.12 * u, 0.1 * u, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2a1a0c';
+    ctx.beginPath(); ctx.arc(0.03 * u, 0.43 * u, 0.024 * u, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(0.12 * u, 0.43 * u, 0.024 * u, 0, TAU); ctx.fill();
+    ctx.strokeStyle = DARK; ctx.lineWidth = 0.022 * u;
+    ctx.beginPath(); ctx.arc(0.075 * u, 0.5 * u, 0.045 * u, 0.25, Math.PI - 0.25); ctx.stroke();
+    // the hand on the rope
+    if (!flail) { ctx.fillStyle = TAN; ctx.beginPath(); ctx.arc(0, 0, 0.075 * u, 0, TAU); ctx.fill(); }
+  }
   function drawExplorer(time) {
     const x = sx(P.x), y = sy(P.y);
     const u = S;
@@ -1842,6 +1933,7 @@
     const bob = state === 'aim' && !reduceMotion ? Math.sin(time * 3) * 0.03 * u : 0;
     ctx.translate(0, bob);
     const flail = (state === 'fire' && outcome === 'short') || state === 'hurt' || state === 'drop';
+    if (character === 'monkey') { drawMonkey(u, flail, time); ctx.restore(); return; }
     // backpack
     ctx.fillStyle = '#8a5a2e'; rrect(-0.34 * u, 0.58 * u, 0.2 * u, 0.36 * u, 0.06 * u); ctx.fill();
     // legs
@@ -2458,7 +2550,7 @@
     get fray() { return fray; },
     get state() { return state; }, get cine() { return cine; }, get idx() { return idx; }, get zoom() { return zoom; },
     get cam() { return { camX, camY, S, viewH, W, H }; }, step(dt) { tick(dt); },
-    ledges: () => ledges, P, startGame, showTitle, showMap, startWorld, titleTick, get tsw() { return tsw; }, get screen() { return !titleScreen.hidden ? 'title' : !mapScreen.hidden ? 'map' : 'game'; }
+    ledges: () => ledges, P, startGame, showTitle, showMap, startWorld, titleTick, setCharacter, get character() { return character; }, get tsw() { return tsw; }, get screen() { return !titleScreen.hidden ? 'title' : !mapScreen.hidden ? 'map' : 'game'; }
   };
 })();
 </script>
