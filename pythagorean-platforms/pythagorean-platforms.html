@@ -268,29 +268,78 @@
     background: var(--clay); color: #2a1206; font-weight: 800;
     padding: 2px 7px; border-radius: 6px;
   }
-  .modes { display: flex; gap: 6px; flex: 1 1 420px; min-width: 0; }
-  .modes button {
-    flex: 1 1 0;
-    min-width: 0;
-    font-family: "Lilita One", system-ui, sans-serif;
-    font-size: 15px;
-    color: var(--text);
-    background: var(--panel);
-    border: 2px solid var(--line);
-    border-bottom-width: 4px;
-    border-radius: 10px;
-    padding: 4px 10px;
-    cursor: pointer;
-    text-align: left;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .modes button small {
-    display: block;
-    font-family: "Nunito", system-ui, sans-serif;
-    font-weight: 700; font-size: 12px; color: var(--muted);
-    overflow: hidden; text-overflow: ellipsis;
-  }
-  .modes button[aria-selected="true"] { background: var(--panel-2); border-color: var(--gold); }
+  /* which world you're in, next to the title (the World Map screen is where worlds are chosen) */
+  .where { flex: 1 1 auto; min-width: 0; font-family: "Lilita One", system-ui, sans-serif; font-size: 16px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .where small { font-family: "Nunito", system-ui, sans-serif; font-weight: 700; font-size: 12px; color: var(--muted); margin-left: 6px; }
+  .map-btn { color: var(--text); }
+
+  /* ---------- title screen: a jungle scene with a hanging wooden sign ---------- */
+  .app { position: relative; }
+  .screen { position: absolute; inset: 0; z-index: 30; border-radius: 16px; overflow: hidden; }
+  .screen[hidden] { display: none; }
+  .title-screen { background: #1d4a33; }
+  .title-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .title-scene .swing { transform-origin: 842px 0; animation: tSwing 3.2s ease-in-out infinite alternate; }
+  .title-scene .leaf-sway { transform-box: fill-box; transform-origin: top center; animation: tSway 4s ease-in-out infinite alternate; }
+  @keyframes tSwing { from { transform: rotate(26deg); } to { transform: rotate(-26deg); } }
+  @keyframes tSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+  .t-content { position: absolute; left: 5%; top: 0; bottom: 0; width: min(46%, 420px); display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+  .sign { position: relative; align-self: flex-start; margin: 34px 0 0; font-weight: 400; padding: 16px 26px 14px; border-radius: 14px;
+    background: linear-gradient(180deg, #b77a3c, #8c5424); border: 4px solid #5c3514; box-shadow: 0 10px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,220,160,0.35);
+    transform-origin: 50% -60px; animation: tSign 5s ease-in-out infinite alternate; }
+  .sign::before, .sign::after { content: ""; position: absolute; top: -64px; width: 5px; height: 64px; background: repeating-linear-gradient(180deg, #6fae4c 0 10px, #4f8a36 10px 20px); border-radius: 3px; }
+  .sign::before { left: 22%; } .sign::after { right: 22%; }
+  @keyframes tSign { from { transform: rotate(-1.6deg); } to { transform: rotate(1.6deg); } }
+  .sign-top { display: block; font-family: "Lilita One", system-ui, sans-serif; font-size: clamp(20px, 2.6vw, 30px); color: #ffe7b0; letter-spacing: 0.04em; line-height: 1; text-shadow: 0 2px 0 #5c3514; }
+  .sign-big { display: block; font-family: "Lilita One", system-ui, sans-serif; font-size: clamp(38px, 5.6vw, 66px); color: var(--gold); line-height: 0.95; text-shadow: 0 3px 0 #5c3514, 0 6px 14px rgba(0,0,0,0.35); }
+  .t-tag { margin: 0; font-size: clamp(15px, 1.7vw, 20px); font-weight: 900; color: #143a26; }
+  .t-tag b { color: #a3230c; white-space: nowrap; }
+  .btn.t-start { align-self: flex-start; font-size: 30px; padding: 12px 44px; border-radius: 999px; box-shadow: 0 6px 14px rgba(0,0,0,0.25); }
+  .t-start:focus-visible, .map-screen button:focus-visible { outline: 4px solid #fff4d6; outline-offset: 3px; }
+  .t-hint { margin: 0; font-weight: 900; font-size: 15px; color: #143a26; animation: tBlink 1.4s ease-in-out infinite; }
+  .t-hint kbd, .map-keys kbd { font-family: inherit; background: rgba(0,0,0,0.35); color: #fff4d6; border: 1px solid rgba(255,255,255,0.35); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; }
+  @keyframes tBlink { 50% { opacity: 0.45; } }
+  .t-stats { margin: 0; align-self: flex-start; font-size: 13px; font-weight: 800; color: #fff4d6; background: rgba(16,38,26,0.7); padding: 4px 10px; border-radius: 8px; }
+  .t-stats:empty { display: none; }
+
+  /* ---------- world map: a trail of platforms climbing to the summit, with the chosen world's card beside it ---------- */
+  .map-screen { background: radial-gradient(120% 90% at 20% 110%, #2f6b3f 0%, #1b3f29 55%, #10261a 100%); display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 14px 16px; gap: 10px; }
+  .map-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .map-head h2 { margin: 0; font-family: "Lilita One", system-ui, sans-serif; font-weight: 400; font-size: 30px; color: var(--gold); text-shadow: 0 2px 0 #6b3f10; }
+  .map-head p { margin: 0; color: var(--muted); font-weight: 700; flex: 1 1 200px; }
+  .map-back { font-family: "Lilita One", system-ui, sans-serif; font-size: 15px; background: transparent; color: var(--text); border: 2px solid var(--line); border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+  .map-body { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(250px, 1fr); gap: 14px; min-height: 0; }
+  .trail { position: relative; border-radius: 16px; background: linear-gradient(180deg, rgba(160,220,200,0.14), rgba(0,0,0,0.12)); border: 2px solid rgba(255,255,255,0.08); min-height: 240px; }
+  .trail-rope { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .node { position: absolute; transform: translate(-50%, -50%); width: 118px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--text); display: grid; justify-items: center; gap: 2px; font-family: "Nunito", system-ui, sans-serif; }
+  .node .num { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-family: "Lilita One", system-ui, sans-serif; font-size: 24px; color: #2a1a04;
+    border: 3px solid #fff4d6; box-shadow: 0 4px 0 rgba(0,0,0,0.3); position: relative; z-index: 1; transition: transform 0.12s; }
+  .node .plank { width: 92px; height: 14px; margin-top: -6px; border-radius: 7px; background: linear-gradient(180deg, #a86d34, #7a4a1d); border-bottom: 4px solid #4d2c0d; }
+  .node .nname { font-family: "Lilita One", system-ui, sans-serif; font-size: 15px; line-height: 1.05; text-align: center; text-shadow: 0 2px 3px rgba(0,0,0,0.6); }
+  .node .done { position: absolute; top: -6px; right: 22px; z-index: 2; width: 22px; height: 22px; border-radius: 50%; background: var(--leaf); color: #10261a; font-weight: 900; font-size: 13px; display: grid; place-items: center; border: 2px solid #10261a; }
+  .node .me { position: absolute; top: -38px; font-size: 26px; opacity: 0; transition: opacity 0.15s; }
+  .node.sel .num { transform: scale(1.18); box-shadow: 0 0 0 5px rgba(242,181,48,0.55), 0 4px 0 rgba(0,0,0,0.3); }
+  .node.sel .me { opacity: 1; animation: tBob 0.9s ease-in-out infinite alternate; }
+  .node.sel .nname { color: var(--gold); }
+  .node:hover .num { transform: scale(1.1); }
+  .node.sel:hover .num { transform: scale(1.18); }
+  @keyframes tBob { to { transform: translateY(-5px); } }
+  .world-card { background: var(--panel); border: 2px solid var(--line); border-top: 8px solid var(--wc, var(--gold)); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+  .wc-kicker { font-weight: 800; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .world-card h3 { margin: -6px 0 0; font-family: "Lilita One", system-ui, sans-serif; font-weight: 400; font-size: 28px; color: var(--text); line-height: 1.05; }
+  .wc-blurb { margin: 0; font-size: 15px; color: #e8efdc; }
+  .wc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .wc-chips span { font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: #143020; border: 1px solid var(--line); color: var(--text); }
+  .wc-sample { background: #143020; border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; }
+  .wc-sample .lbl { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .wc-sample div { font-weight: 900; font-size: 19px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .wc-sample .ca { color: #ff9c85; } .wc-sample .cb { color: #93e088; } .wc-sample .cc { color: #8cc8ff; } .wc-sample .bl { display: inline-block; min-width: 44px; border-bottom: 3px solid var(--gold); text-align: center; color: var(--gold); }
+  .flag { position: absolute; font-size: 22px; transform: translate(-50%, -100%); pointer-events: none; }
+  .wc-progress { margin: 0; font-weight: 800; font-size: 14px; color: var(--muted); }
+  .wc-progress.won { color: var(--leaf); }
+  .btn.wc-go { margin-top: auto; font-size: 22px; padding: 10px; }
+  .map-keys { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; }
   .help-btn {
     font-family: "Lilita One", system-ui, sans-serif; font-size: 15px;
     background: transparent; color: var(--muted); border: 2px solid var(--line);
@@ -400,9 +449,14 @@
     .app { padding-inline: 10px; padding-block: 6px; gap: 6px; }
     header { gap: 6px; }
     .tag, .help-btn .long { display: none; }
-    .modes { flex-basis: 100%; order: 3; }
-    .modes button small, .modes .wname { display: none; }
-    .modes button { text-align: center; }
+    .where small { display: none; }
+    .t-content { width: 62%; left: 4%; }
+    .map-screen { overflow-y: auto; padding: 10px 12px; }
+    .map-body { grid-template-columns: minmax(0, 1.3fr) minmax(210px, 1fr); gap: 10px; }
+    .world-card { padding: 10px 12px; gap: 6px; } .world-card h3 { font-size: 22px; } .wc-blurb { font-size: 13px; } .map-keys, .map-head p { display: none; }
+    .btn.wc-go { font-size: 18px; padding: 8px; } .wc-sample div { font-size: 15px; }
+    .node { width: 84px; } .node .nname { font-size: 12px; } .node .plank { width: 66px; }
+    .map-head h2 { font-size: 24px; }
     .main { gap: 6px; }
     .bar { grid-template-columns: minmax(0, 1fr); padding: 6px 8px; gap: 5px; }
     .cap { display: none; }
@@ -411,6 +465,10 @@
     .prompt { font-size: 14px; }
     .strip { display: none; }
     .btn.eq { font-size: 14px; padding: 6px 4px; }
+  }
+  /* very narrow (portrait phones): the World Map card goes under the trail */
+  @media (max-width: 560px) {
+    .map-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: 260px auto; }
   }
   @media (max-height: 640px) and (min-width: 761px) {
     .strip, .cap { display: none; }
@@ -456,13 +514,8 @@
 <div class="app">
   <header>
     <div class="title">Pythagorean Platforms</div>
-    <div class="modes" role="tablist" aria-label="World">
-      <button role="tab" id="tab-w0" aria-selected="true" data-mode="w0">World 1<span class="wname"> · Rope Count</span><small>Count the squares · type c</small></button>
-      <button role="tab" id="tab-w1" aria-selected="false" data-mode="w1">World 2<span class="wname"> · Tile Grove</span><small>Every step · tile squares</small></button>
-      <button role="tab" id="tab-w2" aria-selected="false" data-mode="w2">World 3<span class="wname"> · Waterfall Cliffs</span><small>Count squares · 4 choices · timed</small></button>
-      <button role="tab" id="tab-w3" aria-selected="false" data-mode="w3">World 4<span class="wname"> · Temple Ruins</span><small>Formula given · missing legs</small></button>
-      <button role="tab" id="tab-w4" aria-selected="false" data-mode="w4">World 5<span class="wname"> · Summit</span><small>Fill in the blanks · big triangles</small></button>
-    </div>
+    <div class="where" id="where" aria-live="polite"></div>
+    <button class="help-btn map-btn" type="button" id="map-btn">&#128506;&#65039;<span class="long"> World map</span></button>
     <button class="help-btn" type="button" id="help-btn" aria-expanded="false" aria-controls="help">?<span class="long"> How to play</span></button>
   </header>
 
@@ -478,6 +531,7 @@
             <li>Each canyon is a right triangle: <b style="color:#ff9c85">a</b> is the distance across to the next platform, <b style="color:#93e088">b</b> is how high the vine's anchor is above you, and <b style="color:#8cc8ff">c</b> is your rope. Find the rope length or the distance to the next platform. All lengths are in feet.</li>
             <li>When the problem is solved, time slows down for a close-up of all three sides, and then you take the <b>big swing</b>. The next platform is one rope length under the anchor, so a short rope keeps you high in the trees and a long rope swings you low.</li>
             <li>A wrong line drops you in the quicksand, shows a hint, and you try that step again.</li>
+            <li><b>World Map:</b> press the map button or <b>Esc</b> to pick a different world. Finished worlds get a ✓.</li>
           </ul>
         </section>
         <section>
@@ -503,10 +557,99 @@
         <div class="row" id="end-actions" hidden>
           <button class="btn" type="button" id="again-btn">Play again</button>
           <button class="btn ghost" type="button" id="other-btn">Next world</button>
+          <button class="btn ghost" type="button" id="map-end-btn">World map</button>
         </div>
         <p class="msg" id="msg" aria-live="polite"></p>
       </div>
       <div class="strip" id="strip"></div>
+    </div>
+  </div>
+
+  <!-- Title screen: a jungle scene - the 3-4-5 squares, an explorer swinging on a vine, and the name on a hanging sign -->
+  <div class="screen title-screen" id="title-screen" role="dialog" aria-modal="true" aria-labelledby="title-name">
+    <svg class="title-scene" viewBox="0 0 960 540" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="t-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#a8e4d0"/><stop offset="0.6" stop-color="#f3e7a8"/><stop offset="1" stop-color="#9dd3b0"/>
+        </linearGradient>
+        <pattern id="t-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0V24H0" fill="none" stroke="rgba(58,42,20,0.4)" stroke-width="1.5"/></pattern>
+        <pattern id="t-grid-c" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(-36.87)"><path d="M24 0V24H0" fill="none" stroke="rgba(30,50,90,0.4)" stroke-width="1.5"/></pattern>
+      </defs>
+      <rect width="960" height="540" fill="url(#t-sky)"/>
+      <circle cx="800" cy="130" r="74" fill="#fff6c9" opacity="0.85"/>
+      <g fill="#7fbf98"><circle cx="90" cy="360" r="90"/><circle cx="230" cy="330" r="80"/><circle cx="380" cy="360" r="95"/><circle cx="560" cy="330" r="85"/><circle cx="930" cy="340" r="95"/></g>
+      <path d="M0 400 Q160 340 320 390 T640 380 T960 370 V540 H0Z" fill="#5fa27a"/>
+      <path d="M0 470 Q220 430 440 462 T960 450 V540 H0Z" fill="#3f8057"/>
+      <g fill="#2e6b45"><circle cx="0" cy="-10" r="70"/><circle cx="110" cy="-24" r="64"/><circle cx="220" cy="-6" r="72"/><circle cx="340" cy="-26" r="66"/><circle cx="460" cy="-8" r="70"/><circle cx="580" cy="-28" r="64"/><circle cx="700" cy="-10" r="70"/><circle cx="960" cy="-12" r="76"/></g>
+      <g stroke="#4f8a36" stroke-width="4" fill="#6fae4c">
+        <g class="leaf-sway"><path d="M60 0 V190" fill="none"/><ellipse cx="68" cy="80" rx="10" ry="5"/><ellipse cx="52" cy="140" rx="10" ry="5"/></g>
+        <g class="leaf-sway"><path d="M520 0 V120" fill="none"/><ellipse cx="528" cy="60" rx="10" ry="5"/></g>
+        <g class="leaf-sway"><path d="M930 0 V160" fill="none"/><ellipse cx="922" cy="90" rx="10" ry="5"/></g>
+      </g>
+      <!-- stepping-stone platforms climbing toward the triangle -->
+      <g>
+        <rect x="304" y="492" width="12" height="60" fill="#6e4526"/><rect x="270" y="484" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="268" y="481" width="84" height="6" rx="3" fill="#5fae55"/>
+        <rect x="414" y="474" width="12" height="80" fill="#6e4526"/><rect x="380" y="466" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="378" y="463" width="84" height="6" rx="3" fill="#5fae55"/>
+        <rect x="524" y="456" width="12" height="100" fill="#6e4526"/><rect x="490" y="448" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="488" y="445" width="84" height="6" rx="3" fill="#5fae55"/>
+        <rect x="934" y="318" width="12" height="230" fill="#6e4526"/><rect x="900" y="310" width="80" height="12" rx="6" fill="#9b6a3a"/><rect x="898" y="307" width="84" height="6" rx="3" fill="#5fae55"/>
+      </g>
+      <!-- the 3-4-5 triangle with its squares: 16 + 9 = 25 -->
+      <g transform="translate(620 380)" font-family="Lilita One, system-ui, sans-serif" text-anchor="middle">
+        <polygon points="0,0 96,-72 24,-168 -72,-96" fill="#cfe4ff"/><polygon points="0,0 96,-72 24,-168 -72,-96" fill="url(#t-grid-c)" stroke="#2d63a8" stroke-width="4"/>
+        <rect x="0" y="0" width="96" height="96" fill="#ffb09c"/><rect x="0" y="0" width="96" height="96" fill="url(#t-grid)" stroke="#b8492c" stroke-width="4"/>
+        <rect x="96" y="-72" width="72" height="72" fill="#a8e59f"/><rect x="96" y="-72" width="72" height="72" fill="url(#t-grid)" stroke="#2f7d2a" stroke-width="4"/>
+        <polygon points="0,0 96,0 96,-72" fill="none" stroke="#fffbe8" stroke-width="5" stroke-linejoin="round"/>
+        <text x="12" y="-72" font-size="40" fill="#1f4e8f" stroke="#fffbe8" stroke-width="6" paint-order="stroke">25</text>
+        <text x="48" y="62" font-size="38" fill="#a3230c" stroke="#fffbe8" stroke-width="6" paint-order="stroke">16</text>
+        <text x="132" y="-24" font-size="34" fill="#17661f" stroke="#fffbe8" stroke-width="6" paint-order="stroke">9</text>
+      </g>
+      <!-- the explorer, swinging on a vine -->
+      <g class="swing">
+        <line x1="842" y1="0" x2="842" y2="236" stroke="#5b8f3a" stroke-width="5" stroke-linecap="round"/>
+        <g transform="translate(842 250)">
+          <rect x="-9" y="-2" width="18" height="24" rx="5" fill="#c77a3a"/>
+          <rect x="-9" y="18" width="7" height="14" rx="3" fill="#6b4a2a"/><rect x="2" y="18" width="7" height="14" rx="3" fill="#6b4a2a"/>
+          <circle cx="0" cy="-12" r="10" fill="#f2c79a"/>
+          <path d="M-15 -17 H15 L10 -21 H-10Z" fill="#a0692c"/><rect x="-9" y="-29" width="18" height="10" rx="4" fill="#a0692c"/>
+          <line x1="-6" y1="2" x2="0" y2="-14" stroke="#f2c79a" stroke-width="5" stroke-linecap="round"/>
+        </g>
+      </g>
+    </svg>
+    <div class="t-content">
+      <h2 class="sign" id="title-name"><span class="sign-top">Pythagorean</span><span class="sign-big">Platforms</span></h2>
+      <p class="t-tag">Swing across the jungle with <b>a² + b² = c²</b></p>
+      <button class="btn t-start" type="button" id="title-start">&#9654; Start</button>
+      <p class="t-hint">Press <kbd>Enter</kbd> to start</p>
+      <p class="t-stats" id="title-stats"></p>
+    </div>
+  </div>
+
+  <!-- World map: a trail of platforms from World 1 up to the summit, with the chosen world's card beside it -->
+  <div class="screen map-screen" id="map-screen" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
+    <div class="map-head">
+      <button class="map-back" type="button" id="map-back">&larr; Title</button>
+      <h2 id="map-title">World Map</h2>
+      <p>Pick a world on the trail, then start it.</p>
+    </div>
+    <div class="map-body">
+      <div class="trail" id="trail" role="listbox" aria-label="Worlds">
+        <svg class="trail-rope" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polygon points="46,100 70,38 80,24 89,8 97,26 100,34 100,100" fill="rgba(160,190,170,0.16)"/>
+          <polygon points="84,17 89,8 93,17 90,15 88,18 86,15" fill="rgba(255,255,255,0.35)"/>
+          <path d="M0 88 Q25 80 50 90 T100 84 V100 H0Z" fill="rgba(90,160,100,0.28)"/>
+          <path d="M11 80 Q21 90 31 58 Q41 80 51 72 Q61 72 71 44 Q81 50 89 20" fill="none" stroke="#c9a064" stroke-width="4" stroke-dasharray="2 7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+        </svg>
+      </div>
+      <aside class="world-card" id="world-card" aria-live="polite">
+        <div class="wc-kicker" id="wc-kicker"></div>
+        <h3 id="wc-name"></h3>
+        <p class="wc-blurb" id="wc-blurb"></p>
+        <div class="wc-chips" id="wc-chips"></div>
+        <div class="wc-sample"><span class="lbl">Example</span><div id="wc-sample"></div></div>
+        <p class="wc-progress" id="wc-progress"></p>
+        <button class="btn wc-go" type="button" id="wc-go"></button>
+        <p class="map-keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>1</kbd>-<kbd>5</kbd> choose &middot; <kbd>Enter</kbd> start &middot; <kbd>Esc</kbd> back</p>
+      </aside>
     </div>
   </div>
 </div>
@@ -580,6 +723,7 @@
   const endEl = document.getElementById('end-actions');
   const againBtn = document.getElementById('again-btn');
   const otherBtn = document.getElementById('other-btn');
+  const whereEl = document.getElementById('where');
   const helpBtn = document.getElementById('help-btn'), helpEl = document.getElementById('help');
   helpBtn.addEventListener('click', () => { helpEl.hidden = !helpEl.hidden; helpBtn.setAttribute('aria-expanded', String(!helpEl.hidden)); });
   helpEl.addEventListener('pointerdown', e => { e.stopPropagation(); helpEl.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); });
@@ -682,6 +826,19 @@
   const BIG_TRIPLES = [[5, 12], [12, 5], [8, 15], [15, 8], [9, 12], [12, 9], [12, 16], [16, 12], [7, 24]];
   const PLAN = { w0: ['hyp', 'hyp', 'hyp', 'hyp'], w1: ['hyp', 'hyp', 'hyp', 'hyp'], w2: ['hyp', 'hyp', 'hyp', 'hyp'], w3: ['leg', 'hyp', 'leg', 'leg'],
     w4: ['hyp', 'leg', 'hyp', 'leg'] };   // World 5 shuffles this order every game
+  // the five worlds as the World Map and the header show them
+  const WORLDS = [
+    { m: 'w0', name: 'Rope Count', short: 'Count the squares · type c',
+      blurb: 'Count the 1-foot squares along the rope and type how long it is. The best place to start!', chips: ['1 question per canyon', 'Type the answer', 'Count squares'], sample: 'Count the blue squares: <span class="cc">c</span> = <span class="bl">5</span> ft' },
+    { m: 'w1', name: 'Tile Grove', short: 'Every step · tile squares',
+      blurb: 'Solve a² + b² = c² one step at a time while tiles fill the squares on each side.', chips: ['Every step', '2 choices', 'Tile squares'], sample: '<span class="ca">3²</span> + <span class="cb">4²</span> = <span class="cc">c²</span> → <span class="cc">c</span> = √25 = 5 ft' },
+    { m: 'w2', name: 'Waterfall Cliffs', short: 'Count squares · 4 choices · timed',
+      blurb: 'Count one unlabeled side, pick from four answers, and type the rope length before the rope frays.', chips: ['4 choices', 'Timed', 'Fewer hints'], sample: 'Count <span class="cb">b</span> = 8, then type <span class="cc">c</span> = <span class="bl">10</span> ft' },
+    { m: 'w3', name: 'Temple Ruins', short: 'Formula given · missing legs',
+      blurb: 'The numbers are carved on a temple door. Find the missing distance a to open it.', chips: ['Missing legs', 'Formula given', 'Subtract squares'], sample: '<span class="ca">a²</span> = <span class="cc">13²</span> − <span class="cb">5²</span> → <span class="ca">a</span> = 12 ft' },
+    { m: 'w4', name: 'Summit', short: 'Fill in the blanks · big triangles',
+      blurb: 'Big triangles and no answer choices: type the missing number in every line of the math.', chips: ['Fill in the blanks', 'Big triangles', 'No hints'], sample: '<span class="ca">a²</span> + <span class="bl">576</span> = <span class="cc">625</span>' }
+  ];
   // color coding: leg a = coral, leg b = green, hypotenuse c = blue, everywhere a number appears
   const A = x => `<span class="ca">${x}</span>`, B = x => `<span class="cb">${x}</span>`, C = x => `<span class="cc">${x}</span>`;
   const plain = html => html.replace(/<[^>]+>/g, '');
@@ -928,7 +1085,8 @@
 
   function startGame(m) {
     mode = m;
-    document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)));
+    const wi = WORLDS.findIndex(w => w.m === m);
+    whereEl.innerHTML = `World ${wi + 1} · ${WORLDS[wi].name}<small>${WORLDS[wi].short}</small>`;
     problems = (m === 'w4' ? shuffle(PLAN[m].slice()) : PLAN[m]).map((type, i) => makeProblem(type, i));
     ledges = [];
     problems.forEach((p, pi) => {
@@ -1014,7 +1172,7 @@
         inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^0-9.]/g, ''); });
         f.addEventListener('submit', e => { e.preventDefault(); submitTyped(inp); });
         choicesEl.appendChild(f);
-        if (aiming && !matchMedia('(pointer: coarse)').matches) setTimeout(() => inp.focus({ preventScroll: true }), 30);
+        if (aiming && !screenOpen() && !matchMedia('(pointer: coarse)').matches) setTimeout(() => inp.focus({ preventScroll: true }), 30);
       }
       choicesEl.classList.toggle('four', s.choices.length > 2);
       s.choices.forEach((ch, i) => {
@@ -1118,15 +1276,98 @@
     sfx.thwip();
   }
 
-  document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { audio(); startGame(b.dataset.mode); }));
   againBtn.addEventListener('click', () => startGame(mode));
   otherBtn.addEventListener('click', () => startGame({ w0: 'w1', w1: 'w2', w2: 'w3', w3: 'w4' }[mode] || 'w4'));
   cvs.addEventListener('pointerdown', () => { audio(); if (state === 'explain' && st > 0.4) retry(); });
+  // ---------- title screen and world map ----------
+  const titleScreen = document.getElementById('title-screen'), mapScreen = document.getElementById('map-screen');
+  const trailEl = document.getElementById('trail'), mapBack = document.getElementById('map-back'), wcGo = document.getElementById('wc-go');
+  const NODE_POS = [[11, 80], [31, 58], [51, 72], [71, 44], [89, 20]];   // % across / down the trail, climbing to the summit
+  let mapSel = 0, mapFrom = 'title';
+  const screenOpen = () => !titleScreen.hidden || !mapScreen.hidden;
+  const setInert = on => document.querySelectorAll('.app > header, .app > .main').forEach(el => { el.inert = on; });
+  const nodes = WORLDS.map((w, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'node'; b.setAttribute('role', 'option');
+    b.style.left = NODE_POS[i][0] + '%'; b.style.top = NODE_POS[i][1] + '%';
+    b.innerHTML = `<span class="me" aria-hidden="true">🧗</span><span class="num" style="background:${SKIES[w.m][0]}">${i + 1}</span>` +
+      `<span class="plank" aria-hidden="true"></span><span class="nname">${w.name}</span>`;
+    b.addEventListener('click', () => { if (mapSel === i) startWorld(i); else selectWorld(i, true); });
+    trailEl.appendChild(b);
+    if (i === WORLDS.length - 1) { const f = document.createElement('span'); f.className = 'flag'; f.textContent = '🚩'; f.setAttribute('aria-hidden', 'true'); f.style.left = (NODE_POS[i][0] + 4) + '%'; f.style.top = (NODE_POS[i][1] - 9) + '%'; trailEl.appendChild(f); }
+    return b;
+  });
+  function selectWorld(i, focus) {
+    mapSel = Math.max(0, Math.min(WORLDS.length - 1, i));
+    const w = WORLDS[mapSel], done = store.get('worlds_done', []).includes(w.m);
+    nodes.forEach((b, j) => { b.classList.toggle('sel', j === mapSel); b.setAttribute('aria-selected', String(j === mapSel)); });
+    document.getElementById('world-card').style.setProperty('--wc', SKIES[w.m][3]);
+    document.getElementById('wc-kicker').textContent = `World ${mapSel + 1} of ${WORLDS.length}`;
+    document.getElementById('wc-name').textContent = w.name;
+    document.getElementById('wc-blurb').textContent = w.blurb;
+    document.getElementById('wc-chips').innerHTML = w.chips.map(c => `<span>${c}</span>`).join('');
+    document.getElementById('wc-sample').innerHTML = w.sample;
+    const prog = document.getElementById('wc-progress');
+    prog.textContent = done ? '✓ Finished - play it again any time' : mapSel === 0 ? 'Start here!' : 'Not finished yet';
+    prog.classList.toggle('won', done);
+    wcGo.textContent = `Start World ${mapSel + 1} ▶`;
+    if (focus) nodes[mapSel].focus({ preventScroll: true });
+  }
+  function refreshMapMarks() {
+    const done = store.get('worlds_done', []);
+    nodes.forEach((b, i) => {
+      let mark = b.querySelector('.done');
+      if (done.includes(WORLDS[i].m) && !mark) { mark = document.createElement('span'); mark.className = 'done'; mark.textContent = '✓'; mark.setAttribute('aria-label', 'finished'); b.appendChild(mark); }
+    });
+  }
+  function showTitle() {
+    const done = store.get('worlds_done', []).length, best = store.get('best_score', 0);
+    document.getElementById('title-stats').textContent = done || best ? `Worlds finished: ${done} / ${WORLDS.length}` + (best ? ` · Best score ${best}` : '') : '';
+    mapScreen.hidden = true; titleScreen.hidden = false; setInert(true);
+    document.getElementById('title-start').focus({ preventScroll: true });
+  }
+  function showMap(from) {
+    mapFrom = from;
+    mapBack.innerHTML = from === 'game' ? '&larr; Back to the game' : '&larr; Title';
+    refreshMapMarks();
+    // start on the world being played, or else the first one not finished yet
+    const done = store.get('worlds_done', []);
+    const next = WORLDS.findIndex(w => !done.includes(w.m));
+    selectWorld(from === 'game' ? WORLDS.findIndex(w => w.m === mode) : next < 0 ? 0 : next, false);
+    titleScreen.hidden = true; mapScreen.hidden = false; setInert(true);
+    nodes[mapSel].focus({ preventScroll: true });
+  }
+  function hideScreens() { titleScreen.hidden = true; mapScreen.hidden = true; setInert(false); last = performance.now(); }
+  function startWorld(i) { audio(); hideScreens(); startGame(WORLDS[i].m); }
+  document.getElementById('title-start').addEventListener('click', () => { audio(); showMap('title'); });
+  titleScreen.addEventListener('click', e => { if (!e.target.closest('button')) { audio(); showMap('title'); } });
+  mapBack.addEventListener('click', () => { if (mapFrom === 'game') hideScreens(); else showTitle(); });
+  wcGo.addEventListener('click', () => startWorld(mapSel));
+  document.getElementById('map-btn').addEventListener('click', () => showMap('game'));
+  document.getElementById('map-end-btn').addEventListener('click', () => showMap('game'));
+  // keys on the two screens: the title starts with Enter / Space; the map walks the trail with the arrows (or 1-5)
+  document.addEventListener('keydown', e => {
+    if (!screenOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const onBtn = e.target && e.target.tagName === 'BUTTON';
+    if (!titleScreen.hidden) {
+      if ((e.key === 'Enter' || e.key === ' ') && !onBtn) { e.preventDefault(); audio(); showMap('title'); }
+      e.stopImmediatePropagation();
+      return;
+    }
+    const dir = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+    if (dir) { e.preventDefault(); selectWorld(mapSel + dir, true); }
+    else if (/^[1-5]$/.test(e.key)) selectWorld(+e.key - 1, true);
+    else if (e.key === 'Escape') { e.preventDefault(); if (mapFrom === 'game') hideScreens(); else showTitle(); }
+    else if ((e.key === 'Enter' || e.key === ' ') && !onBtn) { e.preventDefault(); startWorld(mapSel); }
+    e.stopImmediatePropagation();   // the game underneath doesn't see keys meant for the map
+  }, true);
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !helpEl.hidden) {   // the How-to-play panel closes from the keyboard too
       helpEl.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); helpBtn.focus(); return;
     }
     if (e.target && e.target.closest && e.target.closest('.reset-progress, .teaching-notes, .standards-panel')) return;   // leave page controls alone
+    if (e.key === 'Escape' && state !== 'explain') { e.preventDefault(); showMap('game'); return; }   // Esc in a world opens the World Map
     if (state === 'explain' && st > 0.4 && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); retry(); return; }
     if (e.target && e.target.id === 'typed-ans') return;   // typing the rope length
     const l = cur(), s = state === 'aim' && l && !l.final ? l.prob.steps[l.si] : null;
@@ -2089,7 +2330,7 @@
   let last = performance.now(), time = 0;
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    tick(dt);
+    if (!screenOpen()) tick(dt);   // the world waits (timer and all) while the title or map is up
     requestAnimationFrame(frame);
   }
   function tick(dt) {
@@ -2131,6 +2372,7 @@
   }
 
   startGame('w0');
+  showTitle();
   requestAnimationFrame(frame);
   // small hook for automated checks
   window.GR = {
@@ -2144,7 +2386,7 @@
     get fray() { return fray; },
     get state() { return state; }, get cine() { return cine; }, get idx() { return idx; }, get zoom() { return zoom; },
     get cam() { return { camX, camY, S, viewH, W, H }; }, step(dt) { tick(dt); },
-    ledges: () => ledges, P, startGame
+    ledges: () => ledges, P, startGame, showTitle, showMap, startWorld, get screen() { return !titleScreen.hidden ? 'title' : !mapScreen.hidden ? 'map' : 'game'; }
   };
 })();
 </script>
