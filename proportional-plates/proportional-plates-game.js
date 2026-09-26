@@ -1117,7 +1117,7 @@ function drawSeat(i, C, t) {                                          // chair, 
   ctx.restore();
 }
 const hexA = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
-// on the floor: a glowing spot beside the table you're carrying a plate to (with a trail leading there), and dashed spots at tables ready to order
+// on the floor: a glowing spot beside the table you're carrying a plate to, with a trail leading there
 function drawFloorMarks() {
   const ch = G.chef, target = ch.carry && G.custs.includes(ch.carry) ? ch.carry : null;
   if (target) {
@@ -1125,13 +1125,9 @@ function drawFloorMarks() {
     ctx.save(); ctx.setLineDash([3, 13]); ctx.lineDashOffset = -G.t * 40; ctx.lineCap = 'round'; ctx.strokeStyle = hexA(target.color, 0.85); ctx.lineWidth = 6;
     ctx.beginPath(); ctx.moveTo(ch.x, ch.y); ctx.lineTo(sp.x, sp.y); ctx.stroke(); ctx.restore();
   }
-  for (const C of G.custs) {
-    if (C.arrive < 1 || C.state === 'served' || (C !== target && (C.state !== 'ready' || target))) continue;
-    const sp = serveSpot(C.seat), k = depth(sp.y), p = 1 + Math.sin(G.t * 6) * 0.1;
-    ctx.save();
-    if (C === target) ell(sp.x, sp.y, 40 * k * p, 13 * k * p, hexA(C.color, 0.35), C.color, 4);
-    else { ctx.setLineDash([7, 6]); ell(sp.x, sp.y, 36 * k, 11 * k, 'rgba(255,248,234,.25)', 'rgba(255,248,234,.9)', 2.5); }
-    ctx.restore();
+  if (target && target.arrive >= 1 && target.state !== 'served') {
+    const sp = serveSpot(target.seat), k = depth(sp.y), p = 1 + Math.sin(G.t * 6) * 0.1;
+    ctx.save(); ell(sp.x, sp.y, 40 * k * p, 13 * k * p, hexA(target.color, 0.35), target.color, 4); ctx.restore();
   }
 }
 // big bouncing arrows: over the customer whose plate you're carrying, and over the kitchen when there's cooking to do
