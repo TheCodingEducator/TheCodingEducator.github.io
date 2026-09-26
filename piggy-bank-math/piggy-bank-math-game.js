@@ -144,17 +144,27 @@ function drawMenu() {
   text("Penny Prospect: " + formatTime(bestTimeEasy), 200, 270);
   text("Coin Captain: " + formatTime(bestTimeHard), 200, 288);
 
-  if (mouseWentDown("leftButton")) {
-    if (mouseIsOver(easyBtn)) {
-      difficulty = "easy";
-      startGame();
-    }
-    if (mouseIsOver(hardBtn)) {
-      difficulty = "hard";
-      startGame();
-    }
+  // keyboard: up/down (or 1 / 2) choose a difficulty, Enter / Space starts
+  if (keyWentDown("up") || keyWentDown("left") || keyWentDown("1")) menuSel = 0;
+  if (keyWentDown("down") || keyWentDown("right") || keyWentDown("2")) menuSel = 1;
+  var sel = menuSel === 0 ? easyBtn : hardBtn;
+  noFill(); stroke(255, 214, 60); strokeWeight(4);
+  rect(sel.x - sel.width / 2 - 6, sel.y - sel.height / 2 - 6, sel.width + 12, sel.height + 12, 10);
+  noStroke(); fill("black"); textSize(12);
+  text("▲ ▼ choose  ·  ENTER / SPACE to start", 200, 318);
+  text("Keys in play: 1 penny · 2 nickel · 3 dime · 4 quarter · U undo · C clear", 200, 338);
+
+  var go = keyWentDown("enter") || keyWentDown("space");
+  if ((mouseWentDown("leftButton") && mouseIsOver(easyBtn)) || (go && menuSel === 0)) {
+    difficulty = "easy";
+    startGame();
+  } else if ((mouseWentDown("leftButton") && mouseIsOver(hardBtn)) || (go && menuSel === 1)) {
+    difficulty = "hard";
+    startGame();
   }
 }
+var menuSel = 0;   // the menu's keyboard choice (0 = Penny Prospect, 1 = Coin Captain)
+var exitSel = 1;   // the exit box's keyboard choice (0 = yes, exit; 1 = cancel)
 
 function startGame() {
   gameState = "game";
@@ -178,15 +188,19 @@ function drawExitConfirmOverlay() {
 
   var hoverYes = (mouseX > 60 && mouseX < 190 && mouseY > 225 && mouseY < 270);
   var hoverNo = (mouseX > 210 && mouseX < 340 && mouseY > 225 && mouseY < 270);
-  fill(hoverYes ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(60, 225, 130, 45, 10);
-  fill(hoverNo ? "#229954" : "#27ae60"); rect(210, 225, 130, 45, 10);
+  // keyboard: left/right choose, Enter / Space confirms, Esc cancels
+  if (keyWentDown("left")) exitSel = 0;
+  if (keyWentDown("right")) exitSel = 1;
+  if (hoverYes) exitSel = 0; else if (hoverNo) exitSel = 1;
+  fill(exitSel === 0 ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(exitSel === 0 ? 4 : 2); rect(60, 225, 130, 45, 10);
+  fill(exitSel === 1 ? "#229954" : "#27ae60"); strokeWeight(exitSel === 1 ? 4 : 2); rect(210, 225, 130, 45, 10);
   fill("white"); noStroke(); textSize(15); textStyle(BOLD);
   text("YES, EXIT", 125, 247); text("CANCEL", 275, 247); textStyle(NORMAL);
+  fill("lightgray"); textSize(12); text("◀ ▶ choose  |  ENTER confirm  |  ESC cancel", 200, 300);
 
-  if (mouseWentDown("leftButton")) {
-    if (hoverYes) { exitConfirmPending = false; backToMenu(); }
-    else if (hoverNo) { exitConfirmPending = false; }
-  }
+  var go = keyWentDown("enter") || keyWentDown("space");
+  if ((mouseWentDown("leftButton") && hoverYes) || (go && exitSel === 0)) { exitConfirmPending = false; exitSel = 1; backToMenu(); }
+  else if ((mouseWentDown("leftButton") && hoverNo) || (go && exitSel === 1) || keyWentDown("escape")) { exitConfirmPending = false; exitSel = 1; }
 }
 
 function backToMenu() {
@@ -646,19 +660,24 @@ function drawSingleCoin(type, x, y, active) {
 }
 
 function checkClicks() {
-  if (mouseWentDown("leftButton")) {
+  // keyboard: 1-4 (or P N D Q) drop a penny / nickel / dime / quarter, U or Backspace undoes, C clears
+  var click = mouseWentDown("leftButton");
+  var keyCoin = (keyWentDown("1") || keyWentDown("p")) ? "penny" : (keyWentDown("2") || keyWentDown("n")) ? "nickel"
+    : (keyWentDown("3") || keyWentDown("d")) ? "dime" : (keyWentDown("4") || keyWentDown("q")) ? "quarter" : null;
+  var keyUndo = keyWentDown("u") || keyWentDown("backspace"), keyClear = keyWentDown("c");
+  if (click || keyCoin || keyUndo || keyClear) {
     var previousTotal = currentTotal;
 
-    if (mouseIsOver(penny) && allowedCoins.indexOf("penny") !== -1) {
+    if (((click && mouseIsOver(penny)) || keyCoin === "penny") && allowedCoins.indexOf("penny") !== -1) {
       currentTotal += 1; clickHistory.push(1); spawnAnimation("penny", penny.x, penny.y, "+1¢");
     }
-    if (mouseIsOver(nickel) && allowedCoins.indexOf("nickel") !== -1) {
+    if (((click && mouseIsOver(nickel)) || keyCoin === "nickel") && allowedCoins.indexOf("nickel") !== -1) {
       currentTotal += 5; clickHistory.push(5); spawnAnimation("nickel", nickel.x, nickel.y, "+5¢");
     }
-    if (mouseIsOver(dime) && allowedCoins.indexOf("dime") !== -1) {
+    if (((click && mouseIsOver(dime)) || keyCoin === "dime") && allowedCoins.indexOf("dime") !== -1) {
       currentTotal += 10; clickHistory.push(10); spawnAnimation("dime", dime.x, dime.y, "+10¢");
     }
-    if (mouseIsOver(quarter) && allowedCoins.indexOf("quarter") !== -1) {
+    if (((click && mouseIsOver(quarter)) || keyCoin === "quarter") && allowedCoins.indexOf("quarter") !== -1) {
       currentTotal += 25; clickHistory.push(25); spawnAnimation("quarter", quarter.x, quarter.y, "+25¢");
     }
 
@@ -686,17 +705,17 @@ function checkClicks() {
       }
     }
 
-    if (mouseIsOver(menuBtn)) {
+    if (click && mouseIsOver(menuBtn)) {
       exitConfirmPending = true;
       return;
     }
 
-    if (mouseIsOver(clearBtn)) {
+    if ((click && mouseIsOver(clearBtn)) || keyClear) {
       currentTotal = 0;
       clickHistory = [];
     }
 
-    if (mouseIsOver(undoBtn)) {
+    if ((click && mouseIsOver(undoBtn)) || keyUndo) {
       if (clickHistory.length > 0) {
         var lastCoin = clickHistory.pop();
         currentTotal -= lastCoin;
@@ -704,7 +723,7 @@ function checkClicks() {
       }
     }
 
-    if (mouseIsOver(nextBtn) && nextBtn.visible === true) {
+    if (click && mouseIsOver(nextBtn) && nextBtn.visible === true) {
       setupNextLevel();
     }
   }
@@ -831,8 +850,14 @@ function drawText() {
 
   textSize(14);
   fill("white");
-  text("CLEAR", clearBtn.x, clearBtn.y);
-  text("UNDO", undoBtn.x, undoBtn.y);
+  text("CLEAR (C)", clearBtn.x, clearBtn.y);
+  text("UNDO (U)", undoBtn.x, undoBtn.y);
+
+  // the key for each coin, under it
+  fill(40, 60, 80); textSize(11);
+  [[penny, "penny", "1"], [nickel, "nickel", "2"], [dime, "dime", "3"], [quarter, "quarter", "4"]].forEach(function (c) {
+    if (allowedCoins.indexOf(c[1]) !== -1) text("key " + c[2], c[0].x, c[0].y + 33);
+  });
 
   fill("black");
   if (nextBtn.visible) {

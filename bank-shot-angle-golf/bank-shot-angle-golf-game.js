@@ -393,7 +393,111 @@ function gameSetup() {
   textFont('system-ui');
 }
 
+// ---------------------------------------------------------------
+// Keyboard play - everything the mouse does also works from the keys:
+//   menu: arrows choose, Enter/Space picks · course intro / scorecard: Enter/Space
+//   exit box: arrows choose, Enter/Space confirms, Esc cancels
+//   aiming: ←/→ turn the shot, ↑/↓ set the power, Enter/Space locks it in (same as letting go of a drag)
+// ---------------------------------------------------------------
+var kbMenuSel = 0;      // 0 = Golf Gamer, 1 = Hole-In-One Hero, 2 = Putting Green practice
+var kbExitSel = 'cancel';
+var kbAim = null;       // { ang, power } while aiming from the keyboard
+var kbShown = false;    // only draw focus rings once the keyboard has been used
+
+function kbConfirmKey() { return keyCode === ENTER || keyCode === RETURN || key === ' '; }
+
+// edge-triggered keys (called from keyPressed); returns true when it used the key
+function kbKeyPressed() {
+  if (explainOpen) return false;
+  if (confirmExitOpen) {
+    kbShown = true;
+    if (keyCode === LEFT_ARROW) { kbExitSel = 'cancel'; return true; }
+    if (keyCode === RIGHT_ARROW) { kbExitSel = 'exit'; return true; }
+    if (keyCode === ESCAPE) { confirmExitOpen = false; kbExitSel = 'cancel'; playSound('click'); return true; }
+    if (kbConfirmKey()) {
+      confirmExitOpen = false; playSound('click');
+      if (kbExitSel === 'exit') { dragging = false; kbAim = null; gameState = 'MENU'; }
+      kbExitSel = 'cancel';
+      return true;
+    }
+    return true;
+  }
+  if (gameState === 'MENU') {
+    kbShown = true;
+    if (keyCode === LEFT_ARROW) { kbMenuSel = 0; return true; }
+    if (keyCode === RIGHT_ARROW) { kbMenuSel = 1; return true; }
+    if (keyCode === DOWN_ARROW) { kbMenuSel = 2; return true; }
+    if (keyCode === UP_ARROW) { if (kbMenuSel === 2) kbMenuSel = 0; return true; }
+    if (kbConfirmKey()) {
+      playSound('click');
+      if (kbMenuSel === 2) startPractice(); else { gameMode = kbMenuSel === 0 ? MODE_EASY : MODE_HARD; startCourse(); }
+      return true;
+    }
+    return false;
+  }
+  if (gameState === 'COURSE_INTRO') { if (kbConfirmKey()) { playSound('click'); startHole(0); } return true; }
+  if (gameState === 'COURSE_COMPLETE') { if (kbConfirmKey()) { playSound('click'); gameState = 'MENU'; } return true; }
+  if (gameState === 'PLAYING' && holePhase === 'AIMING' && kbAim && kbConfirmKey()) {
+    kbAim = null;
+    mouseReleased();   // fires exactly like releasing a mouse drag
+    return true;
+  }
+  return false;
+}
+
+// held arrow keys steer the keyboard aim every frame
+function kbUpdateAim() {
+  if (gameState !== 'PLAYING' || holePhase !== 'AIMING' || confirmExitOpen || explainOpen) { if (kbAim) { kbAim = null; dragging = false; } return; }
+  var turn = (keyIsDown(RIGHT_ARROW) ? 1 : 0) - (keyIsDown(LEFT_ARROW) ? 1 : 0);
+  var push = (keyIsDown(UP_ARROW) ? 1 : 0) - (keyIsDown(DOWN_ARROW) ? 1 : 0);
+  if (!kbAim) {
+    if (!turn && !push) return;
+    var target = hole.cup || { x: 350, y: 350 };
+    kbAim = { ang: atan2(target.y - ball.y, target.x - ball.x), power: 0.45 };
+  }
+  var fine = keyIsDown(SHIFT) ? 0.25 : 1;   // hold Shift for small adjustments
+  kbAim.ang += turn * 1.6 * fine;
+  kbAim.power = constrain(kbAim.power + push * 0.012 * fine, 0.08, 1);
+  // show it with the same arrow the mouse drag uses: pull back from the ball, opposite the shot
+  dragging = true;
+  dragStart.x = ball.x; dragStart.y = ball.y;
+  dragNow.x = ball.x - cos(kbAim.ang) * kbAim.power * MAX_DRAG;
+  dragNow.y = ball.y - sin(kbAim.ang) * kbAim.power * MAX_DRAG;
+}
+
+// gold ring around whatever the keyboard has selected
+function kbDrawFocus() {
+  if (!kbShown) return;
+  var r = null;
+  if (confirmExitOpen) {
+    var h = EXIT_CONFIRM_BOX.h, by = height / 2 - h / 2 + h - 70, gap = 16;
+    r = kbExitSel === 'cancel' ? { x: width / 2 - EXIT_CONFIRM_NO.w - gap / 2, y: by, w: EXIT_CONFIRM_NO.w, h: EXIT_CONFIRM_NO.h, rr: 10 }
+                               : { x: width / 2 + gap / 2, y: by, w: EXIT_CONFIRM_YES.w, h: EXIT_CONFIRM_YES.h, rr: 10 };
+  } else if (gameState === 'MENU') {
+    if (kbMenuSel === 2) r = { x: width / 2 - PRACTICE_BTN.w / 2, y: PRACTICE_BTN.y, w: PRACTICE_BTN.w, h: PRACTICE_BTN.h, rr: PRACTICE_BTN.h / 2 };
+    else r = { x: kbMenuSel === 0 ? width / 2 - 12 - MENU_CARD_W : width / 2 + 12, y: MENU_CARD_Y, w: MENU_CARD_W, h: MENU_CARD_H, rr: 16 };
+  }
+  if (!r) return;
+  push();
+  noFill(); stroke(255, 214, 60); strokeWeight(4);
+  rect(r.x - 5, r.y - 5, r.w + 10, r.h + 10, r.rr + 5);
+  pop();
+}
+
 function gameDraw() {
+  kbUpdateAim();
+  gameDrawScreen();
+  kbDrawFocus();
+  if (gameState === 'PLAYING' && holePhase === 'AIMING' && !confirmExitOpen && !explainOpen) {
+    push();
+    noStroke(); fill(0, 0, 0, 140); rect(width - 344, height - 40, 332, 28, 14);
+    fill(230, 240, 230); textAlign(CENTER, CENTER); textSize(13);
+    text(kbAim ? '← → aim  ·  ↑ ↓ power  ·  SPACE to lock in the shot' : 'Drag to aim  ·  or use ← → ↑ ↓ and SPACE', width - 178, height - 26);
+    pop();
+  }
+}
+
+function gameDrawScreen() {
   background(10, 14, 10);
   if (gameState === 'MENU') { drawMenu(); return; }
   if (gameState === 'COURSE_INTRO') { drawCourseIntro(); return; }
@@ -2179,6 +2283,7 @@ function mousePressed() {
   if (gameState === 'PLAYING' && holePhase === 'AIMING') {
     var d = dist(mouseX, mouseY, ball.x, ball.y);
     if (d < 220) {
+      kbAim = null;   // the mouse takes over from any keyboard aim
       dragging = true;
       dragStart.x = ball.x; dragStart.y = ball.y;
       dragNow.x = mouseX; dragNow.y = mouseY;
@@ -2214,6 +2319,7 @@ function keyPressed(ev) {
   if ((ev && (ev.ctrlKey || ev.metaKey || ev.altKey)) ||
       keyIsDown(CONTROL) || keyIsDown(91) || keyIsDown(93) || keyIsDown(224) ||
       (keyCode >= 112 && keyCode <= 123)) return true;
+  if (kbKeyPressed()) return false;
   // Escape acts the same as clicking the exit button - both bring up the
   // same confirm-before-quitting overlay.
   if (keyCode === ESCAPE && gameState === 'PLAYING' && !confirmExitOpen) {

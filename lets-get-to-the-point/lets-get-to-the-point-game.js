@@ -1256,7 +1256,7 @@ function drawTracingPaper() {
     fill(255,60,60); noStroke(); ellipse(cx,cy,10,10);
     fill(255); ellipse(cx,cy,4,4);
 
-    if (drawButton(8,350,130,26,"< Change Center",60,30,100)) {
+    if (drawButton(8,350,130,26,"< Change Center (C)",60,30,100) || keyWentDown("c")) {   // C key = the same as clicking it
       tracingPhase="PENCIL";
       pencilX=toPixelX(centerGX); pencilY=toPixelY(centerGY);
       pencilGX=centerGX; pencilGY=centerGY;
@@ -1515,18 +1515,18 @@ function drawTimeoutPopup(){
     fill(255); noStroke(); textSize(15); textStyle(BOLD);
     text("MENU",200,247); textStyle(NORMAL);
 
-    if(mouseWentDown("left")&&hoverMenu){ timeoutPopupState="none"; STATE="START"; }
+    if((mouseWentDown("left")&&hoverMenu)||keyWentDown("space")||keyWentDown("enter")){ timeoutPopupState="none"; STATE="START"; }
   } else {
     text("Still there?",200,165);
     fill(180,190,220); textSize(13); textStyle(NORMAL);
-    text("Tap below to keep going.",200,192);
+    text("Tap below or press SPACE to keep going.",200,192);
 
     var hoverYes=(mouseX>=100&&mouseX<=300&&mouseY>=225&&mouseY<=270);
     fill(hoverYes?"#229954":"#27ae60"); stroke(255); strokeWeight(2); rect(100,225,200,45,10);
     fill(255); noStroke(); textSize(16); textStyle(BOLD);
     text("YES, I'M HERE",200,247); textStyle(NORMAL);
 
-    if(mouseWentDown("left")&&hoverYes){ timeoutPopupState="none"; timerStart=Date.now(); }
+    if((mouseWentDown("left")&&hoverYes)||keyWentDown("space")||keyWentDown("enter")){ timeoutPopupState="none"; timerStart=Date.now(); }
   }
 }
 
@@ -2528,6 +2528,7 @@ function drawSkillSelect() {
 var shopMsg = "", shopMsgTimer = 0; // brief "not enough coins" feedback
 var SKINS_PER_PAGE = 12; // 3 cols x 4 rows per page
 var shopPage = 0; // scrolls right/left through PLAYER_SKINS one page at a time
+var shopCursor = 0; // keyboard focus in the shop: arrows move it, Space/Enter buys or equips (the page follows it)
 
 function drawShop() {
   background(10, 15, 38);
@@ -2542,6 +2543,14 @@ function drawShop() {
   textAlign(CENTER,CENTER);
 
   var totalPages=Math.ceil(PLAYER_SKINS.length/SKINS_PER_PAGE);
+  // keyboard: left/right step through the characters, up/down jump a row; Space/Enter buys or equips
+  var kR=keyWentDown("right"), kL=keyWentDown("left"), kD=keyWentDown("down"), kU=keyWentDown("up");
+  if (kR) shopCursor=Math.min(PLAYER_SKINS.length-1, shopCursor+1);
+  if (kL) shopCursor=Math.max(0, shopCursor-1);
+  if (kD) shopCursor=Math.min(PLAYER_SKINS.length-1, shopCursor+3);
+  if (kU) shopCursor=Math.max(0, shopCursor-3);
+  if (kR||kL||kD||kU) shopPage=Math.floor(shopCursor/SKINS_PER_PAGE);
+  var shopPick=(keyWentDown("space")||keyWentDown("enter")) ? shopCursor : -1;
   if (shopPage>totalPages-1) shopPage=totalPages-1;
   if (shopPage<0) shopPage=0;
   var pageStart=shopPage*SKINS_PER_PAGE;
@@ -2579,7 +2588,12 @@ function drawShop() {
     else if (owned){ fill(140,220,160); textSize(8); text("OWNED", bx+cardW/2, by+56); }
     else           { drawCoinLabel(bx+cardW/2, by+56, SKIN_PRICE, 9); }
 
-    if (hov && mouseWentDown("left")) {
+    if (i===shopCursor) {   // keyboard focus ring
+      noFill(); stroke(255,255,255,Math.floor(150+((sin(frameCount*6)+1)*0.5)*105)); strokeWeight(2);
+      drawingContext.setLineDash([5,4]); rect(bx-3,by-3,cardW+6,cardH+6,12); drawingContext.setLineDash([]);
+    }
+    if ((hov && mouseWentDown("left")) || shopPick===i) {
+      shopCursor=i;
       if (owned) { equipSkin(i); }
       else if (!buySkin(i)) { shopMsg="Not enough coins!"; shopMsgTimer=60; }
     }
@@ -2596,7 +2610,7 @@ function drawShop() {
       ellipse(raX,raY,arrR*2,arrR*2);
       fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(16);
       text("▶", raX+1, raY+1);
-      if (raHov && mouseWentDown("left")) shopPage++;
+      if (raHov && mouseWentDown("left")) { shopPage++; shopCursor=shopPage*SKINS_PER_PAGE; }
     }
     if (shopPage>0) {
       var laX=startX-20, laY=gridMidY;
@@ -2605,12 +2619,10 @@ function drawShop() {
       ellipse(laX,laY,arrR*2,arrR*2);
       fill(255); noStroke(); textAlign(CENTER,CENTER); textSize(16);
       text("◀", laX-1, laY+1);
-      if (laHov && mouseWentDown("left")) shopPage--;
+      if (laHov && mouseWentDown("left")) { shopPage--; shopCursor=shopPage*SKINS_PER_PAGE; }
     }
     fill(140,170,255); noStroke(); textSize(8); textAlign(CENTER,CENTER);
     text("Page "+(shopPage+1)+"/"+totalPages, 200, startY-4);
-    if (keyWentDown("right")&&shopPage<totalPages-1) shopPage++;
-    if (keyWentDown("left")&&shopPage>0) shopPage--;
   }
 
   if (shopMsgTimer>0) {
@@ -2625,6 +2637,7 @@ function drawShop() {
   rect(150,360,100,32,16);
   fill(255); noStroke(); textSize(12); textAlign(CENTER,CENTER);
   text("BACK", 200, 377);
+  fill(150,170,220); textSize(9); text("Arrows: choose  |  SPACE: buy / wear  |  ESC: back", 200, 350);
   if (backHov && mouseWentDown("left")) STATE="START";
 
   drawSprites();

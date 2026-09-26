@@ -355,7 +355,56 @@ function keyPressed() {
 // once on press, once again on release when mouseClicked() also fired --
 // which silently toggled things back off again.
 function wasClicked(x, y, w, h) {
+  var i = kbButtons.push({ x: x, y: y, w: w, h: h }) - 1;
+  if (kbActivate && i === kbFocus) return true;   // pressed from the keyboard
   return tappedX !== null && tappedX > x && tappedX < x + w && tappedY > y && tappedY < y + h;
+}
+
+// Keyboard buttons for the menu, bracket, results and exit screens (the match itself already
+// plays from the keys). The arrow keys (or Tab / Shift+Tab) move a gold ring to the nearest
+// button in that direction; Enter or Space presses it. Until the ring is moved, Enter / Space
+// keep their old job (start / continue).
+var kbButtons = [], kbPrevButtons = [], kbFocus = -1, kbActivate = false, kbScreen = "", kbUsed = false;
+function kbMenus() { return exitConfirmPending || screenState === "menu" || screenState === "over" || screenState === "bracket"; }
+function kbMove(dx, dy) {
+  var bs = kbPrevButtons; if (!bs.length) return;
+  kbUsed = true;
+  if (kbFocus < 0 || kbFocus >= bs.length) { kbFocus = 0; return; }
+  var c = bs[kbFocus], cx = c.x + c.w / 2, cy = c.y + c.h / 2, best = -1, bestS = Infinity;
+  for (var i = 0; i < bs.length; i++) {
+    if (i === kbFocus) continue;
+    var b = bs[i], bx = b.x + b.w / 2, by = b.y + b.h / 2;
+    var along = dx ? (bx - cx) * dx : (by - cy) * dy, across = dx ? Math.abs(by - cy) : Math.abs(bx - cx);
+    if (along <= 2) continue;
+    var s = along + across * 2.5;
+    if (s < bestS) { bestS = s; best = i; }
+  }
+  if (best >= 0) kbFocus = best;
+}
+window.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey || !kbMenus()) return;
+  var d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (d) { e.preventDefault(); e.stopPropagation(); kbMove(d[0], d[1]); return; }
+  if (e.key === "Tab") {
+    e.preventDefault(); e.stopPropagation(); kbUsed = true;
+    var n = kbPrevButtons.length; if (n) kbFocus = kbFocus < 0 ? 0 : (kbFocus + (e.shiftKey ? -1 : 1) + n) % n;
+    return;
+  }
+  if ((e.key === "Enter" || e.key === " ") && kbFocus >= 0 && kbFocus < kbPrevButtons.length) {
+    e.preventDefault(); e.stopPropagation(); if (!e.repeat) kbActivate = true;
+  }
+}, true);
+function kbBeginFrame() {
+  var screen = (exitConfirmPending ? "exit" : screenState === "menu" || screenState === "over" || screenState === "bracket" ? screenState : "play");
+  if (screen !== kbScreen) { kbScreen = screen; kbFocus = (kbUsed && screen === "exit") ? 0 : -1; }
+  kbPrevButtons = kbButtons; kbButtons = [];
+}
+function kbEndFrame() {
+  kbActivate = false;
+  if (!kbMenus()) return;
+  var r = kbFocus >= 0 ? kbButtons[kbFocus] : null;
+  if (!r) return;
+  push(); noFill(); stroke(255, 214, 60); strokeWeight(3); rect(r.x - 3, r.y - 3, r.w + 6, r.h + 6, 7); pop();
 }
 
 // p5's own automatic touch-to-mouse-click synthesis isn't reliable across
@@ -2859,6 +2908,12 @@ function drawGameOver() {
 }
 
 function draw() {
+  kbBeginFrame();
+  drawFrame();
+  kbEndFrame();
+}
+
+function drawFrame() {
   background(8, 10, 30);
 
   if (screenState === "menu") {

@@ -422,8 +422,10 @@ function draw() {
     var hoverMenu = (mx > 100 && mx < 300 && my > 260 && my < 310);
     fill(hoverMenu ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(100, 260, 200, 50, 10);
     fill("white"); noStroke(); text("MAIN MENU", 200, 293); textStyle(NORMAL);
+    fill("rgba(255,255,255,0.8)"); textSize(12); text("SPACE / ENTER = resume   |   ESC = main menu", 200, 340);
 
-    if (mouseWentDown("leftButton")) {
+    if (keyWentDown("space") || keyWentDown("enter")) { hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
+    else if (mouseWentDown("leftButton")) {
       if (hoverResume) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
       if (hoverMenu) { playSound("sound://category_app/perfect_clean_app_button_click.mp3"); exitConfirmPending = true; }
     }
@@ -682,17 +684,21 @@ function drawExitConfirmOverlay() {
   var mx = World.mouseX; var my = World.mouseY;
   var hoverYes = (mx > 60 && mx < 190 && my > 230 && my < 280);
   var hoverNo = (mx > 210 && mx < 340 && my > 230 && my < 280);
-  fill(hoverYes ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(60, 230, 130, 50, 10);
-  fill(hoverNo ? "#229954" : "#27ae60"); rect(210, 230, 130, 50, 10);
+  // keyboard: left/right choose, Space/Enter confirms, Esc cancels
+  if (keyWentDown("left") || keyWentDown("a")) exitSel = 0;
+  if (keyWentDown("right") || keyWentDown("d")) exitSel = 1;
+  if (hoverYes) exitSel = 0; else if (hoverNo) exitSel = 1;
+  fill(exitSel === 0 ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(exitSel === 0 ? 4 : 2); rect(60, 230, 130, 50, 10);
+  fill(exitSel === 1 ? "#229954" : "#27ae60"); strokeWeight(exitSel === 1 ? 4 : 2); rect(210, 230, 130, 50, 10);
   fill("white"); noStroke(); textSize(17); textStyle(BOLD);
   text("YES, EXIT", 125, 255); text("CANCEL", 275, 255); textStyle(NORMAL);
+  fill("lightgray"); textSize(12); text("◀ ▶ choose  |  SPACE / ENTER confirm  |  ESC cancel", 200, 320);
 
-  if (mouseWentDown("leftButton")) {
-    if (hoverYes) {
-      exitConfirmPending = false; showCorrect = false; showPenalty = false; afkStreak = 0; gameState = "title";
-    } else if (hoverNo) {
-      exitConfirmPending = false;
-    }
+  var go = keyWentDown("space") || keyWentDown("enter");
+  if ((mouseWentDown("leftButton") && hoverYes) || (go && exitSel === 0)) {
+    exitConfirmPending = false; showCorrect = false; showPenalty = false; afkStreak = 0; gameState = "title"; exitSel = 1;
+  } else if ((mouseWentDown("leftButton") && hoverNo) || (go && exitSel === 1) || keyWentDown("escape")) {
+    exitConfirmPending = false; exitSel = 1;
   }
 }
 
@@ -1138,15 +1144,24 @@ function drawTitleScreen() {
   fill("white"); textSize(18); text("Solve Exponents. Sink Shots.", 200, 190);
 
   var mx = World.mouseX; var my = World.mouseY;
+  // keyboard: left/right (or A/D) choose a mode, Space/Enter starts it; 1 and 2 pick directly
+  if (keyWentDown("left") || keyWentDown("a")) titleSel = 0;
+  if (keyWentDown("right") || keyWentDown("d")) titleSel = 1;
   var hover1P = (mx > 20 && mx < 190 && my > 300 && my < 350);
-  fill(hover1P ? "#f1c40f" : "#1d428a"); stroke("white"); strokeWeight(2); rect(20, 300, 170, 50, 10);
-  fill("white"); noStroke(); textSize(18); textStyle(BOLD); text("SOLO MODE", 105, 331);
   var hover2P = (mx > 210 && mx < 380 && my > 300 && my < 350);
-  fill(hover2P ? "#f1c40f" : "#ce1141"); stroke("white"); strokeWeight(2); rect(210, 300, 170, 50, 10);
+  if (hover1P) titleSel = 0; else if (hover2P) titleSel = 1;
+  var on1 = titleSel === 0, on2 = titleSel === 1;
+  fill(on1 ? "#f1c40f" : "#1d428a"); stroke("white"); strokeWeight(on1 ? 4 : 2); rect(20, 300, 170, 50, 10);
+  fill("white"); noStroke(); textSize(18); textStyle(BOLD); text("SOLO MODE", 105, 331);
+  fill(on2 ? "#f1c40f" : "#ce1141"); stroke("white"); strokeWeight(on2 ? 4 : 2); rect(210, 300, 170, 50, 10);
   fill("white"); noStroke(); textSize(18); text("VERSUS MODE", 295, 331); textStyle(NORMAL);
+  fill("rgba(255,255,255,0.75)"); textSize(12); text("◀ ▶ choose  |  SPACE / ENTER to play", 200, 375);
 
-  if (mouseWentDown("leftButton")) {
-    if (hover1P) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "1P"; scoreBlue = 0; gameState = "play"; resetBall(); }
-    if (hover2P) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "2P"; scoreBlue = 0; scoreRed = 0; possession = 1; gameState = "instructions_2p"; resetBall(); }
-  }
+  var go = keyWentDown("space") || keyWentDown("enter");
+  var pick1 = (mouseWentDown("leftButton") && hover1P) || keyWentDown("1") || (go && on1);
+  var pick2 = (mouseWentDown("leftButton") && hover2P) || keyWentDown("2") || (go && on2);
+  if (pick1) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "1P"; scoreBlue = 0; gameState = "play"; resetBall(); }
+  else if (pick2) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "2P"; scoreBlue = 0; scoreRed = 0; possession = 1; gameState = "instructions_2p"; resetBall(); }
 }
+var titleSel = 0;   // which title-screen mode the keyboard has selected (0 = solo, 1 = versus)
+var exitSel = 1;    // the exit overlay's keyboard choice (0 = yes, exit; 1 = cancel)

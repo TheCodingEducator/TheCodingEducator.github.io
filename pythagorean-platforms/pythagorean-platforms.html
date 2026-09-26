@@ -1123,6 +1123,9 @@
   otherBtn.addEventListener('click', () => startGame({ w0: 'w1', w1: 'w2', w2: 'w3', w3: 'w4' }[mode] || 'w4'));
   cvs.addEventListener('pointerdown', () => { audio(); if (state === 'explain' && st > 0.4) retry(); });
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !helpEl.hidden) {   // the How-to-play panel closes from the keyboard too
+      helpEl.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); helpBtn.focus(); return;
+    }
     if (e.target && e.target.closest && e.target.closest('.reset-progress, .teaching-notes, .standards-panel')) return;   // leave page controls alone
     if (state === 'explain' && st > 0.4 && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); retry(); return; }
     if (e.target && e.target.id === 'typed-ans') return;   // typing the rope length

@@ -125,6 +125,7 @@
     @media(min-width: 768px) and (min-height: 600px) { .diff-card { padding: 2rem; border-radius: 2rem; } }
     .diff-card:hover { border-color: #60a5fa; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); transform: translateY(-4px); }
     .diff-card:active { transform: scale(0.98); }
+    .diff-card:focus-visible { outline: 4px solid #f59e0b; outline-offset: 3px; border-color: #60a5fa; }
     .diff-card.complex { background: linear-gradient(to bottom right, #eef2ff, #eff6ff); border-color: #e0e7ff; }
     .diff-card.complex:hover { border-color: #818cf8; }
     .diff-tag { font-family: 'JetBrains Mono', monospace; font-size: 1rem; background: #f8fafc; color: #64748b; display: inline-block; padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-weight: 700;}
@@ -675,19 +676,19 @@
     </div>
 
     <div class="card-grid" style="margin-bottom: auto;">
-      <div data-action="startChallenge" data-args='["1-step"]' class="diff-card">
+      <div data-action="startChallenge" data-args='["1-step"]' role="button" tabindex="0" class="diff-card">
         <h3>1-Step Equations</h3>
         <span class="diff-tag">x + 3 = 8</span>
       </div>
-      <div data-action="startChallenge" data-args='["2-step"]' class="diff-card">
+      <div data-action="startChallenge" data-args='["2-step"]' role="button" tabindex="0" class="diff-card">
         <h3>2-Step Equations</h3>
         <span class="diff-tag">2x + 1 = 7</span>
       </div>
-      <div data-action="startChallenge" data-args='["multi-step"]' class="diff-card">
+      <div data-action="startChallenge" data-args='["multi-step"]' role="button" tabindex="0" class="diff-card">
         <h3>Variables Both Sides</h3>
         <span class="diff-tag">3x + 2 = x + 8</span>
       </div>
-      <div data-action="startChallenge" data-args='["complex"]' class="diff-card complex">
+      <div data-action="startChallenge" data-args='["complex"]' role="button" tabindex="0" class="diff-card complex">
         <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
           <svg style="color: #6366f1; width: 24px; height: 24px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <h3 style="color: #312e81; margin: 0;">Complex Equations</h3>
@@ -2153,6 +2154,14 @@
     if (!fn) return;
     var argsAttr = el.getAttribute('data-args');
     fn.apply(null, argsAttr ? JSON.parse(argsAttr) : []);
+  });
+  // the difficulty cards aren't real buttons, so Enter / Space press them from the keyboard
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var el = e.target.closest && e.target.closest('[data-action][role="button"]');
+    if (!el) return;
+    e.preventDefault();
+    el.click();
   });
   </script>
 </body>

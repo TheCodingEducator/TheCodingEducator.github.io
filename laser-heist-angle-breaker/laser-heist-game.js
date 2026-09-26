@@ -574,12 +574,52 @@ function drawScreenPanel(x, y, w, h) {
   rect(x, y, w, h, 8);
 }
 
+// Keyboard buttons: every on-screen button can also be reached without a mouse.
+// Tab / Shift+Tab (and the arrow keys on menu screens) move a gold focus ring between the
+// buttons, Enter or Space presses the focused one. Buttons register themselves each frame
+// through buttonClicked(), so every screen gets this for free.
+var kbButtons = [], kbPrevButtons = [], kbFocus = -1, kbActivate = false, kbScreen = "", kbUsed = false;
+function kbInPlay() { return gameState === STATE_PLAYING || gameState === STATE_PRACTICE_PLAY; }
+function kbMove(dir) {
+  kbUsed = true;
+  var n = kbPrevButtons.length;
+  if (!n) return;
+  kbFocus = kbFocus < 0 ? (dir > 0 ? 0 : n - 1) : (kbFocus + dir + n) % n;
+}
+window.addEventListener("keydown", function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  var menus = !kbInPlay() || exitConfirmPending;
+  if (e.key === "Tab") { e.preventDefault(); e.stopPropagation(); kbMove(e.shiftKey ? -1 : 1); return; }
+  if (menus && (e.key === "ArrowDown" || e.key === "ArrowRight")) { e.preventDefault(); e.stopPropagation(); kbMove(1); return; }
+  if (menus && (e.key === "ArrowUp" || e.key === "ArrowLeft")) { e.preventDefault(); e.stopPropagation(); kbMove(-1); return; }
+  if ((e.key === "Enter" || (e.key === " " && menus)) && kbFocus >= 0 && kbFocus < kbPrevButtons.length) {
+    // pressing the focused button - keep the game from also seeing this Enter / Space
+    e.preventDefault(); e.stopPropagation(); if (!e.repeat) kbActivate = true; return;
+  }
+  if (!menus && e.key !== "Shift") kbFocus = -1;   // typing an answer takes focus back off the buttons
+}, true);
+function kbBeginFrame() {
+  var screen = gameState + (exitConfirmPending ? "+exit" : "");
+  if (screen !== kbScreen) { kbScreen = screen; kbFocus = (kbUsed && (!kbInPlay() || exitConfirmPending)) ? 0 : -1; }   // keyboard players land on the first button
+  kbPrevButtons = kbButtons; kbButtons = [];
+}
+function kbEndFrame() {
+  kbActivate = false;
+  var r = kbFocus >= 0 ? kbButtons[kbFocus] : null;
+  if (!r) return;
+  noFill(); stroke(255, 214, 60); strokeWeight(3);
+  rect(r.x - 4, r.y - 4, r.w + 8, r.h + 8, 8);
+  noStroke();
+}
+
 function buttonClicked(x, y, w, h) {
-  return mouseClickedEdge && isInsideRect(mouseX, mouseY, x, y, w, h);
+  var i = kbButtons.push({ x: x, y: y, w: w, h: h }) - 1;
+  return (mouseClickedEdge && isInsideRect(mouseX, mouseY, x, y, w, h)) || (kbActivate && i === kbFocus);
 }
 
 function buttonHovered(x, y, w, h) {
-  return isInsideRect(mouseX, mouseY, x, y, w, h);
+  var f = kbFocus >= 0 ? kbPrevButtons[kbFocus] : null;
+  return isInsideRect(mouseX, mouseY, x, y, w, h) || !!(f && f.x === x && f.y === y && f.w === w && f.h === h);
 }
 
 
@@ -4954,6 +4994,12 @@ function setup() {
 }
 
 function draw() {
+  kbBeginFrame();
+  drawFrame();
+  kbEndFrame();
+}
+
+function drawFrame() {
   var nowMillis = (typeof millis === "function") ? millis() : lastFrameMillis + 33;
   var dt = (nowMillis - lastFrameMillis) / 1000;
   if (dt <= 0 || dt > 1) { dt = 1 / 30; }
