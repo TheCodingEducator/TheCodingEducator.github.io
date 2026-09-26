@@ -25,7 +25,7 @@
     return !t || t === document.body || t === document.documentElement || t.tagName === 'CANVAS';
   };
 
-  // p5 games: let Tab reach the canvas, and show a ring when it has keyboard focus
+  // p5 games: let Tab reach the canvas (without drawing a ring around the whole game)
   function tabbableCanvas() {
     var cs = document.querySelectorAll('canvas.p5Canvas');
     for (var i = 0; i < cs.length; i++) {
@@ -39,6 +39,6 @@
   var tries = 0;
   (function wait() { if (!tabbableCanvas() && tries++ < 40) setTimeout(wait, 250); })();
   var st = document.createElement('style');
-  st.textContent = 'canvas.p5Canvas:focus { outline: none; } canvas.p5Canvas:focus-visible { outline: 3px solid #ffd23f; outline-offset: 3px; }';
+  st.textContent = 'canvas.p5Canvas:focus, canvas.p5Canvas:focus-visible { outline: none; }';   // no ring around the game itself
   (document.head || document.documentElement).appendChild(st);
 })();
