@@ -141,13 +141,13 @@ function flagMexico(cx, cy, r) {
 
 var countries = [
   { name: "Argentina", code: "ARG", flag: flagArgentina, color: [108, 166, 224] },
-  { name: "Spain",     code: "ESP", flag: flagSpain,     color: [244, 196, 0] },
-  { name: "France",    code: "FRA", flag: flagFrance,    color: [0, 35, 149] },
+  { name: tl("Spain", "España"),     code: "ESP", flag: flagSpain,     color: [244, 196, 0] },
+  { name: tl("France", "Francia"),    code: "FRA", flag: flagFrance,    color: [0, 35, 149] },
   { name: "Armenia",   code: "ARM", flag: flagArmenia,   color: [213, 43, 30] },
-  { name: "Brazil",    code: "BRA", flag: flagBrazil,    color: [102, 204, 102] },
-  { name: "England",   code: "ENG", flag: flagEngland,   color: [255, 255, 255] },
-  { name: "Germany",   code: "GER", flag: flagGermany,   color: [0, 0, 0] },
-  { name: "Mexico",    code: "MEX", flag: flagMexico,    color: [0, 90, 40] }
+  { name: tl("Brazil", "Brasil"),    code: "BRA", flag: flagBrazil,    color: [102, 204, 102] },
+  { name: tl("England", "Inglaterra"),   code: "ENG", flag: flagEngland,   color: [255, 255, 255] },
+  { name: tl("Germany", "Alemania"),   code: "GER", flag: flagGermany,   color: [0, 0, 0] },
+  { name: tl("Mexico", "México"),    code: "MEX", flag: flagMexico,    color: [0, 90, 40] }
 ];
 
 function drawSwatch(countryIdx, x, y, w, h) {
@@ -260,7 +260,7 @@ function ensureEquationLabelWidths() {
   YEQ_W = textWidth("y =");
   XPLUS_W = textWidth("x +");
   textSize(28 * 0.42);
-  SIGN_BTN_W = max(textWidth("MAKE POSITIVE"), textWidth("MAKE NEGATIVE")) + 16;
+  SIGN_BTN_W = max(textWidth(tl("MAKE POSITIVE", "HACER POSITIVO")), textWidth(tl("MAKE NEGATIVE", "HACER NEGATIVO"))) + 16;
   EQ_LABEL_W_READY = true;
 }
 
@@ -483,44 +483,44 @@ function drawMenuScreen() {
   fill(255, 220, 40); textSize(15); textAlign(CENTER);
   text("LINEAR WORLD CUP", 200, 16);
   fill(120, 220, 255); textSize(10);
-  text("RISE, RUN, REPEAT", 200, 30);
+  text(tl("RISE, RUN, REPEAT", "SUBE, AVANZA, REPITE"), 200, 30);
 
-  drawSectionBox(20, 44, 360, 54, "STEP 1: MATH MODE");
-  drawBtn(32,  58, 162, 30, "PROPORTIONAL (b=0)", mainMode === "proportional" ? col(20,130,20) : col(55,55,65));
-  drawBtn(206, 58, 162, 30, "NON-PROPORTIONAL", mainMode === "nonproportional" ? col(20,130,20) : col(55,55,65));
+  drawSectionBox(20, 44, 360, 54, tl("STEP 1: MATH MODE", "PASO 1: MODO DE MATEMÁTICAS"));
+  drawBtn(32,  58, 162, 30, tl("PROPORTIONAL (b=0)", "PROPORCIONAL (b=0)"), mainMode === "proportional" ? col(20,130,20) : col(55,55,65));
+  drawBtn(206, 58, 162, 30, tl("NON-PROPORTIONAL", "NO PROPORCIONAL"), mainMode === "nonproportional" ? col(20,130,20) : col(55,55,65));
   if (wasClicked(32, 58, 162, 30)) mainMode = "proportional";
   if (wasClicked(206, 58, 162, 30)) mainMode = "nonproportional";
 
-  drawSectionBox(20, 110, 360, 68, "STEP 2: SUPPORT LEVEL");
-  drawBtn(30,  124, 110, 30, "EASY", subMode === "easy" ? col(20,90,170) : col(55,55,65));
-  drawBtn(146, 124, 108, 30, "HARD", subMode === "hard" ? col(20,90,170) : col(55,55,65));
-  drawBtn(260, 124, 110, 30, "2-PLAYER", subMode === "2player" ? col(20,90,170) : col(55,55,65));
+  drawSectionBox(20, 110, 360, 68, tl("STEP 2: SUPPORT LEVEL", "PASO 2: NIVEL DE APOYO"));
+  drawBtn(30,  124, 110, 30, tl("EASY", "FÁCIL"), subMode === "easy" ? col(20,90,170) : col(55,55,65));
+  drawBtn(146, 124, 108, 30, tl("HARD", "DIFÍCIL"), subMode === "hard" ? col(20,90,170) : col(55,55,65));
+  drawBtn(260, 124, 110, 30, tl("2-PLAYER", "2 JUGADORES"), subMode === "2player" ? col(20,90,170) : col(55,55,65));
   if (wasClicked(30, 124, 110, 30)) subMode = "easy";
   if (wasClicked(146, 124, 108, 30)) subMode = "hard";
   if (wasClicked(260, 124, 110, 30)) subMode = "2player";
   fill(170); noStroke(); textSize(7); textAlign(CENTER);
-  text("EASY: shows a live pass preview.  HARD: same boxes, no preview.  2P: take turns vs a friend.", 200, 168);
+  text(tl("EASY: shows a live pass preview.  HARD: same boxes, no preview.  2P: take turns vs a friend.", "FÁCIL: muestra el pase en vivo.  DIFÍCIL: sin vista previa.  2J: por turnos contra un amigo."), 200, 168);
 
-  drawSectionBox(20, 188, 360, 134, "STEP 3: TEAM FLAGS  (no repeats)");
+  drawSectionBox(20, 188, 360, 134, tl("STEP 3: TEAM FLAGS  (no repeats)", "PASO 3: BANDERAS  (sin repetir)"));
   fill(210); noStroke(); textSize(9); textAlign(LEFT);
-  text((subMode === "2player" ? "PLAYER 1: " : "YOU: ") + countries[teamAIdx].name, 30, 208);
+  text((subMode === "2player" ? tl("PLAYER 1: ", "JUGADOR 1: ") : tl("YOU: ", "TÚ: ")) + countries[teamAIdx].name, 30, 208);
   drawColorRow(216, teamAIdx, true);
 
   fill(210); noStroke(); textSize(9); textAlign(LEFT);
-  text((vsComputer() ? "COMPUTER: " : "PLAYER 2: ") + countries[teamBIdx].name, 30, 258);
+  text((vsComputer() ? tl("COMPUTER: ", "COMPUTADORA: ") : tl("PLAYER 2: ", "JUGADOR 2: ")) + countries[teamBIdx].name, 30, 258);
   drawColorRow(266, teamBIdx, false);
 
   if (colorWarnTimer > 0) {
     colorWarnTimer--;
     fill(255, 90, 90); textSize(9); textAlign(CENTER);
-    text("Teams can't use the same flag!", 200, 312);
+    text(tl("Teams can't use the same flag!", "¡Los equipos no pueden usar la misma bandera!"), 200, 312);
   }
 
   var ready = mainMode && subMode;
-  drawBtn(16, 332, 168, 40, ready ? "KICK OFF!" : "PICK MODES FIRST", ready ? col(210, 140, 0) : col(70, 70, 70));
+  drawBtn(16, 332, 168, 40, ready ? tl("KICK OFF!", "¡A JUGAR!") : tl("PICK MODES FIRST", "ELIGE LOS MODOS"), ready ? col(210, 140, 0) : col(70, 70, 70));
   if (ready && (wasClicked(16, 332, 168, 40) || keyTapped)) startMatch();
   var tourReady = ready && subMode !== "2player";
-  drawBtn(216, 332, 168, 40, "TOURNAMENT", tourReady ? col(30, 80, 180) : col(50, 50, 60));
+  drawBtn(216, 332, 168, 40, tl("TOURNAMENT", "TORNEO"), tourReady ? col(30, 80, 180) : col(50, 50, 60));
   if (tourReady && wasClicked(216, 332, 168, 40)) startTournament();
 }
 
@@ -1096,7 +1096,7 @@ function drawBracketSlot(x, cy, w, h, cIdx, isPlayer, isElim) {
     fill(35, 38, 58); stroke(65, 68, 95); strokeWeight(1);
     rect(x, cy - hy, w, h, 3);
     fill(85); noStroke(); textSize(7); textAlign(CENTER);
-    text("TBD", x + w / 2, cy + 2.5);
+    text(tl("TBD", "POR DEFINIR"), x + w / 2, cy + 2.5);
     return;
   }
   if (isElim) {
@@ -1131,7 +1131,7 @@ function drawBracketScreen() {
 
   fill(255, 220, 40); noStroke(); textSize(13); textAlign(CENTER);
   text("LINEAR WORLD CUP", 200, 14);
-  var rndLabel = tRound === 0 ? "QUARTER-FINALS" : tRound === 1 ? "SEMI-FINALS" : "THE FINAL";
+  var rndLabel = tRound === 0 ? tl("QUARTER-FINALS", "CUARTOS DE FINAL") : tRound === 1 ? tl("SEMI-FINALS", "SEMIFINALES") : tl("THE FINAL", "LA FINAL");
   fill(120, 220, 255); textSize(9);
   text(rndLabel, 200, 26);
 
@@ -1187,9 +1187,9 @@ function drawBracketScreen() {
 
   var oppIdx = tRound === 0 ? tSeeds[1] : tRound === 1 ? tQFWin[1] : tSFWin[1];
   fill(255, 210, 80); noStroke(); textSize(9); textAlign(CENTER);
-  text("YOUR MATCH  ►  vs " + countries[oppIdx].name.toUpperCase(), 200, 336);
+  text(tl("YOUR MATCH  ►  vs ", "TU PARTIDO  ►  vs ") + countries[oppIdx].name.toUpperCase(), 200, 336);
   fill(140, 155, 190); textSize(8);
-  text("Click or press Enter / Space to start", 200, 352);
+  text(tl("Click or press Enter / Space to start", "Haz clic o presiona Enter / Espacio para empezar"), 200, 352);
 }
 
 function startMatch() {
@@ -1279,14 +1279,14 @@ function resolveKick() {
 
 function resolveEquation(eq) {
   if (!eq) {
-    if (target.type === "pass") startFeedback("BAD PASS", 30);
-    else startFeedback("INVALID EQUATION");
+    if (target.type === "pass") startFeedback(tl("BAD PASS", "MAL PASE"), 30);
+    else startFeedback(tl("INVALID EQUATION", "ECUACIÓN NO VÁLIDA"));
     return;
   }
 
   if (!onLine(eq, 0, ballB)) {
-    if (target.type === "pass") startFeedback("BAD PASS: INCORRECT Y-INTERCEPT", 30);
-    else startFeedback("INCORRECT Y-INTERCEPT");
+    if (target.type === "pass") startFeedback(tl("BAD PASS: INCORRECT Y-INTERCEPT", "MAL PASE: INTERSECCIÓN Y INCORRECTA"), 30);
+    else startFeedback(tl("INCORRECT Y-INTERCEPT", "INTERSECCIÓN Y INCORRECTA"));
     return;
   }
 
@@ -1295,30 +1295,30 @@ function resolveEquation(eq) {
   if (target.type === "shoot") {
     if (!onLine(eq, target.x, target.y)) {
       var ep = exitPoint(eq);
-      startKickAnimation(eq, ep.x, ep.y, false, false, "MISSED THE GOAL");
+      startKickAnimation(eq, ep.x, ep.y, false, false, tl("MISSED THE GOAL", "FALLASTE LA PORTERÍA"));
       return;
     }
     if (target.forcedBlock) {
       var blockX = target.x * random(0.35, 0.65);
-      startKickAnimation(eq, blockX, eq.m * blockX + eq.b, false, false, "DEFENDER BLOCKED IT");
+      startKickAnimation(eq, blockX, eq.m * blockX + eq.b, false, false, tl("DEFENDER BLOCKED IT", "LO BLOQUEÓ EL DEFENSA"));
       return;
     }
     var gx = gridSX(goalieX), gy = gridSY(GY_MAX);
     var bx = gridSX(target.x), by = gridSY(target.y);
     if (pointSegDist(gx, gy, ax, ay, bx, by) < GOALIE_REACH_PX) {
-      startKickAnimation(eq, goalieX, eq.m * goalieX + eq.b, false, false, "GOALIE BLOCKED IT");
+      startKickAnimation(eq, goalieX, eq.m * goalieX + eq.b, false, false, tl("GOALIE BLOCKED IT", "LO BLOQUEÓ EL PORTERO"));
       return;
     }
     var shootLoX = min(0, target.x), shootHiX = max(0, target.x);
     for (var i = 0; i < opponents.length; i++) {
       var o = opponents[i];
       if (o.x >= shootLoX && o.x <= shootHiX && onLine(eq, o.x, o.y)) {
-        startKickAnimation(eq, o.x, o.y, false, false, "BLOCKED BY DEFENDER");
+        startKickAnimation(eq, o.x, o.y, false, false, tl("BLOCKED BY DEFENDER", "BLOQUEADO POR EL DEFENSA"));
         return;
       }
     }
 
-    startKickAnimation(eq, target.x, target.y + BALL_RADIUS_GRID, true, true, "GOAL!");
+    startKickAnimation(eq, target.x, target.y + BALL_RADIUS_GRID, true, true, tl("GOAL!", "¡GOL!"));
     return;
   }
 
@@ -1329,7 +1329,7 @@ function resolveEquation(eq) {
   }
   if (candidates.length === 0) {
     var ep2 = exitPoint(eq);
-    startKickAnimation(eq, ep2.x, ep2.y, false, false, "BAD PASS: INCORRECT SLOPE");
+    startKickAnimation(eq, ep2.x, ep2.y, false, false, tl("BAD PASS: INCORRECT SLOPE", "MAL PASE: PENDIENTE INCORRECTA"));
     return;
   }
   var first = candidates[0];
@@ -1338,7 +1338,7 @@ function resolveEquation(eq) {
   }
   target.x = first.x;
   target.y = first.y;
-  startKickAnimation(eq, first.x, first.y, true, false, "GREAT PASS!");
+  startKickAnimation(eq, first.x, first.y, true, false, tl("GREAT PASS!", "¡GRAN PASE!"));
 }
 
 function startFeedback(msg, dur) {
@@ -1620,7 +1620,7 @@ function updateEnemyResolution() {
           enemyResolving = false;
           if (attackingTeam === "A") scoreA++; else scoreB++;
           var enemyPlayers = buildPlayerSnapshot(enemyDispO, defenderColor()).concat(buildPlayerSnapshot(enemyDispT, attackerColor()));
-          startCelebration(countries[attackingTeam === "A" ? teamAIdx : teamBIdx].name.toUpperCase() + " SCORES", {
+          startCelebration(countries[attackingTeam === "A" ? teamAIdx : teamBIdx].name.toUpperCase() + tl(" SCORES", " ANOTA"), {
             players: enemyPlayers,
             goalie: { x: goalieX, y: GY_MAX, c: defenderColor() },
             ball: {
@@ -1631,7 +1631,7 @@ function updateEnemyResolution() {
           });
         } else {
           enemyResolving = false;
-          startFeedback("WIDE SHOT");
+          startFeedback(tl("WIDE SHOT", "TIRO DESVIADO"));
         }
       }
     }
@@ -1644,7 +1644,7 @@ function updateEnemyResolution() {
     enemyShotBallY = GY_MAX - ephPft * 1.6;
     if (ephPft >= 1) {
       enemyResolving = false;
-      startFeedback("HIT THE POST");
+      startFeedback(tl("HIT THE POST", "¡AL POSTE!"));
     }
   } else if (enemyPhase === "saveDeflect") {
     enemySaveTimer++;
@@ -1654,7 +1654,7 @@ function updateEnemyResolution() {
     enemyShotBallY = enemySaveFromY - svt * 1.7;
     if (svt >= 1) {
       enemyResolving = false;
-      startFeedback("SAVED!");
+      startFeedback(tl("SAVED!", "¡ATAJADO!"));
     }
   } else if (enemyPhase === "interceptPass") {
     enemyInterceptTimer++;
@@ -1688,7 +1688,7 @@ function updateEnemyResolution() {
     enemyDispO[enemyInterceptorIdx].y = lerp(enemyClearDefFromY, enemyClearToY, cf);
     if (cf >= 1) {
       enemyResolving = false;
-      startFeedback("INTERCEPTED");
+      startFeedback(tl("INTERCEPTED", "INTERCEPTADO"));
     }
   }
 }
@@ -1878,7 +1878,7 @@ function drawEnemyPossessionPanel() {
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
   fill(255, 80, 80); textSize(15); textAlign(CENTER);
-  text(countries[attackingTeam === "A" ? teamAIdx : teamBIdx].name.toUpperCase() + " IS ATTACKING...", 200, FY2 + 40);
+  text(countries[attackingTeam === "A" ? teamAIdx : teamBIdx].name.toUpperCase() + tl(" IS ATTACKING...", " ATACA..."), 200, FY2 + 40);
 }
 
 function endPossessionSwap() {
@@ -1968,7 +1968,7 @@ var exitConfirmPending = false;
 // screen on top of the match as requested; the match clock keeps ticking
 // behind it for the brief moment the confirm is open.
 function drawMenuButton() {
-  drawBtn(4, 4, 66, 26, "MENU", col(70, 60, 90));
+  drawBtn(4, 4, 66, 26, tl("MENU", "MENÚ"), col(70, 60, 90));
   if (!exitConfirmPending && wasClicked(4, 4, 66, 26)) {
     exitConfirmPending = true;
   }
@@ -1978,14 +1978,14 @@ function drawMenuButton() {
 function drawExitConfirmOverlay() {
   noStroke(); fill(10, 12, 20, 235); rect(0, 0, 400, 400);
   fill(255); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(20);
-  text("Exit to Main Menu?", 200, 165);
+  text(tl("Exit to Main Menu?", "¿Salir al menú principal?"), 200, 165);
   fill(200); textSize(13); textStyle(NORMAL);
-  text("Your current match will end.", 200, 190);
+  text(tl("Your current match will end.", "Tu partido terminará."), 200, 190);
 
   var btnW = 130, btnH = 44, gap = 14, btnY = 225;
   var yesX = 200 - btnW - gap / 2, noX = 200 + gap / 2;
-  drawBtn(yesX, btnY, btnW, btnH, "YES, EXIT", col(180, 50, 50));
-  drawBtn(noX, btnY, btnW, btnH, "CANCEL", col(30, 150, 30));
+  drawBtn(yesX, btnY, btnW, btnH, tl("YES, EXIT", "SÍ, SALIR"), col(180, 50, 50));
+  drawBtn(noX, btnY, btnW, btnH, tl("CANCEL", "CANCELAR"), col(30, 150, 30));
 
   if (wasClicked(yesX, btnY, btnW, btnH)) {
     exitConfirmPending = false; screenState = "menu"; mainMode = null; subMode = null;
@@ -2389,7 +2389,7 @@ function drawShootoutPanel(msg) {
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
   fill(200, 220, 255); textSize(15); textAlign(CENTER);
-  text("Distance to goal: " + (round((GY_MAX - dribY) * 10) / 10) + " units", 200, FY2 + 30);
+  text(tl("Distance to goal: ", "Distancia a la portería: ") + (round((GY_MAX - dribY) * 10) / 10) + tl(" units", " unidades"), 200, FY2 + 30);
   fill(255); textAlign(CENTER);
   var msgLines = wrapTextToWidth(msg, 360, 16);
   var lineHeight = 18;
@@ -2546,7 +2546,7 @@ function drawScene() {
   }
 
   if (screenState === "input" && !(subMode === "hard" && mainMode !== "proportional")) {
-    var ballLabel = "ball: (" + dispX(0) + "," + dispY(ballB) + ")";
+    var ballLabel = tl("ball: (", "balón: (") + dispX(0) + "," + dispY(ballB) + ")";
     var ballLx = ballPx + 10, ballLy = ballPy + 14;
     noStroke(); textSize(12); textAlign(LEFT);
     fill(0, 0, 0, 170); rect(ballLx - 3, ballLy - 13, textWidth(ballLabel) + 8, 17, 2);
@@ -2586,12 +2586,12 @@ function drawTransitionScene(t) {
   drawBall(gridSX(0), gridSY(highlightRow));
 
   fill(255); noStroke(); textSize(11); textAlign(CENTER);
-  text("Players repositioning...", 200, FY1 + 16);
+  text(tl("Players repositioning...", "Los jugadores se reacomodan..."), 200, FY1 + 16);
 }
 
 function turnStatusText() {
-  var who = attackingTeam === "A" ? "" : (vsComputer() ? "COMPUTER'S TURN" : "PLAYER 2'S TURN");
-  if (target.type === "shoot") return (who ? who + " -- " : "") + "FINAL ATTEMPT - SHOOT!";
+  var who = attackingTeam === "A" ? "" : (vsComputer() ? tl("COMPUTER'S TURN", "TURNO DE LA COMPUTADORA") : tl("PLAYER 2'S TURN", "TURNO DEL JUGADOR 2"));
+  if (target.type === "shoot") return (who ? who + " -- " : "") + tl("FINAL ATTEMPT - SHOOT!", "ÚLTIMO INTENTO: ¡TIRA!");
   return who;
 }
 
@@ -2609,7 +2609,7 @@ function drawKeyboardButton() {
   // would otherwise sit as redundant clutter overlapping the field.
   if (window.mobileNumpadActive) { keyboardOpen = false; return; }
   var bx = 4, by = 370, bw = 80, bh = 26;
-  drawBtn(bx, by, bw, bh, "KEYBOARD", keyboardOpen ? col(20, 130, 90) : col(70, 60, 90));
+  drawBtn(bx, by, bw, bh, tl("KEYBOARD", "TECLADO"), keyboardOpen ? col(20, 130, 90) : col(70, 60, 90));
   if (wasClicked(bx, by, bw, bh)) keyboardOpen = !keyboardOpen;
 }
 
@@ -2716,16 +2716,16 @@ function drawInputPanel() {
   var kickBtnW = 68, btnGap = 30;
   var signBtnX = 200 - (signBtnW + btnGap + kickBtnW) / 2;
   var kickBtnX = signBtnX + signBtnW + btnGap;
-  drawSolidBtn(signBtnX, btnY, signBtnW, signBtnH, negNow ? "MAKE POSITIVE" : "MAKE NEGATIVE", negNow ? col(30, 150, 30) : col(180, 40, 40));
+  drawSolidBtn(signBtnX, btnY, signBtnW, signBtnH, negNow ? tl("MAKE POSITIVE", "HACER POSITIVO") : tl("MAKE NEGATIVE", "HACER NEGATIVO"), negNow ? col(30, 150, 30) : col(180, 40, 40));
   if (wasClicked(signBtnX, btnY, signBtnW, signBtnH)) toggleSign();
 
-  drawBtn(kickBtnX, btnY, kickBtnW, signBtnH, "KICK!", allBoxesFilled() ? col(200, 130, 0) : col(90, 90, 90));
+  drawBtn(kickBtnX, btnY, kickBtnW, signBtnH, tl("KICK!", "¡PATEA!"), allBoxesFilled() ? col(200, 130, 0) : col(90, 90, 90));
   if (wasClicked(kickBtnX, btnY, kickBtnW, signBtnH)) resolveKick();
 }
 
 function drawFeedbackOverlay() {
   textSize(22); textStyle(BOLD); textAlign(CENTER);
-  // A message with a colon (e.g. "BAD PASS: INCORRECT SLOPE") splits
+  // A message with a colon (e.g. tl("BAD PASS: INCORRECT SLOPE", "MAL PASE: PENDIENTE INCORRECTA")) splits
   // onto two lines instead of running together on one.
   var colonAt = feedbackText.indexOf(":");
   var line1 = colonAt >= 0 ? feedbackText.slice(0, colonAt) : feedbackText;
@@ -2811,20 +2811,20 @@ function drawGameOver() {
     fill(255, 200, 40); noStroke(); textSize(13); textAlign(CENTER);
     text("★   ★   ★   ★   ★", 200, 186);
 
-    // "YOU WON THE" — bold white with gold shadow
+    // tl("YOU WON THE", "¡GANASTE LA") — bold white with gold shadow
     textStyle(BOLD);
     fill(90, 60, 0); noStroke(); textSize(24); textAlign(CENTER);
-    text("YOU WON THE", 202, 215);
+    text(tl("YOU WON THE", "¡GANASTE LA"), 202, 215);
     fill(255, 255, 255); textSize(24);
-    text("YOU WON THE", 200, 213);
+    text(tl("YOU WON THE", "¡GANASTE LA"), 200, 213);
 
-    // "WORLD CUP!" — large gold with dark shadow + glow
+    // tl("WORLD CUP!", "COPA DEL MUNDO!") — large gold with dark shadow + glow
     fill(80, 50, 0); textSize(48);
-    text("WORLD CUP!", 203, 265);
+    text(tl("WORLD CUP!", "COPA DEL MUNDO!"), 203, 265);
     fill(255, 180, 0, 120); textSize(50);
-    text("WORLD CUP!", 200, 264);
+    text(tl("WORLD CUP!", "COPA DEL MUNDO!"), 200, 264);
     fill(255, 220, 40); textSize(48);
-    text("WORLD CUP!", 200, 262);
+    text(tl("WORLD CUP!", "COPA DEL MUNDO!"), 200, 262);
     textStyle(NORMAL);
 
     // Bottom star row
@@ -2834,18 +2834,18 @@ function drawGameOver() {
     var btnW = 144, btnH = 40, btnGap = 14, btnY = 342;
     var leftBtnX = 200 - btnW - btnGap / 2;
     var rightBtnX = 200 + btnGap / 2;
-    drawBtn(leftBtnX, btnY, btnW, btnH, "MENU", col(90, 90, 95));
+    drawBtn(leftBtnX, btnY, btnW, btnH, tl("MENU", "MENÚ"), col(90, 90, 95));
     if (wasClicked(leftBtnX, btnY, btnW, btnH)) {
       wcConfetti = []; tournamentMode = false; screenState = "menu"; mainMode = null; subMode = null;
     }
-    drawBtn(rightBtnX, btnY, btnW, btnH, "PLAY AGAIN", col(30, 150, 30));
+    drawBtn(rightBtnX, btnY, btnW, btnH, tl("PLAY AGAIN", "REVANCHA"), col(30, 150, 30));
     if (wasClicked(rightBtnX, btnY, btnW, btnH) || keyTapped) { wcConfetti = []; startTournament(); }
     return;
   }
   // ───────────────────────────────────────────────────────────
 
   fill(255, 220, 40); noStroke(); textSize(36); textAlign(CENTER);
-  text("FULL TIME", 200, 55);
+  text(tl("FULL TIME", "FINAL DEL PARTIDO"), 200, 55);
   stroke(255, 220, 40, 120); strokeWeight(1);
   line(50, 70, 350, 70);
 
@@ -2874,40 +2874,40 @@ function drawGameOver() {
     var playerWon = scoreA >= scoreB;
     textSize(20); textAlign(CENTER);
     if (playerWon) {
-      var nextRoundName = tRound === 0 ? "SEMI-FINALS" : "FINAL";
+      var nextRoundName = tRound === 0 ? tl("SEMI-FINALS", "SEMIFINALES") : tl("FINAL", "LA FINAL");
       fill(100, 255, 120); textSize(18);
-      text("YOU WIN!", 200, 264);
-      text("ADVANCING TO THE " + nextRoundName, 200, 290);
-      drawBtn(200 - 90, btnY, 180, btnH, "CONTINUE", col(30, 150, 30));
+      text(tl("YOU WIN!", "¡GANASTE!"), 200, 264);
+      text(tl("ADVANCING TO THE ", "AVANZAS A ") + nextRoundName, 200, 290);
+      drawBtn(200 - 90, btnY, 180, btnH, tl("CONTINUE", "CONTINUAR"), col(30, 150, 30));
       if (wasClicked(200 - 90, btnY, 180, btnH) || keyTapped) advanceTournament();
     } else {
       fill(255, 110, 90); textSize(20);
-      text("ELIMINATED FROM", 200, 264);
-      text("THE WORLD CUP", 200, 290);
-      drawBtn(leftBtnX, btnY, btnW, btnH, "MENU", col(90, 90, 95));
+      text(tl("ELIMINATED FROM", "ELIMINADO DE"), 200, 264);
+      text(tl("THE WORLD CUP", "LA COPA DEL MUNDO"), 200, 290);
+      drawBtn(leftBtnX, btnY, btnW, btnH, tl("MENU", "MENÚ"), col(90, 90, 95));
       if (wasClicked(leftBtnX, btnY, btnW, btnH)) {
         tournamentMode = false; screenState = "menu"; mainMode = null; subMode = null;
       }
-      drawBtn(rightBtnX, btnY, btnW, btnH, "PLAY AGAIN", col(30, 150, 30));
+      drawBtn(rightBtnX, btnY, btnW, btnH, tl("PLAY AGAIN", "REVANCHA"), col(30, 150, 30));
       if (wasClicked(rightBtnX, btnY, btnW, btnH) || keyTapped) startTournament();
     }
   } else {
     textSize(20); textAlign(CENTER);
     if (scoreA > scoreB) {
       fill(100, 255, 120);
-      text(countries[teamAIdx].name.toUpperCase() + " WINS!", 200, 274);
+      text(countries[teamAIdx].name.toUpperCase() + tl(" WINS!", " ¡GANA!"), 200, 274);
     } else if (scoreA < scoreB) {
       fill(255, 110, 90);
-      text(countries[teamBIdx].name.toUpperCase() + " WINS!", 200, 274);
+      text(countries[teamBIdx].name.toUpperCase() + tl(" WINS!", " ¡GANA!"), 200, 274);
     } else {
       fill(255, 220, 60);
-      text("IT'S A DRAW!", 200, 274);
+      text(tl("IT'S A DRAW!", "¡EMPATE!"), 200, 274);
     }
-    drawBtn(leftBtnX, btnY, btnW, btnH, "MENU", col(90, 90, 95));
+    drawBtn(leftBtnX, btnY, btnW, btnH, tl("MENU", "MENÚ"), col(90, 90, 95));
     if (wasClicked(leftBtnX, btnY, btnW, btnH)) {
       screenState = "menu"; mainMode = null; subMode = null;
     }
-    drawBtn(rightBtnX, btnY, btnW, btnH, "PLAY AGAIN", col(30, 150, 30));
+    drawBtn(rightBtnX, btnY, btnW, btnH, tl("PLAY AGAIN", "REVANCHA"), col(30, 150, 30));
     if (wasClicked(rightBtnX, btnY, btnW, btnH) || keyTapped) startMatch();
   }
 }
@@ -2989,7 +2989,7 @@ function drawFrame() {
     var powerOriginPx = drawShootoutBase();
     if (screenState === "powering") {
       drawPivotArrow(0, powerFrac, powerOriginPx);
-      drawShootoutPanel("SPACE, ENTER, or CLICK to set power!");
+      drawShootoutPanel(tl("SPACE, ENTER, or CLICK to set power!", "¡ESPACIO, ENTER o CLIC para fijar la fuerza!"));
     } else {
       drawPivotArrow(0, shotPower, powerOriginPx);
     }
@@ -2998,7 +2998,7 @@ function drawFrame() {
     var aimOriginPx = drawShootoutBase();
     if (screenState === "aiming") {
       drawPivotArrow(aimAngle, shotPower, aimOriginPx);
-      drawShootoutPanel("SPACE, ENTER, or CLICK to lock aim and SHOOT!");
+      drawShootoutPanel(tl("SPACE, ENTER, or CLICK to lock aim and SHOOT!", "¡ESPACIO, ENTER o CLIC para apuntar y TIRAR!"));
     }
   } else if (screenState === "shootFlight") {
     shootFlightTimer++;
@@ -3013,7 +3013,7 @@ function drawFrame() {
     var flightOriginPx = drawShootoutFlight(sbx, sby);
 
     drawPivotArrow(shotAimAngle, shotPower, flightOriginPx);
-    drawShootoutPanel("Here it goes...");
+    drawShootoutPanel(tl("Here it goes...", "Allá va..."));
 
     var blocker = findShotBlocker(sbx, sby);
     if (blocker && !shootOutcomeDecided) {
@@ -3035,9 +3035,9 @@ function drawFrame() {
         if (edgeDist <= ballRadius) {
           hitPost();
         } else if (abs(shootEndX) < GOAL_HALF_WIDTH - ballRadius) {
-          finishShoot(true, "GOAL!");
+          finishShoot(true, tl("GOAL!", "¡GOL!"));
         } else {
-          finishShoot(false, "WIDE SHOT");
+          finishShoot(false, tl("WIDE SHOT", "TIRO DESVIADO"));
         }
       }
     }
@@ -3053,9 +3053,9 @@ function drawFrame() {
     drawPlayerCircle(gridSX(dribX), gridSY(dribY), attackerColor());
     drawBall(gridSX(bounceX), gridSY(bounceY));
     drawPostPop(gridSX(bounceDir * 3), FY1 - 4.5, postHitTimer / 12);
-    drawShootoutPanel("HIT THE POST");
+    drawShootoutPanel(tl("HIT THE POST", "¡AL POSTE!"));
     if (postHitTimer >= postHitDuration) {
-      startFeedback("HIT THE POST");
+      startFeedback(tl("HIT THE POST", "¡AL POSTE!"));
     }
   } else if (screenState === "saved") {
 
@@ -3078,9 +3078,9 @@ function drawFrame() {
     drawGoalie(gridSX(keeperX), gridSY(GY_MAX), defenderColor(), { dirX: saveX >= keeperX ? 1 : -1, svt: svt });
     drawPlayerCircle(gridSX(dribX), gridSY(dribY), attackerColor());
     drawBall(gridSX(saveBallX), gridSY(saveBallY));
-    drawShootoutPanel("SAVED!");
+    drawShootoutPanel(tl("SAVED!", "¡ATAJADO!"));
     if (saveTimer >= saveDuration) {
-      startFeedback("SAVED!");
+      startFeedback(tl("SAVED!", "¡ATAJADO!"));
     }
   } else if (screenState === "blocked") {
 
@@ -3093,9 +3093,9 @@ function drawFrame() {
     drawGoalie(gridSX(keeperX), gridSY(GY_MAX), defenderColor());
     drawPlayerCircle(gridSX(dribX), gridSY(dribY), attackerColor());
     drawBall(gridSX(blockBallX), gridSY(blockBallY));
-    drawShootoutPanel("SHOT BLOCKED!");
+    drawShootoutPanel(tl("SHOT BLOCKED!", "¡TIRO BLOQUEADO!"));
     if (blockTimer >= blockDuration) {
-      startFeedback("SHOT BLOCKED!");
+      startFeedback(tl("SHOT BLOCKED!", "¡TIRO BLOQUEADO!"));
     }
   } else if (screenState === "revealLine") {
     revealLineTimer++;
@@ -3128,7 +3128,7 @@ function drawFrame() {
         passCount++;
         startBreakaway(kickStopX, kickEndY);
       } else {
-        startFeedback(kickMsg, kickMsg.indexOf("BAD PASS") === 0 ? 30 : 60);
+        startFeedback(kickMsg, kickMsg.indexOf(tl("BAD PASS", "MAL PASE")) === 0 ? 30 : 60);
       }
     }
   } else if (screenState === "moving") {
