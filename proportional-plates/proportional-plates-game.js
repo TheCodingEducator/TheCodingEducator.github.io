@@ -1069,8 +1069,16 @@ function mixHex(a, b, k) {
   const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b);
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join('');
 }
+// what a customer says when they're almost out of patience: dramatic, a little too extreme, never mean
+const RANTS = ES
+  ? ['¡ENVEJECÍ 10 AÑOS!', '¡ME DESVANEZCO!', '¡ME VOY A COMER LA MESA!', '¿EL CHEF SE FUE DE VACACIONES?', '¡MI ESTÓMAGO ESTÁ LLORANDO!',
+     '¡ME VA A CRECER LA BARBA!', '¡LLAMEN A LAS NOTICIAS!', 'TANTA. HAMBRE.', '¡LLEVO SIGLOS AQUÍ!', '¡MI COMIDA YA ES UNA LEYENDA!']
+  : ['I\'VE AGED 10 YEARS!', 'I\'M WASTING AWAY!', 'I COULD EAT THE TABLE!', 'IS THE CHEF ON VACATION?!', 'MY STOMACH IS CRYING!',
+     'I\'M GROWING A BEARD HERE!', 'CALL THE NEWS!', 'SO. HUNGRY.', 'I\'VE BEEN HERE FOR CENTURIES!', 'MY FOOD IS A LEGEND NOW!'];
 function miniBubble(x, y, text, col, size) {
   ctx.font = `900 ${size || 14}px Fredoka, Trebuchet MS`; const w = Math.max(24, ctx.measureText(text).width + 14), h = 22;
+  const m = ctx.getTransform(), px = cv.width / W, sx = m.a / px, ox = m.e / px;   // keep it on screen (it may be drawn scaled)
+  x = clamp(x, (4 - ox) / sx + w / 2, (W - 4 - ox) / sx - w / 2);
   rr(x - w / 2, y - h / 2, w, h, 11, '#fff', col, 2);
   ctx.beginPath(); ctx.moveTo(x + w / 2 - 8, y + h / 2 - 1); ctx.lineTo(x + w / 2 + 2, y + h / 2 + 8); ctx.lineTo(x + w / 2 - 14, y + h / 2 - 1); ctx.closePath(); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
   ctx.fillStyle = '#fff'; ctx.fillRect(x + w / 2 - 15, y + h / 2 - 3, 14, 3);
@@ -1144,7 +1152,7 @@ function drawCustomer(C, x, sit, t, walking) {
     // the order number (so tickets, plates and customers match) with a patience meter along the bottom
     rr(hx - 18, hy - 58, 36, 24, 8, C.color, '#fff', 2); ctx.fillStyle = '#fff'; ctx.font = '900 12px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('#' + C.num, hx, hy - 44);
     if (isFinite(C.patMax)) { const fr = clamp(C.patience / C.patMax, 0, 1); rr(hx - 13, hy - 41, 26, 4, 2, 'rgba(0,0,0,.35)'); if (fr > 0.02) rr(hx - 13, hy - 41, 26 * fr, 4, 2, fr > 0.5 ? '#7ee081' : fr > 0.25 ? '#ffd23f' : '#ff5a4a'); }
-    if (a > 0.8) miniBubble(hx - 42, hy - 48, '#@%!', '#e0483c', 13);
+    if (a > 0.8) { if (!C.rant) C.rant = pick(RANTS); miniBubble(hx - 42, hy - 48, C.rant, '#e0483c', 12); }
     else if (C.state === 'ready') miniBubble(hx - 38, hy - 48 + Math.sin(t * 5) * 2, '!', '#e0483c', 16);
   }
   if (C.bubble && !waiting) bubble(hx, hy - 30, C.bubble, mood);
