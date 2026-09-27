@@ -125,28 +125,56 @@
       document.body.insertBefore(bar, document.body.firstChild);
       document.body.classList.add('site-fit');
     }
+    // Spanish: a game that has a Spanish version says so with <html data-langs="en es">. It gets a 🌐 button that
+    // switches languages (remembered for every game on this device), and the bar's own buttons are translated too.
+    var canEs = / es( |$)/.test(' ' + (document.documentElement.getAttribute('data-langs') || ''));
+    var es = false;
+    try { es = canEs && localStorage.getItem('site_lang') === 'es'; } catch (e) {}
+    var T = function (en, sp) { return es ? sp : en; };
+    if (canEs) {
+      var lang = document.createElement('button');
+      lang.type = 'button'; lang.className = tipBar ? 'ccss-toggle sb-lang' : 'sb-toggle sb-lang';
+      lang.innerHTML = '&#127760; <span class="sb-lang-lbl" data-short="' + T('ES', 'EN') + '">' + T('Español', 'English') + '</span>';
+      lang.setAttribute('aria-label', T('Cambiar a español', 'Switch to English'));
+      lang.setAttribute('lang', es ? 'en' : 'es');
+      lang.addEventListener('click', function () {
+        try { localStorage.setItem('site_lang', es ? 'en' : 'es'); } catch (e) {}
+        location.reload();
+      });
+      right.insertBefore(lang, right.firstChild);
+      if (es) (tipBar || right.parentNode).classList.add('sb-es');   // longer Spanish labels: switch to icons on a wider screen
+      var backEl = document.querySelector('.site-bar .back-link, .site-back-link');
+      if (backEl && es) backEl.innerHTML = '&larr; <span class="sb-wide">Todos los juegos</span><span class="sb-narrow">Juegos</span>';
+    }
     // the bar's own buttons show just their icons on a narrow screen, like the pop-out buttons
-    [['#fullscreen-btn', 'Fullscreen'], ['.ccss-toggle', 'Standards']].forEach(function (b) {
-      var el = right.querySelector(b[0]);
-      if (!el || el.querySelector('.sb-lbl')) return;
-      el.innerHTML = el.innerHTML.replace(b[1], '<span class="sb-lbl">' + b[1] + '</span>');
-      el.setAttribute('aria-label', b[1]);
-    });
+    var fsEl = right.querySelector('#fullscreen-btn');
+    var fixFs = function () {                    // the page's fullscreen code rewrites this button's text when fullscreen changes
+      var exit = /Exit|Salir/.test(fsEl.textContent);
+      var want = '&#10021; <span class="sb-lbl">' + (exit ? T('Exit Fullscreen', 'Salir de pantalla completa') : T('Fullscreen', 'Pantalla completa')) + '</span>';
+      if (fsEl.innerHTML !== want.replace('&#10021;', '✥')) { fsEl.innerHTML = want; }
+      fsEl.setAttribute('aria-label', exit ? T('Exit Fullscreen', 'Salir de pantalla completa') : T('Fullscreen', 'Pantalla completa'));
+    };
+    if (fsEl) { fixFs(); new MutationObserver(function () { if (!fsEl.querySelector('.sb-lbl')) fixFs(); }).observe(fsEl, { childList: true }); }
+    var stdEl = right.querySelector('.ccss-toggle:not(.sb-guide):not(.sb-lang)');
+    if (stdEl && !stdEl.querySelector('.sb-lbl')) {
+      stdEl.innerHTML = stdEl.innerHTML.replace('Standards', '<span class="sb-lbl">Standards</span>');
+      stdEl.setAttribute('aria-label', 'Standards');
+    }
     // a link to this game's teacher guide (guide.html in the game's folder)
     if (document.getElementById('game-canvas-slot') || tipBar) {
       var guide = document.createElement('a');
       guide.href = 'guide.html';
       guide.className = tipBar ? 'ccss-toggle sb-guide' : 'sb-toggle sb-guide';
-      guide.innerHTML = '&#128216; <span class="sb-lbl">Teacher guide</span>';
-      guide.setAttribute('aria-label', 'Teacher guide');
+      guide.innerHTML = '&#128216; <span class="sb-lbl">' + T('Teacher guide', 'Guía docente') + '</span>';
+      guide.setAttribute('aria-label', T('Teacher guide', 'Guía docente'));
       if (tipBar) {   // Tip the Scales keeps its page controls off the keyboard
         guide.tabIndex = -1;
         guide.addEventListener('mousedown', function (e) { e.preventDefault(); });
       }
       right.appendChild(guide);
     }
-    if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', 'Standards', [standards], false);
-    addPanel(right, 'sb-notes', '&#128221;', 'Teaching notes', [notes], !!tipBar);
+    if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', T('Standards', 'Estándares'), [standards], false);
+    addPanel(right, 'sb-notes', '&#128221;', T('Teaching notes', 'Notas para docentes'), [notes], !!tipBar);
     // this game's saved stats and badges (site-stats.js), read fresh each time it opens
     if (window.SiteStats && !/my-stats\.html$/.test(location.pathname)) {
       var statsBox = document.createElement('div'), gameKey = SiteStats.keyForPage();
@@ -156,10 +184,10 @@
           '<a class="ss-all" href="../my-stats.html">See all my stats and badges &rarr;</a>';
       };
       fillStats();
-      addPanel(right, 'sb-stats', '&#128202;', 'My stats', [statsBox], !!tipBar, fillStats);
+      addPanel(right, 'sb-stats', '&#128202;', T('My stats', 'Mis estadísticas'), [statsBox], !!tipBar, fillStats);
     }
     var erase = reset ? resetPanelNodes(reset) : null;
-    if (erase) addPanel(right, 'sb-reset', '&#128465;&#65039;', 'Reset progress', [reset], !!tipBar, erase.startCountdown, erase.stopCountdown);
+    if (erase) addPanel(right, 'sb-reset', '&#128465;&#65039;', T('Reset progress', 'Borrar progreso'), [reset], !!tipBar, erase.startCountdown, erase.stopCountdown);
     // a click anywhere else closes the panels
     document.addEventListener('click', function (e) {
       if (!panels.some(function (p) { return p.panel.contains(e.target) || p.btn.contains(e.target); })) closeAll();

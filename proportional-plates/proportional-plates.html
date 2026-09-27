@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-langs="en es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -586,8 +586,8 @@
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
   <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
-  <h2>Rotate Your Device</h2>
-  <p>Proportional Plates works best in landscape. Turn your phone sideways to play.</p>
+  <h2 data-es="Gira tu dispositivo">Rotate Your Device</h2>
+  <p data-es="Proportional Plates funciona mejor en horizontal. Gira tu teléfono para jugar.">Proportional Plates works best in landscape. Turn your phone sideways to play.</p>
   <a href="../index.html">&larr; All games</a>
 </div>
 
@@ -602,17 +602,17 @@
     <div id="sb">
       <div id="hud">
         <span class="pill" id="hReviews"></span>
-        <span class="pill" id="hCorrectPill" style="display:none">&#9989; Correct <b id="hCorrect">0</b></span>
-        <span class="pill" id="hServedPill">&#127869;&#65039; Served <b id="hServed">0</b></span>
-        <span class="pill">&#128293; Streak <b id="hStreak">0</b></span>
-        <span class="pill" title="1 star for every correct order"><span class="coinDot">&#11088;</span> <b id="hStars">0</b></span>
-        <span class="pill" id="hLevelPill">Level <b id="hLevel">1</b></span>
+        <span data-es="&#9989; Correcto <b id='hCorrect'>0</b>" class="pill" id="hCorrectPill" style="display:none">&#9989; Correct <b id="hCorrect">0</b></span>
+        <span data-es="&#127869;&#65039; Servidos <b id='hServed'>0</b>" class="pill" id="hServedPill">&#127869;&#65039; Served <b id="hServed">0</b></span>
+        <span data-es="&#128293; Racha <b id='hStreak'>0</b>" class="pill">&#128293; Streak <b id="hStreak">0</b></span>
+        <span class="pill" title="1 star for every correct order" data-es-title="1 estrella por cada pedido correcto"><span class="coinDot">&#11088;</span> <b id="hStars">0</b></span>
+        <span data-es="Nivel <b id='hLevel'>1</b>" class="pill" id="hLevelPill">Level <b id="hLevel">1</b></span>
       </div>
       <div id="stage">
         <canvas id="c" width="960" height="540"></canvas>
-        <div id="rail" aria-label="Order tickets"></div>
+        <div id="rail" aria-label="Order tickets" data-es-aria="Boletos de pedidos"></div>
         <div id="cook" class="hidden">
-          <div class="ckTop"><span id="ckOrder"></span><span id="ckWait" aria-hidden="true"></span><span class="ckKind" id="ckKind"></span><button type="button" id="btnCookClose" aria-label="Step away from the stove">&#10005;</button></div>
+          <div class="ckTop"><span id="ckOrder"></span><span id="ckWait" aria-hidden="true"></span><span class="ckKind" id="ckKind"></span><button type="button" id="btnCookClose" aria-label="Step away from the stove" data-es-aria="Alejarse de la estufa">&#10005;</button></div>
           <div id="ckRecipe"></div>
           <p id="ckAsk"></p>
           <div class="ckAns">
@@ -623,44 +623,44 @@
               <span class="pn"><span id="ansPre"></span><input id="ans" inputmode="decimal" autocomplete="off" maxlength="9" aria-label="Your answer"><span id="ansUnit"></span></span>
               <span class="pd" id="propR"></span>
             </span>
-            <button class="btn" id="btnServe">Serve! &#127869;&#65039;</button>
+            <button data-es="¡Servir! &#127869;&#65039;" class="btn" id="btnServe">Serve! &#127869;&#65039;</button>
           </div>
           <div id="keypad"></div>
         </div>
         <div id="touch" class="hidden">
           <div class="dpad">
-            <button type="button" id="tUp" aria-label="Walk back">&#9650;</button>
-            <button type="button" id="tLeft" aria-label="Walk left">&#9664;</button>
-            <button type="button" id="tRight" aria-label="Walk right">&#9654;</button>
-            <button type="button" id="tDown" aria-label="Walk forward">&#9660;</button>
+            <button type="button" id="tUp" aria-label="Walk back" data-es-aria="Caminar hacia atrás">&#9650;</button>
+            <button type="button" id="tLeft" aria-label="Walk left" data-es-aria="Caminar a la izquierda">&#9664;</button>
+            <button type="button" id="tRight" aria-label="Walk right" data-es-aria="Caminar a la derecha">&#9654;</button>
+            <button type="button" id="tDown" aria-label="Walk forward" data-es-aria="Caminar hacia adelante">&#9660;</button>
           </div>
-          <button type="button" id="tAct">&#9995; Take / Cook / Serve</button>
+          <button data-es="&#9995; Tomar / Cocinar / Servir" type="button" id="tAct">&#9995; Take / Cook / Serve</button>
         </div>
         <div id="toast"></div>
       </div>
-      <div id="help"><b>Arrow keys</b> (or WASD / click the floor) walk &middot; <b>Space</b> takes an order, cooks at the stove, and serves &middot; at the stove, type the amount and press <b>Enter</b> &middot; <b>Esc</b> steps away / pauses.</div>
+      <div data-es="<b>Flechas</b> (o WASD / haz clic en el piso) para caminar &middot; <b>Espacio</b> toma un pedido, cocina en la estufa y sirve &middot; en la estufa, escribe la cantidad y presiona <b>Enter</b> &middot; <b>Esc</b> para alejarte / pausar." id="help"><b>Arrow keys</b> (or WASD / click the floor) walk &middot; <b>Space</b> takes an order, cooks at the stove, and serves &middot; at the stove, type the amount and press <b>Enter</b> &middot; <b>Esc</b> steps away / pauses.</div>
 
-      <button id="menuBtn" aria-label="Menu">&#9776; Menu</button>
+      <button data-es="&#9776; Menú" id="menuBtn" aria-label="Menu" data-es-aria="Menú">&#9776; Menu</button>
       <div id="pause" class="overlay hidden"><div class="card center" style="max-width:440px">
-        <h2>&#9208; Paused</h2>
-        <button class="btn" id="btnResume">&#9654; Resume</button>
-        <button class="btn alt" id="btnRestart">&#128260; Restart</button>
+        <h2 data-es="&#9208; En pausa">&#9208; Paused</h2>
+        <button data-es="&#9654; Continuar" class="btn" id="btnResume">&#9654; Resume</button>
+        <button data-es="&#128260; Reiniciar" class="btn alt" id="btnRestart">&#128260; Restart</button>
         <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
-        <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Menu screen</button>
+        <button data-es="&#127968; Pantalla del menú" class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Menu screen</button>
       </div></div>
       <div id="exitConfirm" class="overlay hidden"><div class="card center" style="max-width:440px">
-        <h2>Exit to Menu?</h2>
-        <p style="margin:0 0 16px">This shift will be lost. Are you sure?</p>
-        <button class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px">Yes, Exit</button>
-        <button class="btn ghost" id="btnExitConfirmNo" style="width:100%;font-size:18px;padding:11px">Keep Playing</button>
+        <h2 data-es="¿Salir al menú?">Exit to Menu?</h2>
+        <p data-es="Se perderá este turno. ¿Estás seguro?" style="margin:0 0 16px">This shift will be lost. Are you sure?</p>
+        <button data-es="Sí, salir" class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px">Yes, Exit</button>
+        <button data-es="Seguir jugando" class="btn ghost" id="btnExitConfirmNo" style="width:100%;font-size:18px;padding:11px">Keep Playing</button>
       </div></div>
 
       <!-- Title screen -->
       <div id="title" class="overlay">
         <div class="titleWrap">
-          <div class="titleKicker">&#127859; A cooking game about proportions</div>
+          <div data-es="&#127859; Un juego de cocina sobre proporciones" class="titleKicker">&#127859; A cooking game about proportions</div>
           <h2 class="titleName"><span>Proportional</span> <span class="b">Plates</span></h2>
-          <button class="btn playBtn" id="btnPlay">&#9654; Play</button>
+          <button data-es="&#9654; Jugar" class="btn playBtn" id="btnPlay">&#9654; Play</button>
         </div>
       </div>
 
@@ -668,33 +668,33 @@
       <div id="menu" class="overlay hidden"><div class="card board" style="max-width:720px">
         <div class="boardHead">
           <div class="boardSmall">~ Proportional Plates ~</div>
-          <h2>Today's Menu</h2>
-          <div class="boardStats">&#11088; <b id="mStars">0</b> stars &middot; best shift <b id="mBest">0</b> orders &middot; level <b id="mBestLevel">1</b></div>
+          <h2 data-es="Menú del día">Today's Menu</h2>
+          <div data-es="&#11088; <b id='mStars'>0</b> estrellas &middot; mejor turno <b id='mBest'>0</b> pedidos &middot; nivel <b id='mBestLevel'>1</b>" class="boardStats">&#11088; <b id="mStars">0</b> stars &middot; best shift <b id="mBest">0</b> orders &middot; level <b id="mBestLevel">1</b></div>
         </div>
         <div class="menuRow">
-          <div class="menuItem"><h3>&#128293; Dinner Rush</h3><span class="dots"></span><span class="price">3 bad reviews = closed</span></div>
-          <p>You're the chef! Take each order, cook it to the right proportions, and serve it before the customer's smile turns into a scowl.</p>
-          <button class="btn" id="btnStart">Open the restaurant!</button>
+          <div data-es="<h3>&#128293; Hora pico</h3><span class='dots'></span><span class='price'>3 malas reseñas = cerrado</span>" class="menuItem"><h3>&#128293; Dinner Rush</h3><span class="dots"></span><span class="price">3 bad reviews = closed</span></div>
+          <p data-es="¡Tú eres el chef! Toma cada pedido, cocínalo con las proporciones correctas y sírvelo antes de que la sonrisa del cliente se convierta en enojo.">You're the chef! Take each order, cook it to the right proportions, and serve it before the customer's smile turns into a scowl.</p>
+          <button data-es="¡Abre el restaurante!" class="btn" id="btnStart">Open the restaurant!</button>
           <div id="menuStarts"></div>
         </div>
         <div class="menuRow">
-          <div class="menuItem"><h3>&#127891; Practice</h3><span class="dots"></span><span class="price">no rush &middot; no reviews</span></div>
-          <p>One order at a time &mdash; pick exactly which skills to work on.</p>
-          <button class="btn alt" id="btnPractice">Choose skills</button>
+          <div data-es="<h3>&#127891; Práctica</h3><span class='dots'></span><span class='price'>sin prisa &middot; sin reseñas</span>" class="menuItem"><h3>&#127891; Practice</h3><span class="dots"></span><span class="price">no rush &middot; no reviews</span></div>
+          <p data-es="Un pedido a la vez &mdash; elige exactamente qué destrezas practicar.">One order at a time &mdash; pick exactly which skills to work on.</p>
+          <button data-es="Elegir destrezas" class="btn alt" id="btnPractice">Choose skills</button>
         </div>
         <div class="boardFoot">
-          <button class="btn ghost" id="btnMenuBack">&larr; Title screen</button>
-          <p class="kbdTip">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
+          <button data-es="&larr; Pantalla de título" class="btn ghost" id="btnMenuBack">&larr; Title screen</button>
+          <p data-es="Teclado: <b>flechas</b> para moverte &middot; <b>Enter</b> para elegir &middot; <b>Esc</b> para regresar" class="kbdTip">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
         </div>
       </div></div>
 
       <!-- Practice setup -->
       <div id="practice" class="overlay hidden"><div class="card" style="max-width:875px">
-        <div class="ptop"><h2 style="margin:0">&#127891; Practice</h2><span class="badge">Pick one or more</span></div>
+        <div data-es="<h2 style='margin:0'>&#127891; Práctica</h2><span class='badge'>Elige una o más</span>" class="ptop"><h2 style="margin:0">&#127891; Practice</h2><span class="badge">Pick one or more</span></div>
         <div id="ptypes" class="ptypes" style="grid-template-columns:repeat(3,1fr)"></div>
         <div class="center pbar">
-          <button class="btn ghost" id="btnPracBack">&larr; Back</button>
-          <button class="btn" id="btnPracStart">Start Practice</button>
+          <button data-es="&larr; Atrás" class="btn ghost" id="btnPracBack">&larr; Back</button>
+          <button data-es="Empezar práctica" class="btn" id="btnPracStart">Start Practice</button>
         </div>
       </div></div>
 
@@ -702,7 +702,7 @@
       <div id="explain" class="overlay hidden"><div class="card" style="max-width:780px">
         <h2 id="exTitle"></h2>
         <div id="exBody"></div>
-        <div class="center"><button class="btn alt" id="btnExNext">Back to the kitchen &#10140;</button><p class="kbdTip">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
+        <div class="center"><button data-es="Volver a la cocina &#10140;" class="btn alt" id="btnExNext">Back to the kitchen &#10140;</button><p data-es="Presiona <b>Enter</b> o <b>Espacio</b> para continuar" class="kbdTip">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
       </div></div>
 
       <!-- Shift over -->
@@ -711,9 +711,9 @@
         <p id="ovSub"></p>
         <div class="stats" id="ovStats"></div>
         <div id="ovContinue"></div>
-        <button class="btn" id="btnAgain">Play again</button>
-        <button class="btn ghost" id="btnOverMenu" style="margin-left:6px">&#127968; Menu</button>
-        <p class="kbdTip">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
+        <button data-es="Jugar otra vez" class="btn" id="btnAgain">Play again</button>
+        <button data-es="&#127968; Menú" class="btn ghost" id="btnOverMenu" style="margin-left:6px">&#127968; Menu</button>
+        <p data-es="Presiona <b>Enter</b> o <b>Espacio</b> para jugar otra vez &middot; <b>Esc</b> para ir al menú" class="kbdTip">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
         <div id="ovReview"></div>
       </div></div>
     </div>

@@ -141,3 +141,11 @@ body.site-fit { padding-top: 44px; box-sizing: border-box; }
 }
 /* the Teacher guide link looks like the bar's other buttons */
 .site-topbar a.sb-guide { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; }
+/* the language button: "Español" / "English" (just "ES" / "EN" on a very narrow screen) */
+.sb-lang { font-weight: 800; }
+@media (max-width: 520px) { .sb-lang .sb-lang-lbl { font-size: 0; } .sb-lang .sb-lang-lbl::after { content: attr(data-short); font-size: 12px; } }
+@media (max-width: 1200px) { .site-bar.sb-es .sb-lbl { display: none; } }
+.sb-narrow { display: none; }
+@media (max-width: 600px) { .site-bar .sb-wide { display: none; } .site-bar .sb-narrow { display: inline; } }
+/* phones: Standards and Teaching notes are for teachers (and the Teacher guide button has both), so they step aside to fit */
+@media (max-width: 480px) { .site-bar [aria-controls="sb-standards"], .site-bar [aria-controls="sb-notes"] { display: none !important; } }

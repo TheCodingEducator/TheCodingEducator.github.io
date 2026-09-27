@@ -18,6 +18,17 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('proportionalplates_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { if (window.proportionalPlatesResetting) return; try { localStorage.setItem('proportionalplates_' + k, JSON.stringify(v)); } catch (e) {} }
 };
+// LANGUAGE: English or Spanish, picked with the 🌐 button in the top bar (site-layout.js) and shared by every game.
+// Every word a student sees goes through L('English', 'Spanish'); the recipes carry their own Spanish words (DISHES_ES).
+const ES = (() => { try { return localStorage.getItem('site_lang') === 'es'; } catch (e) { return false; } })();
+const L = (en, es) => ES ? es : en;
+// the page's own words (buttons, cards, labels) carry their Spanish in data-es / data-es-aria / data-es-title
+if (ES) {
+  document.documentElement.lang = 'es';
+  document.querySelectorAll('[data-es]').forEach(el => { el.innerHTML = el.dataset.es; });
+  document.querySelectorAll('[data-es-aria]').forEach(el => el.setAttribute('aria-label', el.dataset.esAria));
+  document.querySelectorAll('[data-es-title]').forEach(el => el.setAttribute('title', el.dataset.esTitle));
+}
 
 /* ===================== FRACTIONS (every amount is kept exact) ===================== */
 const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
@@ -70,6 +81,29 @@ const STORE_ITEMS = [
   { q: 'cartons of eggs', one: 'carton of eggs', short: 'cartons', dish: 'pancakes' }, { q: 'jars of honey', one: 'jar of honey', short: 'jars', dish: 'muffins' },
   { q: 'baskets of berries', one: 'basket of berries', short: 'baskets', dish: 'smoothie' }, { q: 'cans of tomatoes', one: 'can of tomatoes', short: 'cans', dish: 'soup' }
 ];
+// the same recipes and market in Spanish (hm = the "how many" word that agrees with the ingredient: ¿Cuántas tazas? ¿Cuántos huevos?)
+const DISHES_ES = {
+  pancakes: { name: 'Panqueques', noun: 'panqueques', one: 'panqueque', ings: [
+    { q: 'tazas de harina', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'tazas de leche', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'huevos', u: 'huevos', u1: 'huevo', hm: 'Cuántos' }, { q: 'cucharadas de azúcar', u: 'cdas', u1: 'cda', hm: 'Cuántas' }] },
+  soup: { name: 'Sopa de tomate', noun: 'tazones', one: 'tazón', ings: [
+    { q: 'tazas de caldo', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'tomates', u: 'tomates', u1: 'tomate', hm: 'Cuántos' }, { q: 'dientes de ajo', u: 'dientes', u1: 'diente', hm: 'Cuántos' }, { q: 'cucharaditas de sal', u: 'cdtas', u1: 'cdta', hm: 'Cuántas' }] },
+  lemonade: { name: 'Limonada', noun: 'vasos', one: 'vaso', ings: [
+    { q: 'limones', u: 'limones', u1: 'limón', hm: 'Cuántos' }, { q: 'tazas de azúcar', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'tazas de agua', u: 'tazas', u1: 'taza', hm: 'Cuántas' }] },
+  muffins: { name: 'Muffins de arándanos', noun: 'muffins', one: 'muffin', ings: [
+    { q: 'tazas de harina', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'huevos', u: 'huevos', u1: 'huevo', hm: 'Cuántos' }, { q: 'tazas de arándanos', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'cucharadas de mantequilla', u: 'cdas', u1: 'cda', hm: 'Cuántas' }] },
+  smoothie: { name: 'Batidos de frutas', noun: 'batidos', one: 'batido', ings: [
+    { q: 'plátanos', u: 'plátanos', u1: 'plátano', hm: 'Cuántos' }, { q: 'tazas de yogur', u: 'tazas', u1: 'taza', hm: 'Cuántas' }, { q: 'fresas', u: 'fresas', u1: 'fresa', hm: 'Cuántas' }, { q: 'tazas de jugo', u: 'tazas', u1: 'taza', hm: 'Cuántas' }] }
+};
+const STORE_ES = [
+  { q: 'bolsas de harina', one: 'bolsa de harina', short: 'bolsas', short1: 'bolsa' }, { q: 'limones', one: 'limón', short: 'limones', short1: 'limón' },
+  { q: 'cartones de huevos', one: 'cartón de huevos', short: 'cartones', short1: 'cartón' }, { q: 'frascos de miel', one: 'frasco de miel', short: 'frascos', short1: 'frasco' },
+  { q: 'canastas de moras', one: 'canasta de moras', short: 'canastas', short1: 'canasta' }, { q: 'latas de tomates', one: 'lata de tomates', short: 'latas', short1: 'lata' }
+];
+if (ES) {
+  DISHES.forEach(d => { const s = DISHES_ES[d.id]; Object.assign(d, { name: s.name, noun: s.noun, one: s.one }); d.ings.forEach((ing, i) => { ing.key = ing.u1; Object.assign(ing, s.ings[i]); }); });
+  STORE_ITEMS.forEach((it, i) => Object.assign(it, STORE_ES[i]));
+}
+const howMany = ing => ing.hm || 'How many';                          // "How many" / "Cuántas" / "Cuántos"
 const dishById = id => DISHES.find(d => d.id === id);
 
 /* ---- LEVEL SETTINGS (edit these!) ----
@@ -78,7 +112,8 @@ const dishById = id => DISHES.find(d => d.id === id);
    Level 3  Ratio tables: the order isn't a multiple either way (6 -> 15), so go through an equivalent ratio
    Level 4  Unit price:   the market sells 4 bags for $12 - what do 7 bags cost? (find the price of 1 first)
    Level 5  Fractions:    fractional amounts and scale factors like 1 1/2 or 2/3, mixed with everything else */
-const LEVEL_NAMES = ['Scaling up', 'Scaling up & down', 'Ratio tables', 'Unit prices', 'Fractions & decimals'];
+const LEVEL_NAMES = ES ? ['Aumentar', 'Aumentar y reducir', 'Tablas de razones', 'Precios unitarios', 'Fracciones y decimales']
+  : ['Scaling up', 'Scaling up & down', 'Ratio tables', 'Unit prices', 'Fractions & decimals'];
 const KINDS_BY_LEVEL = [['up'], ['up', 'down', 'down'], ['table', 'table', 'up', 'down'], ['rate', 'rate', 'table', 'down'], ['frac', 'frac', 'rate', 'table', 'up', 'down']];
 const MAX_LEVEL = 5;
 const ORDERS_PER_LEVEL = 8;                 // correct orders to reach the next level
@@ -87,11 +122,11 @@ const PATIENCE_SEC = [85, 75, 68, 62, 56];  // how long a customer waits, from s
 const MAX_REVIEWS = 3;                      // 1-star reviews before the restaurant closes
 const CLOSE = 0.25;                         // within 25% of the right amount = upset; further off = FUMING
 const PRACTICE_TYPES = [
-  { id: 'up', level: 1, name: 'Scale up', desc: 'Multiply the recipe for a bigger order.' },
-  { id: 'down', level: 2, name: 'Scale down', desc: 'Divide the recipe for a smaller order.' },
-  { id: 'table', level: 3, name: 'Ratio tables', desc: 'Orders that aren\'t a whole multiple.' },
-  { id: 'rate', level: 4, name: 'Unit prices', desc: 'Find the price of one, then the total.' },
-  { id: 'frac', level: 5, name: 'Fractions', desc: 'Scale factors like 1½ and ⅔.' }
+  { id: 'up', level: 1, name: L('Scale up', 'Aumentar'), desc: L('Multiply the recipe for a bigger order.', 'Multiplica la receta para un pedido más grande.') },
+  { id: 'down', level: 2, name: L('Scale down', 'Reducir'), desc: L('Divide the recipe for a smaller order.', 'Divide la receta para un pedido más pequeño.') },
+  { id: 'table', level: 3, name: L('Ratio tables', 'Tablas de razones'), desc: L('Orders that aren\'t a whole multiple.', 'Pedidos que no son un múltiplo exacto.') },
+  { id: 'rate', level: 4, name: L('Unit prices', 'Precios unitarios'), desc: L('Find the price of one, then the total.', 'Halla el precio de uno y luego el total.') },
+  { id: 'frac', level: 5, name: L('Fractions', 'Fracciones'), desc: L('Scale factors like 1½ and ⅔.', 'Factores de escala como 1½ y ⅔.') }
 ];
 
 function mk(kind, dish, ing, baseN, baseQ, tgtN, extra) {
@@ -223,7 +258,7 @@ function spawnCustomer() {
   G.custs.push({ id: orderNo, num: orderNo, P, seat: pick(free), look: newLook(), color: TICKET_COLORS[orderNo % TICKET_COLORS.length],
     state: 'ready', patience: pat, patMax: pat, mood: 'wait', bubble: '', arrive: 0, wx: DOOR.x, wy: DOOR.y, react: 0 });
   sfx.bell();
-  if (orderNo === 1) toast('A customer walked in! Walk to their table with the arrow keys and press Space.', '');
+  if (orderNo === 1) toast(L('A customer walked in! Walk to their table with the arrow keys and press Space.', '¡Llegó un cliente! Camina a su mesa con las flechas y presiona Espacio.'), '');
   return true;
 }
 function walkOut(C) {
@@ -232,10 +267,11 @@ function walkOut(C) {
   ch.notepad = ch.notepad.filter(c => c !== C);
   ch.plates = ch.plates.filter(c => c !== C); G.pass = G.pass.filter(c => c !== C);
   if (G.activeId === C.id) G.activeId = null;
-  C.mood = 'fuming'; C.bubble = 'TOO SLOW!'; C.walk = -1;
+  C.mood = 'fuming'; C.bubble = L('TOO SLOW!', '¡QUÉ LENTO!'); C.walk = -1;
   G.leavers.push(C);
   addReview(C);
-  toast(`Order #${C.num} got tired of waiting and left!${hadPlate ? ' Their plate is wasted.' : ''} −1 ★ review`, 'bad');
+  toast(L(`Order #${C.num} got tired of waiting and left!${hadPlate ? ' Their plate is wasted.' : ''} −1 ★ review`,
+    `¡El pedido #${C.num} se cansó de esperar y se fue!${hadPlate ? ' Su plato se desperdició.' : ''} −1 ★ reseña`), 'bad');
   sfx.fume();
   if (G.cooking && !railOrders().length) closeCook();
   renderRail(); renderCook();
@@ -287,24 +323,27 @@ function interact() {
   if (inKitchen() && G.pass.length && ch.plates.length < MAX_HANDS) { pickUp(); return; }
   if (atStove() && railOrders().length) { openCook(); return; }
   if (ch.plates.length) {
-    const nums = ch.plates.map(c => '#' + c.num).join(' and ');
-    toast(near ? `Your plates are for ${nums} - look for the matching flag.` : `Carry the plate${ch.plates.length > 1 ? 's' : ''} to ${nums}, then press Space at the table.`, near ? 'bad' : '');
+    const nums = ch.plates.map(c => '#' + c.num).join(L(' and ', ' y '));
+    toast(near ? L(`Your plates are for ${nums} - look for the matching flag.`, `Tus platos son para ${nums}: busca la bandera con ese número.`)
+      : L(`Carry the plate${ch.plates.length > 1 ? 's' : ''} to ${nums}, then press Space at the table.`, `Lleva ${ch.plates.length > 1 ? 'los platos' : 'el plato'} a ${nums} y presiona Espacio en la mesa.`), near ? 'bad' : '');
     return;
   }
-  if (near) { toast(near.state === 'taken' ? `Bring order #${near.num} to the kitchen first!` : `Order #${near.num} is on the rail - cook it at the stove.`, ''); return; }
-  if (inKitchen()) toast(railOrders().length ? 'Walk over to the stove to cook.' : ch.notepad.length ? 'Your orders go on the rail as you walk in.' : 'No orders yet - walk to a customer and take their order.', '');
+  if (near) { toast(near.state === 'taken' ? L(`Bring order #${near.num} to the kitchen first!`, `¡Primero lleva el pedido #${near.num} a la cocina!`) : L(`Order #${near.num} is on the rail - cook it at the stove.`, `El pedido #${near.num} está en el riel: cocínalo en la estufa.`), ''); return; }
+  if (inKitchen()) toast(railOrders().length ? L('Walk over to the stove to cook.', 'Camina a la estufa para cocinar.') : ch.notepad.length ? L('Your orders go on the rail as you walk in.', 'Tus pedidos se cuelgan en el riel al entrar.') : L('No orders yet - walk to a customer and take their order.', 'Aún no hay pedidos: camina hacia un cliente y toma su pedido.'), '');
 }
 function takeOrder(C) {
   C.state = 'taken'; G.chef.notepad.push(C);
   sfx.go();
   const P = C.P;
-  toast(`Order #${C.num}: ${P.money ? 'a supplies bill' : P.tgtN + ' ' + nounOf(P, P.tgtN)}. Take it to the kitchen (back left)!`, '');
+  toast(L(`Order #${C.num}: ${P.money ? 'a supplies bill' : P.tgtN + ' ' + nounOf(P, P.tgtN)}. Take it to the kitchen (back left)!`,
+    `Pedido #${C.num}: ${P.money ? 'una cuenta de ingredientes' : P.tgtN + ' ' + nounOf(P, P.tgtN)}. ¡Llévalo a la cocina (al fondo a la izquierda)!`), '');
 }
 function hangOrders() {                                               // walking into the kitchen puts every order in the notepad on the rail
   const ch = G.chef, n = ch.notepad.length;
   if (!n) return;
   ch.notepad.forEach(c => { c.state = 'hung'; });
-  toast(`${n === 1 ? 'Order #' + ch.notepad[0].num + ' is' : n + ' orders are'} on the rail - press Space at the stove to cook.`, '');
+  toast(L(`${n === 1 ? 'Order #' + ch.notepad[0].num + ' is' : n + ' orders are'} on the rail - press Space at the stove to cook.`,
+    `${n === 1 ? 'El pedido #' + ch.notepad[0].num + ' está' : n + ' pedidos están'} en el riel: presiona Espacio en la estufa para cocinar.`), '');
   ch.notepad = [];
   sfx.ding(); renderRail();
 }
@@ -320,12 +359,14 @@ function pickUp() {                                                   // take pl
   const ch = G.chef, took = [];
   while (G.pass.length && ch.plates.length < MAX_HANDS) { const C = G.pass.shift(); ch.plates.push(C); took.push('#' + C.num); }
   sfx.go();
-  toast(`Picked up ${took.join(' and ')}.${G.pass.length ? ` ${G.pass.length} more waiting on the counter.` : ''}`, '');
+  toast(L(`Picked up ${took.join(' and ')}.${G.pass.length ? ` ${G.pass.length} more waiting on the counter.` : ''}`,
+    `Recogiste ${took.join(' y ')}.${G.pass.length ? ` Quedan ${G.pass.length} en el mostrador.` : ''}`), '');
 }
 // a wrong plate: after the "let's fix it" card, the customer stays put and the order goes back on the rail to be remade
 function remakeOrder(C) {
   Object.assign(C, { state: 'hung', plated: false, mood: 'wait', bubble: '', handled: false, react: 0, remake: true, railed: false, result: null });
-  toast(`Order #${C.num} is back on the rail - remake it in the kitchen before they run out of patience!`, '');
+  toast(L(`Order #${C.num} is back on the rail - remake it in the kitchen before they run out of patience!`,
+    `El pedido #${C.num} volvió al riel: ¡rehazlo en la cocina antes de que se le acabe la paciencia!`), '');
   renderRail();
 }
 function closeCook() { if (!G) return; G.cooking = false; $('ans').blur(); renderRail(); renderCook(); }
@@ -349,8 +390,8 @@ function foodIcon(d) {
 const ING_COLORS = { egg: '#fff8e8', tomato: '#e0483c', clove: '#f3ead2', lemon: '#ffe066', banana: '#ffd84a', strawberry: '#e0245e' };
 function ingIcon(ing) {
   const o = 'stroke="#5a3a1a" stroke-width="1.2"';
-  if (ing.c) return svgI(`<circle cx="10" cy="11" r="7" fill="${ING_COLORS[ing.u1] || '#f2c14e'}" ${o}/><path d="M9 4 Q10 1.5 12 2" stroke="#2e7d32" stroke-width="1.6" fill="none"/>`);
-  if (ing.u1 === 'cup') return svgI(`<path d="M3 5 H14 L13 18 H4 Z" fill="#e8f3ff" ${o}/><path d="M14 7 Q18.5 8 14 13" fill="none" ${o}/><path d="M4 10 H13.5" stroke="#6aa9e0" stroke-width="1"/>`);
+  if (ing.c) return svgI(`<circle cx="10" cy="11" r="7" fill="${ING_COLORS[ing.key || ing.u1] || '#f2c14e'}" ${o}/><path d="M9 4 Q10 1.5 12 2" stroke="#2e7d32" stroke-width="1.6" fill="none"/>`);
+  if ((ing.key || ing.u1) === 'cup') return svgI(`<path d="M3 5 H14 L13 18 H4 Z" fill="#e8f3ff" ${o}/><path d="M14 7 Q18.5 8 14 13" fill="none" ${o}/><path d="M4 10 H13.5" stroke="#6aa9e0" stroke-width="1"/>`);
   return svgI(`<ellipse cx="7" cy="12" rx="5" ry="3.6" fill="#dfe4ea" ${o}/><path d="M11.5 10.5 L19 4" stroke="#5a3a1a" stroke-width="2.2" stroke-linecap="round"/>`);
 }
 function vizHTML(P) {
@@ -384,11 +425,11 @@ function qbarHTML(P) {
     `<div class="qbLab ${cls}">${title}<span><b>${count}</b> ${unitLabel(count)}</span></div>` +
     `<div class="qbBar ${cls}">${`<span class="qbBox" style="width:${(100 / maxN).toFixed(3)}%">${box()}</span>`.repeat(n)}</div>` +
     `<div class="qbAmt ${cls}">= ${amount}</div>`;
-  const each = P.money ? `Every box is <b>1 ${P.item.one}</b>.` : `Every box is <b>${per} ${nounOf(P, per)}</b>.`;
-  const how = a === 1 ? ` The order is <b>${b}</b> boxes, so it needs ${b} times as much.`
-    : b === 1 ? ` The order is just <b>1</b> of the recipe's ${a} boxes.`
-    : ` Find what <b>1</b> box needs, then use it ${b} times.`;
-  return `<div class="qbar">${row('rec', P.money ? 'Price' : 'Recipe', a, P.baseN, amt(P.baseQ, false))}${row('ord', P.money ? 'You need' : 'Order', b, P.tgtN, amt(P.ans, true))}` +
+  const each = P.money ? L(`Every box is <b>1 ${P.item.one}</b>.`, `Cada caja es <b>1 ${P.item.one}</b>.`) : L(`Every box is <b>${per} ${nounOf(P, per)}</b>.`, `Cada caja es <b>${per} ${nounOf(P, per)}</b>.`);
+  const how = a === 1 ? L(` The order is <b>${b}</b> boxes, so it needs ${b} times as much.`, ` El pedido es <b>${b}</b> cajas, así que necesita ${b} veces esa cantidad.`)
+    : b === 1 ? L(` The order is just <b>1</b> of the recipe's ${a} boxes.`, ` El pedido es solo <b>1</b> de las ${a} cajas de la receta.`)
+    : L(` Find what <b>1</b> box needs, then use it ${b} times.`, ` Halla lo que necesita <b>1</b> caja y úsalo ${b} veces.`);
+  return `<div class="qbar">${row('rec', P.money ? L('Price', 'Precio') : L('Recipe', 'Receta'), a, P.baseN, amt(P.baseQ, false))}${row('ord', P.money ? L('You need', 'Necesitas') : L('Order', 'Pedido'), b, P.tgtN, amt(P.ans, true))}` +
     `<div class="qbNote">${each}${how}</div></div>`;
 }
 function fixActive() {                                              // the order being cooked left (walked out)? cook the next one, or close the stove
@@ -401,17 +442,17 @@ function renderRail() {
   if (!G) return;
   fixActive();
   const r = railOrders();
-  if (!r.length) { rail.innerHTML = '<span class="railEmpty">Order rail &mdash; bring orders into the kitchen</span>'; return; }
+  if (!r.length) { rail.innerHTML = `<span class="railEmpty">${L('Order rail &mdash; bring orders into the kitchen', 'Riel de pedidos &mdash; lleva los pedidos a la cocina')}</span>`; return; }
   r.forEach(C => {
     const b = document.createElement('button'); b.type = 'button';
     b.className = 'tk' + (G.cooking && C.id === G.activeId ? ' on' : '') + (C.railed ? ' old' : '') + (C.remake ? ' remake' : '');   // only brand-new tickets slide in
     C.railed = true;
     const P = C.P, what = P.money ? `${P.tgtN} ${P.tgtN === 1 ? P.item.one : P.item.short}` : `${P.tgtN} ${nounOf(P, P.tgtN)}`;
-    b.innerHTML = `<span class="tkNum" style="background:${C.color}">#${C.num}</span><span class="tkDish">${P.money ? 'Supplies' : P.dish.name}</span><span class="tkQty">${what}</span>${C.remake ? '<span class="tkRe">Remake</span>' : ''}`;
-    b.setAttribute('aria-label', `Order ${C.num}: ${P.money ? 'supplies bill' : P.dish.name}, ${what}`);
+    b.innerHTML = `<span class="tkNum" style="background:${C.color}">#${C.num}</span><span class="tkDish">${P.money ? L('Supplies', 'Compras') : P.dish.name}</span><span class="tkQty">${what}</span>${C.remake ? `<span class="tkRe">${L('Remake', 'Rehacer')}</span>` : ''}`;
+    b.setAttribute('aria-label', L(`Order ${C.num}: ${P.money ? 'supplies bill' : P.dish.name}, ${what}`, `Pedido ${C.num}: ${P.money ? 'cuenta de compras' : P.dish.name}, ${what}`));
     b.onclick = () => {
       if (!G || G.state !== 'play') return;
-      if (!G.cooking) { toast(atStove() ? 'Press Space to cook.' : 'Walk to the stove, then press Space to cook.', ''); return; }
+      if (!G.cooking) { toast(atStove() ? L('Press Space to cook.', 'Presiona Espacio para cocinar.') : L('Walk to the stove, then press Space to cook.', 'Camina a la estufa y presiona Espacio para cocinar.'), ''); return; }
       setActive(C.id); if (!coarse()) $('ans').focus();
     };
     rail.appendChild(b);
@@ -426,30 +467,32 @@ function renderCook() {
   $('touch').classList.toggle('hidden', !G || show || screen !== 'play');
   if (!C) return;
   const P = C.P;
-  $('ckOrder').innerHTML = `<span class="ckNum" style="background:${C.color}">#${C.num}</span> ${C.remake ? '<span class="ckRe">Remake</span> ' : ''}${P.money ? 'Supplies for ' + P.dish.name : P.dish.name}`;
-  $('ckKind').textContent = G.mode === 'practice' ? 'Practice' : 'Level ' + G.level;
+  $('ckOrder').innerHTML = `<span class="ckNum" style="background:${C.color}">#${C.num}</span> ${C.remake ? `<span class="ckRe">${L('Remake', 'Rehacer')}</span> ` : ''}${P.money ? L('Supplies for ', 'Compras para ') + P.dish.name : P.dish.name}`;
+  $('ckKind').textContent = G.mode === 'practice' ? L('Practice', 'Práctica') : L('Level ', 'Nivel ') + G.level;
   // every order is shown as the same picture (qbarHTML): a recipe bar and an order bar made of equal boxes
   let rec = '', ask = '';
   if (P.kind === 'rate') {
-    rec = `<div class="rc market"><div class="rcHead">Market price &middot; ${b_(P.baseN)} ${P.item.q} cost ${b_('$' + fhtml(P.baseQ))}</div>${qbarHTML(P)}</div>`;
-    ask = P.tgtN === 1 ? `What does ${b_('1 ' + P.item.one)} cost?` : `This order needs ${b_(P.tgtN + ' ' + P.item.q)}. What do they cost?`;
+    rec = `<div class="rc market"><div class="rcHead">${L('Market price', 'Precio del mercado')} &middot; ${b_(P.baseN)} ${P.item.q} ${L('cost', 'cuestan')} ${b_('$' + fhtml(P.baseQ))}</div>${qbarHTML(P)}</div>`;
+    ask = P.tgtN === 1 ? L(`What does ${b_('1 ' + P.item.one)} cost?`, `¿Cuánto cuesta ${b_('1 ' + P.item.one)}?`)
+      : L(`This order needs ${b_(P.tgtN + ' ' + P.item.q)}. What do they cost?`, `Este pedido necesita ${b_(P.tgtN + ' ' + P.item.q)}. ¿Cuánto cuestan?`);
   } else if (P.kind === 'table') {
     const cols = [[P.baseN, P.baseQ]].concat(P.extraCol ? [P.extraCol] : []);
-    rec = `<div class="rc"><div class="rcHead">Recipe ratio table</div><table class="rt"><tr><th>${P.dish.noun}</th>${cols.map(c => `<td>${c[0]}</td>`).join('')}<td class="q">${P.tgtN}</td></tr>` +
+    rec = `<div class="rc"><div class="rcHead">${L('Recipe ratio table', 'Tabla de razones de la receta')}</div><table class="rt"><tr><th>${P.dish.noun}</th>${cols.map(c => `<td>${c[0]}</td>`).join('')}<td class="q">${P.tgtN}</td></tr>` +
       `<tr><th>${P.ing.q}</th>${cols.map(c => `<td>${fhtml(c[1])}</td>`).join('')}<td class="q">?</td></tr></table>${qbarHTML(P)}</div>`;
-    ask = `How many ${b_(P.ing.q)} for ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}?`;
+    ask = L(`How many ${b_(P.ing.q)} for ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}?`, `¿${howMany(P.ing)} ${b_(P.ing.q)} para ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}?`);
   } else {
-    rec = `<div class="rc"><div class="rcHead">${P.dish.name} recipe</div>${qbarHTML(P)}</div>`;
-    ask = `Order #${C.num} wants ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}. How many ${b_(P.ing.q)}?`;
+    rec = `<div class="rc"><div class="rcHead">${L(`${P.dish.name} recipe`, `Receta: ${P.dish.name}`)}</div>${qbarHTML(P)}</div>`;
+    ask = L(`Order #${C.num} wants ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}. How many ${b_(P.ing.q)}?`,
+      `El pedido #${C.num} quiere ${b_(P.tgtN + ' ' + nounOf(P, P.tgtN))}. ¿${howMany(P.ing)} ${b_(P.ing.q)}?`);
   }
   $('ckRecipe').innerHTML = rec; $('ckAsk').innerHTML = ask;
   // the answer row is the proportion itself: recipe amount / recipe size = [ answer ] / order size
-  const per = n => P.money ? `<b>${n}</b> ${n === 1 ? P.item.short.replace(/s$/, '') : P.item.short}` : `<b>${n}</b> ${nounOf(P, n)}`;
+  const per = n => P.money ? `<b>${n}</b> ${n === 1 ? (P.item.short1 || P.item.short.replace(/s$/, '')) : P.item.short}` : `<b>${n}</b> ${nounOf(P, n)}`;
   $('propL').innerHTML = `<span class="pn">${P.money ? '<b>$' + fhtml(P.baseQ) + '</b>' : `<b>${fhtml(P.baseQ)}</b> ${fval(P.baseQ) === 1 ? P.ing.u1 : P.ing.u}`}</span><span class="pd">${per(P.baseN)}</span>`;
   $('propR').innerHTML = per(P.tgtN);
   $('ansPre').textContent = P.money ? '$' : '';
   $('ansUnit').textContent = P.money ? '' : P.ing.u;
-  $('ans').setAttribute('aria-label', 'Your answer' + (P.money ? ' in dollars' : ' in ' + P.ing.u));
+  $('ans').setAttribute('aria-label', L('Your answer', 'Tu respuesta') + (P.money ? L(' in dollars', ' en dólares') : L(' in ', ' en ') + P.ing.u));
   requestAnimationFrame(fitCook); setTimeout(fitCook, 150);
   renderWaiting();
 }
@@ -459,7 +502,7 @@ function renderWaiting() {
   if (!G || !G.cooking || G.mode !== 'run') { el.innerHTML = ''; return; }
   el.innerHTML = G.custs.filter(c => c.arrive >= 1 && c.state !== 'served').sort((a, b) => a.patience - b.patience).map(c => {
     const fr = clamp(c.patience / c.patMax, 0, 1), col = fr > 0.5 ? '#35b24a' : fr > 0.25 ? '#e8a33a' : '#e0483c';
-    return `<span class="wChip" title="Order #${c.num}"><b style="background:${c.color}">#${c.num}</b><i><u style="width:${Math.round(fr * 100)}%;background:${col}"></u></i></span>`;
+    return `<span class="wChip" title="${L('Order', 'Pedido')} #${c.num}"><b style="background:${c.color}">#${c.num}</b><i><u style="width:${Math.round(fr * 100)}%;background:${col}"></u></i></span>`;
   }).join('');
 }
 function fitCook() {                                                  // on a really crowded card, shrink the contents a little so nothing is cut off
@@ -485,11 +528,13 @@ function submit() {
   if (next.length) {                                                  // more orders on the rail: keep cooking, one after another
     G.activeId = next[0].id; renderRail(); renderCook();
     if (!coarse()) setTimeout(() => $('ans').focus(), 20);
-    toast(inHand ? `Order #${C.num} is in your hands. Next: order #${next[0].num}.` : `Hands full - order #${C.num} is waiting on the counter. Next: order #${next[0].num}.`, '');
+    toast(inHand ? L(`Order #${C.num} is in your hands. Next: order #${next[0].num}.`, `El pedido #${C.num} está en tus manos. Sigue: pedido #${next[0].num}.`)
+      : L(`Hands full - order #${C.num} is waiting on the counter. Next: order #${next[0].num}.`, `Manos llenas: el pedido #${C.num} espera en el mostrador. Sigue: pedido #${next[0].num}.`), '');
   } else {
     closeCook();
-    const nums = ch.plates.map(c => '#' + c.num).join(' and ');
-    toast(inHand ? `Carry ${nums} to ${ch.plates.length > 1 ? 'their tables' : 'the table'}.` : `Hands full - order #${C.num} is waiting on the counter. Serve ${nums} first.`, '');
+    const nums = ch.plates.map(c => '#' + c.num).join(L(' and ', ' y '));
+    toast(inHand ? L(`Carry ${nums} to ${ch.plates.length > 1 ? 'their tables' : 'the table'}.`, `Lleva ${nums} a ${ch.plates.length > 1 ? 'sus mesas' : 'la mesa'}.`)
+      : L(`Hands full - order #${C.num} is waiting on the counter. Serve ${nums} first.`, `Manos llenas: el pedido #${C.num} espera en el mostrador. Primero sirve ${nums}.`), '');
   }
 }
 function deliver(C) {                                                 // plate on the table: the customer reacts
@@ -498,7 +543,8 @@ function deliver(C) {                                                 // plate o
   if (!ok) G.chef.worry = 1.8;
   C.mood = ok ? 'happy' : C.result === 'close' ? 'upset' : 'fuming';
   if (ok) {
-    C.bubble = pick(['Perfect!', 'Delicious!', '¡Delicioso!', 'Just right!', '5 stars!', 'Yum!', '¡Delicioso!']);
+    C.bubble = pick(ES ? ['¡Perfecto!', '¡Delicioso!', '¡Justo lo que pedí!', '¡5 estrellas!', '¡Qué rico!', '¡Delicioso!']
+      : ['Perfect!', 'Delicious!', '¡Delicioso!', 'Just right!', '5 stars!', 'Yum!', '¡Delicioso!']);
     G.correct++; G.served++; G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.stars++;
     if (G.mode === 'run') { totalStars++; store.set('stars', totalStars); }
     const s = SEATS[C.seat], k = depth(s.ty);
@@ -509,14 +555,16 @@ function deliver(C) {                                                 // plate o
       if (lv > G.level) {
         G.level = lv;
         if (lv > bestLevel) { bestLevel = lv; store.set('best_level', bestLevel); }
-        setTimeout(() => toast(`🎉 Level ${lv}: ${LEVEL_NAMES[lv - 1]}! Customers come in faster.`, 'good'), 900);
+        setTimeout(() => toast(L(`🎉 Level ${lv}: ${LEVEL_NAMES[lv - 1]}! Customers come in faster.`, `🎉 ¡Nivel ${lv}: ${LEVEL_NAMES[lv - 1]}! Los clientes llegan más rápido.`), 'good'), 900);
       }
     }
   } else {
     G.wrong++; G.streak = 0;
-    if (P.money) C.bubble = over ? (C.result === 'close' ? 'That\'s a bit much...' : 'I\'M NOT PAYING THAT!') : (C.result === 'close' ? 'Hmm, that\'s not right.' : 'THAT\'S NOT EVEN CLOSE!');
-    else if (C.result === 'close') C.bubble = over ? 'A little too much...' : 'Hmm, a bit skimpy.';
-    else C.bubble = over ? pick(['WAY TOO MUCH!', 'WHAT IS THIS?!', 'I CAN\'T EAT ALL THAT!']) : pick(['IS THIS A JOKE?!', 'WHAT IS THIS?!', 'WHERE\'S THE REST?!']);
+    if (P.money) C.bubble = over ? (C.result === 'close' ? L('That\'s a bit much...', 'Es un poco caro...') : L('I\'M NOT PAYING THAT!', '¡NO VOY A PAGAR ESO!'))
+      : (C.result === 'close' ? L('Hmm, that\'s not right.', 'Mmm, eso no está bien.') : L('THAT\'S NOT EVEN CLOSE!', '¡NI SE ACERCA!'));
+    else if (C.result === 'close') C.bubble = over ? L('A little too much...', 'Un poco demasiado...') : L('Hmm, a bit skimpy.', 'Mmm, es muy poquito.');
+    else C.bubble = over ? pick(ES ? ['¡ES DEMASIADO!', '¡¿QUÉ ES ESTO?!', '¡NO ME CABE TANTO!'] : ['WAY TOO MUCH!', 'WHAT IS THIS?!', 'I CAN\'T EAT ALL THAT!'])
+      : pick(ES ? ['¡¿ES UNA BROMA?!', '¡¿QUÉ ES ESTO?!', '¡¿DÓNDE ESTÁ EL RESTO?!'] : ['IS THIS A JOKE?!', 'WHAT IS THIS?!', 'WHERE\'S THE REST?!']);
     if (C.result === 'off') sfx.fume(); else sfx.bad();
     G.missed.push(Object.assign({}, C));                              // a copy: the order gets remade, so its answer will change
   }
@@ -531,7 +579,7 @@ function openExplain(C) {
   const body = explainHTML(C);                                          // built first, so a problem here can never leave the game stuck
   if (G.cooking) closeCook();
   G.state = 'explain'; G.pending = C; clearKeys(); G.chef.walking = false;
-  $('exTitle').innerHTML = (C.result === 'off' ? '😤 ' : '😕 ') + `Let's fix order #${C.num}`;
+  $('exTitle').innerHTML = (C.result === 'off' ? '😤 ' : '😕 ') + L(`Let's fix order #${C.num}`, `Arreglemos el pedido #${C.num}`);
   $('exBody').innerHTML = body;
   $('explain').classList.remove('hidden'); cardAt = performance.now();
   setTimeout(() => $('btnExNext').focus(), 30);
@@ -549,28 +597,35 @@ const chip = (txt, col, extra) => { const c = `<span class="chip" style="border-
 const C_BASE = '#2f80ed', C_OK = '#1e9e57', C_K = '#ff7a1a', C_BAD = '#e04545';
 function stepsHTML(P) {
   const { g, a, b, v } = blocksOf(P);
-  const Q = x => P.money ? '$' + fhtml(x) : fhtml(x), per = g === 1 ? `for 1 ${nounOf(P, 1)}` : `for ${g} ${nounOf(P, g)}`;
+  const Q = x => P.money ? '$' + fhtml(x) : fhtml(x), per = L('for ', 'para ') + (g === 1 ? `1 ${nounOf(P, 1)}` : `${g} ${nounOf(P, g)}`);
+  const SF = L('scale factor', 'factor de escala');
   if (P.kind === 'frac') {
     const k = F(P.tgtN, P.baseN);
-    return `<div>${chip(P.tgtN, C_OK)} ÷ ${chip(P.baseN, C_BASE)} = ${chip('×' + fhtml(k), C_K, 'scale factor')}</div>` +
+    return `<div>${chip(P.tgtN, C_OK)} ÷ ${chip(P.baseN, C_BASE)} = ${chip('×' + fhtml(k), C_K, SF)}</div>` +
       `<div>${chip(Q(P.baseQ), C_BASE)} × ${fhtml(k)} = ${chip(Q(P.ans), C_OK)}</div>`;
   }
-  if (a === 1) return `<div>${chip(P.tgtN, C_OK)} ÷ ${chip(P.baseN, C_BASE)} = ${chip('×' + b, C_K, 'scale factor')}</div><div>${chip(Q(P.baseQ), C_BASE)} × ${b} = ${chip(Q(P.ans), C_OK)}</div>`;
-  if (b === 1 && !P.money) return `<div>${chip(P.baseN, C_BASE)} ÷ ${chip(P.tgtN, C_OK)} = ${chip('÷' + a, C_K, 'scale factor')}</div><div>${chip(Q(P.baseQ), C_BASE)} ÷ ${a} = ${chip(Q(P.ans), C_OK)}</div>`;
-  return `<div>${chip(Q(P.baseQ), C_BASE)} ÷ ${a} = ${chip(Q(v), C_K, P.money ? `per ${P.item.one}` : per)}</div>` +
-    `<div>${chip(Q(v), C_K)} × ${b} = ${chip(Q(P.ans), C_OK, `for ${P.tgtN} ${nounOf(P, P.tgtN)}`)}</div>`;
+  if (a === 1) return `<div>${chip(P.tgtN, C_OK)} ÷ ${chip(P.baseN, C_BASE)} = ${chip('×' + b, C_K, SF)}</div><div>${chip(Q(P.baseQ), C_BASE)} × ${b} = ${chip(Q(P.ans), C_OK)}</div>`;
+  if (b === 1 && !P.money) return `<div>${chip(P.baseN, C_BASE)} ÷ ${chip(P.tgtN, C_OK)} = ${chip('÷' + a, C_K, SF)}</div><div>${chip(Q(P.baseQ), C_BASE)} ÷ ${a} = ${chip(Q(P.ans), C_OK)}</div>`;
+  return `<div>${chip(Q(P.baseQ), C_BASE)} ÷ ${a} = ${chip(Q(v), C_K, P.money ? L('per ', 'por ') + P.item.one : per)}</div>` +
+    `<div>${chip(Q(v), C_K)} × ${b} = ${chip(Q(P.ans), C_OK, `${L('for', 'para')} ${P.tgtN} ${nounOf(P, P.tgtN)}`)}</div>`;
 }
 function mistakeHTML(T) {
-  const P = T.P, diff = P.tgtN - P.baseN, noun = nounOf(P, Math.abs(diff)), more = fval(P.ans) > fval(P.baseQ);
-  const tips = {
-    add: () => `The order has ${Math.abs(diff)} ${diff > 0 ? 'more' : 'fewer'} ${noun} than the ${P.money ? 'price listed' : 'recipe'}, so it looks like you <b>${diff > 0 ? 'added' : 'subtracted'} ${Math.abs(diff)}</b>. Proportions don't change by adding the same amount &mdash; every amount changes by the <b>same factor</b>.`,
+  const P = T.P, diff = P.tgtN - P.baseN, noun = nounOf(P, Math.abs(diff)), more = fval(P.ans) > fval(P.baseQ), n = Math.abs(diff);
+  const tips = ES ? {
+    add: () => `El pedido tiene ${n} ${noun} ${diff > 0 ? 'más' : 'menos'} que ${P.money ? 'el precio de la lista' : 'la receta'}, así que parece que <b>${diff > 0 ? 'sumaste' : 'restaste'} ${n}</b>. Las proporciones no cambian sumando la misma cantidad &mdash; cada cantidad cambia por el <b>mismo factor</b>.`,
+    flip: () => `Parece que ${more ? 'dividiste' : 'multiplicaste'} cuando necesitabas ${more ? 'multiplicar' : 'dividir'}. El pedido es ${more ? 'más grande' : 'más pequeño'} que ${P.money ? 'la cantidad de la lista' : 'la receta'}, así que la respuesta tiene que ser ${more ? 'mayor' : 'menor'}.`,
+    timesN: () => `Parece que multiplicaste por ${P.tgtN} (el número de ${nounOf(P, P.tgtN)}) en lugar de por el factor de escala.`,
+    unit: () => `$${fhtml(fdiv(P.baseQ, F(P.baseN)))} es el precio de solo <b>1</b> ${P.item.one}. Ahora multiplícalo por ${P.tgtN} para todo el pedido.`
+  } : {
+    add: () => `The order has ${n} ${diff > 0 ? 'more' : 'fewer'} ${noun} than the ${P.money ? 'price listed' : 'recipe'}, so it looks like you <b>${diff > 0 ? 'added' : 'subtracted'} ${n}</b>. Proportions don't change by adding the same amount &mdash; every amount changes by the <b>same factor</b>.`,
     flip: () => `It looks like you ${more ? 'divided' : 'multiplied'} when you needed to ${more ? 'multiply' : 'divide'}. The order is ${more ? 'bigger' : 'smaller'} than the ${P.money ? 'listed amount' : 'recipe'}, so the answer has to be ${more ? 'more' : 'less'}.`,
     timesN: () => `It looks like you multiplied by ${P.tgtN} (the number of ${nounOf(P, P.tgtN)}) instead of by the scale factor.`,
     unit: () => `$${fhtml(fdiv(P.baseQ, F(P.baseN)))} is the price of just <b>one</b> ${P.item.one}. Now multiply it by ${P.tgtN} for the whole order.`
   };
   if (tips[T.mistake]) return `<div class="note">💡 ${tips[T.mistake]()}</div>`;
-  const d = Math.abs(T.userAns - fval(P.ans));
-  return `<div class="note">💡 You were ${T.userAns > fval(P.ans) ? 'over' : 'under'} by ${Math.round(d * 100) / 100}${P.money ? ' dollars' : ' ' + P.ing.u}. Find how many times bigger (or smaller) the order is, then change the amount by that same factor.</div>`;
+  const d = Math.round(Math.abs(T.userAns - fval(P.ans)) * 100) / 100, over = T.userAns > fval(P.ans), unit = P.money ? L(' dollars', ' dólares') : ' ' + P.ing.u;
+  return `<div class="note">💡 ${L(`You were ${over ? 'over' : 'under'} by ${d}${unit}. Find how many times bigger (or smaller) the order is, then change the amount by that same factor.`,
+    `${over ? 'Te pasaste por' : 'Te faltaron'} ${d}${unit}. Halla cuántas veces más grande (o más pequeño) es el pedido y luego cambia la cantidad por ese mismo factor.`)}</div>`;
 }
 // the tape diagram: the recipe as equal blocks, the order as the same blocks repeated, and the student's amount as a bar underneath
 function tapeSVG(P, userVal, compact) {
@@ -579,8 +634,8 @@ function tapeSVG(P, userVal, compact) {
   const rowH = compact ? 30 : 36, gap = compact ? 16 : 24, fs = compact ? 12 : 14;
   const cur = P.money ? '$' : '';
   const rows = [
-    { lab: P.money ? `${P.baseN} ${nounOf(P, P.baseN)}` : `Recipe: ${P.baseN} ${nounOf(P, P.baseN)}`, n: a, fill: '#dbe8ff', st: C_BASE, tot: P.baseQ },
-    { lab: P.money ? `${P.tgtN} ${nounOf(P, P.tgtN)}` : `Order: ${P.tgtN} ${nounOf(P, P.tgtN)}`, n: b, fill: '#d3f5df', st: C_OK, tot: P.ans }
+    { lab: P.money ? `${P.baseN} ${nounOf(P, P.baseN)}` : `${L("Recipe", "Receta")}: ${P.baseN} ${nounOf(P, P.baseN)}`, n: a, fill: '#dbe8ff', st: C_BASE, tot: P.baseQ },
+    { lab: P.money ? `${P.tgtN} ${nounOf(P, P.tgtN)}` : `${L("Order", "Pedido")}: ${P.tgtN} ${nounOf(P, P.tgtN)}`, n: b, fill: '#d3f5df', st: C_OK, tot: P.ans }
   ];
   let y = 8, out = '';
   rows.forEach(r => {
@@ -595,21 +650,22 @@ function tapeSVG(P, userVal, compact) {
   // the student's amount
   const ok = verdict(P, userVal) === 'ok', col = ok ? C_OK : verdict(P, userVal) === 'close' ? '#e8a33a' : C_BAD;
   const wUser = Math.min(userU, maxU * 1.15) * u, clipped = userU > maxU * 1.15;
-  out += `<text x="${X0 - 10}" y="${y + rowH / 2 + 5}" text-anchor="end" font-size="${fs}" font-weight="800" fill="#1d2340">You served</text>`;
+  out += `<text x="${X0 - 10}" y="${y + rowH / 2 + 5}" text-anchor="end" font-size="${fs}" font-weight="800" fill="#1d2340">${L("You served", "Serviste")}</text>`;
   out += `<rect x="${X0}" y="${y}" width="${b * u}" height="${rowH}" fill="none" stroke="${C_OK}" stroke-width="2" stroke-dasharray="6 5"/>`;
   out += `<rect x="${X0}" y="${y + 4}" width="${Math.max(3, wUser)}" height="${rowH - 8}" rx="4" fill="${col}" opacity=".85"/>`;
   if (clipped) out += `<path d="M${X0 + wUser - 8},${y + 2} l12,${rowH / 2 - 2} l-12,${rowH / 2 - 2}" fill="${col}"/>`;
   out += `<text x="${X0 + Math.max(wUser, b * u) + 10}" y="${y + rowH / 2 + 5}" font-size="${fs + 1}" font-weight="900" fill="${col}">= ${P.money ? '$' : ''}${Math.round(userVal * 100) / 100}</text>`;
   y += rowH;
   // the "each block = ..." note goes under the diagram as HTML, so its fraction can be drawn stacked
-  const note = P.money ? `each block = $${fhtml(v)} for 1 ${P.item.one}` : `each block = ${fhtml(v)} ${unitWord(P, v)} for ${g} ${nounOf(P, g)}`;
-  return `<svg class="tape" viewBox="0 0 ${X0 + span + 90} ${y + 8}" role="img" aria-label="tape diagram comparing the right amount with yours">${out}</svg>` +
+  const eb = L("each block", "cada bloque"), fr = L("for", "para");
+  const note = P.money ? `${eb} = $${fhtml(v)} ${fr} 1 ${P.item.one}` : `${eb} = ${fhtml(v)} ${unitWord(P, v)} ${fr} ${g} ${nounOf(P, g)}`;
+  return `<svg class="tape" viewBox="0 0 ${X0 + span + 90} ${y + 8}" role="img" aria-label="${L("tape diagram comparing the right amount with yours", "diagrama de cinta que compara la cantidad correcta con la tuya")}">${out}</svg>` +
     `<div class="tapeNote" style="padding-left:${(X0 / (X0 + span + 90) * 100).toFixed(1)}%">${note}</div>`;
 }
 function explainHTML(T) {
   const P = T.P, off = T.result === 'off';
   const you = `${P.money ? '$' : ''}${Math.round(T.userAns * 100) / 100}${P.money ? '' : ' ' + P.ing.u}`;
-  return `<div class="verdict"><span class="bad">❌ You: ${you} <small>${off ? '(way off)' : '(close)'}</small></span><span class="arrow">➜</span><span class="ok">✅ ${qtyText(P, P.ans)}</span></div>` +
+  return `<div class="verdict"><span class="bad">❌ ${L("You", "Tú")}: ${you} <small>${off ? L("(way off)", "(muy lejos)") : L("(close)", "(cerca)")}</small></span><span class="arrow">➜</span><span class="ok">✅ ${qtyText(P, P.ans)}</span></div>` +
     mistakeHTML(T) + tapeSVG(P, T.userAns) + `<div class="steps">${stepsHTML(P)}</div>`;
 }
 
@@ -618,13 +674,13 @@ function explainHTML(T) {
 function startGame(level) {
   G = newWorld('run', level || 1); orderNo = 0; clearKeys();
   hideOverlays(); showScreen('play'); audioInit();
-  toast(level > 1 ? `Level ${level}: ${LEVEL_NAMES[level - 1]} - the restaurant is open!` : 'The restaurant is open! Use ← → to walk.', '');
+  toast(level > 1 ? L(`Level ${level}: ${LEVEL_NAMES[level - 1]} - the restaurant is open!`, `Nivel ${level}: ${LEVEL_NAMES[level - 1]} — ¡el restaurante está abierto!`) : L('The restaurant is open! Use ← → to walk.', '¡El restaurante está abierto! Usa ← → para caminar.'), '');
   renderRail(); renderCook(); updateHUD();
 }
 function startPractice(kinds) {
   G = newWorld('practice', 1, kinds); orderNo = 0; clearKeys();
   hideOverlays(); showScreen('play'); audioInit();
-  toast('Practice: no rush and no reviews - take your time!', '');
+  toast(L('Practice: no rush and no reviews - take your time!', 'Práctica: sin prisa y sin reseñas. ¡Tómate tu tiempo!'), '');
   renderRail(); renderCook(); updateHUD();
 }
 function gameOver() {
@@ -634,11 +690,11 @@ function gameOver() {
   if (newBest) { best = n; store.set('best_served', best); }
   if (G.level > bestLevel) { bestLevel = G.level; store.set('best_level', bestLevel); }
   const total = G.correct + G.wrong, acc = total ? Math.round(G.correct / total * 100) : 0;
-  $('ovTitle').textContent = '🚪 The restaurant closed!';
-  $('ovSub').textContent = `${MAX_REVIEWS} one-star reviews - time to lock up for the night.`;
-  $('ovStats').innerHTML = `<div><b>${n}</b>Orders served ${newBest ? '🏆 New best!' : ''}</div><div><b>${best}</b>Best shift &middot; Level ${bestLevel}</div>` +
-    `<div><b>${G.stars} ⭐</b>Stars this shift</div><div><b>${acc}%</b>Accuracy &middot; best streak ${G.bestStreak}</div>`;
-  renderStarts($('ovContinue'), '↩ Or start the next shift at:');
+  $('ovTitle').textContent = L('🚪 The restaurant closed!', '🚪 ¡El restaurante cerró!');
+  $('ovSub').textContent = L(`${MAX_REVIEWS} one-star reviews - time to lock up for the night.`, `${MAX_REVIEWS} reseñas de una estrella: hora de cerrar por hoy.`);
+  $('ovStats').innerHTML = `<div><b>${n}</b>${L("Orders served", "Pedidos servidos")} ${newBest ? L("🏆 New best!", "🏆 ¡Nuevo récord!") : ""}</div><div><b>${best}</b>${L("Best shift", "Mejor turno")} &middot; ${L("Level", "Nivel")} ${bestLevel}</div>` +
+    `<div><b>${G.stars} ⭐</b>${L("Stars this shift", "Estrellas en este turno")}</div><div><b>${acc}%</b>${L("Accuracy", "Precisión")} &middot; ${L("best streak", "mejor racha")} ${G.bestStreak}</div>`;
+  renderStarts($('ovContinue'), L('↩ Or start the next shift at:', '↩ O empieza el próximo turno en:'));
   $('ovReview').innerHTML = missedHTML(G.missed);
   hideOverlays(['over']); $('over').classList.remove('hidden'); cardAt = performance.now();
   setTimeout(() => $('btnAgain').focus(), 30);
@@ -646,24 +702,24 @@ function gameOver() {
 }
 function missedHTML(list) {
   const last = list.slice(-4);
-  if (!last.length) return '<p>🎉 No wrong orders - the customers just got tired of waiting. Try to move faster!</p>';
-  return `<p style="text-align:left;font-weight:800;margin:6px 0 2px">📝 Orders you missed${list.length > last.length ? ` (last ${last.length})` : ''}:</p><div class="review">` +
-    last.map(T => `<div class="miss"><div class="missHead">#${T.num} &middot; ${T.P.money ? 'Supplies' : T.P.dish.name}</div>${tapeSVG(T.P, T.userAns, true)}` +
+  if (!last.length) return `<p>${L("🎉 No wrong orders - the customers just got tired of waiting. Try to move faster!", "🎉 Ningún pedido equivocado: los clientes solo se cansaron de esperar. ¡Intenta moverte más rápido!")}</p>`;
+  return `<p style="text-align:left;font-weight:800;margin:6px 0 2px">📝 ${L("Orders you missed", "Pedidos que fallaste")}${list.length > last.length ? ` (${L("last", "últimos")} ${last.length})` : ""}:</p><div class="review">` +
+    last.map(T => `<div class="miss"><div class="missHead">#${T.num} &middot; ${T.P.money ? L("Supplies", "Compras") : T.P.dish.name}</div>${tapeSVG(T.P, T.userAns, true)}` +
       `<div class="missLine"><span class="bad">❌ ${T.P.money ? '$' : ''}${Math.round(T.userAns * 100) / 100}</span> ➜ <span class="ok">✅ ${qtyText(T.P, T.P.ans)}</span></div></div>`).join('') + '</div>';
 }
 function renderStarts(el, head) {
   let h = `<p class="startsHead">${head}</p><div class="starts">`;
   for (let lv = 1; lv <= MAX_LEVEL; lv++) {
-    if (lv === 1) h += `<button type="button" class="btn ghost start" data-lv="1">↺ Start Over</button>`;
-    else h += lv <= bestLevel ? `<button type="button" class="btn alt start" data-lv="${lv}">Level ${lv}</button>` : `<span class="start locked" title="Reach level ${lv} in a shift to unlock it">🔒 Level ${lv}</span>`;
+    if (lv === 1) h += `<button type="button" class="btn ghost start" data-lv="1">${L("↺ Start Over", "↺ Empezar de nuevo")}</button>`;
+    else h += lv <= bestLevel ? `<button type="button" class="btn alt start" data-lv="${lv}">${L("Level", "Nivel")} ${lv}</button>` : `<span class="start locked" title="${L(`Reach level ${lv} in a shift to unlock it`, `Llega al nivel ${lv} en un turno para desbloquearlo`)}">🔒 ${L("Level", "Nivel")} ${lv}</span>`;
   }
   el.innerHTML = h + '</div>';
   el.onclick = e => { const b = e.target.closest('button[data-lv]'); if (b) startGame(+b.dataset.lv); };
 }
 function buildMenu() {
   $('mStars').textContent = totalStars; $('mBest').textContent = best; $('mBestLevel').textContent = bestLevel;
-  $('btnStart').textContent = bestLevel > 1 ? `▶ Continue · Level ${bestLevel}` : 'Open the restaurant!';
-  renderStarts($('menuStarts'), '📍 Or start at:');
+  $('btnStart').textContent = bestLevel > 1 ? L(`▶ Continue · Level ${bestLevel}`, `▶ Continuar · Nivel ${bestLevel}`) : L('Open the restaurant!', '¡Abre el restaurante!');
+  renderStarts($('menuStarts'), L('📍 Or start at:', '📍 O empieza en:'));
 }
 function toMenu() { setPaused(false); G = null; hideOverlays(); buildMenu(); showScreen('menu'); renderCook(); $('rail').innerHTML = ''; }
 function showScreen(name) {
@@ -692,7 +748,7 @@ function renderPractice() {
     const card = document.createElement('button'); card.type = 'button';
     card.className = 'ptype' + (on ? ' on' : ''); card.setAttribute('role', 'checkbox'); card.setAttribute('aria-checked', on ? 'true' : 'false');
     card.style.borderLeftColor = lc; card.style.borderLeftWidth = '8px';
-    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel" style="color:${lc}">Level ${t.level}</span><span class="pname">${t.name}</span><span class="pdesc">${t.desc}</span><span class="psample">${sampleText(t.id)}</span>`;
+    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel" style="color:${lc}">${L("Level", "Nivel")} ${t.level}</span><span class="pname">${t.name}</span><span class="pdesc">${t.desc}</span><span class="psample">${sampleText(t.id)}</span>`;
     card.onclick = () => {
       practicePicked = practicePicked.includes(t.id) ? practicePicked.filter(id => id !== t.id) : practicePicked.concat(t.id);
       store.set('practice_types', practicePicked); renderPractice(); grid.children[PRACTICE_TYPES.indexOf(t)].focus();
@@ -700,7 +756,7 @@ function renderPractice() {
     grid.appendChild(card);
   });
   const n = practicePicked.length, b = $('btnPracStart');
-  b.disabled = n === 0; b.textContent = n === 0 ? 'Pick at least one skill' : `Start Practice (${n} skill${n > 1 ? 's' : ''})`;
+  b.disabled = n === 0; b.textContent = n === 0 ? L('Pick at least one skill', 'Elige al menos una destreza') : L(`Start Practice (${n} skill${n > 1 ? "s" : ""})`, `Empezar práctica (${n} destreza${n > 1 ? "s" : ""})`);
 }
 
 
@@ -838,7 +894,7 @@ function drawRoom(t) {
   ctx.fillStyle = '#8f9aa8'; ctx.fillRect(8, 16, 532, 7); circ(8, 19, 5, '#6b7686'); circ(540, 19, 5, '#6b7686');       // the ticket rail
   ctx.fillStyle = '#8a5a2a'; ctx.fillRect(KITCHEN.x - 6, 0, 12, FLOOR_Y);                                              // post between kitchen and dining room
   ctx.fillStyle = '#2a2320'; ctx.font = '900 13px Fredoka, Trebuchet MS'; ctx.textAlign = 'center';
-  rr(300, 132, 84, 22, 5, '#2f3b33', '#8a5a2a', 3); ctx.fillStyle = '#ffc83d'; ctx.fillText('KITCHEN', 342, 148);
+  rr(300, 132, 84, 22, 5, '#2f3b33', '#8a5a2a', 3); ctx.fillStyle = '#ffc83d'; ctx.fillText(L('KITCHEN', 'COCINA'), 342, 148);
   // kitchen things against the back wall: shelf of jars, fridge, stove
   rr(96, 104, 190, 5, 2, '#6b4423');
   ['#fff8ec', '#ffffff', '#f3e0b0', '#ffe9ef', '#e8f3ff'].forEach((c, i) => rr(104 + i * 36, 80, 24, 24, 5, c, '#b9a67a', 1.5));
@@ -859,7 +915,7 @@ function drawRoom(t) {
   ctx.fillStyle = '#6b4a2a'; ctx.font = '800 9px Fredoka, Trebuchet MS'; ctx.fillText('PROPORTIONAL', 713, 102); ctx.fillText('PLATES', 713, 111);
   rr(DOOR.x - 36, 84, 72, FLOOR_Y - 84 + 2, 4, '#8a5a2a', OL, 2); rr(DOOR.x - 28, 92, 56, FLOOR_Y - 92, 3, '#a8703f');
   rr(DOOR.x - 20, 100, 40, 40, 4, '#bfe3f5', '#6b4423', 2); circ(DOOR.x + 20, 150, 3, '#ffc83d');
-  rr(DOOR.x - 22, 64, 44, 16, 4, '#2a9d8f', '#fff', 1.5); ctx.fillStyle = '#fff'; ctx.font = '900 10px Fredoka, Trebuchet MS'; ctx.fillText('OPEN', DOOR.x, 76);
+  rr(DOOR.x - 22, 64, 44, 16, 4, '#2a9d8f', '#fff', 1.5); ctx.fillStyle = '#fff'; ctx.font = '900 10px Fredoka, Trebuchet MS'; ctx.fillText(L('OPEN', 'ABIERTO'), DOOR.x, 76);
   // the floor: wooden planks in the dining room, checkered tiles in the kitchen, all running toward the vanishing point
   ctx.fillStyle = '#b77c4a'; ctx.fillRect(0, FLOOR_Y, W, H - FLOOR_Y);
   ctx.strokeStyle = 'rgba(80,45,20,.28)'; ctx.lineWidth = 1.5; ctx.beginPath();
@@ -905,7 +961,7 @@ function drawTableTop() {
 function drawFood(P, ratio, x, y, val) {
   if (P.money) {                                                    // a bill instead of food
     ctx.save(); ctx.translate(x, y - 16); ctx.rotate(-0.08);
-    rr(-22, -18, 44, 34, 3, '#ffffff', '#6b6152', 1.5); ctx.fillStyle = '#6b6152'; ctx.font = '800 8px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('BILL', 0, -8);
+    rr(-22, -18, 44, 34, 3, '#ffffff', '#6b6152', 1.5); ctx.fillStyle = '#6b6152'; ctx.font = '800 8px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText(L('BILL', 'CUENTA'), 0, -8);
     ctx.fillStyle = ratio === 1 ? '#1e9e57' : '#e04545'; ctx.font = '900 12px Fredoka, Trebuchet MS'; ctx.fillText('$' + (Math.round(val * 100) / 100), 0, 9); ctx.restore(); return;
   }
   ell(x, y, 28, 6, '#ffffff', '#9a9a9a', 1.5);
@@ -963,7 +1019,7 @@ function drawParticles() {
   for (const p of G.particles) {
     ctx.globalAlpha = clamp(p.life * 1.4, 0, 1);
     if (p.kind === 'star') { ctx.fillStyle = '#ffc83d'; ctx.font = '900 20px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('★', p.x, p.y); }
-    else if (p.kind === 'review') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(-0.15); rr(-30, -16, 60, 32, 5, '#fff', '#e0483c', 3); ctx.fillStyle = '#e0483c'; ctx.font = '900 14px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('1★', 0, -1); ctx.font = '800 7.5px Fredoka, Trebuchet MS'; ctx.fillStyle = '#6b4a2a'; ctx.fillText('REVIEW', 0, 10); ctx.restore(); }
+    else if (p.kind === 'review') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(-0.15); rr(-30, -16, 60, 32, 5, '#fff', '#e0483c', 3); ctx.fillStyle = '#e0483c'; ctx.font = '900 14px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('1★', 0, -1); ctx.font = '800 7.5px Fredoka, Trebuchet MS'; ctx.fillStyle = '#6b4a2a'; ctx.fillText(L('REVIEW', 'RESEÑA'), 0, 10); ctx.restore(); }
   }
   ctx.globalAlpha = 1;
 }
@@ -1099,15 +1155,15 @@ function hintInfo() {                                                 // the lit
   const ch = G.chef, near = nearCustomer(), r = railOrders();
   const to = p => dirArrow(p.x - ch.x, p.y - ch.y);
   const room = ch.plates.length < MAX_HANDS;
-  if (near && ch.plates.includes(near)) return { t: 'Space: Serve!', key: true };
-  if (near && near.state === 'ready') return { t: 'Space: Take order', key: true };
-  if (inKitchen() && G.pass.length && room) return { t: 'Space: Pick up plates', key: true };
-  if (atStove() && r.length) return { t: 'Space: Cook', key: true };
-  if (ch.plates.length) return { t: ch.plates.map(c => `Serve #${c.num} ${to(serveSpot(c.seat))}`).join('  ·  ') };
-  if (ch.notepad.length) return { t: `To the kitchen ${to(KITCHEN_SPOT)}` };
-  if (G.pass.length) return { t: `Plates on the counter ${to(KITCHEN_SPOT)}` };
-  if (r.length) return { t: `To the stove ${to(KITCHEN_SPOT)}` };
-  if (inKitchen() && G.custs.some(c => c.state === 'ready' && c.arrive >= 1)) return { t: 'A customer is waiting!' };
+  if (near && ch.plates.includes(near)) return { t: L('Space: Serve!', 'Espacio: ¡Servir!'), key: true };
+  if (near && near.state === 'ready') return { t: L('Space: Take order', 'Espacio: Tomar pedido'), key: true };
+  if (inKitchen() && G.pass.length && room) return { t: L('Space: Pick up plates', 'Espacio: Recoger platos'), key: true };
+  if (atStove() && r.length) return { t: L('Space: Cook', 'Espacio: Cocinar'), key: true };
+  if (ch.plates.length) return { t: ch.plates.map(c => `${L("Serve", "Servir")} #${c.num} ${to(serveSpot(c.seat))}`).join('  ·  ') };
+  if (ch.notepad.length) return { t: `${L("To the kitchen", "A la cocina")} ${to(KITCHEN_SPOT)}` };
+  if (G.pass.length) return { t: `${L("Plates on the counter", "Platos en el mostrador")} ${to(KITCHEN_SPOT)}` };
+  if (r.length) return { t: `${L("To the stove", "A la estufa")} ${to(KITCHEN_SPOT)}` };
+  if (inKitchen() && G.custs.some(c => c.state === 'ready' && c.arrive >= 1)) return { t: L('A customer is waiting!', '¡Un cliente está esperando!') };
   return null;
 }
 function dirArrow(dx, dy) { return ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'][(Math.round(Math.atan2(dy * 1.4, dx) / (Math.PI / 4)) + 8) % 8]; }
@@ -1130,7 +1186,7 @@ function draw() {
   // everything standing on the floor is drawn back-to-front, so nearer things cover farther ones
   const items = [{ y: COUNTER.y1, f: drawCounter }];
   if (!G) {                                                            // the title / menu backdrop: a calm evening at the restaurant
-    const fake = (i, mood, look) => ({ look, mood, num: i + 1, color: TICKET_COLORS[i + 1], bubble: mood === 'happy' ? 'Yum!' : '', state: 'hung', arrive: 1, patience: 1, patMax: Infinity });
+    const fake = (i, mood, look) => ({ look, mood, num: i + 1, color: TICKET_COLORS[i + 1], bubble: mood === 'happy' ? L('Yum!', '¡Qué rico!') : '', state: 'hung', arrive: 1, patience: 1, patMax: Infinity });
     const guests = { 6: fake(0, 'happy', { skin: '#c68642', hair: '#2b1b10', shirt: '#5b8cff', style: 'pony' }), 1: fake(1, 'wait', { skin: '#ffd9b0', hair: '#a0522d', shirt: '#2eb872', style: 'curly' }) };
     SEATS.forEach((s, i) => items.push({ y: s.ty, f: () => drawSeat(i, guests[i], t) }));
     items.push({ y: 250, f: () => atDepth(200, 250, depth(250), () => drawChef({ x: 0, dir: 1, walking: false, notepad: [], plates: [], worry: 0 }, t, true)) });
@@ -1199,9 +1255,9 @@ function drawGuideArrows() {
     ctx.beginPath(); ctx.moveTo(-15, -12); ctx.lineTo(15, -12); ctx.lineTo(0, 8); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
     ctx.restore();
   };
-  held.forEach(C => { const s = SEATS[C.seat], k = depth(s.ty); arrow(s.tx, s.sy - 196 * k, C.color, `Serve #${C.num}`); });
+  held.forEach(C => { const s = SEATS[C.seat], k = depth(s.ty); arrow(s.tx, s.sy - 196 * k, C.color, `${L("Serve", "Servir")} #${C.num}`); });
   if (!held.length && (ch.notepad.length || railOrders().length || G.pass.length) && !inKitchen() && !G.cooking)
-    arrow(KITCHEN_SPOT.x, 196, '#d9432f', ch.notepad.length ? 'Kitchen' : railOrders().length ? 'Cook' : 'Pick up');
+    arrow(KITCHEN_SPOT.x, 196, '#d9432f', ch.notepad.length ? L('Kitchen', 'Cocina') : railOrders().length ? L('Cook', 'Cocinar') : L('Pick up', 'Recoger'));
 }
 
 /* ===================== HUD / TOAST ===================== */
@@ -1211,7 +1267,7 @@ function updateHUD() {
   if (!G) return;
   const run = G.mode === 'run';
   $('hReviews').style.display = run ? '' : 'none';
-  $('hReviews').innerHTML = 'Reviews ' + Array.from({ length: MAX_REVIEWS }, (_, i) => `<span class="rv${i < G.reviews ? ' bad' : ''}">${i < G.reviews ? '1★' : '☆'}</span>`).join('');
+  $('hReviews').innerHTML = L('Reviews ', 'Reseñas ') + Array.from({ length: MAX_REVIEWS }, (_, i) => `<span class="rv${i < G.reviews ? ' bad' : ''}">${i < G.reviews ? '1★' : '☆'}</span>`).join('');
   $('hCorrectPill').style.display = run ? 'none' : ''; $('hCorrect').textContent = G.correct;
   $('hServedPill').style.display = run ? '' : 'none'; $('hServed').textContent = shiftServed();
   $('hStreak').textContent = G.streak; $('hStars').textContent = run ? totalStars : G.stars;
@@ -1251,7 +1307,7 @@ let last = performance.now();
 function setPaused(v) {
   paused = v; $('pause').classList.toggle('hidden', !v);
   if (v) { $('btnResume').focus(); clearKeys(); }
-  $('menuBtn').textContent = v ? '✕ Close' : '☰ Menu';
+  $('menuBtn').textContent = v ? L('✕ Close', '✕ Cerrar') : L('☰ Menu', '☰ Menú');
   last = performance.now();
   if (G) renderCook();
   if (!v && G && !$('cook').classList.contains('hidden') && !coarse()) $('ans').focus();
@@ -1273,7 +1329,7 @@ addEventListener('keydown', e => {
   if (e.repeat || !e.shiftKey || !['KeyT', 'KeyA', 'KeyV'].every(k => cheatDown.has(k))) return;
   cheatDown.clear();
   totalStars = 999999; store.set('stars', totalStars); bestLevel = MAX_LEVEL; store.set('best_level', bestLevel);
-  sfx.good(); toast('🔓 All levels unlocked · max stars!', 'good');
+  sfx.good(); toast(L('🔓 All levels unlocked · max stars!', '🔓 ¡Todos los niveles desbloqueados · estrellas al máximo!'), 'good');
   if (screen === 'menu') buildMenu(); updateHUD();
 });
 const MOVE_KEYS = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down' };
@@ -1352,7 +1408,7 @@ $('btnOverMenu').onclick = toMenu;
 $('btnServe').onclick = () => submit();
 $('btnCookClose').onclick = () => closeCook();
 $('btnExNext').onclick = closeExplain;
-const muteLabel = () => { $('muteBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on'; };
+const muteLabel = () => { $('muteBtn').textContent = muted ? L('🔇 Sound off', '🔇 Sonido apagado') : L('🔊 Sound on', '🔊 Sonido encendido'); };
 $('muteBtn').onclick = () => { muted = !muted; store.set('muted', muted); muteLabel(); audioInit(); };
 muteLabel();
 $('menuBtn').onclick = () => { if (G && G.state === 'play') setPaused(!paused); };
@@ -1385,7 +1441,7 @@ $('tAct').onclick = () => { audioInit(); interact(); };
 const ANS_CHAR = /[0-9./ ]/;
 const shakeAns = () => { const a = $('ans'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); };
 $('ans').addEventListener('keydown', e => {
-  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !ANS_CHAR.test(e.key)) { e.preventDefault(); shakeAns(); toast('Numbers only - use / for fractions (like 3/4) and . for decimals', ''); }
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !ANS_CHAR.test(e.key)) { e.preventDefault(); shakeAns(); toast(L('Numbers only - use / for fractions (like 3/4) and . for decimals', 'Solo números: usa / para fracciones (como 3/4) y . para decimales'), ''); }
 });
 $('ans').addEventListener('input', () => {                             // catches pasting and phone keyboards too
   const a = $('ans'), v = a.value.replace(/[^0-9./ ]/g, '').replace(/ {2,}/g, ' ').replace(/^ /, '');
@@ -1395,7 +1451,7 @@ $('ans').addEventListener('input', () => {                             // catche
   const kp = $('keypad');
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', '/', 'space', '⌫'].forEach(k => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = k === 'space' ? '␣' : k;
-    b.setAttribute('aria-label', k === 'space' ? 'space' : k === '⌫' ? 'delete' : k);
+    b.setAttribute('aria-label', k === 'space' ? L('space', 'espacio') : k === '⌫' ? L('delete', 'borrar') : k);
     b.onclick = () => { const a = $('ans'); if (k === '⌫') a.value = a.value.slice(0, -1); else a.value += k === 'space' ? ' ' : k; };
     kp.appendChild(b);
   });
