@@ -481,6 +481,24 @@
   #sb .pill .rv.bad { background:#e04545; color:#fff; }
   #sb .note { background:#fff7dd; border:2px solid #ffc83d; border-radius:12px; padding:8px 12px; font-size:15px; line-height:1.4; margin:8px 0; color:var(--ink); text-align:left; }
   #sb .tape { width:100%; height:auto; display:block; margin:6px 0; }
+  /* the wrong-order card: recipe card ×k order card, then the proportion with the scale factor arrows */
+  #sb .sfRow { display:flex; align-items:stretch; justify-content:center; gap:10px; margin:6px 0 2px; }
+  #sb .sfCard { flex:1 1 0; max-width:260px; border:3px solid; border-radius:14px; padding:6px 10px 8px; background:#fff; text-align:center; }
+  #sb .sfCard.rec { border-color:#2f80ed; } #sb .sfCard.ord { border-color:#1e9e57; }
+  #sb .sfT { font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.05em; }
+  #sb .sfCard.rec .sfT { color:#2f80ed; } #sb .sfCard.ord .sfT { color:#1e9e57; }
+  #sb .sfIc { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:2px; min-height:28px; margin:4px 0; font-size:22px; }
+  #sb .sfIc .ic { width:22px; height:22px; display:block; }
+  #sb .sfIc b { font-size:18px; } #sb .sfIc .sfBig { font-size:28px; }
+  #sb .sfN { font-size:16px; } #sb .sfA { display:flex; align-items:center; justify-content:center; gap:4px; font-size:18px; margin-top:2px; }
+  #sb .sfA .ic { width:22px; height:22px; display:block; }
+  #sb .sfArrow { display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ff7a1a; font-weight:900; min-width:84px; }
+  #sb .sfK { font-size:30px; line-height:1; background:#fff; border:3px solid #ff7a1a; border-radius:12px; padding:2px 10px; }
+  #sb .sfAr { font-size:34px; line-height:1; }
+  #sb .sfArrow small { font-size:12px; color:#8a5a2a; font-weight:800; }
+  #sb .propSvg { width:100%; max-width:560px; height:auto; display:block; margin:4px auto 0; }
+  #sb .propNote { text-align:center; font-size:15px; color:var(--ink); margin:0 0 4px; }
+  #sb .propNote b { color:#ff7a1a; }
   #sb .chipNote { display:block; font-size:12px; color:var(--muted); font-weight:700; text-align:center; margin-top:2px; line-height:1.2; }
   #sb .steps > div { display:flex; align-items:flex-start; gap:8px; flex-wrap:wrap; justify-content:center; }
   #sb .chipWrap { display:inline-flex; flex-direction:column; align-items:center; }

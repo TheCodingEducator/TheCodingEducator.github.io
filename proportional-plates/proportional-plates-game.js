@@ -662,11 +662,55 @@ function tapeSVG(P, userVal, compact) {
   return `<svg class="tape" viewBox="0 0 ${X0 + span + 90} ${y + 8}" role="img" aria-label="${L("tape diagram comparing the right amount with yours", "diagrama de cinta que compara la cantidad correcta con la tuya")}">${out}</svg>` +
     `<div class="tapeNote" style="padding-left:${(X0 / (X0 + span + 90) * 100).toFixed(1)}%">${note}</div>`;
 }
+// the scale factor from the recipe to the order, as it's written on the card: ×4, ÷3, or ×3/2
+const kLabel = P => { const k = F(P.tgtN, P.baseN); return k.n === 1 && k.d > 1 ? '÷' + k.d : '×' + fhtml(k); };
+// the picture: the recipe card and the order card side by side, the dishes drawn on each, joined by a big "×k" arrow
+function scaleCardsHTML(P) {
+  const icons = n => P.money ? `<b class="sfBig">${n}</b>` : n <= 12 ? foodIcon(P.dish).repeat(n) : `${foodIcon(P.dish)}<b>&times;${n}</b>`;
+  const label = n => P.money ? (n === 1 ? P.item.one : P.item.q) : nounOf(P, n);
+  const amt = x => P.money ? `<b>$${fhtml(x)}</b>` : `${ingIcon(P.ing)}<b>${fhtml(x)}</b> ${fval(x) === 1 ? P.ing.u1 : P.ing.u}`;
+  const card = (cls, title, n, x) => `<div class="sfCard ${cls}"><div class="sfT">${title}</div><div class="sfIc">${icons(n)}</div>` +
+    `<div class="sfN"><b>${n}</b> ${label(n)}</div><div class="sfA">${amt(x)}</div></div>`;
+  return `<div class="sfRow">${card('rec', P.money ? L('Price', 'Precio') : L('Recipe', 'Receta'), P.baseN, P.baseQ)}` +
+    `<div class="sfArrow"><span class="sfK">${kLabel(P)}</span><span class="sfAr">&#10140;</span><small>${L('scale factor', 'factor de escala')}</small></div>` +
+    `${card('ord', P.money ? L('Your order', 'Tu pedido') : L('Order', 'Pedido'), P.tgtN, P.ans)}</div>`;
+}
+// the math: recipe amount / recipe size = order amount / order size, with a curved "×k" arrow over the tops and
+// another under the bottoms, so the same factor is visible on both parts of the ratio
+function proportionSVG(P) {
+  const Lx = 125, Rx = 395, cy = 70, bar = 96, dy = 128, fs = 30, cw = (s, f) => [...String(s)].length * f * 0.52;
+  const k = F(P.tgtN, P.baseN), kIsDiv = k.n === 1 && k.d > 1;
+  let out = '';
+  const frac = (cx, amount, count, col) => {
+    const unit = P.money ? '' : ' ' + (fval(amount) === 1 ? P.ing.u1 : P.ing.u);
+    const probe = svgAmount(amount, P.money ? '$' : '', 0, cy, 'start', fs, col), uw = unit ? cw(unit, 21) + 5 : 0, tw = probe.w + uw;
+    const start = cx - tw / 2, den = `${count} ${P.money ? (count === 1 ? (P.item.short1 || P.item.short.replace(/s$/, '')) : P.item.short) : nounOf(P, count)}`, dw = cw(den, 21);
+    out += svgAmount(amount, P.money ? '$' : '', start, cy, 'start', fs, col).svg;
+    if (unit) out += `<text x="${start + probe.w + 7}" y="${cy + 9}" font-size="21" font-weight="800" fill="${col}">${unit}</text>`;
+    const half = Math.max(tw, dw) / 2 + 8;
+    out += `<line x1="${cx - half}" x2="${cx + half}" y1="${bar}" y2="${bar}" stroke="#1d2340" stroke-width="3" stroke-linecap="round"/>`;
+    out += `<text x="${cx}" y="${dy}" text-anchor="middle" font-size="21" font-weight="800" fill="${col}">${den}</text>`;
+  };
+  frac(Lx, P.baseQ, P.baseN, C_BASE); frac(Rx, P.ans, P.tgtN, C_OK);
+  out += `<text x="260" y="${bar + 12}" text-anchor="middle" font-size="40" font-weight="900" fill="#1d2340">=</text>`;
+  // the two arrows, each labeled with the scale factor
+  const arc = (y0, yc, ly) => {
+    out += `<path d="M${Lx + 36} ${y0} Q260 ${yc} ${Rx - 36} ${y0}" fill="none" stroke="${C_K}" stroke-width="3" marker-end="url(#ppArr)"/>`;
+    const lab = svgAmount(kIsDiv ? F(k.d) : k, kIsDiv ? '÷' : '×', 0, ly, 'start', 22, C_K), bw = lab.w + 18;
+    out += `<rect x="${260 - bw / 2}" y="${ly - 17}" width="${bw}" height="34" rx="9" fill="#fff" stroke="${C_K}" stroke-width="2.5"/>`;
+    out += svgAmount(kIsDiv ? F(k.d) : k, kIsDiv ? '÷' : '×', 260 - lab.w / 2, ly, 'start', 22, C_K).svg;
+  };
+  arc(38, -6, 20); arc(146, 190, 170);
+  return `<svg class="propSvg" viewBox="0 0 520 190" role="img" aria-label="${L('proportion with the scale factor', 'proporción con el factor de escala')}">` +
+    `<defs><marker id="ppArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${C_K}"/></marker></defs>${out}</svg>` +
+    `<div class="propNote">${L('Scale factor', 'Factor de escala')} = ${P.tgtN} &divide; ${P.baseN} = <b>${kLabel(P)}</b>. ` +
+    L('The top changes by the same factor as the bottom.', 'La parte de arriba cambia por el mismo factor que la de abajo.') + `</div>`;
+}
 function explainHTML(T) {
   const P = T.P, off = T.result === 'off';
   const you = `${P.money ? '$' : ''}${Math.round(T.userAns * 100) / 100}${P.money ? '' : ' ' + P.ing.u}`;
   return `<div class="verdict"><span class="bad">❌ ${L("You", "Tú")}: ${you} <small>${off ? L("(way off)", "(muy lejos)") : L("(close)", "(cerca)")}</small></span><span class="arrow">➜</span><span class="ok">✅ ${qtyText(P, P.ans)}</span></div>` +
-    mistakeHTML(T) + tapeSVG(P, T.userAns) + `<div class="steps">${stepsHTML(P)}</div>`;
+    scaleCardsHTML(P) + proportionSVG(P) + mistakeHTML(T) + tapeSVG(P, T.userAns, true);
 }
 
 
