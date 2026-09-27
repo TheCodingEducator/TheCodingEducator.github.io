@@ -2180,10 +2180,16 @@
     if (!dir || e.ctrlKey || e.metaKey || e.altKey) return;
     if (window.isPageControlKey && window.isPageControlKey(e)) return;
     var t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    // the answer box is a stop too: Up / Down always leave it, and Left / Right leave it once the cursor is at
+    // that end of what's typed (otherwise they move the cursor as usual)
+    if (t && t.id === 'user-answer-input') {
+      var len = t.value.length, s = t.selectionStart, en = t.selectionEnd;
+      if (e.key === 'ArrowLeft' && !(s === 0 && en === 0)) return;
+      if (e.key === 'ArrowRight' && !(s === len && en === len)) return;
+    } else if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
     var popup = null;
     TS_POPUPS.forEach(function (id) { var el = document.getElementById(id); if (el && !el.classList.contains('hidden')) popup = el; });
-    var els = Array.prototype.slice.call((popup || document).querySelectorAll('button, [role="button"]')).filter(function (el) {
+    var els = Array.prototype.slice.call((popup || document).querySelectorAll('button, [role="button"], #user-answer-input')).filter(function (el) {
       return el.offsetParent !== null && !el.disabled && !el.closest(TS_CHROME) && (popup || !el.closest('#' + TS_POPUPS.join(', #')));
     });
     if (!els.length) return;
