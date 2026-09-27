@@ -104,7 +104,7 @@
 
   .games {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 20px;
     margin-bottom: 40px;
   }
@@ -188,6 +188,9 @@
 </style>
 <script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<link rel="stylesheet" href="site-layout.css">
+<script src="site-stats.js"></script>
+<script src="site-layout.js"></script>
 </head>
 <body>
 
@@ -202,24 +205,28 @@
   </div>
 
   <div class="privacy-note">
-    <strong>Where this comes from:</strong> everything on this page is read directly out of your own browser's local storage for this site. It was never sent anywhere, isn't tied to your name, and nobody else - including your teacher or us - can see it. It only shows up here on this device, in this browser. Clearing your browser data (or clicking "Reset all progress" below) erases it for good.
+    <strong>Where this comes from:</strong> everything on this page is read directly out of your own browser's local storage for this site. It was never sent anywhere, isn't tied to your name, and nobody else - including your teacher or us - can see it. It only shows up here on this device, in this browser. Clearing your browser data (or the "Reset progress" button at the top of this page) erases it for good.
   </div>
 
-  <h2 class="section-title">Achievement Badges</h2>
-  <p class="section-sub">Earned automatically based on your saved progress</p>
-  <div class="badges" id="badges"></div>
+  <h2 class="section-title">All games</h2>
+  <p class="section-sub">Your totals across every game, and the badges that count all your games together</p>
+  <div id="totals"></div>
+  <div id="all-badges" style="margin-bottom:44px"></div>
 
-  <h2 class="section-title">Game Stats</h2>
-  <p class="section-sub">Best times, streaks, coins, and unlocks per game</p>
+  <h2 class="section-title">By game</h2>
+  <p class="section-sub">Each game's best times, scores, coins and unlocks, with that game's own badges</p>
   <div class="games" id="games"></div>
 
   <p class="not-tracked-note">
     <strong>Not shown here:</strong> Exponent Hoops, Linear World Cup, and Bank Shot: Angle Golf don't keep a personal record - the first two are head-to-head games where the score resets each match, and Angle Golf generates a brand new random course every time you play. Tip the Scales is a straight level-by-level practice tool with no score to track either.
   </p>
 
-  <div class="reset-section">
+  <!-- moved into the top bar's "Reset progress" pop-out by site-layout.js (with its 5-second countdown) -->
+  <section class="reset-progress">
+    <h2>Reset all progress</h2>
+    <p>Erases the saved coins, streaks, unlocks, badges, and best times for every game on this device. This can't be undone.</p>
     <button class="reset-btn" id="reset-all-progress-btn">Reset all progress</button>
-  </div>
+  </section>
 </main>
 
 <footer>
@@ -248,219 +255,11 @@
   } catch (e) {}
 })();
 
-function readNum(key, fallback) {
-  var v = localStorage.getItem(key);
-  if (v === null) return fallback;
-  var n = parseFloat(v);
-  return isNaN(n) ? fallback : n;
-}
-function readJSON(key, fallback) {
-  var v = localStorage.getItem(key);
-  if (v === null) return fallback;
-  try { var p = JSON.parse(v); return p === null ? fallback : p; } catch (e) { return fallback; }
-}
-function readBool(key) {
-  return localStorage.getItem(key) === 'true';
-}
-function formatSeconds(s) {
-  if (s === null || s === undefined) return null;
-  return s.toFixed(2) + 's';
-}
-
-// ---- Let's Get to the Point ----
-var lgttp = {
-  played: localStorage.getItem('lgttp_coins') !== null || localStorage.getItem('lgttp_hs_genius') !== null,
-  coins: readNum('lgttp_coins', 0),
-  streak: readNum('lgttp_streak', 0),
-  ownedSkins: readJSON('lgttp_owned_skins', [0]),
-  hsGenius: readNum('lgttp_hs_genius', 0),
-  hsGeometry: readNum('lgttp_hs_geometry', 0)
-};
-
-// ---- Exponent Racer ----
-var exprace = {
-  played: localStorage.getItem('exprace_coins') !== null,
-  coins: readNum('exprace_coins', 0),
-  unlocked: readJSON('exprace_unlocked', { cars: ["red"], trails: ["none"], boosts: ["none"] }),
-  hardMode: readBool('exprace_hard_unlocked')
-};
-var expraceUnlockedCount = (exprace.unlocked.cars || []).length + (exprace.unlocked.trails || []).length + (exprace.unlocked.boosts || []).length;
-
-// ---- Laser Heist: Angle Breaker ----
-var laser = {
-  played: localStorage.getItem('laserheist_high_score') !== null || localStorage.getItem('laserheist_best_streak') !== null,
-  highScore: readNum('laserheist_high_score', 0),
-  bestStreak: readNum('laserheist_best_streak', 0),
-  unlockedSkins: readJSON('laserheist_unlocked_skins', [0])
-};
-
-// ---- Piggy Bank Math ----
-var piggy = {
-  played: localStorage.getItem('piggybank_best_easy') !== null || localStorage.getItem('piggybank_best_hard') !== null,
-  bestEasy: localStorage.getItem('piggybank_best_easy') !== null ? readNum('piggybank_best_easy', null) : null,
-  bestHard: localStorage.getItem('piggybank_best_hard') !== null ? readNum('piggybank_best_hard', null) : null
-};
-
-// ---- Similarity Builder ----
-// 1 coin per correct answer, spent in the game's Shop on the bridge-building crew (40 looks across 10 jobs, the Site Worker is free).
-var BRIDGE_CREW_TOTAL = 40;
-var bridge = {
-  played: localStorage.getItem('similaritybuilder_best_meters') !== null || localStorage.getItem('similaritybuilder_coins') !== null,
-  bestMeters: readNum('similaritybuilder_best_meters', 0),
-  bestLevel: readNum('similaritybuilder_best_level', 1),
-  bestBridges: readNum('similaritybuilder_best_bridges', 0),
-  bestStreak: readNum('similaritybuilder_best_streak', 0),
-  coins: readNum('similaritybuilder_coins', 0),
-  crew: Math.max(1, (readJSON('similaritybuilder_owned', ['crew']) || []).length)
-};
-// ---- Proportional Plates ----
-// 1 star per correct order served during a shift.
-var plates = {
-  played: localStorage.getItem('proportionalplates_best_served') !== null || localStorage.getItem('proportionalplates_stars') !== null,
-  bestServed: readNum('proportionalplates_best_served', 0),
-  bestLevel: readNum('proportionalplates_best_level', 1),
-  stars: readNum('proportionalplates_stars', 0)
-};
-
-// ---- Pythagorean Platforms ----
-// Saved when a world is finished: best score, best combo, and which of the 5 worlds are done.
-var rope = {
-  played: localStorage.getItem('grapplerope_best_score') !== null,
-  bestScore: readNum('grapplerope_best_score', 0),
-  bestCombo: readNum('grapplerope_best_combo', 0),
-  worlds: (readJSON('grapplerope_worlds_done', []) || []).length
-};
-
-var gamesPlayedCount = [lgttp.played, exprace.played, laser.played, piggy.played, bridge.played, plates.played, rope.played].filter(Boolean).length;
-var hasAnyBestTime = lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 || piggy.bestEasy !== null || piggy.bestHard !== null || laser.highScore > 0 || bridge.bestMeters > 0 || plates.bestServed > 0 || rope.bestScore > 0;
-var totalCoinsCombined = lgttp.coins + exprace.coins + bridge.coins;
-var lgttpSkinCount = (lgttp.ownedSkins || [0]).length;
-var laserSkinCount = (laser.unlockedSkins || [0]).length;
-
-// ---------------------------------------------------------------
-// Badges - each just a boolean condition over the data read above.
-// Thresholds are deliberately modest/achievable, not tuned to any
-// "elite" bar - the point is celebrating real progress, not gating it.
-// ---------------------------------------------------------------
-var BADGES = [
-  { icon: "🎮", name: "First Steps", desc: "Play any game once", earned: gamesPlayedCount >= 1 },
-  { icon: "🕹️", name: "Multi-Gamer", desc: "Save progress in 2+ games", earned: gamesPlayedCount >= 2 },
-  { icon: "🏆", name: "Completionist", desc: "Save progress in all 7 tracked games", earned: gamesPlayedCount >= 7 },
-  { icon: "⏱️", name: "Personal Best", desc: "Record a best time or high score", earned: hasAnyBestTime },
-  { icon: "🔥", name: "Streak Starter", desc: "Reach a streak of 3 in Let's Get to the Point", earned: lgttp.streak >= 3 },
-  { icon: "🌟", name: "Streak Master", desc: "Reach a streak of 10", earned: lgttp.streak >= 10 },
-  { icon: "🪙", name: "Coin Collector", desc: "Earn 20+ coins total", earned: totalCoinsCombined >= 20 },
-  { icon: "🎨", name: "Style Icon", desc: "Own 3+ skins in Let's Get to the Point", earned: lgttpSkinCount >= 3 },
-  { icon: "🧠", name: "Hard Mode Hero", desc: "Unlock Hard Mode in Exponent Racer", earned: exprace.hardMode },
-  { icon: "💎", name: "Laser Legend", desc: "Unlock 3+ laser skins", earned: laserSkinCount >= 3 },
-  { icon: "🐷", name: "Penny Pincher", desc: "Set a best time in Piggy Bank Math", earned: piggy.bestEasy !== null || piggy.bestHard !== null },
-  { icon: "📐", name: "Point Master", desc: "Set a best time in Genius or Geometry mode", earned: lgttp.hsGenius > 0 || lgttp.hsGeometry > 0 },
-  { icon: "🌉", name: "First Bridge", desc: "Play a run in Similarity Builder", earned: bridge.played },
-  { icon: "🏃", name: "Marathon Runner", desc: "Run 300+ meters in one Similarity Builder run", earned: bridge.bestMeters >= 300 },
-  { icon: "📏", name: "Scale Master", desc: "Reach level 4 in Similarity Builder", earned: bridge.bestLevel >= 4 },
-  { icon: "👷", name: "Crew Boss", desc: "Hire 3+ crew members in Similarity Builder", earned: bridge.crew >= 3 },
-  { icon: "🏗️", name: "Full Crew", desc: "Hire all 40 bridge-building crew looks", earned: bridge.crew >= BRIDGE_CREW_TOTAL },
-  { icon: "🍳", name: "Order Up!", desc: "Play a shift in Proportional Plates", earned: plates.played },
-  { icon: "🍽️", name: "Head Chef", desc: "Serve 15+ orders in one Proportional Plates shift", earned: plates.bestServed >= 15 },
-  { icon: "⭐", name: "Five-Star Diner", desc: "Reach level 5 in Proportional Plates", earned: plates.bestLevel >= 5 },
-  { icon: "🧗", name: "First Swing", desc: "Finish a world in Pythagorean Platforms", earned: rope.worlds >= 1 },
-  { icon: "🔥", name: "Swing Streak", desc: "Get a combo of 15+ in Pythagorean Platforms", earned: rope.bestCombo >= 15 },
-  { icon: "🛕", name: "Temple Explorer", desc: "Finish all 5 worlds in Pythagorean Platforms", earned: rope.worlds >= 5 }
-];
-
-var badgesHtml = BADGES.map(function (b) {
-  return '<div class="badge ' + (b.earned ? 'earned' : 'locked') + '">' +
-    '<div class="icon">' + b.icon + '</div>' +
-    '<div class="name">' + b.name + '</div>' +
-    '<div class="desc">' + b.desc + '</div>' +
-  '</div>';
-}).join('');
-document.getElementById('badges').innerHTML = badgesHtml;
-
-// ---------------------------------------------------------------
-// Per-game stat cards
-// ---------------------------------------------------------------
-function statRow(label, value) {
-  return '<div class="stat-row"><span class="stat-label">' + label + '</span><span class="stat-value">' + value + '</span></div>';
-}
-
-var gamesHtml = '';
-
-gamesHtml += '<div class="game-card"><h3>🎯 Let\'s Get to the Point</h3>';
-if (lgttp.played) {
-  gamesHtml += statRow('Coins', lgttp.coins);
-  gamesHtml += statRow('Current Streak', lgttp.streak);
-  gamesHtml += statRow('Skins Owned', lgttpSkinCount + ' / 12');
-  gamesHtml += statRow('Best Time (Genius)', lgttp.hsGenius > 0 ? formatSeconds(lgttp.hsGenius) : '—');
-  gamesHtml += statRow('Best Time (Geometry)', lgttp.hsGeometry > 0 ? formatSeconds(lgttp.hsGeometry) : '—');
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="lets-get-to-the-point/lets-get-to-the-point.html">Play &rarr;</a></div>';
-
-gamesHtml += '<div class="game-card"><h3>🏎️ Exponent Racer</h3>';
-if (exprace.played) {
-  gamesHtml += statRow('Coins', exprace.coins);
-  gamesHtml += statRow('Items Unlocked', expraceUnlockedCount);
-  gamesHtml += statRow('Hard Mode', exprace.hardMode ? 'Unlocked' : 'Locked');
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="exponent-racer/exponent-racer.html">Play &rarr;</a></div>';
-
-gamesHtml += '<div class="game-card"><h3>🔦 Laser Heist</h3>';
-if (laser.played) {
-  gamesHtml += statRow('High Score', laser.highScore);
-  gamesHtml += statRow('Best Streak', laser.bestStreak);
-  gamesHtml += statRow('Skins Unlocked', laserSkinCount + ' / 5');
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="laser-heist-angle-breaker/laser-heist-angle-breaker.html">Play &rarr;</a></div>';
-
-gamesHtml += '<div class="game-card"><h3>🐷 Piggy Bank Math</h3>';
-if (piggy.played) {
-  gamesHtml += statRow('Best Time (Easy)', piggy.bestEasy !== null ? formatSeconds(piggy.bestEasy) : '—');
-  gamesHtml += statRow('Best Time (Hard)', piggy.bestHard !== null ? formatSeconds(piggy.bestHard) : '—');
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="piggy-bank-math/piggy-bank-math.html">Play &rarr;</a></div>';
-
-gamesHtml += '<div class="game-card"><h3>🌉 Similarity Builder</h3>';
-if (bridge.played) {
-  gamesHtml += statRow('Best Distance', bridge.bestMeters + ' m');
-  gamesHtml += statRow('Highest Level', bridge.bestLevel + ' / 4');
-  gamesHtml += statRow('Most Bridges in a Run', bridge.bestBridges);
-  gamesHtml += statRow('Best Streak', bridge.bestStreak);
-  gamesHtml += statRow('Coins', bridge.coins);
-  gamesHtml += statRow('Crew Hired', bridge.crew + ' / ' + BRIDGE_CREW_TOTAL);
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="similarity-builder/similarity-builder.html">Play &rarr;</a></div>';
-
-gamesHtml += '<div class="game-card"><h3>🍳 Proportional Plates</h3>';
-if (plates.played) {
-  gamesHtml += statRow('Best Shift', plates.bestServed + ' orders');
-  gamesHtml += statRow('Highest Level', plates.bestLevel + ' / 5');
-  gamesHtml += statRow('Stars', plates.stars);
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="proportional-plates/proportional-plates.html">Play &rarr;</a></div>';
-
-gamesHtml += '<div class="game-card"><h3>🧗 Pythagorean Platforms</h3>';
-if (rope.played) {
-  gamesHtml += statRow('Best Score', rope.bestScore);
-  gamesHtml += statRow('Best Combo', 'x' + rope.bestCombo);
-  gamesHtml += statRow('Worlds Finished', rope.worlds + ' / 5');
-} else {
-  gamesHtml += '<p class="empty-note">No progress saved yet.</p>';
-}
-gamesHtml += '<a class="play-link" href="pythagorean-platforms/pythagorean-platforms.html">Play &rarr;</a></div>';
-
-document.getElementById('games').innerHTML = gamesHtml;
+// every game's stats and badges come from site-stats.js (the game pages' "My stats" pop-outs use it too)
+var data = SiteStats.read();
+document.getElementById('totals').innerHTML = SiteStats.totalsHTML(data);
+document.getElementById('all-badges').innerHTML = SiteStats.badgesHTML(data.badges.filter(function (b) { return b.game === 'all'; }));
+document.getElementById('games').innerHTML = data.games.map(function (g) { return SiteStats.gameHTML(data, g.key, '', true); }).join('');
 
 // ---------------------------------------------------------------
 // Reset button - only touches the keys these games actually use, not

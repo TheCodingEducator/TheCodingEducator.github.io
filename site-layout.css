@@ -90,3 +90,8 @@ html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-t
 }
 .sb-panel .sb-erase:hover:not(:disabled) { background: #b92a25; }
 .sb-panel .sb-erase:disabled { background: #5b6170; color: #e8ecf5; cursor: not-allowed; }
+
+/* leave room for the fixed top bar on every screen size (the game pages add more layout on computers, above) */
+body.site-fit { padding-top: 44px; box-sizing: border-box; }
+.sb-panel .reset-progress h2 { font-size: 16px; margin: 0 0 6px; }
+.sb-panel .reset-progress p { margin: 0; font-size: 13px; color: #b7c0d4; }

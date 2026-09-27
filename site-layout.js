@@ -103,6 +103,17 @@
     }
     if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', 'Standards', [standards], false);
     addPanel(right, 'sb-notes', '&#128221;', 'Teaching notes', [notes], !!tipBar);
+    // this game's saved stats and badges (site-stats.js), read fresh each time it opens
+    if (window.SiteStats && !/my-stats\.html$/.test(location.pathname)) {
+      var statsBox = document.createElement('div'), gameKey = SiteStats.keyForPage();
+      var fillStats = function () {
+        statsBox.innerHTML = (gameKey ? SiteStats.gameHTML(SiteStats.read(), gameKey, '../', false)
+          : '<p class="ss-empty">This game doesn\'t save stats - every round starts fresh.</p>') +
+          '<a class="ss-all" href="../my-stats.html">See all my stats and badges &rarr;</a>';
+      };
+      fillStats();
+      addPanel(right, 'sb-stats', '&#128202;', 'My stats', [statsBox], !!tipBar, fillStats);
+    }
     var erase = reset ? resetPanelNodes(reset) : null;
     if (erase) addPanel(right, 'sb-reset', '&#128465;&#65039;', 'Reset progress', [reset], !!tipBar, erase.startCountdown, erase.stopCountdown);
     // a click anywhere else closes the panels
