@@ -124,11 +124,11 @@ var COLOR_CRATE_HIGHLIGHT    = [126, 96, 58];
 
 // Unlockable laser color skins, unlocked at score thresholds.
 var LASER_SKINS = [
-  { name: "Ruby Red",     unlockScore: 0,    color: [255, 45, 60] },
-  { name: "Emerald Grid", unlockScore: 800,  color: [60, 255, 140] },
-  { name: "Sapphire Net", unlockScore: 2000, color: [70, 170, 255] },
-  { name: "Gold Vault",   unlockScore: 4000, color: [255, 205, 60] },
-  { name: "Void Purple",  unlockScore: 7000, color: [180, 90, 255] }
+  { name: tl("Ruby Red", "Rojo rubí"),     unlockScore: 0,    color: [255, 45, 60] },
+  { name: tl("Emerald Grid", "Rejilla esmeralda"), unlockScore: 800,  color: [60, 255, 140] },
+  { name: tl("Sapphire Net", "Red de zafiro"), unlockScore: 2000, color: [70, 170, 255] },
+  { name: tl("Gold Vault", "Bóveda dorada"),   unlockScore: 4000, color: [255, 205, 60] },
+  { name: tl("Void Purple", "Morado vacío"),  unlockScore: 7000, color: [180, 90, 255] }
 ];
 
 
@@ -163,67 +163,67 @@ var exitConfirmPending = false;
 var LEVELS = [
   {
     id: 0,
-    name: "Sector 1: Laser Grid Corner",
+    name: tl("Sector 1: Laser Grid Corner", "Sector 1: Esquina de láseres"),
     type: "complementary",
     puzzlesToClear: 4,
     timeLimit: 16,
     introText: [
-      "A tripwire laser clips a corner mirror and splits",
-      "into two beams that always sum to 90 degrees.",
-      "Know one beam's angle and you know exactly where",
-      "the other one is sweeping -- and where it isn't."
+      tl("A tripwire laser clips a corner mirror and splits", "Un láser trampa toca un espejo de esquina y se divide"),
+      tl("into two beams that always sum to 90 degrees.", "en dos rayos que siempre suman 90 grados."),
+      tl("Know one beam's angle and you know exactly where", "Si sabes el ángulo de un rayo, sabes exactamente dónde"),
+      tl("the other one is sweeping -- and where it isn't.", "barre el otro -- y dónde no.")
     ]
   },
   {
     id: 1,
-    name: "Sector 2: Watch Team Hallway",
+    name: tl("Sector 2: Watch Team Hallway", "Sector 2: Pasillo de guardias"),
     type: "supplementary",
     puzzlesToClear: 4,
     timeLimit: 18,
     introText: [
-      "Two guards watch this hallway from opposite doors --",
-      "together their sightline is a flat 180-degree line.",
-      "Read the active guard's watched angle, then work out",
-      "how wide the dead-space gap is before the crew moves."
+      tl("Two guards watch this hallway from opposite doors --", "Dos guardias vigilan este pasillo desde puertas opuestas --"),
+      tl("together their sightline is a flat 180-degree line.", "juntas, sus miradas forman una línea plana de 180 grados."),
+      tl("Read the active guard's watched angle, then work out", "Lee el ángulo que vigila el guardia activo y calcula"),
+      tl("how wide the dead-space gap is before the crew moves.", "qué tan ancho es el hueco sin vigilancia antes de moverte.")
     ]
   },
   {
     id: 2,
-    name: "Sector 3: Camera Crossfire",
+    name: tl("Sector 3: Camera Crossfire", "Sector 3: Fuego cruzado de cámaras"),
     type: "vertical",
     puzzlesToClear: 5,
     timeLimit: 16,
     introText: [
-      "Two security cameras face each other across the",
-      "floor, sweeping crossed cones of view. Angles directly",
-      "opposite each other (vertical angles) are always",
-      "equal -- adjacent ones are always supplementary."
+      tl("Two security cameras face each other across the", "Dos cámaras de seguridad se miran de frente en el"),
+      tl("floor, sweeping crossed cones of view. Angles directly", "piso, con conos de visión que se cruzan. Los ángulos"),
+      tl("opposite each other (vertical angles) are always", "opuestos entre sí (ángulos verticales) siempre son"),
+      tl("equal -- adjacent ones are always supplementary.", "iguales -- los adyacentes siempre son suplementarios.")
     ]
   },
   {
     id: 3,
-    name: "Sector 4: Duct Crawl",
+    name: tl("Sector 4: Duct Crawl", "Sector 4: Por los ductos"),
     type: "parallel",
     puzzlesToClear: 6,
     timeLimit: 20,
     introText: [
-      "Two parallel ventilation runs, linked by one diagonal",
-      "connector duct cutting through both -- a transversal",
-      "forming eight angles. Corresponding, alternate, and",
-      "co-interior rules all apply. Watch the lit pair."
+      tl("Two parallel ventilation runs, linked by one diagonal", "Dos ductos paralelos, unidos por un ducto"),
+      tl("connector duct cutting through both -- a transversal", "diagonal que corta a ambos -- una transversal"),
+      tl("forming eight angles. Corresponding, alternate, and", "que forma ocho ángulos. Aplican las reglas de"),
+      tl("co-interior rules all apply. Watch the lit pair.", "correspondientes, alternos y conjugados.")
     ]
   },
   {
     id: 4,
-    name: "Sector 5: The Vault Core",
+    name: tl("Sector 5: The Vault Core", "Sector 5: El corazón de la bóveda"),
     type: "mixed",
     puzzlesToClear: 8,
     timeLimit: 15,
     introText: [
-      "Guards, lasers, cameras, and duct crawls --",
-      "every system, randomized. This is the final lock",
-      "on the vault. Stay sharp -- lives are limited",
-      "and every mistake costs one."
+      tl("Guards, lasers, cameras, and duct crawls --", "Guardias, láseres, cámaras y ductos --"),
+      tl("every system, randomized. This is the final lock", "todos los sistemas, al azar. Este es el último candado"),
+      tl("on the vault. Stay sharp -- lives are limited", "de la bóveda. Ponte atento -- las vidas son pocas"),
+      tl("and every mistake costs one.", "y cada error cuesta una.")
     ]
   }
 ];
@@ -246,10 +246,10 @@ var currentPuzzle        = null;
 var seenPuzzleTypes = {};
 var FIRST_OF_TYPE_TIME_MULTIPLIER = 1.5;
 var PUZZLE_HINTS = {
-  supplementary: "Supplementary angles add up to 180 degrees.",
-  complementary: "Complementary angles add up to 90 degrees.",
-  vertical: "Vertical angles (directly across from each other) are equal.",
-  parallel: "Matching-position angles are equal; angles on the same side between the lines add up to 180 degrees."
+  supplementary: tl("Supplementary angles add up to 180 degrees.", "Los ángulos suplementarios suman 180 grados."),
+  complementary: tl("Complementary angles add up to 90 degrees.", "Los ángulos complementarios suman 90 grados."),
+  vertical: tl("Vertical angles (directly across from each other) are equal.", "Los ángulos verticales (opuestos entre sí) son iguales."),
+  parallel: tl("Matching-position angles are equal; angles on the same side between the lines add up to 180 degrees.", "Los ángulos en la misma posición son iguales; los del mismo lado entre las líneas suman 180 grados.")
 };
 
 // A one-line real-world tie-in shown on every puzzle after the first
@@ -258,10 +258,10 @@ var PUZZLE_HINTS = {
 // actual profession that uses this exact math is what makes "why does
 // this matter" a real answer instead of implied.
 var PUZZLE_FIELD_NOTES = {
-  supplementary: "Field Note: security techs aim two cameras this way to cover a straight hallway with zero blind spot.",
-  complementary: "Field Note: carpenters use this to cut corner trim that meets flush at a perfect right angle.",
-  vertical: "Field Note: surveyors and pilots fix a position using two crossing sightlines like this.",
-  parallel: "Field Note: civil engineers use this exact math for streets that cut diagonally across a city grid."
+  supplementary: tl("Field Note: security techs aim two cameras this way to cover a straight hallway with zero blind spot.", "Nota de campo: los técnicos de seguridad apuntan dos cámaras así para cubrir un pasillo recto sin puntos ciegos."),
+  complementary: tl("Field Note: carpenters use this to cut corner trim that meets flush at a perfect right angle.", "Nota de campo: los carpinteros usan esto para cortar molduras que se unen en un ángulo recto perfecto."),
+  vertical: tl("Field Note: surveyors and pilots fix a position using two crossing sightlines like this.", "Nota de campo: topógrafos y pilotos fijan una posición con dos líneas de mira que se cruzan así."),
+  parallel: tl("Field Note: civil engineers use this exact math for streets that cut diagonally across a city grid.", "Nota de campo: los ingenieros civiles usan estas mismas matemáticas para calles que cruzan en diagonal una cuadrícula urbana.")
 };
 
 var currentScore   = 0;
@@ -321,7 +321,7 @@ var PUZZLE_PHASE_SNEAKING    = "SNEAKING";
 var PUZZLE_PHASE_CAUGHT      = "CAUGHT";
 var puzzlePhase   = PUZZLE_PHASE_AIMING;
 var phaseTimer    = 0;
-var CAUGHT_DURATION = 100; // frames the "spotted, then chased off" reaction takes -- long enough for both beats (see computeCaughtScenePositions)
+var CAUGHT_DURATION = 100; // frames the tl("spotted, then chased off", "lo vieron y lo persiguieron") reaction takes -- long enough for both beats (see computeCaughtScenePositions)
 var pendingAdvance  = null; // what to do once the current phase finishes
 
 // Which screen edge the chasing guard rushes in from on a wrong
@@ -449,7 +449,7 @@ function checkSkinUnlocks() {
   for (var i = 0; i < LASER_SKINS.length; i++) {
     if (currentScore >= LASER_SKINS[i].unlockScore && unlockedSkinIndices.indexOf(i) === -1) {
       unlockedSkinIndices.push(i);
-      showFeedback("SKIN UNLOCKED: " + LASER_SKINS[i].name, COLOR_LASER_GOLD, 90);
+      showFeedback(tl("SKIN UNLOCKED: ", "ASPECTO DESBLOQUEADO: ") + LASER_SKINS[i].name, COLOR_LASER_GOLD, 90);
     }
   }
 }
@@ -810,8 +810,8 @@ function generateSupplementaryPuzzle() {
   var knownIsFirst = random(0, 1) < 0.5;
   return {
     type: "supplementary",
-    relationshipName: "Supplementary Angles",
-    ruleText: "Supplementary angles sum to 180 degrees.",
+    relationshipName: tl("Supplementary Angles", "Ángulos suplementarios"),
+    ruleText: tl("Supplementary angles sum to 180 degrees.", "Los ángulos suplementarios suman 180 grados."),
     knownValue: known,
     correctAnswer: missing,
     knownIsFirst: knownIsFirst,
@@ -897,8 +897,8 @@ function generateComplementaryPuzzle() {
   var knownIsFirst = random(0, 1) < 0.5;
   return {
     type: "complementary",
-    relationshipName: "Complementary Angles",
-    ruleText: "Complementary angles sum to 90 degrees.",
+    relationshipName: tl("Complementary Angles", "Ángulos complementarios"),
+    ruleText: tl("Complementary angles sum to 90 degrees.", "Los ángulos complementarios suman 90 grados."),
     knownValue: known,
     correctAnswer: missing,
     knownIsFirst: knownIsFirst,
@@ -993,15 +993,15 @@ function generateVerticalPuzzle() {
   var relationship;
   if ((knownSlot === "A" && targetSlot === "C") || (knownSlot === "C" && targetSlot === "A") ||
       (knownSlot === "B" && targetSlot === "D") || (knownSlot === "D" && targetSlot === "B")) {
-    relationship = "Vertical Angles (equal)";
+    relationship = tl("Vertical Angles (equal)", "Ángulos verticales (iguales)");
   } else {
-    relationship = "Linear Pair (supplementary)";
+    relationship = tl("Linear Pair (supplementary)", "Par lineal (suplementarios)");
   }
 
   return {
     type: "vertical",
     relationshipName: relationship,
-    ruleText: "Vertical angles are equal; adjacent angles on a line are supplementary.",
+    ruleText: tl("Vertical angles are equal; adjacent angles on a line are supplementary.", "Los ángulos verticales son iguales; los adyacentes en una línea son suplementarios."),
     knownSlot: knownSlot,
     targetSlot: targetSlot,
     knownValue: values[knownSlot],
@@ -1105,13 +1105,13 @@ function classifyParallelRelationship(posKnown, intKnown, posTarget, intTarget) 
   if (intKnown === intTarget) {
     var oppositePairs = { topLeft: "bottomRight", bottomRight: "topLeft", topRight: "bottomLeft", bottomLeft: "topRight" };
     if (oppositePairs[posKnown] === posTarget) {
-      return { name: "Vertical Angles", equal: true };
+      return { name: tl("Vertical Angles", "Ángulos verticales"), equal: true };
     }
-    return { name: "Linear Pair", equal: false };
+    return { name: tl("Linear Pair", "Par lineal"), equal: false };
   }
 
   if (posKnown === posTarget) {
-    return { name: "Corresponding Angles", equal: true };
+    return { name: tl("Corresponding Angles", "Ángulos correspondientes"), equal: true };
   }
 
   var interiorPositionsA = { bottomLeft: true, bottomRight: true }; // interior at upper line
@@ -1126,20 +1126,20 @@ function classifyParallelRelationship(posKnown, intKnown, posTarget, intTarget) 
 
   if (knownIsInterior && targetIsInterior) {
     if (sameSide) {
-      return { name: "Co-Interior Angles (Same-Side Interior)", equal: false };
+      return { name: tl("Co-Interior Angles (Same-Side Interior)", "Ángulos conjugados internos"), equal: false };
     }
-    return { name: "Alternate Interior Angles", equal: true };
+    return { name: tl("Alternate Interior Angles", "Ángulos alternos internos"), equal: true };
   }
 
   if (!knownIsInterior && !targetIsInterior) {
     if (sameSide) {
-      return { name: "Co-Exterior Angles (Same-Side Exterior)", equal: false };
+      return { name: tl("Co-Exterior Angles (Same-Side Exterior)", "Ángulos conjugados externos"), equal: false };
     }
-    return { name: "Alternate Exterior Angles", equal: true };
+    return { name: tl("Alternate Exterior Angles", "Ángulos alternos externos"), equal: true };
   }
 
   // One interior, one exterior, not aligned by the cases above.
-  return { name: "Angle Pair", equal: false };
+  return { name: tl("Angle Pair", "Par de ángulos"), equal: false };
 }
 
 function generateParallelPuzzle() {
@@ -1171,7 +1171,7 @@ function generateParallelPuzzle() {
     // Co-Exterior genuinely isn't any of those (it's supplementary,
     // not equal, so it can't just be renamed to Alternate Exterior).
   } while ((targetPos === knownPos && targetInt === knownInt) ||
-    relationship.name === "Co-Exterior Angles (Same-Side Exterior)");
+    relationship.name === tl("Co-Exterior Angles (Same-Side Exterior)", "Ángulos conjugados externos"));
 
   var knownValue = angleValueForPosition(knownPos, theta);
   var targetValue = angleValueForPosition(targetPos, theta);
@@ -1180,8 +1180,8 @@ function generateParallelPuzzle() {
     type: "parallel",
     relationshipName: relationship.name,
     ruleText: relationship.equal
-      ? relationship.name + " are equal."
-      : relationship.name + " are supplementary (sum to 180°).",
+      ? relationship.name + tl(" are equal.", " son iguales.")
+      : relationship.name + tl(" are supplementary (sum to 180°).", " son suplementarios (suman 180°)."),
     theta: theta,
     knownPos: knownPos,
     knownInt: knownInt,
@@ -1455,7 +1455,7 @@ function handleCorrectAnswer() {
   // so a new record set mid-level was lost if the tab closed before
   // reaching one of those checkpoints.
   saveHighScores();
-  showFeedback("+" + gained + "  STREAK x" + scoreMultiplier, COLOR_TEXT_GOOD, 40);
+  showFeedback("+" + gained + tl("  STREAK x", "  RACHA x") + scoreMultiplier, COLOR_TEXT_GOOD, 40);
   playSfx("correct");
   puzzlesSolvedInLevel += 1;
 
@@ -1488,11 +1488,11 @@ function handleWrongAnswer() {
   if (lives <= 0) {
     // The heist is over either way, so it's fine to reveal the
     // answer here -- there's no more retry to spoil.
-    showFeedback("Correct answer: " + currentPuzzle.correctAnswer + "°", COLOR_TEXT_WARN, 50);
+    showFeedback(tl("Correct answer: ", "Respuesta correcta: ") + currentPuzzle.correctAnswer + "°", COLOR_TEXT_WARN, 50);
     pendingAdvance = "GAME_OVER";
   } else {
     // Same puzzle, another shot -- don't give away the answer.
-    showFeedback("Not quite -- try again!", COLOR_TEXT_WARN, 40);
+    showFeedback(tl("Not quite -- try again!", "Casi -- ¡inténtalo otra vez!"), COLOR_TEXT_WARN, 40);
     pendingAdvance = "RETRY_SAME_PUZZLE";
   }
   puzzlePhase = PUZZLE_PHASE_CAUGHT;
@@ -1751,8 +1751,8 @@ var LINKED_CAMERA_CONE_WIDTH_MAX = 176;
 // color -- each role's maze color is the same color that value
 // already wore on the puzzle screen, not a new color introduced here.
 var LINKED_CAMERA_ROLE_INFO = {
-  known:  { color: COLOR_LASER_RED,  label: "GIVEN ANGLE" },
-  answer: { color: COLOR_LASER_GOLD, label: "YOUR ANGLE" }
+  known:  { color: COLOR_LASER_RED,  label: tl("GIVEN ANGLE", "ÁNGULO DADO") },
+  answer: { color: COLOR_LASER_GOLD, label: tl("YOUR ANGLE", "TU ÁNGULO") }
 };
 
 // Each camera is on for CAMERA_CYCLE_ON_SECONDS, then dark for
@@ -2790,7 +2790,7 @@ function isTooCloseToSpawn(gr, gc) {
 // it on a short leash means it reliably sweeps back past the same
 // spot again and again at a roughly consistent interval - something
 // a player can actually watch, count, and time a dash around.
-var HOME_RANGE_STEPS = 2; // tried 3 briefly - combined with the extra guard and tighter maze below, a totally-blind walk got caught in every test trial, well past "slightly harder". Back to 2, which still leaves the maze/guard-count changes doing the actual work.
+var HOME_RANGE_STEPS = 2; // tried 3 briefly - combined with the extra guard and tighter maze below, a totally-blind walk got caught in every test trial, well past tl("slightly harder", "un poco más difícil"). Back to 2, which still leaves the maze/guard-count changes doing the actual work.
 
 // Where a guard heads next after arriving at arrivedCell: a real
 // neighbor from the room graph, biased to stay within HOME_RANGE_STEPS
@@ -3587,7 +3587,7 @@ function startChaseSequence(chaserX, chaserY) {
   triggerShake(6, 14);
   playSfx("wrong");
   lives -= 1;
-  showFeedback("CAUGHT! -1 LIFE", COLOR_TEXT_WARN, 40);
+  showFeedback(tl("CAUGHT! -1 LIFE", "¡ATRAPADO! -1 VIDA"), COLOR_TEXT_WARN, 40);
 
   var dx = robberX - chaserX;
   var dy = robberY - chaserY;
@@ -3645,10 +3645,10 @@ function updateChaseAnimation(dt) {
 function finishSneaking() {
   if (!sneakWasSpotted) {
     currentScore += 40;
-    showFeedback("CLEAN GETAWAY! +40", COLOR_TEXT_GOOD, 45);
+    showFeedback(tl("CLEAN GETAWAY! +40", "¡ESCAPE LIMPIO! +40"), COLOR_TEXT_GOOD, 45);
   } else {
     currentScore += 15;
-    showFeedback("MADE IT THROUGH! +15", COLOR_TEXT_GOOD, 45);
+    showFeedback(tl("MADE IT THROUGH! +15", "¡LO LOGRASTE! +15"), COLOR_TEXT_GOOD, 45);
   }
   if (currentScore > sessionHighScore) { sessionHighScore = currentScore; }
   checkSkinUnlocks();
@@ -3667,7 +3667,7 @@ function drawDoorMarker(x, y) {
   fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
   textAlign(CENTER, CENTER);
   textSize(8);
-  text("EXIT", x, y + 16);
+  text(tl("EXIT", "SALIDA"), x, y + 16);
 }
 
 // A one-second exit-colored pulse right at the spawn point, the
@@ -4081,17 +4081,17 @@ function drawHUD() {
   textSize(13);
   noStroke();
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("SCORE " + currentScore, 8, 13);
+  text(tl("SCORE ", "PUNTOS ") + currentScore, 8, 13);
 
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textSize(11);
   var levelLabel;
   if (isChallengeMode) {
-    levelLabel = "CHALLENGE Lv." + challengeDifficulty + "  (run: " + challengePuzzlesSolved + ")";
+    levelLabel = tl("CHALLENGE Lv.", "RETO Nv.") + challengeDifficulty + tl("  (run: ", "  (carrera: ") + challengePuzzlesSolved + ")";
   } else {
     var lvl = LEVELS[currentLevelIndex];
     var roomNumber = Math.min(puzzlesSolvedInLevel + 1, lvl.puzzlesToClear);
-    levelLabel = lvl.name + "  (room " + roomNumber + "/" + lvl.puzzlesToClear + ")";
+    levelLabel = lvl.name + tl("  (room ", "  (sala ") + roomNumber + "/" + lvl.puzzlesToClear + ")";
   }
   text(levelLabel, 8, 27);
 
@@ -4108,13 +4108,13 @@ function drawHUD() {
     fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
     textAlign(CENTER, CENTER);
     textSize(10);
-    text("TIME FROZEN -- RETRY!", CANVAS_W / 2, 45);
+    text(tl("TIME FROZEN -- RETRY!", "TIEMPO CONGELADO -- ¡REINTENTA!"), CANVAS_W / 2, 45);
     return;
   }
 
   var timerRatio = clampNum(timerValue / timerMax, 0, 1);
   var timerColor = timerRatio < 0.25 ? COLOR_TEXT_WARN : COLOR_LASER_GREEN;
-  drawLabeledMeter("TIME", 8, 45, CANVAS_W - 16, timerRatio, timerColor, false);
+  drawLabeledMeter(tl("TIME", "TIEMPO"), 8, 45, CANVAS_W - 16, timerRatio, timerColor, false);
 }
 
 // A small caption immediately to the left of its own mini-bar,
@@ -4191,7 +4191,7 @@ function drawStreakBadge(rightX, y) {
   textSize(11);
   noStroke();
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
-  text("STREAK " + streak + " (x" + computeMultiplierFromStreak(streak) + ")", rightX, y);
+  text(tl("STREAK ", "RACHA ") + streak + " (x" + computeMultiplierFromStreak(streak) + ")", rightX, y);
 }
 
 // ----------------------------------------------------------------
@@ -4217,7 +4217,7 @@ function drawAnswerBox(cx, cy) {
 
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textSize(10);
-  text("Type the degrees, ENTER to submit", cx, boxY + boxH + 14);
+  text(tl("Type the degrees, ENTER to submit", "Escribe los grados, ENTER para enviar"), cx, boxY + boxH + 14);
 }
 
 // Shown in place of the answer box during the sneak minigame.
@@ -4226,11 +4226,11 @@ function drawSneakPrompt(cx, cy) {
   fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
   textAlign(CENTER, CENTER);
   textSize(13);
-  text("Correct! Sneak to the green exit!", cx, cy - 6);
+  text(tl("Correct! Sneak to the green exit!", "¡Correcto! ¡Escabúllete a la salida verde!"), cx, cy - 6);
 
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textSize(10);
-  text("Arrow keys / WASD -- dodge the camera & patrol guards", cx, cy + 12);
+  text(tl("Arrow keys / WASD -- dodge the camera & patrol guards", "Flechas / WASD -- esquiva la cámara y a los guardias"), cx, cy + 12);
 }
 
 function handleAnswerTyping() {
@@ -4269,14 +4269,14 @@ function drawTitleScreen() {
   drawScreenPanel(statsX, statsY, statsW, statsH);
   textSize(11);
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
-  text("Best Score: " + sessionHighScore + "   Best Streak: " + bestStreakEver, CANVAS_W / 2, statsY + statsH / 2);
+  text(tl("Best Score: ", "Mejor puntaje: ") + sessionHighScore + tl("   Best Streak: ", "   Mejor racha: ") + bestStreakEver, CANVAS_W / 2, statsY + statsH / 2);
 
   var btnW = 180, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
   var playY = 200, howY = 244, scoreY = 288;
 
-  drawButton(btnX, playY, btnW, btnH, "START HEIST", buttonHovered(btnX, playY, btnW, btnH));
-  drawButton(btnX, howY, btnW, btnH, "HOW TO PLAY", buttonHovered(btnX, howY, btnW, btnH));
-  drawButton(btnX, scoreY, btnW, btnH, "HIGH SCORES", buttonHovered(btnX, scoreY, btnW, btnH));
+  drawButton(btnX, playY, btnW, btnH, tl("START HEIST", "EMPEZAR ATRACO"), buttonHovered(btnX, playY, btnW, btnH));
+  drawButton(btnX, howY, btnW, btnH, tl("HOW TO PLAY", "CÓMO JUGAR"), buttonHovered(btnX, howY, btnW, btnH));
+  drawButton(btnX, scoreY, btnW, btnH, tl("HIGH SCORES", "RÉCORDS"), buttonHovered(btnX, scoreY, btnW, btnH));
 
   if (buttonClicked(btnX, playY, btnW, btnH)) {
     gameState = STATE_MODE_SELECT;
@@ -4336,18 +4336,18 @@ function drawModeSelectScreen() {
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(20);
-  text("CHOOSE YOUR HEIST", CANVAS_W / 2, 76);
+  text(tl("CHOOSE YOUR HEIST", "ELIGE TU ATRACO"), CANVAS_W / 2, 76);
 
   var cardW = 280, cardH = 62, cardX = CANVAS_W / 2 - cardW / 2, gap = 14;
   var campaignY = 104, challengeY = campaignY + cardH + gap, practiceY = challengeY + cardH + gap;
 
-  drawModeCard(cardX, campaignY, cardW, cardH, "CAMPAIGN (5 Sectors)", "Teaches each angle type step by step.", buttonHovered(cardX, campaignY, cardW, cardH));
-  drawModeCard(cardX, challengeY, cardW, cardH, "CHALLENGE (Endless)", "All four types mixed, speeds up forever.", buttonHovered(cardX, challengeY, cardW, cardH));
-  drawModeCard(cardX, practiceY, cardW, cardH, "PRACTICE MODE", "No timer, no lives, no score -- pick your skills.", buttonHovered(cardX, practiceY, cardW, cardH));
+  drawModeCard(cardX, campaignY, cardW, cardH, tl("CAMPAIGN (5 Sectors)", "CAMPAÑA (5 sectores)"), tl("Teaches each angle type step by step.", "Enseña cada tipo de ángulo paso a paso."), buttonHovered(cardX, campaignY, cardW, cardH));
+  drawModeCard(cardX, challengeY, cardW, cardH, tl("CHALLENGE (Endless)", "RETO (sin fin)"), tl("All four types mixed, speeds up forever.", "Los cuatro tipos mezclados, cada vez más rápido."), buttonHovered(cardX, challengeY, cardW, cardH));
+  drawModeCard(cardX, practiceY, cardW, cardH, tl("PRACTICE MODE", "MODO PRÁCTICA"), tl("No timer, no lives, no score -- pick your skills.", "Sin reloj, sin vidas, sin puntos -- elige tus destrezas."), buttonHovered(cardX, practiceY, cardW, cardH));
 
   var backW = 90, backH = 26;
   var backX = 10, backY = CANVAS_H - 36;
-  drawButton(backX, backY, backW, backH, "< BACK", buttonHovered(backX, backY, backW, backH));
+  drawButton(backX, backY, backW, backH, tl("< BACK", "< ATRÁS"), buttonHovered(backX, backY, backW, backH));
 
   if (buttonClicked(cardX, campaignY, cardW, cardH)) {
     resetFullGame();
@@ -4369,10 +4369,10 @@ function drawModeSelectScreen() {
 // SECTION 25B: PRACTICE MODE (no timer, no score, no lives)
 // ----------------------------------------------------------------
 var PRACTICE_SKILL_OPTIONS = [
-  { key: "supplementary", label: "Supplementary Angles" },
-  { key: "complementary", label: "Complementary Angles" },
-  { key: "vertical", label: "Vertical Angles" },
-  { key: "parallel", label: "Parallel Lines + Transversal" }
+  { key: "supplementary", label: tl("Supplementary Angles", "Ángulos suplementarios") },
+  { key: "complementary", label: tl("Complementary Angles", "Ángulos complementarios") },
+  { key: "vertical", label: tl("Vertical Angles", "Ángulos verticales") },
+  { key: "parallel", label: tl("Parallel Lines + Transversal", "Paralelas + transversal") }
 ];
 
 function anyPracticeSkillSelected() {
@@ -4388,11 +4388,11 @@ function drawPracticeSetupScreen() {
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(20);
-  text("PRACTICE MODE", CANVAS_W / 2, 46);
+  text(tl("PRACTICE MODE", "MODO PRÁCTICA"), CANVAS_W / 2, 46);
 
   textSize(11);
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
-  text("Check off which skills you want to work on:", CANVAS_W / 2, 70);
+  text(tl("Check off which skills you want to work on:", "Marca las destrezas que quieres practicar:"), CANVAS_W / 2, 70);
 
   var boxSize = 20;
   var rowW = 260;
@@ -4440,7 +4440,7 @@ function drawPracticeSetupScreen() {
   var btnW = 200, btnH = 36;
   var btnX = CANVAS_W / 2 - btnW / 2;
   var btnY = startY + PRACTICE_SKILL_OPTIONS.length * rowH + 16;
-  var startLabel = anySelected ? "START PRACTICE" : "SELECT AT LEAST ONE";
+  var startLabel = anySelected ? tl("START PRACTICE", "EMPEZAR PRÁCTICA") : tl("SELECT AT LEAST ONE", "ELIGE AL MENOS UNA");
   drawButton(btnX, btnY, btnW, btnH, startLabel, anySelected && buttonHovered(btnX, btnY, btnW, btnH));
   if (anySelected && buttonClicked(btnX, btnY, btnW, btnH)) {
     practiceAttempted = 0;
@@ -4450,7 +4450,7 @@ function drawPracticeSetupScreen() {
   }
 
   var backW = 90, backH = 26, backX = 10, backY = CANVAS_H - 36;
-  drawButton(backX, backY, backW, backH, "< BACK", buttonHovered(backX, backY, backW, backH));
+  drawButton(backX, backY, backW, backH, tl("< BACK", "< ATRÁS"), buttonHovered(backX, backY, backW, backH));
   if (buttonClicked(backX, backY, backW, backH)) {
     gameState = STATE_TITLE;
   }
@@ -4480,11 +4480,11 @@ function submitPracticeAnswer() {
 
   if (value === currentPuzzle.correctAnswer) {
     practiceCorrect += 1;
-    practiceFeedbackText = "Correct! " + currentPuzzle.correctAnswer + "°";
+    practiceFeedbackText = tl("Correct! ", "¡Correcto! ") + currentPuzzle.correctAnswer + "°";
     practiceFeedbackColor = COLOR_TEXT_GOOD;
     playSfx("correct");
   } else {
-    practiceFeedbackText = "Not quite -- it was " + currentPuzzle.correctAnswer + "°";
+    practiceFeedbackText = tl("Not quite -- it was ", "Casi -- era ") + currentPuzzle.correctAnswer + "°";
     practiceFeedbackColor = COLOR_TEXT_WARN;
     playSfx("wrong");
   }
@@ -4518,11 +4518,11 @@ function drawPracticeScreen(dt) {
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(13);
-  text("PRACTICE MODE", CANVAS_W / 2, 16);
+  text(tl("PRACTICE MODE", "MODO PRÁCTICA"), CANVAS_W / 2, 16);
 
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textSize(10);
-  text("Correct " + practiceCorrect + " / " + practiceAttempted + " attempted", CANVAS_W / 2, 32);
+  text(tl("Correct ", "Correctas ") + practiceCorrect + " / " + practiceAttempted + tl(" attempted", " intentadas"), CANVAS_W / 2, 32);
 
   if (currentPuzzle) {
     drawSkillNameBanner(currentPuzzle, 46);
@@ -4544,13 +4544,13 @@ function drawPracticeScreen(dt) {
   }
 
   var menuW = 90, menuH = 24, menuX = 8, menuY = CANVAS_H - 32;
-  drawButton(menuX, menuY, menuW, menuH, "MENU", buttonHovered(menuX, menuY, menuW, menuH));
+  drawButton(menuX, menuY, menuW, menuH, tl("MENU", "MENÚ"), buttonHovered(menuX, menuY, menuW, menuH));
   if (buttonClicked(menuX, menuY, menuW, menuH)) {
     exitConfirmPending = true;
   }
 
   var skillsW = 118, skillsH = 24, skillsX = CANVAS_W - 8 - skillsW, skillsY = CANVAS_H - 32;
-  drawButton(skillsX, skillsY, skillsW, skillsH, "CHANGE SKILLS", buttonHovered(skillsX, skillsY, skillsW, skillsH));
+  drawButton(skillsX, skillsY, skillsW, skillsH, tl("CHANGE SKILLS", "CAMBIAR DESTREZAS"), buttonHovered(skillsX, skillsY, skillsW, skillsH));
   if (buttonClicked(skillsX, skillsY, skillsW, skillsH)) {
     gameState = STATE_PRACTICE_SETUP;
   }
@@ -4565,28 +4565,28 @@ function drawPracticeScreen(dt) {
 // gaps -- a reader can find "how do I answer" or "what happens if I
 // get caught" at a glance instead of hunting through a block.
 var INSTRUCTIONS_SECTIONS = [
-  { header: "THE SETUP", lines: [
-    "Every room runs on a different security system:",
-    "guards (supplementary), corner lasers (complementary),",
-    "cameras (vertical), and duct crawls (parallel lines)."
+  { header: tl("THE SETUP", "EL PLAN"), lines: [
+    tl("Every room runs on a different security system:", "Cada sala tiene un sistema de seguridad diferente:"),
+    tl("guards (supplementary), corner lasers (complementary),", "guardias (suplementarios), láseres de esquina (complementarios),"),
+    tl("cameras (vertical), and duct crawls (parallel lines).", "cámaras (verticales) y ductos (rectas paralelas).")
   ]},
-  { header: "ANSWERING", lines: [
-    "Type the missing angle's degrees with the number keys,",
-    "then press ENTER. BACKSPACE fixes a mistyped digit."
+  { header: tl("ANSWERING", "CÓMO RESPONDER"), lines: [
+    tl("Type the missing angle's degrees with the number keys,", "Escribe los grados del ángulo que falta con los números"),
+    tl("then press ENTER. BACKSPACE fixes a mistyped digit.", "y presiona ENTER. BORRAR corrige un dígito equivocado.")
   ]},
-  { header: "THE SNEAK", lines: [
-    "Get it right and you steer the robber through a maze",
-    "-- arrow keys / WASD -- dodging cameras and roaming",
-    "guards to reach the exit. Get spotted, lose a life."
+  { header: tl("THE SNEAK", "ESCABULLIRSE"), lines: [
+    tl("Get it right and you steer the robber through a maze", "Si aciertas, guías al ladrón por un laberinto"),
+    tl("-- arrow keys / WASD -- dodging cameras and roaming", "-- flechas / WASD -- esquivando cámaras y guardias"),
+    tl("guards to reach the exit. Get spotted, lose a life.", "hasta la salida. Si te ven, pierdes una vida.")
   ]},
-  { header: "MISTAKES", lines: [
-    "A wrong answer costs a life -- run out and the heist",
-    "ends. You'll retry the SAME puzzle, clock frozen,",
-    "after your first miss on it."
+  { header: tl("MISTAKES", "ERRORES"), lines: [
+    tl("A wrong answer costs a life -- run out and the heist", "Una respuesta incorrecta cuesta una vida -- si se acaban,"),
+    tl("ends. You'll retry the SAME puzzle, clock frozen,", "termina el atraco. Reintentarás el MISMO acertijo, con el reloj"),
+    tl("after your first miss on it.", "congelado, después de tu primer error.")
   ]},
-  { header: "TIP", lines: [
-    "Watch for the red aura around each guard -- get that",
-    "close and they'll spot you no matter which way they face."
+  { header: tl("TIP", "CONSEJO"), lines: [
+    tl("Watch for the red aura around each guard -- get that", "Cuidado con el aura roja de cada guardia -- si te acercas"),
+    tl("close and they'll spot you no matter which way they face.", "tanto, te verán sin importar hacia dónde miren.")
   ]}
 ];
 
@@ -4596,7 +4596,7 @@ function drawInstructionsScreen() {
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(18);
-  text("HOW TO PLAY", CANVAS_W / 2, 34);
+  text(tl("HOW TO PLAY", "CÓMO JUGAR"), CANVAS_W / 2, 34);
 
   var panelY = 48, panelH = 296;
   drawScreenPanel(20, panelY, CANVAS_W - 40, panelH);
@@ -4621,7 +4621,7 @@ function drawInstructionsScreen() {
   }
 
   var backW = 120, backH = 30, backX = CANVAS_W / 2 - backW / 2, backY = CANVAS_H - 34;
-  drawButton(backX, backY, backW, backH, "BACK", buttonHovered(backX, backY, backW, backH));
+  drawButton(backX, backY, backW, backH, tl("BACK", "ATRÁS"), buttonHovered(backX, backY, backW, backH));
   if (buttonClicked(backX, backY, backW, backH)) {
     gameState = previousState;
   }
@@ -4645,11 +4645,15 @@ function drawLevelIntroScreen() {
   textSize(12);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   for (var i = 0; i < level.introText.length; i++) {
+    var introSize = 12;                                   // longer lines (e.g. in Spanish) shrink a little to stay inside the panel
+    textSize(introSize);
+    while (textWidth(level.introText[i]) > CANVAS_W - 100 && introSize > 9) { introSize -= 0.5; textSize(introSize); }
     text(level.introText[i], CANVAS_W / 2, 140 + i * 18);
   }
+  textSize(12);
 
   var btnW = 170, btnH = 36, btnX = CANVAS_W / 2 - btnW / 2, btnY = 240;
-  drawButton(btnX, btnY, btnW, btnH, "ENTER SECTOR", buttonHovered(btnX, btnY, btnW, btnH));
+  drawButton(btnX, btnY, btnW, btnH, tl("ENTER SECTOR", "ENTRAR AL SECTOR"), buttonHovered(btnX, btnY, btnW, btnH));
   if (buttonClicked(btnX, btnY, btnW, btnH) || enterKeyEdge()) {
     beginPlayingCurrentLevel();
   }
@@ -4665,12 +4669,12 @@ function drawChallengeIntroScreen() {
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
   textAlign(CENTER, CENTER);
   textSize(20);
-  text("CHALLENGE MODE", CANVAS_W / 2, 100);
+  text(tl("CHALLENGE MODE", "MODO RETO"), CANVAS_W / 2, 100);
 
   var lines = [
-    "All four angle types, fully randomized.",
-    "Every 5 solves, the timer gets faster.",
-    "How long can you keep the vault quiet?"
+    tl("All four angle types, fully randomized.", "Los cuatro tipos de ángulos, totalmente al azar."),
+    tl("Every 5 solves, the timer gets faster.", "Cada 5 aciertos, el reloj va más rápido."),
+    tl("How long can you keep the vault quiet?", "¿Cuánto tiempo puedes mantener la bóveda en silencio?")
   ];
   drawScreenPanel(40, 126, CANVAS_W - 80, lines.length * 18 + 36);
   textSize(12);
@@ -4680,7 +4684,7 @@ function drawChallengeIntroScreen() {
   }
 
   var btnW = 170, btnH = 36, btnX = CANVAS_W / 2 - btnW / 2, btnY = 230;
-  drawButton(btnX, btnY, btnW, btnH, "BEGIN", buttonHovered(btnX, btnY, btnW, btnH));
+  drawButton(btnX, btnY, btnW, btnH, tl("BEGIN", "EMPEZAR"), buttonHovered(btnX, btnY, btnW, btnH));
   if (buttonClicked(btnX, btnY, btnW, btnH) || enterKeyEdge()) {
     startChallengeMode();
   }
@@ -4805,7 +4809,7 @@ function drawVaultDoor(cx, cy, radius, progressRatio) {
   fill(COLOR_TEXT_DIM[0], COLOR_TEXT_DIM[1], COLOR_TEXT_DIM[2]);
   textAlign(CENTER, CENTER);
   textSize(9);
-  text(Math.round(progressRatio * 100) + "% BREACHED", cx, cy + radius + 16);
+  text(Math.round(progressRatio * 100) + tl("% BREACHED", "% VULNERADO"), cx, cy + radius + 16);
 }
 
 function drawLevelCompleteScreen() {
@@ -4814,16 +4818,16 @@ function drawLevelCompleteScreen() {
   fill(COLOR_TEXT_GOOD[0], COLOR_TEXT_GOOD[1], COLOR_TEXT_GOOD[2]);
   textAlign(CENTER, CENTER);
   textSize(22);
-  text("SECTOR CLEARED", CANVAS_W / 2, 100);
+  text(tl("SECTOR CLEARED", "SECTOR SUPERADO"), CANVAS_W / 2, 100);
 
   drawScreenPanel(CANVAS_W / 2 - 110, 122, 220, 52);
   textSize(13);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("Score: " + currentScore, CANVAS_W / 2, 140);
-  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 160);
+  text(tl("Score: ", "Puntos: ") + currentScore, CANVAS_W / 2, 140);
+  text(tl("Best Streak: ", "Mejor racha: ") + bestStreakEver, CANVAS_W / 2, 160);
 
   var btnW = 170, btnH = 36, btnX = CANVAS_W / 2 - btnW / 2, btnY = 210;
-  drawButton(btnX, btnY, btnW, btnH, "NEXT SECTOR", buttonHovered(btnX, btnY, btnW, btnH));
+  drawButton(btnX, btnY, btnW, btnH, tl("NEXT SECTOR", "SIGUIENTE SECTOR"), buttonHovered(btnX, btnY, btnW, btnH));
   if (buttonClicked(btnX, btnY, btnW, btnH) || enterKeyEdge()) {
     startLevel(currentLevelIndex + 1);
   }
@@ -4842,19 +4846,19 @@ function drawVictoryScreen() {
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
   textAlign(CENTER, CENTER);
   textSize(24);
-  text("VAULT CRACKED!", CANVAS_W / 2, 100);
+  text(tl("VAULT CRACKED!", "¡BÓVEDA ABIERTA!"), CANVAS_W / 2, 100);
 
   drawScreenPanel(CANVAS_W / 2 - 130, 122, 260, 72);
   textSize(13);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("Final Score: " + currentScore, CANVAS_W / 2, 140);
-  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 160);
-  text("You mastered every angle relationship.", CANVAS_W / 2, 180);
+  text(tl("Final Score: ", "Puntaje final: ") + currentScore, CANVAS_W / 2, 140);
+  text(tl("Best Streak: ", "Mejor racha: ") + bestStreakEver, CANVAS_W / 2, 160);
+  text(tl("You mastered every angle relationship.", "Dominaste todas las relaciones de ángulos."), CANVAS_W / 2, 180);
 
   var btnW = 200, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
   var challengeY = 220, titleY = 262;
-  drawButton(btnX, challengeY, btnW, btnH, "TRY CHALLENGE MODE", buttonHovered(btnX, challengeY, btnW, btnH));
-  drawButton(btnX, titleY, btnW, btnH, "MAIN MENU", buttonHovered(btnX, titleY, btnW, btnH));
+  drawButton(btnX, challengeY, btnW, btnH, tl("TRY CHALLENGE MODE", "PRUEBA EL MODO RETO"), buttonHovered(btnX, challengeY, btnW, btnH));
+  drawButton(btnX, titleY, btnW, btnH, tl("MAIN MENU", "MENÚ PRINCIPAL"), buttonHovered(btnX, titleY, btnW, btnH));
 
   if (buttonClicked(btnX, challengeY, btnW, btnH)) {
     gameState = STATE_CHALLENGE_INTRO;
@@ -4876,20 +4880,20 @@ function drawGameOverScreen() {
   fill(COLOR_TEXT_WARN[0], COLOR_TEXT_WARN[1], COLOR_TEXT_WARN[2]);
   textAlign(CENTER, CENTER);
   textSize(24);
-  text("ALARM TRIPPED", CANVAS_W / 2, 100);
+  text(tl("ALARM TRIPPED", "¡SONÓ LA ALARMA!"), CANVAS_W / 2, 100);
 
   drawScreenPanel(CANVAS_W / 2 - 110, 122, 220, 72);
   textSize(13);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("Score: " + currentScore, CANVAS_W / 2, 140);
-  text("High Score: " + sessionHighScore, CANVAS_W / 2, 160);
-  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 180);
+  text(tl("Score: ", "Puntos: ") + currentScore, CANVAS_W / 2, 140);
+  text(tl("High Score: ", "Récord: ") + sessionHighScore, CANVAS_W / 2, 160);
+  text(tl("Best Streak: ", "Mejor racha: ") + bestStreakEver, CANVAS_W / 2, 180);
 
   var btnW = 170, btnH = 34, btnX = CANVAS_W / 2 - btnW / 2;
   var retryY = 220, titleY = 262;
-  var retryLabel = isChallengeMode ? "RETRY CHALLENGE" : "RETRY SECTOR";
+  var retryLabel = isChallengeMode ? tl("RETRY CHALLENGE", "REINTENTAR RETO") : tl("RETRY SECTOR", "REINTENTAR SECTOR");
   drawButton(btnX, retryY, btnW, btnH, retryLabel, buttonHovered(btnX, retryY, btnW, btnH));
-  drawButton(btnX, titleY, btnW, btnH, "MAIN MENU", buttonHovered(btnX, titleY, btnW, btnH));
+  drawButton(btnX, titleY, btnW, btnH, tl("MAIN MENU", "MENÚ PRINCIPAL"), buttonHovered(btnX, titleY, btnW, btnH));
 
   if (buttonClicked(btnX, retryY, btnW, btnH)) {
     if (isChallengeMode) {
@@ -4917,12 +4921,12 @@ function drawPauseScreen() {
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(20);
-  text("PAUSED", CANVAS_W / 2, 130);
+  text(tl("PAUSED", "EN PAUSA"), CANVAS_W / 2, 130);
 
   var btnW = 160, btnH = 32, btnX = CANVAS_W / 2 - btnW / 2;
   var resumeY = 180, menuY = 222;
-  drawButton(btnX, resumeY, btnW, btnH, "RESUME", buttonHovered(btnX, resumeY, btnW, btnH));
-  drawButton(btnX, menuY, btnW, btnH, "QUIT TO MENU", buttonHovered(btnX, menuY, btnW, btnH));
+  drawButton(btnX, resumeY, btnW, btnH, tl("RESUME", "CONTINUAR"), buttonHovered(btnX, resumeY, btnW, btnH));
+  drawButton(btnX, menuY, btnW, btnH, tl("QUIT TO MENU", "SALIR AL MENÚ"), buttonHovered(btnX, menuY, btnW, btnH));
 
   if (buttonClicked(btnX, resumeY, btnW, btnH) || keyEdge("p")) {
     gameState = STATE_PLAYING;
@@ -4942,14 +4946,14 @@ function drawExitConfirmOverlay() {
 
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER); textSize(18);
-  text("Exit to Main Menu?", CANVAS_W / 2, y + 36);
+  text(tl("Exit to Main Menu?", "¿Salir al menú principal?"), CANVAS_W / 2, y + 36);
   textSize(13);
-  text("Your current run will end.", CANVAS_W / 2, y + 62);
+  text(tl("Your current run will end.", "Tu partida terminará."), CANVAS_W / 2, y + 62);
 
   var btnW = 100, btnH = 34, gap = 12;
   var yesX = CANVAS_W / 2 - btnW - gap / 2, noX = CANVAS_W / 2 + gap / 2, btnY = y + h - 50;
-  drawButton(yesX, btnY, btnW, btnH, "YES, EXIT", buttonHovered(yesX, btnY, btnW, btnH));
-  drawButton(noX, btnY, btnW, btnH, "CANCEL", buttonHovered(noX, btnY, btnW, btnH));
+  drawButton(yesX, btnY, btnW, btnH, tl("YES, EXIT", "SÍ, SALIR"), buttonHovered(yesX, btnY, btnW, btnH));
+  drawButton(noX, btnY, btnW, btnH, tl("CANCEL", "CANCELAR"), buttonHovered(noX, btnY, btnW, btnH));
 
   if (buttonClicked(yesX, btnY, btnW, btnH)) {
     exitConfirmPending = false;
@@ -4969,20 +4973,20 @@ function drawHighScoresScreen() {
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
   textAlign(CENTER, CENTER);
   textSize(20);
-  text("HIGH SCORES", CANVAS_W / 2, 80);
+  text(tl("HIGH SCORES", "RÉCORDS"), CANVAS_W / 2, 80);
 
   drawScreenPanel(CANVAS_W / 2 - 140, 106, 280, 100);
   textSize(14);
   fill(COLOR_TEXT_MAIN[0], COLOR_TEXT_MAIN[1], COLOR_TEXT_MAIN[2]);
-  text("Best Score: " + sessionHighScore, CANVAS_W / 2, 130);
-  text("Best Streak: " + bestStreakEver, CANVAS_W / 2, 155);
+  text(tl("Best Score: ", "Mejor puntaje: ") + sessionHighScore, CANVAS_W / 2, 130);
+  text(tl("Best Streak: ", "Mejor racha: ") + bestStreakEver, CANVAS_W / 2, 155);
 
   textSize(12);
   fill(COLOR_LASER_GOLD[0], COLOR_LASER_GOLD[1], COLOR_LASER_GOLD[2]);
-  text("Laser Skins Unlocked: " + unlockedSkinIndices.length + "/" + LASER_SKINS.length, CANVAS_W / 2, 185);
+  text(tl("Laser Skins Unlocked: ", "Aspectos de láser desbloqueados: ") + unlockedSkinIndices.length + "/" + LASER_SKINS.length, CANVAS_W / 2, 185);
 
   var backW = 120, backH = 30, backX = CANVAS_W / 2 - backW / 2, backY = CANVAS_H - 44;
-  drawButton(backX, backY, backW, backH, "BACK", buttonHovered(backX, backY, backW, backH));
+  drawButton(backX, backY, backW, backH, tl("BACK", "ATRÁS"), buttonHovered(backX, backY, backW, backH));
   if (buttonClicked(backX, backY, backW, backH)) {
     gameState = STATE_TITLE;
   }
