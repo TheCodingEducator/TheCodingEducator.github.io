@@ -46,7 +46,7 @@ html .sb-panel .standards-panel, html .sb-panel .teaching-notes, html .sb-panel 
   margin: 0 !important; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important;
   display: block !important; flex: none !important;
 }
-html .sb-panel .reset-progress { margin-top: 18px !important; padding-top: 14px !important; border-top: 1px solid rgba(255, 255, 255, 0.14) !important; }
+html .sb-panel .reset-progress { margin-top: 0 !important; }
 html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-top: 0 !important; }
 
 /* On a computer, the game fills the page under the bar */
@@ -81,3 +81,12 @@ html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-t
 .sb-panel.sb-light { background: #fff; color: #1e293b; border-color: #e2e8f0; font-family: 'Inter', -apple-system, sans-serif; }
 .sb-panel.sb-light .sb-close { background: #f1f5f9; color: #1e293b; border-color: #e2e8f0; }
 .sb-panel.sb-light .teaching-notes h2 { font-size: 20px !important; }
+
+/* Reset progress: the erase button counts down 5 seconds (on the button) before it can be pressed */
+.sb-panel .sb-erase {
+  display: block; width: 100%; margin-top: 14px; padding: 10px 14px; border-radius: 10px; cursor: pointer;
+  font: 800 15px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #d9352f; color: #fff; border: 0;
+}
+.sb-panel .sb-erase:hover:not(:disabled) { background: #b92a25; }
+.sb-panel .sb-erase:disabled { background: #5b6170; color: #e8ecf5; cursor: not-allowed; }
