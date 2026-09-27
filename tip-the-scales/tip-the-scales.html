@@ -471,13 +471,11 @@
       .diff-card { padding: 1rem; }
       .title-buttons .btn-hero { padding: 1.1rem 1.5rem; }
 
-      /* A left/right fade hint on the horizontally-scrollable controls row
-         signals there's more to swipe to, instead of the row just looking
-         abruptly cut off at the edge. */
-      .challenge-controls {
-        -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
-        mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
-      }
+      /* The controls row wraps onto a second line instead of swiping sideways, so nothing on the page scrolls. */
+      .challenge-controls { flex-wrap: wrap; overflow: visible; row-gap: 0.35rem; }
+      .challenge-controls .divider { display: none; }
+      .action-group-row { flex-wrap: wrap; justify-content: center; }
+      .action-btns-row { flex-wrap: wrap; justify-content: center; }
     }
 
     /* Sandbox's math-readout rows (sm-controls-row/sm-sub/sm-simp) are
