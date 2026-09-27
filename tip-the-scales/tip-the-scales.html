@@ -258,6 +258,20 @@
     /* --- Fractional Shapes & Blocks --- */
     .shape-var { width: 32px; height: 32px; background: #2563eb; border: 1px solid rgba(29,78,216,0.4); color: white; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex-shrink: 0; overflow: hidden; }
     .shape-const { width: 30px; height: 30px; background: #fb923c; border: 1px solid rgba(249,115,22,0.4); color: #431407; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; overflow: hidden; }
+    /* A fraction of a block is drawn as a whole-size block with a dashed outline and only that fraction filled in
+       (--f, from 0 to 1): an x-block fills from the bottom, a 1-circle fills like a pie. The piece never shrinks,
+       so its fraction label always fits inside it. */
+    .shape-var.part, .shape-const.part, .balloon.part {
+      border: 2px dashed; box-shadow: none; font-size: 11px; line-height: 1;
+      text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff;
+    }
+    .shape-var.part, .b-var.part { border-color: #2563eb; color: #1e3a8a; background: linear-gradient(to top, #2563eb calc(var(--f) * 100%), rgba(255,255,255,0.75) 0); }
+    .shape-const.part, .b-const.part { border-color: #f97316; color: #431407; background: conic-gradient(#fb923c calc(var(--f) * 360deg), rgba(255,255,255,0.75) 0); }
+    .balloon.part::before { display: none; }
+    .b-wrapper.part-wrap, .balloon.part { width: 36px; height: 46px; }
+    .shape-var.part, .shape-const.part, .balloon.part { white-space: nowrap; }
+    .part .frac { font-size: 1em; margin: 0 0.05em; }
+    .part .frac-num { border-bottom-width: 1.5px; }
     .group-wrap { display: flex; align-items: center; gap: 3px; padding: 3px; background: rgba(255,255,255,0.4); border: 2px dashed rgba(148,163,184,0.5); border-radius: 12px; flex-shrink: 0; }
 
     /* --- Fractional Balloon Physics --- */
@@ -1786,14 +1800,13 @@
           let vFull = Math.floor(Math.abs(side.groups.variables));
           let vFrac = cleanFloat(Math.abs(side.groups.variables) - vFull);
           for(let v=0; v<vFull; v++) h += `<div class="shape-var">x</div>`;
-          if (vFrac > 0.001) h += `<div class="shape-var" style="height: ${Math.max(16, Math.round(32 * vFrac))}px; font-size: 10px;">${toImproperFraction(vFrac)}x</div>`;
+          if (vFrac > 0.001) h += `<div class="shape-var part" style="--f: ${vFrac};">${toImproperFraction(vFrac)}x</div>`;
 
           let cFull = Math.floor(Math.abs(side.groups.constants));
           let cFrac = cleanFloat(Math.abs(side.groups.constants) - cFull);
           for(let c=0; c<cFull; c++) h += `<div class="shape-const">1</div>`;
           if (cFrac > 0.001) {
-              let dim = Math.max(16, Math.round(30 * Math.sqrt(cFrac)));
-              h += `<div class="shape-const" style="width: ${dim}px; height: ${dim}px; font-size: 10px; border-radius: 50%;">${toImproperFraction(cFrac)}</div>`;
+              h += `<div class="shape-const part" style="--f: ${cFrac};">${toImproperFraction(cFrac)}</div>`;
           }
           h += `</div>`;
         }
@@ -1826,15 +1839,9 @@
         h += `<div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; width: 100%;">`;
         chunk.forEach(b => {
           let bClass = b.type === 'var' ? 'shape-var' : 'shape-const';
-          let style = '';
-          if (b.frac < 1) {
-              if (b.type === 'var') {
-                  style = `height: ${Math.max(16, Math.round(32 * b.frac))}px; font-size: 10px;`;
-              } else {
-                  let dim = Math.max(16, Math.round(30 * Math.sqrt(b.frac)));
-                  style = `width: ${dim}px; height: ${dim}px; font-size: 10px; border-radius: 50%;`;
-              }
-          }
+          // a fraction of a block: whole size, dashed, with just that fraction filled in
+          if (b.frac < 1) bClass += ' part';
+          let style = b.frac < 1 ? `--f: ${b.frac};` : '';
           h += `<div class="${bClass}" style="${style}">${b.label}</div>`;
         });
         h += `</div>`;
@@ -1873,11 +1880,12 @@
         h += `<div style="display: flex; gap: 6px; justify-content: center; width: 100%;">`;
         chunk.forEach(b => {
           let bClass = b.type === 'var' ? 'b-var' : 'b-const';
-          let scale = b.frac < 1 ? Math.max(0.7, Math.sqrt(b.frac)) : 1;
-          let bStyle = b.frac < 1 ? `transform: scale(${scale});` : '';
-          let lStyle = b.frac < 1 ? `font-size: 10px;` : '';
+          let scale = 1;   // a fraction of a balloon stays whole size, with just that fraction filled in
+          if (b.frac < 1) bClass += ' part';
+          let bStyle = b.frac < 1 ? `--f: ${b.frac};` : '';
+          let lStyle = '';
 
-          h += `<div class="b-wrapper">
+          h += `<div class="b-wrapper${b.frac < 1 ? ' part-wrap' : ''}">
                   <div class="balloon ${bClass}" style="${bStyle}">
                     <span class="b-label" style="${lStyle}">${b.label}</span>
                     <div class="b-string" style="--string-len: ${stringLen / scale}px;"></div>
