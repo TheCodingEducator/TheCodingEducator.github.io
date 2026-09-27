@@ -132,6 +132,19 @@
       el.innerHTML = el.innerHTML.replace(b[1], '<span class="sb-lbl">' + b[1] + '</span>');
       el.setAttribute('aria-label', b[1]);
     });
+    // a link to this game's teacher guide (guide.html in the game's folder)
+    if (document.getElementById('game-canvas-slot') || tipBar) {
+      var guide = document.createElement('a');
+      guide.href = 'guide.html';
+      guide.className = tipBar ? 'ccss-toggle sb-guide' : 'sb-toggle sb-guide';
+      guide.innerHTML = '&#128216; <span class="sb-lbl">Teacher guide</span>';
+      guide.setAttribute('aria-label', 'Teacher guide');
+      if (tipBar) {   // Tip the Scales keeps its page controls off the keyboard
+        guide.tabIndex = -1;
+        guide.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      }
+      right.appendChild(guide);
+    }
     if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', 'Standards', [standards], false);
     addPanel(right, 'sb-notes', '&#128221;', 'Teaching notes', [notes], !!tipBar);
     // this game's saved stats and badges (site-stats.js), read fresh each time it opens

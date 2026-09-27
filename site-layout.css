@@ -131,11 +131,13 @@ body.site-fit { padding-top: 44px; box-sizing: border-box; }
   }
 }
 /* narrow screens: the bar's buttons show just their icons, so the whole bar fits */
-@media (max-width: 1000px) { .site-topbar .sb-lbl { display: none; } }
-@media (max-width: 780px) {
+@media (max-width: 1180px) { .site-topbar .sb-lbl { display: none; } }
+@media (max-width: 920px) {
   .site-bar .sb-lbl { display: none; }
   .site-bar { padding: 0 6px; }
   .site-bar .sb-right { gap: 5px; }
   html .site-bar .fullscreen-btn, .site-bar .sb-toggle { padding: 6px 9px !important; }
   html .site-bar .back-link { padding: 6px 10px !important; }
 }
+/* the Teacher guide link looks like the bar's other buttons */
+.site-topbar a.sb-guide { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; }

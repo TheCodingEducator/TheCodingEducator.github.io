@@ -2,56 +2,126 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://thecodingeducator.github.io/</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/teachers.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/whats-new.html</loc>
+    <lastmod>2026-09-26</lastmod>
   </url>
   <url>
     <loc>https://thecodingeducator.github.io/my-stats.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/exponent-racer/exponent-racer.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/exponent-hoops/exponent-hoops.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/tip-the-scales/tip-the-scales.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/lets-get-to-the-point/lets-get-to-the-point.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/linear-world-cup/linear-world-cup.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/piggy-bank-math/piggy-bank-math.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/laser-heist-angle-breaker/laser-heist-angle-breaker.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/bank-shot-angle-golf/bank-shot-angle-golf.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/similarity-builder/similarity-builder.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/proportional-plates/proportional-plates.html</loc>
-  </url>
-  <url>
-    <loc>https://thecodingeducator.github.io/pythagorean-platforms/pythagorean-platforms.html</loc>
+    <lastmod>2026-09-26</lastmod>
   </url>
   <url>
     <loc>https://thecodingeducator.github.io/about.html</loc>
+    <lastmod>2026-09-26</lastmod>
   </url>
   <url>
-    <loc>https://thecodingeducator.github.io/privacy-policy.html</loc>
+    <loc>https://thecodingeducator.github.io/exponent-racer/exponent-racer.html</loc>
+    <lastmod>2026-09-26</lastmod>
   </url>
   <url>
-    <loc>https://thecodingeducator.github.io/terms.html</loc>
+    <loc>https://thecodingeducator.github.io/exponent-racer/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
   </url>
   <url>
-    <loc>https://thecodingeducator.github.io/accessibility.html</loc>
+    <loc>https://thecodingeducator.github.io/exponent-hoops/exponent-hoops.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/exponent-hoops/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/tip-the-scales/tip-the-scales.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/tip-the-scales/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/lets-get-to-the-point/lets-get-to-the-point.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/lets-get-to-the-point/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/linear-world-cup/linear-world-cup.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/linear-world-cup/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/piggy-bank-math/piggy-bank-math.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/piggy-bank-math/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/laser-heist-angle-breaker/laser-heist-angle-breaker.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/laser-heist-angle-breaker/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/bank-shot-angle-golf/bank-shot-angle-golf.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/bank-shot-angle-golf/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/similarity-builder/similarity-builder.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/similarity-builder/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/proportional-plates/proportional-plates.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/proportional-plates/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/pythagorean-platforms/pythagorean-platforms.html</loc>
+    <lastmod>2026-09-26</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/pythagorean-platforms/guide.html</loc>
+    <lastmod>2026-09-26</lastmod>
   </url>
   <url>
     <loc>https://thecodingeducator.github.io/contact.html</loc>
+    <lastmod>2026-09-23</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/accessibility.html</loc>
+    <lastmod>2026-09-23</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/privacy-policy.html</loc>
+    <lastmod>2026-09-23</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/terms.html</loc>
+    <lastmod>2026-09-23</lastmod>
   </url>
 </urlset>
