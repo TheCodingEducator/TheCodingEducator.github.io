@@ -445,6 +445,27 @@
     @media(min-width: 768px) and (min-height: 600px) { .win-title { font-size: 3rem; margin-bottom: 1rem; } }
     .win-val { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 800; color: #64748b; background: #f8fafc; padding: 0.75rem 2rem; border-radius: 1rem; border: 2px solid #f1f5f9; margin-bottom: 2rem; }
     @media(min-width: 768px) and (min-height: 600px) { .win-val { font-size: 2rem; padding: 1rem 3rem; border-radius: 1.5rem; margin-bottom: 3rem; } }
+    /* the one-time pop-up that points at the Expand button */
+    .expand-tip-layer { position: fixed; inset: 0; z-index: 260; background: rgba(15,23,42,0.35); }
+    .expand-tip-ring { position: fixed; border: 3px solid #f59e0b; border-radius: 12px; pointer-events: none; animation: expand-tip-pulse 1.4s ease-in-out infinite; }
+    @keyframes expand-tip-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.6); } 50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); } }
+    .expand-tip-bubble {
+      position: fixed; width: min(320px, calc(100vw - 24px)); box-sizing: border-box; padding: 1rem 1.1rem;
+      background: #fff; color: #1e293b; border-radius: 1rem; box-shadow: 0 20px 30px -5px rgba(0,0,0,0.25);
+      font-size: 0.9rem; line-height: 1.45;
+    }
+    .expand-tip-bubble::after {   /* the arrow, pointing down at the button (or up, when the bubble sits below it) */
+      content: ''; position: absolute; left: var(--ax, 50%); top: 100%; transform: translateX(-50%);
+      border: 10px solid transparent; border-top-color: #fff;
+    }
+    .expand-tip-bubble.below::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #fff; }
+    .expand-tip-new { display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px; }
+    .expand-tip-bubble h3 { margin: 0.35rem 0 0.35rem; color: #047857; }
+    .expand-tip-bubble p { margin: 0 0 0.5rem; }
+    .expand-tip-bubble b { font-family: 'JetBrains Mono', monospace; font-weight: 800; white-space: nowrap; }
+    .expand-tip-ok { display: block; margin: 0.75rem 0 0 auto; background: #2563eb; color: #fff; border: 0; border-radius: 0.75rem; padding: 0.55rem 1.4rem; font-weight: 800; font-size: 0.95rem; cursor: pointer; }
+    .expand-tip-ok:hover { background: #1d4ed8; }
+    .expand-tip-ok:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
     .btn-next { background: #22c55e; color: white; padding: 1rem 2rem; border-radius: 1rem; font-weight: 800; font-size: 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 15px -3px rgba(34,197,94,0.3); transition: all 0.2s; }
     @media(min-width: 768px) and (min-height: 600px) { .btn-next { padding: 1.5rem 3rem; font-size: 1.5rem; border-radius: 1.5rem; gap: 1rem; } }
     .btn-next:active { transform: scale(0.95); }
@@ -976,6 +997,18 @@
         </button>
       </div>
     </div>
+
+    <!-- First time in Variables Both Sides or Complex Equations: a pop-up pointing at the Expand button -->
+    <div id="expand-tip-layer" class="expand-tip-layer hidden" role="dialog" aria-modal="true" aria-labelledby="expand-tip-title">
+      <div class="expand-tip-ring" id="expand-tip-ring"></div>
+      <div class="expand-tip-bubble" id="expand-tip-bubble">
+        <span class="expand-tip-new">New button</span>
+        <h3 id="expand-tip-title">Expand and Factor</h3>
+        <p>Expand multiplies out a group, so you can see every term: <b>2(x + 3)</b> becomes <b>2x + 6</b>.</p>
+        <p>When every term shares a number, the same button turns into <b>Factor</b>: <b>2x + 6</b> becomes <b>2(x + 3)</b>.</p>
+        <button data-action="closeExpandTip" class="expand-tip-ok">Got it</button>
+      </div>
+    </div>
   </div>
 
 </div><!-- /.game-frame -->
@@ -1505,7 +1538,50 @@
       state.seenEquations = new Set();
       generateLevel();
       setMode('challenge');
+      if (diff === 'multi-step' || diff === 'complex') setTimeout(maybeShowExpandTip, 350);
     }
+
+    // The first time a student plays Variables Both Sides or Complex Equations, a pop-up points at the Expand
+    // button and explains it (once per browser).
+    const EXPAND_TIP_KEY = 'tipthescales_expand_tip_seen';
+    function maybeShowExpandTip() {
+      let seen = false;
+      try { seen = localStorage.getItem(EXPAND_TIP_KEY) === '1'; } catch (e) {}
+      const btn = document.getElementById('btn-expand');
+      if (seen || state.mode !== 'challenge' || !btn || !btn.offsetParent) return;
+      document.getElementById('expand-tip-layer').classList.remove('hidden');
+      placeExpandTip();
+      document.querySelector('.expand-tip-ok').focus({ preventScroll: true });
+    }
+    function placeExpandTip() {
+      const layer = document.getElementById('expand-tip-layer');
+      if (layer.classList.contains('hidden')) return;
+      const r = document.getElementById('btn-expand').getBoundingClientRect();
+      const ring = document.getElementById('expand-tip-ring'), bub = document.getElementById('expand-tip-bubble');
+      ring.style.left = (r.left - 6) + 'px'; ring.style.top = (r.top - 6) + 'px';
+      ring.style.width = (r.width + 12) + 'px'; ring.style.height = (r.height + 12) + 'px';
+      const bw = bub.offsetWidth, bh = bub.offsetHeight, cx = r.left + r.width / 2;
+      const left = Math.max(12, Math.min(window.innerWidth - bw - 12, cx - bw / 2));
+      const above = r.top - bh - 20 >= 8;   // above the button if it fits, otherwise below it
+      bub.classList.toggle('below', !above);
+      bub.style.left = left + 'px';
+      bub.style.top = (above ? r.top - bh - 20 : r.bottom + 20) + 'px';
+      bub.style.setProperty('--ax', Math.max(18, Math.min(bw - 18, cx - left)) + 'px');
+    }
+    function closeExpandTip() {
+      document.getElementById('expand-tip-layer').classList.add('hidden');
+      try { localStorage.setItem(EXPAND_TIP_KEY, '1'); } catch (e) {}
+      const btn = document.getElementById('btn-expand');
+      if (btn && btn.offsetParent) btn.focus({ preventScroll: true });
+    }
+    window.addEventListener('resize', placeExpandTip);
+    // Esc closes it too (instead of leaving the level)
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || document.getElementById('expand-tip-layer').classList.contains('hidden')) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      closeExpandTip();
+    }, true);
+    document.getElementById('expand-tip-layer').addEventListener('click', function (e) { if (e.target === this) closeExpandTip(); });
 
     function generateLevel() {
       const eq = generateEquation(state.difficulty, state.levelIndex);
@@ -1945,6 +2021,8 @@
             expBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 15l-6 6m6-6v4.8m0-4.8H4.2M9 9 3 3m6 6V4.2M9 9H4.2m5.8-5.8 6 6m-6-6v4.8m0-4.8h4.8"/></svg> Expand`;
             expBtn.onclick = null;
         }
+        // 1-Step and 2-Step Equations never need it, so the button only shows in Variables Both Sides and Complex
+        if (state.mode === 'challenge' && (state.difficulty === '1-step' || state.difficulty === '2-step')) expBtn.classList.add('hidden');
       }
 
       // Sandbox used to push the scale down by a fixed 200px here,
@@ -2167,7 +2245,7 @@
     startChallenge: startChallenge, resetLevel: resetLevel, cancelWarning: cancelWarning,
     proceedWarning: proceedWarning, handleSandboxOp: handleSandboxOp, changeXValue: changeXValue,
     handleOp: handleOp, handleMultiply: handleMultiply, handleDivide: handleDivide,
-    handleExpand: handleExpand, handleUndo: handleUndo, submitAnswer: submitAnswer,
+    handleExpand: handleExpand, closeExpandTip: closeExpandTip, handleUndo: handleUndo, submitAnswer: submitAnswer,
     nextLevel: nextLevel, cancelExitConfirm: cancelExitConfirm, confirmExit: confirmExit
   };
   document.addEventListener('click', function (e) {
@@ -2181,7 +2259,7 @@
   // Arrow keys move between the buttons on the current screen (inside an open pop-up if there is one), to the
   // nearest one in that direction; Enter or Space then presses it. The first arrow press picks the first button
   // that isn't a corner Home / Back / Reset button.
-  var TS_POPUPS = ['exit-confirm-layer', 'warning-layer', 'win-layer'];
+  var TS_POPUPS = ['exit-confirm-layer', 'warning-layer', 'win-layer', 'expand-tip-layer'];
   var TS_CHROME = '.ccss-toggle, .site-back-link, .back-link, .fullscreen-btn, .pseudo-fullscreen-exit-btn, .teaching-notes, .standards-panel, .reset-progress';
   document.addEventListener('keydown', function (e) {
     var dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
