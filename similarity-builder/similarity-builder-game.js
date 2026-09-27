@@ -36,7 +36,7 @@ const R3 = Math.sqrt(3) / 2;
 // classes = groups of edges that are equal in length (worked out from cmap below; used for the tick marks)
 const SHAPES = {
   tee: {
-    name: 'T-shapes', single: 'T-shape', bridge: 'T-Beam Bridge', label: [0,1,2,3,4], cmap: [0,1,2,3,4,3,2,1],
+    name: 'T-shapes', single: 'T-shape', bridge: tl('T-Beam Bridge', 'Puente en T'), label: [0,1,2,3,4], cmap: [0,1,2,3,4,3,2,1],
     brace: [[0,3],[1,6],[3,5],[6,4]],
     make() {
       const [a, c, s, d] = pick(TEE_SETS), l = (a - s) / 2, r = l + s;      // an upside-down T: wide bar on the deck, stem on top
@@ -44,7 +44,7 @@ const SHAPES = {
     }
   },
   arrow: {
-    name: 'arrows', single: 'arrow', bridge: 'Arrow Bridge', label: [0,1,2,3], cmap: [0,1,2,3,3,2,1],
+    name: 'arrows', single: 'arrow', bridge: tl('Arrow Bridge', 'Puente flecha'), label: [0,1,2,3], cmap: [0,1,2,3,3,2,1],
     brace: [[0,2],[1,6],[5,3],[6,4],[2,4]],
     make() {
       const [hw, rise, sl] = pick(ARROW_SETS), s = pick(ARROW_SHAFTS), e = hw - s / 2, h1 = rnd(3, 5);
@@ -52,7 +52,7 @@ const SHAPES = {
     }
   },
   stair: {
-    name: 'staircases', single: 'staircase', bridge: 'Staircase Bridge', label: [0,1,2,3], cmap: [0,1,2,3,2,3,2,3],
+    name: 'staircases', single: 'staircase', bridge: tl('Staircase Bridge', 'Puente escalera'), label: [0,1,2,3], cmap: [0,1,2,3,2,3,2,3],
     brace: [[0,2],[1,5],[0,6]],
     make() {
       const w = rnd(2, 4), t = rnd(2, 3);
@@ -60,28 +60,28 @@ const SHAPES = {
     }
   },
   rtrap: {
-    name: 'right trapezoids', single: 'right trapezoid', bridge: 'Ramp Bridge', label: [0,1,2,3], cmap: [0,1,2,3],
+    name: 'right trapezoids', single: 'right trapezoid', bridge: tl('Ramp Bridge', 'Puente rampa'), label: [0,1,2,3], cmap: [0,1,2,3],
     make() {
       const [d, h, s] = pick(RT_TRIPLES), c = rnd(3, 8), a = c + d;         // top c, bottom a, left wall h, slanted side s
       return { pts: [[0,0],[a,0],[c,h],[0,h]], lens: [a, s, c, h] };
     }
   },
   house: {
-    name: 'pentagons', single: 'pentagon', bridge: 'Gable Bridge', label: [0,1,2], cmap: [0,1,2,2,1],
+    name: 'pentagons', single: 'pentagon', bridge: tl('Gable Bridge', 'Puente de tejado'), label: [0,1,2], cmap: [0,1,2,2,1],
     make() {
       const [w, r, s] = pick(HOUSE_SETS), h = rnd(2, 4);
       return { pts: [[0,0],[w,0],[w,h],[w/2,h+r],[0,h]], lens: [w, h, s, s, h] };
     }
   },
   ell: {
-    name: 'L-shapes', single: 'L-shape', bridge: 'Stepped Bridge', label: [0,1,2,3,4,5], cmap: [0,1,2,3,4,5],
+    name: 'L-shapes', single: 'L-shape', bridge: tl('Stepped Bridge', 'Puente escalonado'), label: [0,1,2,3,4,5], cmap: [0,1,2,3,4,5],
     make() {
       const [a, c, b, d] = pick(ELL_SETS);
       return { pts: [[0,0],[a,0],[a,c],[b,c],[b,d],[0,d]], lens: [a, c, a - b, d - c, b, d] };
     }
   },
   tri: {
-    name: 'triangles', single: 'triangle', bridge: 'Truss Bridge', label: [0,1,2], cmap: [0,1,2],
+    name: 'triangles', single: 'triangle', bridge: tl('Truss Bridge', 'Puente de armadura'), label: [0,1,2], cmap: [0,1,2],
     make() {
       const [a,b,c] = pick(TRI_SETS);                 // edges: c (bottom), a, b
       const x = (b*b + c*c - a*a) / (2*c), y = Math.sqrt(Math.max(0, b*b - x*x));
@@ -89,14 +89,14 @@ const SHAPES = {
     }
   },
   rect: {
-    name: 'rectangles', single: 'rectangle', bridge: 'Box Girder Bridge', label: [0,1], cmap: [0,1,0,1], classes: [[0,2],[1,3]],
+    name: 'rectangles', single: 'rectangle', bridge: tl('Box Girder Bridge', 'Puente de viga cajón'), label: [0,1], cmap: [0,1,0,1], classes: [[0,2],[1,3]],
     make() {
       const w = rnd(4,10), h = rnd(2, w - 1);      // base is always the longer side so it can be a deck
       return { pts: [[0,0],[w,0],[w,h],[0,h]], lens: [w,h,w,h] };
     }
   },
   par: {
-    name: 'parallelograms', single: 'parallelogram', bridge: 'Leaning Span Bridge', label: [0,1], cmap: [0,1,0,1], classes: [[0,2],[1,3]],
+    name: 'parallelograms', single: 'parallelogram', bridge: tl('Leaning Span Bridge', 'Puente inclinado'), label: [0,1], cmap: [0,1,0,1], classes: [[0,2],[1,3]],
     make() {
       const a = rnd(6,10), b = rnd(3, Math.min(a - 1, 8));
       const dx = b * 0.5, dy = b * R3;
@@ -104,7 +104,7 @@ const SHAPES = {
     }
   },
   trap: {
-    name: 'trapezoids', single: 'isosceles trapezoid', bridge: 'Arch Truss Bridge', label: [0,1,2], cmap: [0,1,2,1], classes: [[1,3],[0],[2]],
+    name: 'trapezoids', single: 'isosceles trapezoid', bridge: tl('Arch Truss Bridge', 'Puente de arco'), label: [0,1,2], cmap: [0,1,2,1], classes: [[1,3],[0],[2]],
     make() {
       const [a,c,l] = pick(TRAP_SETS);
       const d = (a - c) / 2, h = Math.sqrt(l*l - d*d);
@@ -112,22 +112,22 @@ const SHAPES = {
     }
   },
   sq: {
-    name: 'squares', single: 'square', bridge: 'Square Span', label: [0,1,2,3], cmap: [0,0,0,0], classes: [[0,1,2,3]],
+    name: 'squares', single: 'square', bridge: tl('Square Span', 'Tramo cuadrado'), label: [0,1,2,3], cmap: [0,0,0,0], classes: [[0,1,2,3]],
     make() { const s = rnd(2, 8); return { pts: [[0,0],[s,0],[s,s],[0,s]], lens: [s,s,s,s] }; }
   },
   rhomb: {
-    name: 'rhombuses', single: 'rhombus', bridge: 'Diamond Bridge', label: [0,1,2,3], cmap: [0,0,0,0], classes: [[0,1,2,3]],
+    name: 'rhombuses', single: 'rhombus', bridge: tl('Diamond Bridge', 'Puente diamante'), label: [0,1,2,3], cmap: [0,0,0,0], classes: [[0,1,2,3]],
     make() { const s = rnd(2, 8); return { pts: [[0,0],[s,0],[s*1.5,s*R3],[s*.5,s*R3]], lens: [s,s,s,s] }; }
   },
   isotri: {
-    name: 'isosceles triangles', single: 'isosceles triangle', bridge: 'Gable Truss', label: [0,1,2], cmap: [0,1,1], classes: [[1,2],[0]],
+    name: 'isosceles triangles', single: 'isosceles triangle', bridge: tl('Gable Truss', 'Armadura de tejado'), label: [0,1,2], cmap: [0,1,1], classes: [[1,2],[0]],
     make() {
       const [b, l] = pick(ISO_SETS), h = Math.sqrt(l*l - b*b/4);
       return { pts: [[0,0],[b,0],[b/2,h]], lens: [b,l,l] };
     }
   },
   equitri: {
-    name: 'equilateral triangles', single: 'equilateral triangle', bridge: 'Delta Bridge', label: [0,1,2], cmap: [0,0,0], classes: [[0,1,2]],
+    name: 'equilateral triangles', single: 'equilateral triangle', bridge: tl('Delta Bridge', 'Puente delta'), label: [0,1,2], cmap: [0,0,0], classes: [[0,1,2]],
     make() { const s = rnd(2, 8); return { pts: [[0,0],[s,0],[s/2,s*R3]], lens: [s,s,s] }; }
   }
 };
@@ -167,7 +167,7 @@ const KIND_CFG = {
 const SECONDS_BETWEEN_QUESTIONS = 10;                          // about how long you run (dodging obstacles) between two questions
 const METERS_PER_LEVEL = 1000;                           // Level 2 starts at 1000 m, Level 3 at 2000 m ... Level 5 at 4000 m
 const levelForMeters = m => Math.min(MAX_LEVEL, 1 + Math.floor(m / METERS_PER_LEVEL));
-const SIM_YES = 'Similar', SIM_NO = 'Not Similar';                                       // the two answer buttons of a "Similar or not?" question
+const SIM_YES = tl('Similar', 'Semejantes'), SIM_NO = tl('Not Similar', 'No semejantes');                                       // the two answer buttons of a "Similar or not?" question
 
 // pixels per foot that keeps the gap 120-400 px wide and the finished bridge on screen (0 = this size does not fit)
 function fitPPF(lensB0, heightFt) {
@@ -307,14 +307,14 @@ const gapFor = P => P.lensB[0] * P.ppf;                     // gap width = real 
 // The kinds of questions Practice mode lets you pick from (choose as many as you like; they are mixed together).
 // Each one is a level's question style; level 2 is split into its two halves (multiply / divide).
 const PRACTICE_TYPES = [
-  { id: 'scale', level: 1, kind: 'scale', name: 'Scale factor', desc: 'Find the scale factor.' },
-  { id: 'up', level: 2, kind: 'up', name: 'Multiply', desc: 'Find the bigger side.' },
-  { id: 'down', level: 2, kind: 'down', name: 'Divide', desc: 'Find the smaller side.' },
-  { id: 'pair', level: 3, kind: 'pair', name: 'Turned and flipped', desc: 'Find k from one pair of sides.' },
-  { id: 'nest', level: 4, kind: 'nest', name: 'Nested triangles', desc: 'Find the missing length.' },
-  { id: 'sim', level: 4, kind: 'sim', name: 'Similar or not?', desc: 'Compare two figures.' },
-  { id: 'frac', level: 5, kind: 'frac', name: 'Fractional scale factors', desc: 'Factors like 3/2, 2/3 or 1/4.' },
-  { id: 'alg', level: 5, kind: 'alg', name: 'Algebra in the sides', desc: 'Solve for x.' }
+  { id: 'scale', level: 1, kind: 'scale', name: tl('Scale factor', 'Factor de escala'), desc: tl('Find the scale factor.', 'Halla el factor de escala.') },
+  { id: 'up', level: 2, kind: 'up', name: tl('Multiply', 'Multiplicar'), desc: tl('Find the bigger side.', 'Halla el lado mayor.') },
+  { id: 'down', level: 2, kind: 'down', name: tl('Divide', 'Dividir'), desc: tl('Find the smaller side.', 'Halla el lado menor.') },
+  { id: 'pair', level: 3, kind: 'pair', name: tl('Turned and flipped', 'Girada y reflejada'), desc: tl('Find k from one pair of sides.', 'Halla k con un par de lados.') },
+  { id: 'nest', level: 4, kind: 'nest', name: tl('Nested triangles', 'Triángulos anidados'), desc: tl('Find the missing length.', 'Halla la longitud que falta.') },
+  { id: 'sim', level: 4, kind: 'sim', name: tl('Similar or not?', '¿Semejantes o no?'), desc: tl('Compare two figures.', 'Compara dos figuras.') },
+  { id: 'frac', level: 5, kind: 'frac', name: tl('Fractional scale factors', 'Factores de escala fraccionarios'), desc: tl('Factors like 3/2, 2/3 or 1/4.', 'Factores como 3/2, 2/3 o 1/4.') },
+  { id: 'alg', level: 5, kind: 'alg', name: tl('Algebra in the sides', 'Álgebra en los lados'), desc: tl('Solve for x.', 'Resuelve para x.') }
 ];
 
 const chip = (txt, col) => `<span class="chip" style="border-color:${col};color:${col}">${txt}</span>`;
@@ -325,7 +325,7 @@ function stepsHTML(P) {
   if (P.type === 'nest') return nestSteps(P);
   if (P.type === 'sim') {
     const rows = SHAPES[P.shape].label.map(i => { const r = P.lensB[i] / P.lensS[i]; return `<span style="white-space:nowrap">${chip(P.lensB[i], C(i))} ÷ ${chip(P.lensS[i], C(i))} = <b>${fmt(r)}</b></span>`; });
-    return `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center">${rows.join('')}</div><div>${P.answer === 'yes' ? 'Every ratio is the same, so the figures are similar.' : 'The ratios are not all the same, so the figures are not similar.'}</div>`;
+    return `<div style="display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center">${rows.join('')}</div><div>${P.answer === 'yes' ? tl('Every ratio is the same, so the figures are similar.', 'Todas las razones son iguales, así que las figuras son semejantes.') : tl('The ratios are not all the same, so the figures are not similar.', 'Las razones no son todas iguales, así que las figuras no son semejantes.')}</div>`;
   }
   if (P.type === 'scale') return `<div>${chip(P.lensB[0], C(0))} ÷ ${chip(P.lensS[0], C(0))} = ${chip('×' + P.k, '#ff7a1a')}</div>`;
   const x = P.type === 'up' ? P.lensS[P.src] : P.lensB[P.src];
@@ -345,10 +345,10 @@ function stepsHTML(P) {
 function missedHTML(list) {
   const last = list.slice(-4);
   if (!last.length) return '';
-  return `<p style="text-align:left;font-weight:800;margin:6px 0 2px">📝 Questions you missed${list.length > last.length ? ` (last ${last.length})` : ''}:</p><div class="review">` +
-    last.map(P => `<div class="miss">${pairSVG(P, true)}<div class="missLine">${P.timedOut ? '⏱ Time ran out' : '<span class="bad">❌ ' + ansText(P, P.userAns) + '</span>'} <span>➜</span> <span class="ok">✅ ${ansText(P, P.answer)}</span></div></div>`).join('') + `</div>`;
+  return `<p style="text-align:left;font-weight:800;margin:6px 0 2px">${tl('📝 Questions you missed', '📝 Preguntas que fallaste')}${list.length > last.length ? tl(` (last ${last.length})`, ` (últimas ${last.length})`) : ''}:</p><div class="review">` +
+    last.map(P => `<div class="miss">${pairSVG(P, true)}<div class="missLine">${P.timedOut ? tl('⏱ Time ran out', '⏱ Se acabó el tiempo') : '<span class="bad">❌ ' + ansText(P, P.userAns) + '</span>'} <span>➜</span> <span class="ok">✅ ${ansText(P, P.answer)}</span></div></div>`).join('') + `</div>`;
 }
-const ansText = (P, v) => P.type === 'scale' ? '×' + fmt(v) : P.type === 'sim' ? (v === 'yes' ? SIM_YES : SIM_NO) : P.alg ? 'x = ' + fmt(v) : fmt(v) + ' ft';
+const ansText = (P, v) => P.type === 'scale' ? '×' + fmt(v) : P.type === 'sim' ? (v === 'yes' ? SIM_YES : SIM_NO) : P.alg ? 'x = ' + fmt(v) : fmt(v) + tl(' ft', ' pies');
 
 // Both figures in ONE picture, with a curved arrow for every side: from the pre-image side to its matching side on the image,
 // the scale factor on top of the arrow (×k going small -> big, ÷k going big -> small; "×?" on level 1 while it is unknown).
@@ -371,7 +371,7 @@ function pairSVG(P, reveal) {
   const topY = Math.min(pre.top, img.top), botY = Math.max(pre.bottom, img.bottom);
   let ru = 0, rl = 0;
   // panel titles: the shape you start from is the PRE-IMAGE; the one you move to (the one with the missing side) is the IMAGE
-  const small = P.type === 'sim' ? 'Figure A' : toSmall ? 'Image' : 'Pre-image', big = P.type === 'sim' ? 'Figure B' : toSmall ? 'Pre-image' : 'Image';
+  const small = P.type === 'sim' ? tl('Figure A', 'Figura A') : toSmall ? tl('Image', 'Imagen') : tl('Pre-image', 'Preimagen'), big = P.type === 'sim' ? tl('Figure B', 'Figura B') : toSmall ? tl('Pre-image', 'Preimagen') : tl('Image', 'Imagen');
   const font = 'font-family:Trebuchet MS,system-ui,sans-serif';
   let defs = '', paths = '', pills = '';
   const items = [];
@@ -499,7 +499,7 @@ function nestSteps(P) {
 
 // wrong-answer card: mostly pictures - both figures with per-side arrows, and the math with matching colors
 function solutionHTML(P) {
-  const verdict = P.timedOut ? '⏱' : `<span class="bad">❌ ${ansText(P, P.userAns)} <small>${typeof P.userAns === 'number' ? (P.userAns < P.answer ? '(too small)' : '(too big)') : ''}</small></span>`;
+  const verdict = P.timedOut ? '⏱' : `<span class="bad">❌ ${ansText(P, P.userAns)} <small>${typeof P.userAns === 'number' ? (P.userAns < P.answer ? tl('(too small)', '(muy pequeño)') : tl('(too big)', '(muy grande)')) : ''}</small></span>`;
   return `<div class="verdict">${verdict}<span class="arrow">➜</span><span class="ok">✅ ${ansText(P, P.answer)}</span></div>
     ${pairSVG(P, true)}
     <div class="steps">${stepsHTML(P)}</div>`;
@@ -633,9 +633,9 @@ function figParts(P, which, reveal) {
 
 /* ===================== GAME STATE ===================== */
 const THEMES = [
-  { name: 'Canyon', sky: ['#6ec6ff','#ffe3b3'], far: '#d9a074', near: '#b5683f', top: '#d29a55', body: '#8a4b2a', sun: '#fff3b0' },
-  { name: 'Jungle', sky: ['#7fdcc0','#f4fbd0'], far: '#5fae7a', near: '#2f8a5a', top: '#45b04f', body: '#6b4a2b', sun: '#fffbd0' },
-  { name: 'Night City', sky: ['#171b48','#7a4a8f'], far: '#3a3470', near: '#25204d', top: '#5b5b70', body: '#2d2d3a', sun: '#e8ecff', city: true }
+  { name: tl('Canyon', 'Cañón'), sky: ['#6ec6ff','#ffe3b3'], far: '#d9a074', near: '#b5683f', top: '#d29a55', body: '#8a4b2a', sun: '#fff3b0' },
+  { name: tl('Jungle', 'Selva'), sky: ['#7fdcc0','#f4fbd0'], far: '#5fae7a', near: '#2f8a5a', top: '#45b04f', body: '#6b4a2b', sun: '#fffbd0' },
+  { name: tl('Night City', 'Ciudad nocturna'), sky: ['#171b48','#7a4a8f'], far: '#3a3470', near: '#25204d', top: '#5b5b70', body: '#2d2d3a', sun: '#e8ecff', city: true }
 ];
 // Canyon and Jungle alternate every 6 bridges early on; Night City only starts once level 4 begins (3000 m) and then stays
 // for the rest of the run, since its dark sky is the one theme that needs full daylight obstacle colors to read clearly.
@@ -644,59 +644,59 @@ function themeFor(level, solved) { return level >= 4 ? 2 : Math.floor(solved / 6
 // (Looks only - every crew member runs the same.)  Drawn from the SIDE, walking to the right.
 //   look: torso/legs/boots colors; hat (hard | cap | beret | hair | headlamp) + hatc; hair; glasses (round | square); goggles;
 //         vest + stripes; bibs; tie; belt; bolt; sash; props (held in the front hand, or worn: whistle, badge)
-const CREW_ROLES = ['Site Worker', 'Politician', 'Architect', 'Engineer', 'Electrician', 'Safety Inspector', 'Surveyor', 'Environmental Scientist', 'Crane Operator', 'Geologist'];
+const CREW_ROLES = [tl('Site Worker', 'Obrero'), tl('Politician', 'Político'), tl('Architect', 'Arquitecto'), tl('Engineer', 'Ingeniero'), tl('Electrician', 'Electricista'), tl('Safety Inspector', 'Inspector de seguridad'), tl('Surveyor', 'Topógrafo'), tl('Environmental Scientist', 'Científico ambiental'), tl('Crane Operator', 'Operador de grúa'), tl('Geologist', 'Geólogo')];
 const cY = '#ffd23f', cWH = '#f4f4f4', cBL = '#2f80ed', cOR = '#ff9f1a';
 const CHARACTERS = [
   // ---- Site Worker (the free starter is the first one) ----
-  { id: 'crew', role: 0, name: 'Site Worker', price: 0, tag: 'Ready to build. Your starting runner.', look: { torso: cBL, legs: '#1b4f9c', hat: 'cap', hatc: '#1b4f9c' } },
-  { id: 'crewA', role: 0, name: 'Shovel Crew', price: 5, tag: 'Hi-vis vest, hard hat, and a shovel.', look: { torso: '#e8e2d0', vest: cOR, stripes: 1, legs: '#3d5a80', hat: 'hard', hatc: cY, props: ['shovel'] } },
-  { id: 'crewB', role: 0, name: 'Fix-It Pro', price: 10, tag: 'Overalls, a tool belt, and a wrench.', look: { torso: '#c0392b', bibs: '#3a5f9c', legs: '#3a5f9c', hat: 'cap', hatc: '#e0761f', belt: 1, props: ['wrench'] } },
-  { id: 'crewC', role: 0, name: 'Flagger', price: 15, tag: 'Slows the traffic with a STOP sign.', look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: '#f2c21b', props: ['paddle'] } },
+  { id: 'crew', role: 0, name: tl('Site Worker', 'Obrero'), price: 0, tag: tl('Ready to build. Your starting runner.', 'Listo para construir. Tu corredor inicial.'), look: { torso: cBL, legs: '#1b4f9c', hat: 'cap', hatc: '#1b4f9c' } },
+  { id: 'crewA', role: 0, name: tl('Shovel Crew', 'Equipo de pala'), price: 5, tag: tl('Hi-vis vest, hard hat, and a shovel.', 'Chaleco reflectante, casco y una pala.'), look: { torso: '#e8e2d0', vest: cOR, stripes: 1, legs: '#3d5a80', hat: 'hard', hatc: cY, props: ['shovel'] } },
+  { id: 'crewB', role: 0, name: tl('Fix-It Pro', 'Experto en arreglos'), price: 10, tag: tl('Overalls, a tool belt, and a wrench.', 'Overol, cinturón de herramientas y una llave.'), look: { torso: '#c0392b', bibs: '#3a5f9c', legs: '#3a5f9c', hat: 'cap', hatc: '#e0761f', belt: 1, props: ['wrench'] } },
+  { id: 'crewC', role: 0, name: tl('Flagger', 'Banderero'), price: 15, tag: tl('Slows the traffic with a STOP sign.', 'Frena el tráfico con una señal de ALTO.'), look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: '#f2c21b', props: ['paddle'] } },
   // ---- Politician ----
-  { id: 'politician', role: 1, name: 'Politician', price: 10, tag: 'Gets the funding approved.', look: { torso: '#2b3a67', legs: '#1c2547', hair: '#b9b9c4', tie: '#d92b2b' } },
-  { id: 'politicianA', role: 1, name: 'Mayor', price: 15, tag: 'A sash and a flag for the big day.', look: { torso: '#2b3a67', legs: '#1c2547', hair: '#7b5a3a', tie: '#d92b2b', sash: '#e8b02a', props: ['flag'] } },
-  { id: 'politicianB', role: 1, name: 'State Representative', price: 20, tag: 'Gets the bridge funding bill passed.', look: { torso: '#3b3b46', legs: '#25252e', hair: '#b9b9c4', tie: '#2e86c1', props: ['clip', 'badge'] } },
-  { id: 'politicianC', role: 1, name: 'Campaigner', price: 25, tag: 'Rallies the town with a megaphone.', look: { torso: '#e8e8ee', vest: '#3a5f9c', legs: '#3b3b46', hair: '#5b3a1a', tie: '#d92b2b', props: ['megaphone'] } },
+  { id: 'politician', role: 1, name: tl('Politician', 'Político'), price: 10, tag: tl('Gets the funding approved.', 'Consigue que aprueben el dinero.'), look: { torso: '#2b3a67', legs: '#1c2547', hair: '#b9b9c4', tie: '#d92b2b' } },
+  { id: 'politicianA', role: 1, name: tl('Mayor', 'Alcalde'), price: 15, tag: tl('A sash and a flag for the big day.', 'Una banda y una bandera para el gran día.'), look: { torso: '#2b3a67', legs: '#1c2547', hair: '#7b5a3a', tie: '#d92b2b', sash: '#e8b02a', props: ['flag'] } },
+  { id: 'politicianB', role: 1, name: tl('State Representative', 'Representante estatal'), price: 20, tag: tl('Gets the bridge funding bill passed.', 'Logra aprobar la ley que paga el puente.'), look: { torso: '#3b3b46', legs: '#25252e', hair: '#b9b9c4', tie: '#2e86c1', props: ['clip', 'badge'] } },
+  { id: 'politicianC', role: 1, name: tl('Campaigner', 'Activista'), price: 25, tag: tl('Rallies the town with a megaphone.', 'Anima al pueblo con un megáfono.'), look: { torso: '#e8e8ee', vest: '#3a5f9c', legs: '#3b3b46', hair: '#5b3a1a', tie: '#d92b2b', props: ['megaphone'] } },
   // ---- Architect ----
-  { id: 'architect', role: 2, name: 'Architect', price: 20, tag: 'Designs the bridge on a blue blueprint first.', look: { torso: '#3b3b46', legs: '#26262e', hat: 'beret', hatc: '#7b3fa0', glasses: 'round', props: ['roll'] } },
-  { id: 'architectA', role: 2, name: 'Designer', price: 25, tag: 'Black turtleneck, a ruler, and a blue blueprint tube.', look: { torso: '#222222', legs: '#333333', hair: '#5b3a1a', glasses: 'square', props: ['ruler', 'tube'] } },
-  { id: 'architectB', role: 2, name: 'Draftsperson', price: 30, tag: 'Hard hat, a big compass, and a blue blueprint tube.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cWH, glasses: 'round', tie: cBL, props: ['compass', 'tube'] } },
-  { id: 'architectC', role: 2, name: 'Blueprint Boss', price: 35, tag: 'A big blue blueprint and a red beret.', look: { torso: '#c9a26a', legs: '#5b4a3a', hat: 'beret', hatc: '#c0392b', glasses: 'round', belt: 1, props: ['blueprint'] } },
+  { id: 'architect', role: 2, name: tl('Architect', 'Arquitecto'), price: 20, tag: tl('Designs the bridge on a blue blueprint first.', 'Primero diseña el puente en un plano azul.'), look: { torso: '#3b3b46', legs: '#26262e', hat: 'beret', hatc: '#7b3fa0', glasses: 'round', props: ['roll'] } },
+  { id: 'architectA', role: 2, name: tl('Designer', 'Diseñador'), price: 25, tag: tl('Black turtleneck, a ruler, and a blue blueprint tube.', 'Suéter negro de cuello alto, una regla y un tubo de planos.'), look: { torso: '#222222', legs: '#333333', hair: '#5b3a1a', glasses: 'square', props: ['ruler', 'tube'] } },
+  { id: 'architectB', role: 2, name: tl('Draftsperson', 'Dibujante'), price: 30, tag: tl('Hard hat, a big compass, and a blue blueprint tube.', 'Casco, un compás grande y un tubo de planos.'), look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cWH, glasses: 'round', tie: cBL, props: ['compass', 'tube'] } },
+  { id: 'architectC', role: 2, name: tl('Blueprint Boss', 'Jefe de planos'), price: 35, tag: tl('A big blue blueprint and a red beret.', 'Un gran plano azul y una boina roja.'), look: { torso: '#c9a26a', legs: '#5b4a3a', hat: 'beret', hatc: '#c0392b', glasses: 'round', belt: 1, props: ['blueprint'] } },
   // ---- Engineer ----
-  { id: 'engineer', role: 3, name: 'Engineer', price: 30, tag: 'Checks the math and the forces.', look: { torso: cOR, legs: '#7a5a20', hat: 'hard', hatc: cY, glasses: 'round', props: ['clip'] } },
-  { id: 'engineerA', role: 3, name: 'Lab Engineer', price: 35, tag: 'Goggles and a laptop full of numbers.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cY, goggles: 1, props: ['laptop'] } },
-  { id: 'engineerB', role: 3, name: 'Angle Engineer', price: 40, tag: 'Measures every angle with a detailed protractor.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
-  { id: 'engineerC', role: 3, name: 'Site Engineer', price: 45, tag: 'Vest, clipboard, and a badge.', look: { torso: cBL, vest: cOR, legs: '#25252e', hat: 'hard', hatc: cOR, props: ['clip', 'badge'] } },
+  { id: 'engineer', role: 3, name: tl('Engineer', 'Ingeniero'), price: 30, tag: tl('Checks the math and the forces.', 'Revisa las matemáticas y las fuerzas.'), look: { torso: cOR, legs: '#7a5a20', hat: 'hard', hatc: cY, glasses: 'round', props: ['clip'] } },
+  { id: 'engineerA', role: 3, name: tl('Lab Engineer', 'Ingeniero de laboratorio'), price: 35, tag: tl('Goggles and a laptop full of numbers.', 'Gafas y una laptop llena de números.'), look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cY, goggles: 1, props: ['laptop'] } },
+  { id: 'engineerB', role: 3, name: tl('Angle Engineer', 'Ingeniero de ángulos'), price: 40, tag: tl('Measures every angle with a detailed protractor.', 'Mide cada ángulo con un transportador detallado.'), look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'hard', hatc: cWH, glasses: 'square', belt: 1, props: ['protractor'] } },
+  { id: 'engineerC', role: 3, name: tl('Site Engineer', 'Ingeniero de obra'), price: 45, tag: tl('Vest, clipboard, and a badge.', 'Chaleco, portapapeles y una credencial.'), look: { torso: cBL, vest: cOR, legs: '#25252e', hat: 'hard', hatc: cOR, props: ['clip', 'badge'] } },
   // ---- Electrician ----
-  { id: 'electrician', role: 4, name: 'Electrician', price: 45, tag: 'Wires up the lights and signals.', look: { torso: '#2e6bd6', legs: '#1d3f86', hat: 'hard', hatc: cWH, bolt: 1, belt: 1 } },
-  { id: 'electricianA', role: 4, name: 'Lineworker', price: 50, tag: 'Headlamp on, pliers in hand.', look: { torso: '#2e6bd6', legs: '#2e6bd6', hat: 'headlamp', hatc: cWH, belt: 1, props: ['pliers'] } },
-  { id: 'electricianB', role: 4, name: 'Cable Crew', price: 55, tag: 'Carries a big coil of cable.', look: { torso: '#d9dde6', legs: '#3d4a6a', hat: 'hard', hatc: '#e0261f', bolt: 1, props: ['cable'] } },
-  { id: 'electricianC', role: 4, name: 'Bright Spark', price: 60, tag: 'Goggles on and a glowing bulb.', look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['bulb'] } },
+  { id: 'electrician', role: 4, name: tl('Electrician', 'Electricista'), price: 45, tag: tl('Wires up the lights and signals.', 'Conecta las luces y las señales.'), look: { torso: '#2e6bd6', legs: '#1d3f86', hat: 'hard', hatc: cWH, bolt: 1, belt: 1 } },
+  { id: 'electricianA', role: 4, name: tl('Lineworker', 'Liniero'), price: 50, tag: tl('Headlamp on, pliers in hand.', 'Linterna en la cabeza y pinzas en la mano.'), look: { torso: '#2e6bd6', legs: '#2e6bd6', hat: 'headlamp', hatc: cWH, belt: 1, props: ['pliers'] } },
+  { id: 'electricianB', role: 4, name: tl('Cable Crew', 'Equipo de cables'), price: 55, tag: tl('Carries a big coil of cable.', 'Carga un gran rollo de cable.'), look: { torso: '#d9dde6', legs: '#3d4a6a', hat: 'hard', hatc: '#e0261f', bolt: 1, props: ['cable'] } },
+  { id: 'electricianC', role: 4, name: tl('Bright Spark', 'Chispa brillante'), price: 60, tag: tl('Goggles on and a glowing bulb.', 'Gafas puestas y un foco encendido.'), look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['bulb'] } },
   // ---- Safety Inspector ----
-  { id: 'inspector', role: 5, name: 'Safety Inspector', price: 60, tag: 'Makes sure it is safe before it opens.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cWH, stripes: 1, vest: '#a6e22e', props: ['clip'] } },
-  { id: 'inspectorA', role: 5, name: 'Stamp Inspector', price: 65, tag: 'Approves the bridge with a stamp.', look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['stamp'] } },
-  { id: 'inspectorB', role: 5, name: 'Whistle Marshal', price: 70, tag: 'A whistle, a green cap, and an OK sign.', look: { torso: '#3b3b46', vest: '#a6e22e', stripes: 1, legs: '#25252e', hat: 'cap', hatc: '#a6e22e', props: ['whistle', 'signOK'] } },
-  { id: 'inspectorC', role: 5, name: 'OK Inspector', price: 75, tag: 'Gives the final thumbs-up sign.', look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cOR, glasses: 'square', stripes: 1, vest: '#a6e22e', props: ['signOK'] } },
+  { id: 'inspector', role: 5, name: tl('Safety Inspector', 'Inspector de seguridad'), price: 60, tag: tl('Makes sure it is safe before it opens.', 'Se asegura de que sea seguro antes de abrir.'), look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cWH, stripes: 1, vest: '#a6e22e', props: ['clip'] } },
+  { id: 'inspectorA', role: 5, name: tl('Stamp Inspector', 'Inspector del sello'), price: 65, tag: tl('Approves the bridge with a stamp.', 'Aprueba el puente con un sello.'), look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, goggles: 1, props: ['stamp'] } },
+  { id: 'inspectorB', role: 5, name: tl('Whistle Marshal', 'Jefe del silbato'), price: 70, tag: tl('A whistle, a green cap, and an OK sign.', 'Un silbato, una gorra verde y una señal de OK.'), look: { torso: '#3b3b46', vest: '#a6e22e', stripes: 1, legs: '#25252e', hat: 'cap', hatc: '#a6e22e', props: ['whistle', 'signOK'] } },
+  { id: 'inspectorC', role: 5, name: tl('OK Inspector', 'Inspector del OK'), price: 75, tag: tl('Gives the final thumbs-up sign.', 'Da el visto bueno final.'), look: { torso: '#a6e22e', legs: '#4a5a1c', hat: 'hard', hatc: cOR, glasses: 'square', stripes: 1, vest: '#a6e22e', props: ['signOK'] } },
   // ---- Surveyor ----
-  { id: 'surveyor', role: 6, name: 'Surveyor', price: 40, tag: 'Measures the gap with a survey scope.', look: { torso: '#e8e2d0', vest: cOR, stripes: 1, legs: '#4a5a6a', hat: 'hard', hatc: cOR, props: ['tripod'] } },
-  { id: 'surveyorA', role: 6, name: 'Rod Holder', price: 45, tag: 'Holds the striped rod for the scope.', look: { torso: '#f2c21b', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'cap', hatc: '#ff8a1f', props: ['rod'] } },
-  { id: 'surveyorB', role: 6, name: 'Mapper', price: 50, tag: 'Draws the land onto a map.', look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cWH, glasses: 'round', props: ['map'] } },
-  { id: 'surveyorC', role: 6, name: 'Drone Pilot', price: 55, tag: 'Maps the gap from the sky.', look: { torso: '#2f80ed', legs: '#25252e', hat: 'cap', hatc: '#222222', props: ['drone'] } },
+  { id: 'surveyor', role: 6, name: tl('Surveyor', 'Topógrafo'), price: 40, tag: tl('Measures the gap with a survey scope.', 'Mide el hueco con un teodolito.'), look: { torso: '#e8e2d0', vest: cOR, stripes: 1, legs: '#4a5a6a', hat: 'hard', hatc: cOR, props: ['tripod'] } },
+  { id: 'surveyorA', role: 6, name: tl('Rod Holder', 'Portamira'), price: 45, tag: tl('Holds the striped rod for the scope.', 'Sostiene la regla de rayas para el teodolito.'), look: { torso: '#f2c21b', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'cap', hatc: '#ff8a1f', props: ['rod'] } },
+  { id: 'surveyorB', role: 6, name: tl('Mapper', 'Cartógrafo'), price: 50, tag: tl('Draws the land onto a map.', 'Dibuja el terreno en un mapa.'), look: { torso: '#f4f4f4', legs: '#3b3b46', hat: 'hard', hatc: cWH, glasses: 'round', props: ['map'] } },
+  { id: 'surveyorC', role: 6, name: tl('Drone Pilot', 'Piloto de dron'), price: 55, tag: tl('Maps the gap from the sky.', 'Mapea el hueco desde el cielo.'), look: { torso: '#2f80ed', legs: '#25252e', hat: 'cap', hatc: '#222222', props: ['drone'] } },
   // ---- Environmental Scientist ----
-  { id: 'envsci', role: 7, name: 'Environmental Scientist', price: 50, tag: 'Looks for endangered animals with binoculars.', look: { torso: '#3a7d44', legs: '#5b4a3a', hat: 'sun', hatc: '#e8c778', props: ['binoculars'] } },
-  { id: 'envsciA', role: 7, name: 'Field Biologist', price: 55, tag: 'Gets a closer look with a net.', look: { torso: '#c9a26a', vest: '#6b7a3a', legs: '#4a5a1c', hat: 'cap', hatc: '#3a7d44', props: ['net'] } },
-  { id: 'envsciB', role: 7, name: 'Wildlife Ranger', price: 60, tag: 'Logs every sighting in a notebook.', look: { torso: '#6b7a3a', legs: '#5b4a3a', hat: 'ranger', hatc: '#8a6a3a', props: ['notebook'] } },
-  { id: 'envsciC', role: 7, name: 'Water Tester', price: 65, tag: 'Tests the river water in a jar.', look: { torso: '#2e86c1', legs: '#25252e', goggles: 1, props: ['jar'] } },
+  { id: 'envsci', role: 7, name: tl('Environmental Scientist', 'Científico ambiental'), price: 50, tag: tl('Looks for endangered animals with binoculars.', 'Busca animales en peligro con binoculares.'), look: { torso: '#3a7d44', legs: '#5b4a3a', hat: 'sun', hatc: '#e8c778', props: ['binoculars'] } },
+  { id: 'envsciA', role: 7, name: tl('Field Biologist', 'Biólogo de campo'), price: 55, tag: tl('Gets a closer look with a net.', 'Mira de cerca con una red.'), look: { torso: '#c9a26a', vest: '#6b7a3a', legs: '#4a5a1c', hat: 'cap', hatc: '#3a7d44', props: ['net'] } },
+  { id: 'envsciB', role: 7, name: tl('Wildlife Ranger', 'Guardabosques'), price: 60, tag: tl('Logs every sighting in a notebook.', 'Anota cada avistamiento en una libreta.'), look: { torso: '#6b7a3a', legs: '#5b4a3a', hat: 'ranger', hatc: '#8a6a3a', props: ['notebook'] } },
+  { id: 'envsciC', role: 7, name: tl('Water Tester', 'Analista de agua'), price: 65, tag: tl('Tests the river water in a jar.', 'Analiza el agua del río en un frasco.'), look: { torso: '#2e86c1', legs: '#25252e', goggles: 1, props: ['jar'] } },
   // ---- Crane Operator ----
-  { id: 'crane', role: 8, name: 'Crane Operator', price: 60, tag: 'Lifts the beams into place.', look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: cWH, props: ['joystick', 'headset'] } },
-  { id: 'craneA', role: 8, name: 'Signal Rigger', price: 65, tag: 'Guides the crane by radio.', look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cY, props: ['radio'] } },
-  { id: 'craneB', role: 8, name: 'Tower Crane Pro', price: 70, tag: 'Runs the tallest crane on site.', look: { torso: '#2f80ed', legs: '#1b4f9c', hat: 'hard', hatc: cOR, props: ['crane'] } },
-  { id: 'craneC', role: 8, name: 'Rigger', price: 75, tag: 'Hooks the load on safely.', look: { torso: '#c0392b', belt: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, props: ['hook'] } },
+  { id: 'crane', role: 8, name: tl('Crane Operator', 'Operador de grúa'), price: 60, tag: tl('Lifts the beams into place.', 'Sube las vigas a su lugar.'), look: { torso: '#f2c21b', legs: '#3b3b46', hat: 'hard', hatc: cWH, props: ['joystick', 'headset'] } },
+  { id: 'craneA', role: 8, name: tl('Signal Rigger', 'Señalero'), price: 65, tag: tl('Guides the crane by radio.', 'Guía la grúa por radio.'), look: { torso: '#f4f4f4', vest: '#ff8a1f', stripes: 1, legs: '#3b3b46', hat: 'hard', hatc: cY, props: ['radio'] } },
+  { id: 'craneB', role: 8, name: tl('Tower Crane Pro', 'Experto en grúa torre'), price: 70, tag: tl('Runs the tallest crane on site.', 'Maneja la grúa más alta de la obra.'), look: { torso: '#2f80ed', legs: '#1b4f9c', hat: 'hard', hatc: cOR, props: ['crane'] } },
+  { id: 'craneC', role: 8, name: tl('Rigger', 'Aparejador'), price: 75, tag: tl('Hooks the load on safely.', 'Engancha la carga con seguridad.'), look: { torso: '#c0392b', belt: 1, legs: '#3b3b46', hat: 'hard', hatc: cWH, props: ['hook'] } },
   // ---- Geologist ----
-  { id: 'geo', role: 9, name: 'Geologist', price: 70, tag: 'Reads the rock under the river.', look: { torso: '#c9a26a', legs: '#5b4a3a', hat: 'hard', hatc: cY, props: ['rockhammer'] } },
-  { id: 'geoA', role: 9, name: 'Soil Tester', price: 75, tag: 'Pulls up a soil core to test.', look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'cap', hatc: '#8a5a2a', props: ['core'] } },
-  { id: 'geoB', role: 9, name: 'Rock Collector', price: 80, tag: 'Never leaves without a good rock.', look: { torso: '#e8e2d0', legs: '#5b4a3a', hat: 'sun', hatc: '#e8c778', props: ['rocks'] } },
-  { id: 'geoC', role: 9, name: 'Driller', price: 85, tag: 'Drills test holes for the bridge footings.', look: { torso: '#2e6bd6', legs: '#25252e', hat: 'hard', hatc: '#e0261f', goggles: 1, props: ['drill'] } }
+  { id: 'geo', role: 9, name: tl('Geologist', 'Geólogo'), price: 70, tag: tl('Reads the rock under the river.', 'Estudia la roca bajo el río.'), look: { torso: '#c9a26a', legs: '#5b4a3a', hat: 'hard', hatc: cY, props: ['rockhammer'] } },
+  { id: 'geoA', role: 9, name: tl('Soil Tester', 'Analista de suelo'), price: 75, tag: tl('Pulls up a soil core to test.', 'Saca una muestra de suelo para analizar.'), look: { torso: '#3a7d44', legs: '#2a4a30', hat: 'cap', hatc: '#8a5a2a', props: ['core'] } },
+  { id: 'geoB', role: 9, name: tl('Rock Collector', 'Coleccionista de rocas'), price: 80, tag: tl('Never leaves without a good rock.', 'Nunca se va sin una buena roca.'), look: { torso: '#e8e2d0', legs: '#5b4a3a', hat: 'sun', hatc: '#e8c778', props: ['rocks'] } },
+  { id: 'geoC', role: 9, name: tl('Driller', 'Perforador'), price: 85, tag: tl('Drills test holes for the bridge footings.', 'Perfora hoyos de prueba para los cimientos.'), look: { torso: '#2e6bd6', legs: '#25252e', hat: 'hard', hatc: '#e0261f', goggles: 1, props: ['drill'] } }
 ];
 // Who each crew member is: half are women, and skin tones and hair vary, so every student can see someone like themselves in a professional job.
 // style: short | long | pony | bun | curly
@@ -817,9 +817,9 @@ function renderStarts(el, head, beforeStart) {
   el.innerHTML = `<p class="startsHead">${head}</p><div class="starts">` +
     Array.from({ length: MAX_LEVEL }, (_, i) => {
       const lv = i + 1, c = checkpoints[lv];
-      if (lv === 1) return `<button type="button" class="btn ghost start" data-lv="1">↺ Start Over</button>`;
-      return c ? `<button type="button" class="btn alt start" data-lv="${lv}">Level ${lv} · ${Math.floor(c.px / 30)} m</button>`
-               : `<span class="start locked" title="Reach level ${lv} in a run to unlock this start">🔒 Level ${lv}</span>`;
+      if (lv === 1) return `<button type="button" class="btn ghost start" data-lv="1">${tl('↺ Start Over', '↺ Empezar de nuevo')}</button>`;
+      return c ? `<button type="button" class="btn alt start" data-lv="${lv}">${tl('Level', 'Nivel')} ${lv} · ${Math.floor(c.px / 30)} m</button>`
+               : `<span class="start locked" title="${tl(`Reach level ${lv} in a run to unlock this start`, `Llega al nivel ${lv} en una carrera para desbloquear este inicio`)}">🔒 ${tl('Level', 'Nivel')} ${lv}</span>`;
     }).join('') + `</div>`;
   el.onclick = e => {
     const b = e.target.closest('button[data-lv]'); if (!b) return;
@@ -861,35 +861,35 @@ function newWorld(menu, cp, mode) {
 //   fly      = hangs at head height (birds, drones, storm clouds, power lines): DON'T jump into it, just run under
 const OBS = {
   // --- standing on the ground ---
-  rock:      { kind: 'solid', w: 46, h: 38, label: 'boulder' },
+  rock:      { kind: 'solid', w: 46, h: 38, label: tl('boulder', 'una roca') },
   cactus:    { kind: 'solid', w: 28, h: 62, label: 'cactus' },
-  log:       { kind: 'solid', w: 64, h: 30, label: 'fallen log' },
-  stump:     { kind: 'solid', w: 36, h: 44, label: 'tree stump' },
-  cone:      { kind: 'solid', w: 26, h: 38, label: 'road cone' },
-  barrel:    { kind: 'solid', w: 38, h: 48, label: 'hazmat barrel' },
-  redtape:   { kind: 'solid', w: 58, h: 30, label: 'red tape' },
-  home:      { kind: 'solid', w: 54, h: 52, label: 'private home' },
+  log:       { kind: 'solid', w: 64, h: 30, label: tl('fallen log', 'un tronco caído') },
+  stump:     { kind: 'solid', w: 36, h: 44, label: tl('tree stump', 'un tocón') },
+  cone:      { kind: 'solid', w: 26, h: 38, label: tl('road cone', 'un cono') },
+  barrel:    { kind: 'solid', w: 38, h: 48, label: tl('hazmat barrel', 'un barril tóxico') },
+  redtape:   { kind: 'solid', w: 58, h: 30, label: tl('red tape', 'el papeleo') },
+  home:      { kind: 'solid', w: 54, h: 52, label: tl('private home', 'una casa privada') },
   // --- walking toward you ---
   protesters:{ kind: 'solid', w: 140, h: 66, vx: -70, label: 'protesters' },
-  tortoise:  { kind: 'solid', w: 46, h: 28, vx: -22, label: 'endangered tortoise' },
-  frog:      { kind: 'solid', w: 64, h: 40, vx: -30, label: 'endangered frog' },
-  lawyer:    { kind: 'solid', w: 30, h: 68, vx: -45, label: 'lawyer (needs a permit)' },
+  tortoise:  { kind: 'solid', w: 46, h: 28, vx: -22, label: tl('endangered tortoise', 'una tortuga en peligro') },
+  frog:      { kind: 'solid', w: 64, h: 40, vx: -30, label: tl('endangered frog', 'una rana en peligro') },
+  lawyer:    { kind: 'solid', w: 30, h: 68, vx: -45, label: tl('lawyer (needs a permit)', 'un abogado (falta un permiso)') },
   // --- ground hazards ---
-  flood:     { kind: 'zone', w: 160, effect: 'hurt',     label: 'flooded land',      msg: 'You waded into the flood!' },
-  soil:      { kind: 'zone', w: 130, effect: 'hurt',     label: 'unstable soil',     msg: 'The unstable soil gave way!' },
-  hole:      { kind: 'zone', w: 64,  effect: 'hurt',     label: 'hole in the ground', msg: 'You fell in a hole in the ground!' },
-  pipe:      { kind: 'pipe', w: 56, label: 'loose underground pipe', msg: 'A loose pipe burst out of the ground!' },
+  flood:     { kind: 'zone', w: 160, effect: 'hurt',     label: tl('flooded land', 'un terreno inundado'),      msg: tl('You waded into the flood!', '¡Te metiste en la inundación!') },
+  soil:      { kind: 'zone', w: 130, effect: 'hurt',     label: tl('unstable soil', 'un suelo inestable'),     msg: tl('The unstable soil gave way!', '¡El suelo inestable se hundió!') },
+  hole:      { kind: 'zone', w: 64,  effect: 'hurt',     label: tl('hole in the ground', 'un hoyo en el suelo'), msg: tl('You fell in a hole in the ground!', '¡Caíste en un hoyo en el suelo!') },
+  pipe:      { kind: 'pipe', w: 56, label: tl('loose underground pipe', 'un tubo suelto'), msg: tl('A loose pipe burst out of the ground!', '¡Un tubo suelto salió del suelo!') },
   // --- overhead: don't jump into these ---
   vulture:   { fly: true, label: 'vulture' },
   parrot:    { fly: true, label: 'parrot' },
-  drone:     { fly: true, label: 'survey drone' },
-  falcon:    { fly: true, label: 'endangered falcon' },
-  storm:     { fly: true, w: 50, label: 'storm cloud (weather delay)' },   // hit width matched to how wide the cloud actually draws (~76px) - it was hitting well before the player visually touched it
-  powerline: { fly: true, w: 180, still: true, label: 'electrical line' },
+  drone:     { fly: true, label: tl('survey drone', 'un dron topográfico') },
+  falcon:    { fly: true, label: tl('endangered falcon', 'un halcón en peligro') },
+  storm:     { fly: true, w: 50, label: tl('storm cloud (weather delay)', 'una nube de tormenta (retraso por clima)') },   // hit width matched to how wide the cloud actually draws (~76px) - it was hitting well before the player visually touched it
+  powerline: { fly: true, w: 180, still: true, label: tl('electrical line', 'un cable eléctrico') },
   // --- level 5 ---
-  crate:     { kind: 'solid', w: 44, h: 84, label: 'stack of crates' },
-  truck:     { kind: 'solid', w: 100, h: 54, vx: -95, label: 'dump truck' },
-  helicopter:{ fly: true, w: 60, label: 'news helicopter' }
+  crate:     { kind: 'solid', w: 44, h: 84, label: tl('stack of crates', 'una pila de cajas') },
+  truck:     { kind: 'solid', w: 100, h: 54, vx: -95, label: tl('dump truck', 'un camión de volteo') },
+  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') }
 };
 // Every level has its OWN obstacles (none repeat on another level), and every one of them costs a heart if it touches you.
 // (A name listed twice shows up twice as often.)
@@ -1055,7 +1055,7 @@ function startGame(cp) {
   G.tipT = cp ? 0 : 4;
   hidePlayOverlays(); showScreen('play');
   audioInit();
-  toast(cp ? `Level ${cp.level} · continuing from ${Math.floor(cp.px / 30)} m` : 'Run! Jump obstacles — a crash costs a ❤️', '');
+  toast(cp ? tl(`Level ${cp.level} · continuing from ${Math.floor(cp.px / 30)} m`, `Nivel ${cp.level} · sigues desde ${Math.floor(cp.px / 30)} m`) : tl('Run! Jump obstacles — a crash costs a ❤️', '¡Corre! Salta los obstáculos — chocar cuesta un ❤️'), '');
 }
 // Practice: no obstacles, no hearts, no timer. `types` = the PRACTICE_TYPES entries the player picked.
 function startPractice(types) {
@@ -1063,7 +1063,7 @@ function startPractice(types) {
   G.tipT = 0;
   hidePlayOverlays(); showScreen('play');
   audioInit();
-  toast('Practice: no obstacles, no hearts — take your time!', '');
+  toast(tl('Practice: no obstacles, no hearts — take your time!', 'Práctica: sin obstáculos ni corazones — ¡tómate tu tiempo!'), '');
 }
 
 /* ===================== AUDIO ===================== */
@@ -1113,8 +1113,8 @@ function buildMenu() {
   $('mBestLevel').textContent = bestLevel;
   $('mCoins').textContent = coins; $('hCoins').textContent = coins;
   const hc = highestCheckpoint();                                     // push the player back into their hardest unlocked level by default
-  $('btnStart').textContent = hc ? `▶ Continue · Level ${hc.level}` : 'Start Running!';
-  renderStarts($('menuStarts'), '📍 Or start from a level you\'ve reached:');
+  $('btnStart').textContent = hc ? tl(`▶ Continue · Level ${hc.level}`, `▶ Continuar · Nivel ${hc.level}`) : tl('Start Running!', '¡A correr!');
+  renderStarts($('menuStarts'), tl('📍 Or start from a level you\'ve reached:', '📍 O empieza desde un nivel que ya alcanzaste:'));
 }
 
 /* ===================== PRACTICE SETUP ===================== */
@@ -1128,7 +1128,7 @@ function renderPractice() {
     card.className = 'ptype' + (on ? ' on' : ''); card.setAttribute('role', 'checkbox'); card.setAttribute('aria-checked', on ? 'true' : 'false');
     let sample = ''; try { sample = pairSVG(genProblem(t.level, undefined, t.kind), false); } catch (e) {}      // a live example of this kind of question
     card.style.borderLeftColor = lc; card.style.borderLeftWidth = '8px';
-    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel" style="color:${lc}">Level ${t.level}</span>` +
+    card.innerHTML = `<span class="pcheck">${on ? '✓' : ''}</span><span class="plevel" style="color:${lc}">${tl('Level', 'Nivel')} ${t.level}</span>` +
       `<span class="pname">${t.name}</span><span class="pdesc">${t.desc}</span><span class="psample" aria-hidden="true">${sample}</span>`;
     card.onclick = () => {
       practicePicked = practicePicked.includes(t.id) ? practicePicked.filter(id => id !== t.id) : practicePicked.concat(t.id);
@@ -1143,7 +1143,7 @@ function renderPractice() {
 function renderPracticeState() {
   const n = practicePicked.length, b = $('btnPracStart');
   b.disabled = n === 0;
-  b.textContent = n === 0 ? 'Pick at least one type' : `Start Practice (${n} type${n > 1 ? 's' : ''})`;
+  b.textContent = n === 0 ? tl('Pick at least one type', 'Elige al menos un tipo') : tl(`Start Practice (${n} type${n > 1 ? 's' : ''})`, `Empezar práctica (${n} tipo${n > 1 ? 's' : ''})`);
 }
 function openPractice() { hidePlayOverlays(); renderPractice(); showScreen('practice'); }
 
@@ -1170,10 +1170,10 @@ function renderShop() {
     const nm = document.createElement('div'); nm.className = 'shopName'; nm.textContent = ch.name; card.appendChild(nm);
     const tg = document.createElement('div'); tg.className = 'shopTag'; tg.textContent = ch.tag; card.appendChild(tg);
     const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn shopBtn';
-    if (eq) { btn.textContent = '✔ Running as'; btn.disabled = true; btn.classList.add('ghost'); }
-    else if (has) { btn.textContent = 'Select'; btn.classList.add('alt'); btn.onclick = () => { equipCharacter(ch.id); renderShop(); buildMenu(); }; }
+    if (eq) { btn.textContent = tl('✔ Running as', '✔ Corriendo como'); btn.disabled = true; btn.classList.add('ghost'); }
+    else if (has) { btn.textContent = tl('Select', 'Elegir'); btn.classList.add('alt'); btn.onclick = () => { equipCharacter(ch.id); renderShop(); buildMenu(); }; }
     else {
-      btn.textContent = `Hire · ${ch.price} stars`; btn.disabled = coins < ch.price;
+      btn.textContent = tl(`Hire · ${ch.price} stars`, `Contratar · ${ch.price} estrellas`); btn.disabled = coins < ch.price;
       btn.onclick = () => { if (buyCharacter(ch.id)) { sfx.good(); renderShop(); buildMenu(); } };
     }
     card.appendChild(btn); grid.appendChild(card);
@@ -1194,19 +1194,19 @@ function startSolve() {
   const P = G.problem;
   const bn = SHAPES[P.shape].bridge;
   const practice = G.mode === 'practice';
-  $('pTitle').textContent = practice ? `Practice · Level ${P.level}` : `Level ${P.runLevel}`;
+  $('pTitle').textContent = practice ? tl(`Practice · Level ${P.level}`, `Práctica · Nivel ${P.level}`) : tl('Level ', 'Nivel ') + P.runLevel;
   $('barFill').parentElement.style.display = practice ? 'none' : '';        // Practice is untimed
   $('pTimer').style.display = practice ? 'none' : '';
   $('pTimer').textContent = '';
   const single = SHAPES[P.shape].single;
   const prompts = {
-    scale: 'What is the <b>scale factor</b>?',
-    up: 'Find the missing side of the <b>image</b>.',
-    down: 'Find the missing side of the <b>image</b>.',
-    nest: 'Find the <b>missing length</b>.',
-    sim: 'Are these two figures <b>similar</b>?'
+    scale: tl('What is the <b>scale factor</b>?', '¿Cuál es el <b>factor de escala</b>?'),
+    up: tl('Find the missing side of the <b>image</b>.', 'Halla el lado que falta de la <b>imagen</b>.'),
+    down: tl('Find the missing side of the <b>image</b>.', 'Halla el lado que falta de la <b>imagen</b>.'),
+    nest: tl('Find the <b>missing length</b>.', 'Halla la <b>longitud que falta</b>.'),
+    sim: tl('Are these two figures <b>similar</b>?', '¿Estas dos figuras son <b>semejantes</b>?')
   };
-  $('pPrompt').innerHTML = P.alg ? 'Solve for <b>x</b>.' : prompts[P.type];
+  $('pPrompt').innerHTML = P.alg ? tl('Solve for <b>x</b>.', 'Resuelve para <b>x</b>.') : prompts[P.type];
   $('pairWrap').innerHTML = pairSVG(P, false);
   const sim = P.type === 'sim';                                              // "Similar or not?" has two buttons instead of a number box
   $('ansRow').classList.toggle('hidden', sim); $('simRow').classList.toggle('hidden', !sim);
@@ -1238,7 +1238,7 @@ function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for
   P.userAns = val; P.timedOut = !!timedOut;
   if (timedOut) {                                                       // out of time: no bridge at all - you just walk to the edge and fall in
     p.bridge = null; $('problem').classList.add('hidden'); G.state = 'cross';
-    toast("Time's up! No bridge…", 'bad'); return;
+    toast(tl("Time's up! No bridge…", "¡Se acabó el tiempo! Sin puente…"), 'bad'); return;
   }
   // On a wide gap, a plain 2.2x "too big" bridge can run off the right edge of the screen - worse still for a shape (like a
   // leaning parallelogram or trapezoid) whose far point overhangs past its own base width. Cap the ratio using how far that
@@ -1256,7 +1256,7 @@ function advanceLevel(lv) {
   G.theme = themeFor(lv, G.solved);                                     // Night City locks in the moment level 4 starts (3000 m)
   for (let i = G.pi; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
   saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
-  sfx.good(); toast(`🎉 Level ${lv} at ${(lv - 1) * METERS_PER_LEVEL} m: faster + new obstacles!`, 'good');
+  sfx.good(); toast(tl(`🎉 Level ${lv} at ${(lv - 1) * METERS_PER_LEVEL} m: faster + new obstacles!`, `🎉 ¡Nivel ${lv} a los ${(lv - 1) * METERS_PER_LEVEL} m: más rápido + obstáculos nuevos!`), 'good');
 }
 function onBridgeBuilt() {
   const p = G.platforms[G.pi], b = p.bridge;
@@ -1269,10 +1269,10 @@ function onBridgeBuilt() {
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
     addCoins(1); sfx.coin();                                          // 1 star for every correct answer
     const up = ' · +1 ⭐';
-    toast((b.P.type === 'scale' ? `Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`
-      : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? 'Similar' : 'Not similar'} — ${SHAPES[b.P.shape].bridge} locked in!`
-      : b.P.alg ? `x = ${b.P.answer} — ${SHAPES[b.P.shape].bridge} locked in!`
-      : `${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`) + up, 'good'); sfx.good();
+    toast((b.P.type === 'scale' ? tl(`Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`, `Escala ×${b.P.k} — ¡${SHAPES[b.P.shape].bridge} listo!`)
+      : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? tl('Similar', 'Semejantes') : tl('Not similar', 'No semejantes')} — ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
+      : b.P.alg ? `x = ${b.P.answer} — ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
+      : tl(`${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`, `¡${SHAPES[b.P.shape].bridge} listo con tu pieza clave de ${fmt(b.P.answer)} pies!`)) + up, 'good'); sfx.good();
     G.state = 'run';
   } else {
     G.state = 'cross';
@@ -1285,24 +1285,24 @@ function applyFail() {
   G.streak = 0; G.wrong++;
   G.missed.push(P);
   sfx.bad(); G.shake = .3;
-  if (G.mode === 'practice') { toast('Not quite — see how it works, then try the next one', 'bad'); return; }   // Practice: no hearts to lose
+  if (G.mode === 'practice') { toast(tl('Not quite — see how it works, then try the next one', 'Casi — mira cómo se hace y prueba la siguiente'), 'bad'); return; }   // Practice: no hearts to lose
   G.lives--;
-  toast(G.lives > 0 ? 'Down the hole! −1 ❤️' : 'Down the hole!', 'bad');
+  toast(G.lives > 0 ? tl('Down the hole! −1 ❤️', '¡Al hoyo! −1 ❤️') : tl('Down the hole!', '¡Al hoyo!'), 'bad');
 }
 // after falling out of sight, the runner is carried back up to the ledge
 function startRise() {
   const p = G.platforms[G.pi];
   G.state = 'rise'; G.vy = 0;
   G.rise = { t: 0, x0: G.px, y0: G.py, x1: p.e - 70 };
-  toast('Whoosh! Flying back up…', ''); beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
+  toast(tl('Whoosh! Flying back up…', '¡Fiuuu! Volando de regreso…'), ''); beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
 }
 function showFeedback() {
   const P = G.problem;
   G.state = 'feedback';
-  $('fbTitle').textContent = '💥 Oops!';
+  $('fbTitle').textContent = tl('💥 Oops!', '💥 ¡Uy!');
   $('fbBody').innerHTML = solutionHTML(P);
   $('fbStorm').innerHTML = G.mode === 'practice' ? '' : '❤️'.repeat(G.lives) + '🖤'.repeat(3 - G.lives);
-  $('btnNext').textContent = 'Try a new bridge ➜';
+  $('btnNext').textContent = tl('Try a new bridge ➜', 'Prueba otro puente ➜');
   $('feedback').classList.remove('hidden'); cardAt = performance.now(); $('btnNext').focus();
 }
 
@@ -1320,12 +1320,12 @@ function gameOver() {
   const total = G.solved + G.wrong, acc = total ? Math.round(G.solved / total * 100) : 0;
   const meters = Math.max(0, Math.floor(G.px / 30)), newBest = meters > best, newBestLevel = G.level > bestLevel;
   saveRunStats();                                       // best distance, highest level, most bridges, best streak
-  $('ovTitle').textContent = G.crashed ? '💥 You crashed out!' : '🏁 Run over!'; $('btnAgain').textContent = 'Run again';
+  $('ovTitle').textContent = G.crashed ? tl('💥 You crashed out!', '💥 ¡Chocaste demasiado!') : tl('🏁 Run over!', '🏁 ¡Fin de la carrera!'); $('btnAgain').textContent = tl('Run again', 'Correr otra vez');
   $('ovStats').innerHTML =
-    `<div><b>${meters} m</b>Distance ${newBest ? '🏆 New best!' : ''}</div><div><b>${best} m &middot; Level ${bestLevel}</b>Best distance${newBestLevel ? ' 🏆' : ''}</div>` +
-    `<div><b>${G.solved}</b>Bridges built</div><div><b>${acc}%</b>Accuracy · best streak ${G.bestStreak}</div>`;
-  $('ovReview').innerHTML = missedHTML(G.missed) || `<p>🎉 No missed math problems!${G.crashed ? ' Watch out for obstacles next time.' : ''}</p>`;
-  renderStarts($('ovContinue'), '↩ Or continue where you unlocked a level:');      // same level, same distance, fresh hearts
+    `<div><b>${meters} m</b>${tl('Distance', 'Distancia')} ${newBest ? tl('🏆 New best!', '🏆 ¡Nuevo récord!') : ''}</div><div><b>${best} m &middot; ${tl('Level', 'Nivel')} ${bestLevel}</b>${tl('Best distance', 'Mejor distancia')}${newBestLevel ? ' 🏆' : ''}</div>` +
+    `<div><b>${G.solved}</b>${tl('Bridges built', 'Puentes construidos')}</div><div><b>${acc}%</b>${tl('Accuracy · best streak', 'Precisión · mejor racha')} ${G.bestStreak}</div>`;
+  $('ovReview').innerHTML = missedHTML(G.missed) || `<p>${tl('🎉 No missed math problems!', '🎉 ¡No fallaste ningún problema!')}${G.crashed ? tl(' Watch out for obstacles next time.', ' Cuidado con los obstáculos la próxima vez.') : ''}</p>`;
+  renderStarts($('ovContinue'), tl('↩ Or continue where you unlocked a level:', '↩ O sigue donde desbloqueaste un nivel:'));      // same level, same distance, fresh hearts
   $('feedback').classList.add('hidden'); $('problem').classList.add('hidden');
   $('over').classList.remove('hidden'); cardAt = performance.now(); $('btnAgain').focus();
 }
@@ -1398,7 +1398,7 @@ function update(dt) {
             if (Math.random() < .6) G.particles.push({ x: G.px, y: GROUND, vx: (Math.random() - .5) * 160, vy: -120 - Math.random() * 120, life: .4, color: '#7fc8ff' });
           } else if (d.effect === 'collapse') {                         // unstable soil: keep running slowly on it and it gives way
             G.stumble = Math.max(G.stumble, .3); c.sink = (c.sink || 0) + dt; G.shake = Math.max(G.shake, .05);
-            if (!c.warned) { c.warned = true; toast('Unstable soil! Jump off it!', 'bad'); }
+            if (!c.warned) { c.warned = true; toast(tl('Unstable soil! Jump off it!', '¡Suelo inestable! ¡Salta fuera!'), 'bad'); }
             if (c.sink > 0.55) { hurt = true; c.collapsed = true; }
           } else if (d.effect === 'hurt') hurt = true;                  // a hole in the ground
         } else if (d.effect === 'collapse' && !c.collapsed) c.sink = 0;
@@ -1412,7 +1412,7 @@ function update(dt) {
       if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
-        toast(G.lives > 0 ? `${d.msg || 'You ran into the ' + d.label + '!'} −1 ❤️` : 'Crashed out!', 'bad');
+        toast(G.lives > 0 ? `${d.msg || tl('You ran into the ' + d.label + '!', '¡Chocaste con ' + d.label + '!')} −1 ❤️` : tl('Crashed out!', '¡Chocaste demasiado!'), 'bad');
         if (G.lives <= 0) { G.crashed = true; gameOver(); return; }
         if (c.type === 'hole') {                                           // you really fall into a hole in the ground...
           G.state = 'hfall'; G.holeC = c; G.vy = 0; G.px = c.x + dw / 2; G.onGround = false; G.airJumps = 0;
@@ -1472,7 +1472,7 @@ function update(dt) {
     if (G.py >= GROUND + 105) {
       G.py = GROUND + 105; G.state = 'rise'; G.vy = 0;
       G.rise = { t: 0, x0: G.px, y0: G.py, x1: G.holeC.x + OBS.hole.w + 45, hole: true };
-      toast('Whoosh! Balloons to the rescue…', ''); beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
+      toast(tl('Whoosh! Balloons to the rescue…', '¡Fiuuu! Globos al rescate…'), ''); beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
     }
   } else if (G.state !== 'fall') {
     const prevPy = G.py;
@@ -1683,7 +1683,7 @@ function drawBridge(p, T) {
       haloText(txt, mx + nx / l * 26, my + ny / l * (i === 0 ? 20 : 26), col, size);
     };
     if (b.val !== null && b.val !== undefined) {              // the built beam's real length (or the scale you chose for level 1)
-      const txt = P.type === 'scale' ? '×' + b.val : P.type === 'sim' ? (b.val === 'yes' ? SIM_YES : SIM_NO) : P.alg ? 'x = ' + b.val : fmt((ti >= 0 ? P.lensB[ti] : P.answer) * b.ratio) + ' ft';
+      const txt = P.type === 'scale' ? '×' + b.val : P.type === 'sim' ? (b.val === 'yes' ? SIM_YES : SIM_NO) : P.alg ? 'x = ' + b.val : fmt((ti >= 0 ? P.lensB[ti] : P.answer) * b.ratio) + tl(' ft', ' pies');
       label(ti >= 0 ? ti : 0, (b.ok ? '⭐ ' : '❌ ') + txt, b.ok ? '#b58100' : '#d33', 20);
     }
   }
@@ -1727,7 +1727,7 @@ function drawObstacle(c, x) {
       rr(x, G0 - 34, 6, 34, 2, '#8a8a8a'); rr(x + dw - 6, G0 - 34, 6, 34, 2, '#8a8a8a');
       ctx.fillStyle = '#d92b2b'; ctx.strokeStyle = '#7a1414'; ctx.lineWidth = 2;
       for (const yy of [G0 - 32, G0 - 17]) { ctx.beginPath(); ctx.moveTo(x + 5, yy); ctx.quadraticCurveTo(x + dw / 2, yy + 5, x + dw - 5, yy); ctx.lineTo(x + dw - 5, yy + 8); ctx.quadraticCurveTo(x + dw / 2, yy + 13, x + 5, yy + 8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-      rr(x + dw / 2 - 62, G0 - 70, 124, 30, 5, '#fff'); txt('RED TAPE', x + dw / 2, G0 - 55, 20, '#c0180c'); break;
+      rr(x + dw / 2 - 62, G0 - 70, 124, 30, 5, '#fff'); txt(tl('RED TAPE', 'PAPELEO'), x + dw / 2, G0 - 55, 20, '#c0180c'); break;
     case 'home':                                                        // a mini private home: someone lives here, so you can't build through it
       ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
       rr(x + 37, G0 - 62, 8, 20, 1, '#a0523d');                                                                 // chimney
@@ -1736,9 +1736,9 @@ function drawObstacle(c, x) {
       rr(x + 8, G0 - 24, 12, 24, 2, '#7a4b22');                                                                 // door
       rr(x + 30, G0 - 27, 14, 13, 2, '#9ad8ff');                                                                // window
       ctx.strokeStyle = '#3a6f8f'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 37, G0 - 27); ctx.lineTo(x + 37, G0 - 14); ctx.moveTo(x + 30, G0 - 20.5); ctx.lineTo(x + 44, G0 - 20.5); ctx.stroke();
-      rr(x - 92, G0 - 104, 238, 36, 6, '#ffd23f'); txt("DON'T EVICT ME!", x + dw / 2, G0 - 86, 22, '#7a1414'); break;
+      rr(x - 92, G0 - 104, 238, 36, 6, '#ffd23f'); txt(tl("DON'T EVICT ME!", "¡NO ME SAQUEN!"), x + dw / 2, G0 - 86, 22, '#7a1414'); break;
     case 'protesters': {                                                // a group carrying signs that walks toward you
-      const signs = ['NO!', 'STOP', 'WAIT'], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
+      const signs = [tl('NO!', '¡NO!'), tl('STOP', 'ALTO'), tl('WAIT', 'ESPERA')], cols = ['#fff35c', '#ffffff', '#ffd6a0'];
       for (let i = 0; i < 3; i++) {
         const px = x + 30 + i * 46, bob = Math.abs(Math.sin(T * 6 + i)) * 2, lift = i === 1 ? 14 : 0;
         person(px, 66, ['#c0392b', '#2e86c1', '#27ae60'][i], '#f1c08a', true, i);
@@ -1752,7 +1752,7 @@ function drawObstacle(c, x) {
       ctx.fillStyle = '#d92b2b'; ctx.beginPath(); ctx.moveTo(x + 15, G0 - 50); ctx.lineTo(x + 18, G0 - 44); ctx.lineTo(x + 15, G0 - 34); ctx.lineTo(x + 12, G0 - 44); ctx.fill();
       rr(x + 19, G0 - 36, 14, 11, 2, '#7a4b22');
       rr(x - 44, G0 - 120, 110, 32, 8, '#fff'); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x + 6, G0 - 88); ctx.lineTo(x + 14, G0 - 88); ctx.lineTo(x + 12, G0 - 78); ctx.fill();
-      txt('PERMIT?', x + 11, G0 - 104, 21, '#1d2340'); break; }
+      txt(tl('PERMIT?', '¿PERMISO?'), x + 11, G0 - 104, 21, '#1d2340'); break; }
     case 'tortoise': {                                                  // a protected desert tortoise crossing the trail
       const l = Math.sin(T * 3) * 2;
       ctx.fillStyle = '#c9a26a'; ctx.strokeStyle = ol; ctx.lineWidth = 2.5;
@@ -1761,7 +1761,7 @@ function drawObstacle(c, x) {
       ctx.fillStyle = '#7a8f3a'; ctx.beginPath(); ctx.ellipse(x + 24, G0 - 16, 22, 15, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 24, G0 - 31); ctx.lineTo(x + 24, G0 - 16); ctx.moveTo(x + 10, G0 - 22); ctx.lineTo(x + 38, G0 - 22); ctx.stroke();
       ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 20, G0 - 30); ctx.lineTo(x + 20, G0 - 70); ctx.stroke();
-      rr(x - 52, G0 - 136, 144, 64, 6, '#fff'); txt('PROTECTED', x + 20, G0 - 118, 22, '#0d7a3c'); txt('WILDLIFE', x + 20, G0 - 92, 22, '#0d7a3c'); break; }
+      rr(x - 52, G0 - 136, 144, 64, 6, '#fff'); txt(tl('PROTECTED', 'FAUNA'), x + 20, G0 - 118, 22, '#0d7a3c'); txt(tl('WILDLIFE', 'SILVESTRE'), x + 20, G0 - 92, 22, '#0d7a3c'); break; }
     case 'frog': {                                                      // an endangered red-eyed tree frog, hopping toward you
       const hop = Math.abs(Math.sin(T * 5 + c.x * .01)) * 8;
       const E = (ex, ey, rx, ry, f) => { ctx.fillStyle = f; ctx.beginPath(); ctx.ellipse(ex, ey, rx, ry, 0, 0, 7); ctx.fill(); if (f !== null) ctx.stroke(); };
@@ -1778,7 +1778,7 @@ function drawObstacle(c, x) {
       ctx.lineWidth = 5; for (const [tx, ty, tr] of [[80, 122, 7], [96, 124, 6], [124, 124, 6], [140, 122, 7]]) E(tx, ty, tr, tr, '#ff8a1f');   // round orange toe pads
       ctx.restore();
       ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 32, G0 - 46); ctx.lineTo(x + 32, G0 - 64); ctx.stroke();
-      rr(x - 44, G0 - 102, 152, 38, 6, '#fff'); txt('ENDANGERED', x + 32, G0 - 83, 22, '#0d7a3c'); break; }
+      rr(x - 44, G0 - 102, 152, 38, 6, '#fff'); txt(tl('ENDANGERED', 'EN PELIGRO'), x + 32, G0 - 83, 22, '#0d7a3c'); break; }
     case 'flood': {                                                     // land under flood water: rippling water, half-sunk fence posts, and a warning sign
       const w = dw, top = G0 - 24;
       ctx.fillStyle = 'rgba(60,140,225,.88)'; ctx.strokeStyle = 'rgba(20,70,140,.95)'; ctx.lineWidth = 2.5;
@@ -1790,7 +1790,7 @@ function drawObstacle(c, x) {
       for (let i = 30; i < w - 20; i += 90) { ctx.beginPath(); ctx.roundRect(x + i, G0 - 46, 7, 26, 2); ctx.fill(); ctx.stroke(); }
       const sx = x + Math.min(w / 2, 80);
       ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, G0 - 22); ctx.lineTo(sx, G0 - 62); ctx.stroke();
-      rr(sx - 52, G0 - 100, 104, 36, 6, '#fff'); txt('FLOOD!', sx, G0 - 82, 24, '#1c5fb5'); break; }
+      rr(sx - 52, G0 - 100, 104, 36, 6, '#fff'); txt(tl('FLOOD!', '¡AGUA!'), sx, G0 - 82, 24, '#1c5fb5'); break; }
     case 'soil': {                                                      // unstable soil: cracks, and it shakes when you linger on it
       const w = dw, sh = c.sink ? Math.sin(T * 60) * (1 + c.sink * 4) : 0;
       ctx.fillStyle = '#5b3a1e'; ctx.strokeStyle = '#2f1d0e'; ctx.lineWidth = 2;
@@ -1823,7 +1823,7 @@ function drawObstacle(c, x) {
       if (c.type === 'falcon') { ctx.fillStyle = '#f4f1ea'; ctx.beginPath(); ctx.ellipse(x - 2, y + 3, 10, 5, 0, 0, 7); ctx.fill(); }
       ctx.fillStyle = '#ffc93c'; ctx.beginPath(); ctx.moveTo(x - 15, y - 2); ctx.lineTo(x - 26, y + 3); ctx.lineTo(x - 15, y + 5); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 9, y - 3, 2.5, 0, 7); ctx.fill();
-      if (c.type === 'falcon') { rr(x - 76, y - 74, 152, 38, 6, '#fff'); txt('ENDANGERED', x, y - 55, 22, '#0d7a3c'); } break; }
+      if (c.type === 'falcon') { rr(x - 76, y - 74, 152, 38, 6, '#fff'); txt(tl('ENDANGERED', 'EN PELIGRO'), x, y - 55, 22, '#0d7a3c'); } break; }
     case 'crate': {                                                     // a tall stack of shipping crates: a supply delay
       const box = (bx, by, bw, bh, f) => { rr(bx, by, bw, bh, 3, f); ctx.strokeStyle = 'rgba(70,40,15,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx + 4, by + 4); ctx.lineTo(bx + bw - 4, by + bh - 4); ctx.moveTo(bx + bw - 4, by + 4); ctx.lineTo(bx + 4, by + bh - 4); ctx.stroke(); ctx.strokeStyle = ol; ctx.lineWidth = 3; };
       box(x, G0 - 42, 44, 42, '#c9954f'); box(x + 3, G0 - 84, 38, 42, '#d9a862'); break; }
@@ -2007,7 +2007,7 @@ function drawChar(g, x, fy, ch, o) {
   for (const k of props) {
     if (k === 'shovel') { line(0, -40, 0, 40, '#8a5a2a', 4); p('M-8 40 L8 40 L5 54 L-5 54 Z', '#b0b7c0', OL, 2); }
     else if (k === 'wrench') { line(0, 0, 12, -26, '#b0b7c0', 6); circ(13, -30, 6, null, '#b0b7c0', 4); }
-    else if (k === 'paddle') { line(0, -34, 0, 26, '#8a5a2a', 3); circ(0, -46, 14, '#d92b2b', OL, 2); g.fillStyle = '#fff'; g.font = '900 11px Trebuchet MS, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('STOP', 0, -46); }
+    else if (k === 'paddle') { line(0, -34, 0, 26, '#8a5a2a', 3); circ(0, -46, 14, '#d92b2b', OL, 2); g.fillStyle = '#fff'; g.font = '900 11px Trebuchet MS, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tl('STOP', 'ALTO'), 0, -46); }
     else if (k === 'scissors') { line(0, 6, 24, -14, '#c0c6d0', 4); line(0, -14, 24, 6, '#c0c6d0', 4); circ(-2, 8, 4, null, '#d92b2b', 2.5); circ(-2, -16, 4, null, '#d92b2b', 2.5); }
     else if (k === 'megaphone') { p('M0 -6 L26 -20 L26 12 L0 2 Z', '#e8b02a', OL, 2); rect(-6, -6, 8, 10, 1, '#555'); }
     else if (k === 'flag') { line(0, -46, 0, 20, '#8a5a2a', 3); p('M0 -46 L20 -40 L0 -32 Z', '#d92b2b', OL, 1.5); }
@@ -2111,14 +2111,14 @@ function draw() {
   if (G.state === 'menu') { /* keep clean behind the menu card */ }
   if (G.tipT > 0 && G.state === 'run') {
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.roundRect(W / 2 - 250, 110, 500, 40, 20); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Trebuchet MS, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('SPACE / TAP to jump · again in the air = double jump!', W / 2, 137);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Trebuchet MS, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(tl('SPACE / TAP to jump · again in the air = double jump!', 'ESPACIO / TOCA para saltar · otra vez en el aire = ¡doble salto!'), W / 2, 137);
   }
   if (G.state !== 'menu' && G.py - 100 - G.camY < 0) {                              // above the top of the screen: a little marker shows where the runner is
     const rx = 240 + (G.px - G.cam - 240), up = clamp((100 + G.camY - G.py) / 160, 0, 1);
     ctx.globalAlpha = .55 + .4 * up; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1d2340'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(rx, 8); ctx.lineTo(rx - 13, 32); ctx.lineTo(rx + 13, 32); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1;
   }
-  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = 'bold 14px Trebuchet MS, sans-serif'; ctx.textAlign = 'right'; ctx.fillText(T.name + ' · Level ' + G.level, W - 12, H - 10);
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = 'bold 14px Trebuchet MS, sans-serif'; ctx.textAlign = 'right'; ctx.fillText(T.name + tl(' · Level ', ' · Nivel ') + G.level, W - 12, H - 10);
   ctx.restore();
 }
 
@@ -2173,12 +2173,12 @@ function drawTitleObs(g, type, cx, y) {
     box(cx + 12, y - 62, 8, 20, 1, '#a0523d'); box(cx - 25, y - 34, 50, 34, 2, '#f2d9a8');
     g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(cx - 31, y - 34); g.lineTo(cx, y - 58); g.lineTo(cx + 31, y - 34); g.closePath(); g.fill(); g.stroke();
     box(cx - 19, y - 24, 12, 24, 2, '#7a4b22'); box(cx + 3, y - 27, 14, 13, 2, '#9ad8ff');
-    box(cx - 120, y - 106, 240, 36, 6, '#ffd23f'); g.fillStyle = '#7a1414'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText("DON'T EVICT ME!", cx, y - 88);
+    box(cx - 120, y - 106, 240, 36, 6, '#ffd23f'); g.fillStyle = '#7a1414'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tl("DON'T EVICT ME!", "¡NO ME SAQUEN!"), cx, y - 88);
   } else if (type === 'tortoise') {
     g.fillStyle = '#c9a26a'; for (const lx of [-16, -6, 8, 18]) { g.beginPath(); g.roundRect(cx + lx - 3, y - 8, 7, 8, 2); g.fill(); g.stroke(); }
     g.beginPath(); g.ellipse(cx - 26, y - 15, 7, 5, 0, 0, 7); g.fill(); g.stroke();
     g.fillStyle = '#7a8f3a'; g.beginPath(); g.ellipse(cx, y - 16, 22, 15, 0, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
-    g.beginPath(); g.moveTo(cx, y - 68); g.lineTo(cx, y - 30); g.stroke(); box(cx - 70, y - 128, 140, 60, 6, '#fff'); g.fillStyle = '#0d7a3c'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('PROTECTED', cx, y - 111); g.fillText('WILDLIFE', cx, y - 85);
+    g.beginPath(); g.moveTo(cx, y - 68); g.lineTo(cx, y - 30); g.stroke(); box(cx - 70, y - 128, 140, 60, 6, '#fff'); g.fillStyle = '#0d7a3c'; g.font = '900 22px "Trebuchet MS",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(tl('PROTECTED', 'FAUNA'), cx, y - 111); g.fillText(tl('WILDLIFE', 'SILVESTRE'), cx, y - 85);
   }
   g.restore();
 }
@@ -2291,7 +2291,7 @@ let paused = false;                                        // the Menu button pa
 function setPaused(v) {
   paused = v; $('pause').classList.toggle('hidden', !v);
   if (v) { $('btnResume').focus(); }
-  $('menuBtn').textContent = v ? '✕ Close' : '☰ Menu';
+  $('menuBtn').textContent = v ? tl('✕ Close', '✕ Cerrar') : tl('☰ Menu', '☰ Menú');
   last = performance.now();
 }
 function frame(now) {
@@ -2311,7 +2311,7 @@ addEventListener('keydown', e => {
   cheatDown.clear();
   coins = 999999; store.set(KEY.coins, coins);
   for (let lv = 2; lv <= MAX_LEVEL; lv++) saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: (lv - 1) * 4, wrong: 0, bestStreak: 0 });   // every level start unlocked
-  sfx.good(); toast('🔓 All levels unlocked · max stars!', 'good');
+  sfx.good(); toast(tl('🔓 All levels unlocked · max stars!', '🔓 ¡Todos los niveles desbloqueados · estrellas al máximo!'), 'good');
   if (!$('shop').classList.contains('hidden')) renderShop();
   if (screen === 'menu') buildMenu();
 });
@@ -2392,7 +2392,7 @@ $('btnBuild').onclick = () => submit();
 $('btnNext').onclick = respawn;
 $('btnSimYes').onclick = () => submit(false, 'yes');
 $('btnSimNo').onclick = () => submit(false, 'no');
-const muteLabel = () => { $('muteBtn').textContent = muted ? '🔇 Sound off' : '🔊 Sound on'; };
+const muteLabel = () => { $('muteBtn').textContent = muted ? tl('🔇 Sound off', '🔇 Sonido no') : tl('🔊 Sound on', '🔊 Sonido sí'); };
 $('muteBtn').onclick = () => { muted = !muted; store.set(KEY.muted, muted); muteLabel(); audioInit(); };
 muteLabel();
 $('menuBtn').onclick = () => setPaused(!paused);

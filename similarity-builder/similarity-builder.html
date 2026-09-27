@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-langs="en es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -398,6 +398,7 @@
 </style>
 <script data-goatcounter="https://thecodingeducator.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<script src="../site-lang.js"></script>
 <script src="../site-keyboard.js"></script>
 <link rel="stylesheet" href="../site-layout.css">
 <script src="../site-stats.js"></script>
@@ -406,14 +407,14 @@
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
   <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
-  <h2>Rotate Your Device</h2>
-  <p>Similarity Builder works best in landscape. Turn your phone sideways to play.</p>
-  <a href="../index.html">&larr; All games</a>
+  <h2 data-es="Gira tu dispositivo">Rotate Your Device</h2>
+  <p data-es="Similarity Builder funciona mejor en horizontal. Gira tu teléfono para jugar.">Similarity Builder works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../index.html" data-es="&larr; Todos los juegos">&larr; All games</a>
 </div>
 
 <a class="back-link" href="../index.html">&larr; All games</a>
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
-<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Similarity Builder</h1>
 <p class="sr-only">A runner game about similar figures. You run across a canyon, and at every gap a puzzle shows two similar shapes of different sizes: find the scale factor between them (level 1), or use the scale factor to find a missing side length by multiplying or dividing (levels 2 to 4, where the shapes get turned, flipped, and eventually only label one side out of each group of equal sides). Whatever number you answer is what the bridge gets built with - too small and it buckles, too large and it snaps, and either way you fall and lose a heart. Between puzzles, dodge obstacles that are the real-world reasons a bridge does not get built - protesters, endangered animals, lawyers who need permits, red tape, unstable soil, flooded land, holes, loose pipes, and electrical lines. Each level has its own obstacles, and every one costs a heart if it touches you. Jump the ones on the ground and run under the ones overhead, and land on floating platforms. Every correct answer earns a coin to spend in the Shop on a bridge-building crew member such as a politician, architect, engineer, electrician, or safety inspector, each in four different looks. Controls: Space, Enter, or the up arrow (or a tap) jumps, and pressing again in the air double jumps. Type whole-number answers and press Enter or the Build button. The Menu button or the Escape key pauses. From the title screen, Play opens the Menu screen, where you can start a Bridge Run, open Practice (no obstacles or hearts, with a choice of question types), or open the Shop.</p>
 
@@ -422,86 +423,86 @@
     <div id="sb">
       <div id="hud">
         <span class="pill" id="hLives"></span>
-        <span class="pill" id="hCorrectPill" style="display:none">&#9989; Correct <b id="hCorrect">0</b></span>
-        <span class="pill">🔥 Streak <b id="hStreak">0</b></span>
-        <span class="pill" title="1 star for every correct answer - spend them in the Shop"><span class="coinDot">&#11088;</span> <b id="hCoins">0</b></span>
+        <span class="pill" id="hCorrectPill" style="display:none">&#9989; <span data-es="Correctas">Correct</span> <b id="hCorrect">0</b></span>
+        <span class="pill">🔥 <span data-es="Racha">Streak</span> <b id="hStreak">0</b></span>
+        <span class="pill" title="1 star for every correct answer - spend them in the Shop" data-es-title="1 estrella por cada respuesta correcta: gástalas en la tienda"><span class="coinDot">&#11088;</span> <b id="hCoins">0</b></span>
         <span class="pill">🏃 <b id="hDist">0</b> m</span>
       </div>
       <div id="stage">
         <canvas id="c" width="960" height="540"></canvas>
         <div id="toast"></div>
-        <button id="jumpBtn">JUMP</button>
+        <button id="jumpBtn" data-es="SALTA">JUMP</button>
       </div>
-      <div id="help">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; press again in the air to <b>double jump</b>. Esc or Menu pauses.</div>
+      <div id="help" data-es="Saltar: <b>Espacio</b> / <b>Enter</b> / <b>&uarr;</b> / toca &mdash; presiona otra vez en el aire para un <b>doble salto</b>. Esc o Menú pausa.">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; press again in the air to <b>double jump</b>. Esc or Menu pauses.</div>
 
       <!-- Always-available menu button + pause menu -->
       <button id="menuBtn" aria-label="Menu">&#9776; Menu</button>
       <div id="pause" class="overlay hidden"><div class="card center" style="max-width:440px">
-        <h2>&#9208; Paused</h2>
-        <button class="btn" id="btnResume">&#9654; Resume</button>
-        <button class="btn alt" id="btnRestart">&#128260; Restart</button>
+        <h2 data-es="&#9208; En pausa">&#9208; Paused</h2>
+        <button class="btn" id="btnResume" data-es="&#9654; Continuar">&#9654; Resume</button>
+        <button class="btn alt" id="btnRestart" data-es="&#128260; Reiniciar">&#128260; Restart</button>
         <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
-        <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#127968; Menu screen</button>
+        <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px" data-es="&#127968; Pantalla de menú">&#127968; Menu screen</button>
       </div></div>
       <!-- Shown instead of immediately leaving when "Menu screen" is pressed mid-run,
            so a misclick can't silently discard the run/practice in progress. -->
       <div id="exitConfirm" class="overlay hidden"><div class="card center" style="max-width:440px">
-        <h2>Exit to Menu?</h2>
-        <p style="margin:0 0 16px">Your current run will be lost. Are you sure?</p>
-        <button class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px">Yes, Exit</button>
-        <button class="btn ghost" id="btnExitConfirmNo" style="width:100%;font-size:18px;padding:11px">Keep Playing</button>
+        <h2 data-es="¿Salir al menú?">Exit to Menu?</h2>
+        <p style="margin:0 0 16px" data-es="Tu partida actual se perderá. ¿Seguro?">Your current run will be lost. Are you sure?</p>
+        <button class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px" data-es="Sí, salir">Yes, Exit</button>
+        <button class="btn ghost" id="btnExitConfirmNo" style="width:100%;font-size:18px;padding:11px" data-es="Seguir jugando">Keep Playing</button>
       </div></div>
 
       <!-- Crew Shop -->
       <div id="shop" class="overlay hidden"><div class="card" style="max-width:800px">
-        <div class="ptop"><h2 style="margin:0">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="shopCoins">0</b> stars</span></div>
-        <p style="margin:6px 0 8px">Every correct answer earns 1 <span class="coinDot">&#11088;</span> star. Hire the crew that builds real bridges &mdash; then run as them!</p>
+        <div class="ptop"><h2 style="margin:0" data-es="&#128717; Tienda del equipo">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="shopCoins">0</b> <span data-es="estrellas">stars</span></span></div>
+        <p style="margin:6px 0 8px" data-es="Cada respuesta correcta te da 1 <span class=&quot;coinDot&quot;>&#11088;</span> estrella. Contrata al equipo que construye puentes de verdad &mdash; ¡y corre como ellos!">Every correct answer earns 1 <span class="coinDot">&#11088;</span> star. Hire the crew that builds real bridges &mdash; then run as them!</p>
         <div id="shopTabs" class="shopTabs"></div>
         <div id="shopGrid" class="shopGrid"></div>
-        <div class="center"><button class="btn" id="btnShopClose">Done</button></div>
+        <div class="center"><button class="btn" id="btnShopClose" data-es="Listo">Done</button></div>
       </div></div>
 
       <!-- Title screen (the first thing you see) -->
       <div id="title" class="overlay">
         <canvas id="titleCv" width="960" height="540" aria-hidden="true"></canvas>
         <div class="titleWrap">
-          <div class="titleKicker">&#128208; A game about similar figures</div>
+          <div class="titleKicker" data-es="&#128208; Un juego de figuras semejantes">&#128208; A game about similar figures</div>
           <h2 class="titleName"><span>Similarity</span> <span class="b">Builder</span></h2>
-          <button class="btn playBtn" id="btnPlay">&#9654; Play</button>
+          <button class="btn playBtn" id="btnPlay" data-es="&#9654; Jugar">&#9654; Play</button>
         </div>
       </div>
 
       <!-- Menu screen: the only place to start a game or open the Shop -->
       <div id="menu" class="overlay hidden"><div class="card center menuCard">
-        <div class="ptop"><h2 style="margin:0">&#127753; Menu</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="mCoins">0</b> stars &middot; Best <b id="mBest">0</b> m &middot; Level <b id="mBestLevel">1</b></span></div>
+        <div class="ptop"><h2 style="margin:0" data-es="&#127753; Menú">&#127753; Menu</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="mCoins">0</b> <span data-es="estrellas">stars</span> &middot; <span data-es="Récord">Best</span> <b id="mBest">0</b> m &middot; <span data-es="Nivel">Level</span> <b id="mBestLevel">1</b></span></div>
         <div class="menuGrid">
           <div class="tile">
-            <h3>&#127939; Bridge Run</h3>
-            <p>Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn stars &mdash; the farther the better.</p>
+            <h3 data-es="&#127939; Carrera de puentes">&#127939; Bridge Run</h3>
+            <p data-es="Corre por el cañón y construye un puente en cada hueco. Esquiva obstáculos, cuida tus &#10084;&#65039; corazones y gana estrellas &mdash; cuanto más lejos, mejor.">Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn stars &mdash; the farther the better.</p>
             <button class="btn" id="btnStart">Start Running!</button>
             <div id="menuStarts"></div>
           </div>
           <div class="tile">
-            <h3>&#127891; Practice</h3>
-            <p><b>No obstacles, no hearts.</b> Choose exactly which kinds of questions you want to work on &mdash; as many as you like.</p>
-            <button class="btn alt" id="btnPractice">Choose questions</button>
+            <h3 data-es="&#127891; Práctica">&#127891; Practice</h3>
+            <p data-es="<b>Sin obstáculos, sin corazones.</b> Elige exactamente qué tipos de preguntas quieres practicar &mdash; todos los que quieras."><b>No obstacles, no hearts.</b> Choose exactly which kinds of questions you want to work on &mdash; as many as you like.</p>
+            <button class="btn alt" id="btnPractice" data-es="Elegir preguntas">Choose questions</button>
           </div>
           <div class="tile">
-            <h3>&#128717; Crew Shop</h3>
-            <p>Spend the stars you earn from correct answers to hire a bridge-building crew, then run as them.</p>
-            <button class="btn ghost" id="btnShop" style="font-size:17px">Open the Shop</button>
+            <h3 data-es="&#128717; Tienda del equipo">&#128717; Crew Shop</h3>
+            <p data-es="Gasta las estrellas que ganas con respuestas correctas para contratar a un equipo constructor de puentes, y corre como ellos.">Spend the stars you earn from correct answers to hire a bridge-building crew, then run as them.</p>
+            <button class="btn ghost" id="btnShop" style="font-size:17px" data-es="Abrir la tienda">Open the Shop</button>
           </div>
         </div>
-        <button class="btn ghost" id="btnMenuBack">&larr; Title screen</button>
-        <p class="kbdTip">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
+        <button class="btn ghost" id="btnMenuBack" data-es="&larr; Pantalla de título">&larr; Title screen</button>
+        <p class="kbdTip" data-es="Teclado: las <b>flechas</b> mueven &middot; <b>Enter</b> elige &middot; <b>Esc</b> regresa">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
       </div></div>
 
       <!-- Practice setup -->
       <div id="practice" class="overlay hidden"><div class="card" style="max-width:875px">
-        <div class="ptop"><h2 style="margin:0">&#127891; Practice</h2><span class="badge">Pick one or more</span></div>
+        <div class="ptop"><h2 style="margin:0" data-es="&#127891; Práctica">&#127891; Practice</h2><span class="badge" data-es="Elige uno o más">Pick one or more</span></div>
         <div id="ptypes" class="ptypes"></div>
         <div class="center pbar">
-          <button class="btn ghost" id="btnPracBack">&larr; Back</button>
+          <button class="btn ghost" id="btnPracBack" data-es="&larr; Atrás">&larr; Back</button>
           <button class="btn" id="btnPracStart">Start Practice</button>
         </div>
       </div></div>
@@ -514,13 +515,13 @@
         <div id="pairWrap"></div>
         <div class="answer" id="ansRow">
           <label for="ans" id="ansLbl">? =</label>
-          <input id="ans" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Your answer (whole number)">
-          <span style="font-weight:700" id="ansUnit">ft</span>
-          <button class="btn" id="btnBuild">Build! &#127753;</button>
+          <input id="ans" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Your answer (whole number)" data-es-aria="Tu respuesta (número entero)">
+          <span style="font-weight:700" id="ansUnit" data-es="pies">ft</span>
+          <button class="btn" id="btnBuild" data-es="¡Construir! &#127753;">Build! &#127753;</button>
         </div>
         <div class="answer hidden" id="simRow" style="justify-content:center;gap:14px">
-          <button class="btn" id="btnSimYes">Similar</button>
-          <button class="btn alt" id="btnSimNo">Not Similar</button>
+          <button class="btn" id="btnSimYes" data-es="Semejantes">Similar</button>
+          <button class="btn alt" id="btnSimNo" data-es="No semejantes">Not Similar</button>
         </div>
         <div id="keypad"></div>
       </div></div>
@@ -530,7 +531,7 @@
         <h2 id="fbTitle">&#128165; The bridge failed!</h2>
         <div id="fbBody"></div>
         <p id="fbStorm" style="font-weight:700"></p>
-        <div class="center"><button class="btn alt" id="btnNext">Try a new bridge</button><p class="kbdTip">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
+        <div class="center"><button class="btn alt" id="btnNext">Try a new bridge</button><p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para continuar">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
       </div></div>
 
       <!-- Run over -->
@@ -539,8 +540,8 @@
         <div class="stats" id="ovStats"></div>
         <div id="ovContinue"></div>
         <button class="btn" id="btnAgain">Run again</button>
-        <button class="btn ghost" id="btnOverMenu" style="margin-left:6px">&#127968; Menu</button>
-        <p class="kbdTip">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
+        <button class="btn ghost" id="btnOverMenu" style="margin-left:6px" data-es="&#127968; Menú">&#127968; Menu</button>
+        <p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para jugar otra vez &middot; <b>Esc</b> para el menú">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
         <div id="ovReview"></div>
       </div></div>
     </div>
