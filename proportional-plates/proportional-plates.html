@@ -387,6 +387,9 @@
   #sb .tk.on { outline:0.4cqw solid #ffd23f; transform:translateY(0.9cqw); box-shadow:0 1cqw 1.6cqw rgba(0,0,0,.45); }
   #sb .tk:focus-visible { outline:0.4cqw solid #1d2340; }
   #sb .tk.old { animation:none; }
+  #sb .tk .tkRe, #sb .ckRe { background:#e0483c; color:#fff; font-weight:900; font-size:1.3cqw; border-radius:0.4cqw; padding:0.1cqw 0.5cqw; text-transform:uppercase; letter-spacing:.04em; }
+  #sb .tk .tkRe { margin-top:0.4cqw; }
+  #sb .ckRe { font-size:1.5cqw; vertical-align:middle; }
   #sb #ckWait { display:flex; gap:0.5cqw; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
   #sb .wChip { display:inline-flex; flex-direction:column; align-items:stretch; gap:0.2cqw; }
   #sb .wChip b { color:#fff; font-size:1.55cqw; border-radius:0.4cqw; padding:0 0.45cqw; text-align:center; }
@@ -409,12 +412,12 @@
   #sb .qbLab span { display:block; text-transform:none; letter-spacing:0; font-size:2.2cqw; color:#2a2320; font-weight:700; }
   #sb .qbLab.ord { color:#1e7a44; }
   #sb .qbBar { display:flex; min-height:5.2cqw; border-radius:0.8cqw; overflow:hidden; }
-  #sb .qbBox { display:flex; align-items:center; justify-content:center; min-height:5.2cqw; border:0.28cqw solid #2f80ed; background:#dbe8ff; margin-right:-0.28cqw; }
+  #sb .qbBox { display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden; min-height:5.2cqw; border:0.28cqw solid #2f80ed; background:#dbe8ff; margin-right:-0.28cqw; }
   #sb .qbBar.ord .qbBox { border-color:#1e9e57; background:#d3f5df; }
   #sb .qbBox:first-child { border-radius:0.8cqw 0 0 0.8cqw; }
   #sb .qbBox:last-child { border-radius:0 0.8cqw 0.8cqw 0; margin-right:0; }
   #sb .qbBox:only-child { border-radius:0.8cqw; }
-  #sb .qbIn { display:flex; align-items:center; gap:0.15cqw; font-size:2.4cqw; font-weight:900; color:#2a2320; }
+  #sb .qbIn { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; max-width:100%; gap:0.15cqw; font-size:2.4cqw; font-weight:900; color:#2a2320; }
   #sb .qbIn .ic { width:2.6cqw; height:2.6cqw; display:block; }
   #sb .qbIn b { font-size:2cqw; color:#2a2320 !important; }
   #sb .qbIn b.qbN { font-size:2.3cqw; }
@@ -592,7 +595,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Proportional Plates</h1>
-<p class="sr-only">A fast-paced cooking game about proportions. You are the chef. Walk around the diner with the arrow keys (or click the floor). The kitchen is in the back-left corner and the tables are spread around the dining room. When a customer sits down and raises a hand, walk to their table and press Space to take the order, then walk back to the kitchen, where the order goes up on the ticket rail. Press Space at the stove to cook: read the recipe (or the market price), work out how much is needed for the size of the order, type the amount, and press Enter. Then carry the plate back to that customer, following the arrow and the glowing spot beside their table, and press Space to serve it. The food on the plate is sized by your answer. Customers arrive smiling and slowly get angrier the longer they wait; if one waits too long, they leave and post a 1-star review. A correct order makes the customer happy and earns a star. An answer within 25 percent upsets the customer, and one that is way off makes the customer furious; both earn a 1-star review, followed by a pop-up that shows the right method next to what you did, with a tape diagram. Three 1-star reviews close the restaurant. Levels: scaling a recipe up, scaling up and down, ratio tables, unit prices, and fractional scale factors. Practice mode has no waiting and no reviews. At the stove, the up and down arrow keys switch between orders and Escape steps away; otherwise Escape or the Menu button pauses.</p>
+<p class="sr-only">A fast-paced cooking game about proportions. You are the chef. Walk around the diner with the arrow keys (or click the floor). The kitchen is in the back-left corner and the tables are spread around the dining room. When a customer sits down and raises a hand, walk to their table and press Space to take the order, then walk back to the kitchen, where the order goes up on the ticket rail. Press Space at the stove to cook: read the recipe (or the market price), work out how much is needed for the size of the order, type the amount, and press Enter. You can cook several orders in a row. The chef carries up to two plates at once, each with a trail to its table; any more wait on the kitchen counter, where Space picks them up. Carry each plate to its customer, following the arrow and the glowing spot under their table, and press Space to serve it. The food on the plate is sized by your answer. Customers arrive smiling and slowly get angrier the longer they wait; if one waits too long, they leave and post a 1-star review. A correct order makes the customer happy and earns a star. An answer within 25 percent upsets the customer, and one that is way off makes the customer furious; either way a pop-up shows the right method next to what you did, with a tape diagram, and the order goes back on the rail so you can remake it while the customer keeps waiting. Three 1-star reviews close the restaurant. Levels: scaling a recipe up, scaling up and down, ratio tables, unit prices, and fractional scale factors. Practice mode has no waiting and no reviews. At the stove, the up and down arrow keys switch between orders and Escape steps away; otherwise Escape or the Menu button pauses.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">

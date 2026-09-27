@@ -97,9 +97,10 @@ const PRACTICE_TYPES = [
 function mk(kind, dish, ing, baseN, baseQ, tgtN, extra) {
   return Object.assign({ kind, dish, ing, baseN, baseQ, tgtN, ans: F(baseQ.n * tgtN, baseQ.d * baseN) }, extra || {});
 }
-// every multiplication or division a student has to do stays inside the 10 x 10 times table (both factors 10 or less)
-function genUp() {                                                    // order ÷ recipe = k, then amount × k
-  const d = pick(DISHES), ing = pick(d.ings), baseN = rnd(2, 10), k = rnd(2, 10), q = rnd(1, 10);
+// every multiplication or division a student has to do stays inside the 10 x 10 times table (both factors 10 or less).
+// Level 1 (and Practice) keeps scaling up easy: recipes of 2-5 dishes, scale factors of 2-5 and amounts of 1-5.
+function genUp(easy) {                                                // order ÷ recipe = k, then amount × k
+  const d = pick(DISHES), ing = pick(d.ings), baseN = easy ? rnd(2, 5) : rnd(2, 10), k = easy ? rnd(2, 5) : rnd(2, 10), q = easy ? rnd(1, 5) : rnd(1, 10);
   return mk('up', d, ing, baseN, F(q), baseN * k);
 }
 function genDown() {                                                  // recipe ÷ order = k, then amount ÷ k
@@ -138,7 +139,7 @@ function genFrac() {
   return genUp();
 }
 const GEN = { up: genUp, down: genDown, table: genTable, rate: genRate, frac: genFrac };
-function genProblem(kind) { return GEN[kind](); }
+function genProblem(kind, easy) { return GEN[kind](easy); }
 
 // how the numbers break into equal "blocks" (the tape diagram and the steps both use it):
 // the recipe is a blocks, the order is b blocks, and every block is the same amount v
@@ -201,20 +202,23 @@ function newWorld(mode, level, kinds) {
     mode, level: lv, kinds: kinds || null, startServed: (lv - 1) * ORDERS_PER_LEVEL, served: (lv - 1) * ORDERS_PER_LEVEL,
     correct: 0, wrong: 0, streak: 0, bestStreak: 0, stars: 0, reviews: 0, t: 0,
     custs: [], leavers: [], particles: [], activeId: null, nextT: 1, arrivals: 0, cooking: false, pending: null,
-    chef: { x: 360, y: 345, dir: 1, walking: false, notepad: [], carry: null, target: null }, missed: [], state: 'play'
+    pass: [],                                                           // cooked plates waiting on the kitchen counter (the chef's hands were full)
+    chef: { x: 360, y: 345, dir: 1, walking: false, notepad: [], plates: [], target: null }, missed: [], state: 'play'
   };
 }
 const shiftServed = () => G.served - G.startServed;
 
 /* ===================== CUSTOMERS ===================== */
 // a customer's order goes: ready (wants to order) -> taken (in the chef's notepad) -> hung (on the kitchen rail)
-//   -> carry (cooked, on the chef's plate) -> served (they react, then leave)
+//   -> carry (cooked: in the chef's hands, or waiting on the kitchen counter) -> served (they react; a right order
+//   leaves happy, a wrong one goes back on the rail to be remade - customers only storm out when their patience runs out)
+const MAX_HANDS = 2;                                                  // the chef can carry two plates at once
 function spawnCustomer() {
   const used = new Set(G.custs.map(c => c.seat).concat(G.leavers.filter(l => l.walk < 0).map(l => l.seat)));
   const free = SEATS.map((_, i) => i).filter(s => !used.has(s));
   if (!free.length) return false;
   const kind = G.kinds ? pick(G.kinds) : pick(KINDS_BY_LEVEL[G.level - 1]);
-  const P = genProblem(kind), pat = G.mode === 'run' ? PATIENCE_SEC[G.level - 1] : Infinity;
+  const P = genProblem(kind, G.mode === 'practice' || G.level === 1), pat = G.mode === 'run' ? PATIENCE_SEC[G.level - 1] : Infinity;
   orderNo++;
   G.custs.push({ id: orderNo, num: orderNo, P, seat: pick(free), look: newLook(), color: TICKET_COLORS[orderNo % TICKET_COLORS.length],
     state: 'ready', patience: pat, patMax: pat, mood: 'wait', bubble: '', arrive: 0, wx: DOOR.x, wy: DOOR.y, react: 0 });
@@ -223,10 +227,10 @@ function spawnCustomer() {
   return true;
 }
 function walkOut(C) {
-  const ch = G.chef, hadPlate = ch.carry === C;
+  const ch = G.chef, hadPlate = ch.plates.includes(C) || G.pass.includes(C);
   G.custs = G.custs.filter(c => c !== C);
   ch.notepad = ch.notepad.filter(c => c !== C);
-  if (hadPlate) ch.carry = null;
+  ch.plates = ch.plates.filter(c => c !== C); G.pass = G.pass.filter(c => c !== C);
   if (G.activeId === C.id) G.activeId = null;
   C.mood = 'fuming'; C.bubble = 'TOO SLOW!'; C.walk = -1;
   G.leavers.push(C);
@@ -278,14 +282,15 @@ function interact() {
   if (!G || G.state !== 'play' || paused || G.cooking) return;
   const ch = G.chef, near = nearCustomer();
   if (near) ch.dir = SEATS[near.seat].tx < ch.x ? -1 : 1;              // turn to face the table
-  if (ch.carry && near === ch.carry) { deliver(near); return; }
+  if (near && ch.plates.includes(near)) { deliver(near); return; }
   if (near && near.state === 'ready') { takeOrder(near); return; }
-  if (ch.carry && atStove()) { redoPlate(); return; }
-  if (ch.carry) {
-    toast(near ? `This plate is for order #${ch.carry.num} - look for the #${ch.carry.num} flag.` : `Carry the plate to order #${ch.carry.num}'s table, then press Space.`, near ? 'bad' : '');
+  if (inKitchen() && G.pass.length && ch.plates.length < MAX_HANDS) { pickUp(); return; }
+  if (atStove() && railOrders().length) { openCook(); return; }
+  if (ch.plates.length) {
+    const nums = ch.plates.map(c => '#' + c.num).join(' and ');
+    toast(near ? `Your plates are for ${nums} - look for the matching flag.` : `Carry the plate${ch.plates.length > 1 ? 's' : ''} to ${nums}, then press Space at the table.`, near ? 'bad' : '');
     return;
   }
-  if (atStove() && railOrders().length) { openCook(); return; }
   if (near) { toast(near.state === 'taken' ? `Bring order #${near.num} to the kitchen first!` : `Order #${near.num} is on the rail - cook it at the stove.`, ''); return; }
   if (inKitchen()) toast(railOrders().length ? 'Walk over to the stove to cook.' : ch.notepad.length ? 'Your orders go on the rail as you walk in.' : 'No orders yet - walk to a customer and take their order.', '');
 }
@@ -311,12 +316,17 @@ function openCook() {
   renderRail(); renderCook();
   if (!coarse()) setTimeout(() => $('ans').focus(), 20);
 }
-function redoPlate() {                                                // brought a plate back to the kitchen: back on the stove to change the answer
-  const C = G.chef.carry;
-  G.chef.carry = null; C.state = 'hung'; G.activeId = C.id;
-  openCook();
-  $('ans').value = C.ansText || '';
-  sfx.go(); toast(`Fix your answer for order #${C.num}, then press Enter.`, '');
+function pickUp() {                                                   // take plates waiting on the kitchen counter (as many as the chef's hands hold)
+  const ch = G.chef, took = [];
+  while (G.pass.length && ch.plates.length < MAX_HANDS) { const C = G.pass.shift(); ch.plates.push(C); took.push('#' + C.num); }
+  sfx.go();
+  toast(`Picked up ${took.join(' and ')}.${G.pass.length ? ` ${G.pass.length} more waiting on the counter.` : ''}`, '');
+}
+// a wrong plate: after the "let's fix it" card, the customer stays put and the order goes back on the rail to be remade
+function remakeOrder(C) {
+  Object.assign(C, { state: 'hung', plated: false, mood: 'wait', bubble: '', handled: false, react: 0, remake: true, railed: false, result: null });
+  toast(`Order #${C.num} is back on the rail - remake it in the kitchen before they run out of patience!`, '');
+  renderRail();
 }
 function closeCook() { if (!G) return; G.cooking = false; $('ans').blur(); renderRail(); renderCook(); }
 function setActive(id) {
@@ -362,8 +372,9 @@ function qbarHTML(P) {
   const unitLabel = n => P.money ? (n === 1 ? P.item.one : P.item.q) : nounOf(P, n);
   const box = () => {
     if (P.money) return `<span class="qbIn">1</span>`;
-    // narrow boxes (more than 5 in a bar) just show how many dishes; wider ones show the dishes themselves
-    const icons = maxN > 5 ? `<b class="qbN">${per}</b>` : per <= 3 ? foodIcon(P.dish).repeat(per) : `${foodIcon(P.dish)}<b>&times;${per}</b>`;
+    // narrow boxes (more than 5 in a bar) just show how many dishes; the dishes are drawn one by one only when they all
+    // fit inside their box (few boxes, few dishes each) - otherwise one dish and "×3", so nothing spills over the edges
+    const icons = maxN > 5 ? `<b class="qbN">${per}</b>` : per <= 3 && per * maxN <= 8 ? foodIcon(P.dish).repeat(per) : `${foodIcon(P.dish)}<b>&times;${per}</b>`;
     return `<span class="qbIn">${icons}</span>`;
   };
   const amt = (x, ask) => P.money
@@ -393,10 +404,10 @@ function renderRail() {
   if (!r.length) { rail.innerHTML = '<span class="railEmpty">Order rail &mdash; bring orders into the kitchen</span>'; return; }
   r.forEach(C => {
     const b = document.createElement('button'); b.type = 'button';
-    b.className = 'tk' + (G.cooking && C.id === G.activeId ? ' on' : '') + (C.railed ? ' old' : '');   // only brand-new tickets slide in
+    b.className = 'tk' + (G.cooking && C.id === G.activeId ? ' on' : '') + (C.railed ? ' old' : '') + (C.remake ? ' remake' : '');   // only brand-new tickets slide in
     C.railed = true;
     const P = C.P, what = P.money ? `${P.tgtN} ${P.tgtN === 1 ? P.item.one : P.item.short}` : `${P.tgtN} ${nounOf(P, P.tgtN)}`;
-    b.innerHTML = `<span class="tkNum" style="background:${C.color}">#${C.num}</span><span class="tkDish">${P.money ? 'Supplies' : P.dish.name}</span><span class="tkQty">${what}</span>`;
+    b.innerHTML = `<span class="tkNum" style="background:${C.color}">#${C.num}</span><span class="tkDish">${P.money ? 'Supplies' : P.dish.name}</span><span class="tkQty">${what}</span>${C.remake ? '<span class="tkRe">Remake</span>' : ''}`;
     b.setAttribute('aria-label', `Order ${C.num}: ${P.money ? 'supplies bill' : P.dish.name}, ${what}`);
     b.onclick = () => {
       if (!G || G.state !== 'play') return;
@@ -415,7 +426,7 @@ function renderCook() {
   $('touch').classList.toggle('hidden', !G || show || screen !== 'play');
   if (!C) return;
   const P = C.P;
-  $('ckOrder').innerHTML = `<span class="ckNum" style="background:${C.color}">#${C.num}</span> ${P.money ? 'Supplies for ' + P.dish.name : P.dish.name}`;
+  $('ckOrder').innerHTML = `<span class="ckNum" style="background:${C.color}">#${C.num}</span> ${C.remake ? '<span class="ckRe">Remake</span> ' : ''}${P.money ? 'Supplies for ' + P.dish.name : P.dish.name}`;
   $('ckKind').textContent = G.mode === 'practice' ? 'Practice' : 'Level ' + G.level;
   // every order is shown as the same picture (qbarHTML): a recipe bar and an order bar made of equal boxes
   let rec = '', ask = '';
@@ -465,19 +476,29 @@ function submit() {
   const val = parseAns($('ans').value);
   if (!isFinite(val)) { const a = $('ans'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); return; }
   C.userAns = val; C.result = verdict(C.P, val); C.mistake = C.result === 'ok' ? '' : mistakeOf(C.P, val);
-  C.state = 'carry'; G.chef.carry = C; C.ansText = $('ans').value.trim();
+  C.state = 'carry'; C.ansText = $('ans').value.trim();
+  const ch = G.chef, inHand = ch.plates.length < MAX_HANDS;
+  if (inHand) ch.plates.push(C); else G.pass.push(C);                 // hands full: the plate waits on the counter
   $('ans').value = ''; G.activeId = null;
-  closeCook();
   sfx.go();
-  toast(`Order #${C.num} is plated - carry it to their table. (Changed your mind? Press Space here to fix it.)`, '');
+  const next = railOrders();
+  if (next.length) {                                                  // more orders on the rail: keep cooking, one after another
+    G.activeId = next[0].id; renderRail(); renderCook();
+    if (!coarse()) setTimeout(() => $('ans').focus(), 20);
+    toast(inHand ? `Order #${C.num} is in your hands. Next: order #${next[0].num}.` : `Hands full - order #${C.num} is waiting on the counter. Next: order #${next[0].num}.`, '');
+  } else {
+    closeCook();
+    const nums = ch.plates.map(c => '#' + c.num).join(' and ');
+    toast(inHand ? `Carry ${nums} to ${ch.plates.length > 1 ? 'their tables' : 'the table'}.` : `Hands full - order #${C.num} is waiting on the counter. Serve ${nums} first.`, '');
+  }
 }
 function deliver(C) {                                                 // plate on the table: the customer reacts
   const ok = C.result === 'ok', P = C.P, over = C.userAns > fval(P.ans);
-  G.chef.carry = null; C.state = 'served'; C.plated = true; C.react = 0;
+  G.chef.plates = G.chef.plates.filter(c => c !== C); C.state = 'served'; C.plated = true; C.react = 0;
   if (!ok) G.chef.worry = 1.8;
   C.mood = ok ? 'happy' : C.result === 'close' ? 'upset' : 'fuming';
   if (ok) {
-    C.bubble = pick(['Perfect!', 'Delicious!', 'Just right!', '5 stars!', 'Yum!']);
+    C.bubble = pick(['Perfect!', 'Delicious!', '¡Delicioso!', 'Just right!', '5 stars!', 'Yum!', '¡Delicioso!']);
     G.correct++; G.served++; G.streak++; G.bestStreak = Math.max(G.bestStreak, G.streak); G.stars++;
     if (G.mode === 'run') { totalStars++; store.set('stars', totalStars); }
     const s = SEATS[C.seat], k = depth(s.ty);
@@ -497,8 +518,7 @@ function deliver(C) {                                                 // plate o
     else if (C.result === 'close') C.bubble = over ? 'A little too much...' : 'Hmm, a bit skimpy.';
     else C.bubble = over ? pick(['WAY TOO MUCH!', 'WHAT IS THIS?!', 'I CAN\'T EAT ALL THAT!']) : pick(['IS THIS A JOKE?!', 'WHAT IS THIS?!', 'WHERE\'S THE REST?!']);
     if (C.result === 'off') sfx.fume(); else sfx.bad();
-    G.missed.push(C);
-    addReview(C);
+    G.missed.push(Object.assign({}, C));                              // a copy: the order gets remade, so its answer will change
   }
   updateHUD();
 }
@@ -520,7 +540,7 @@ function closeExplain() {
   if (!G || G.state !== 'explain') return;
   $('explain').classList.add('hidden');
   const C = G.pending; G.pending = null; G.state = 'play';
-  if (C) finishOrder(C);
+  if (C && G.custs.includes(C)) remakeOrder(C);
   if (G.mode === 'run' && G.reviews >= MAX_REVIEWS) { gameOver(); return; }
   renderCook();
 }
@@ -864,6 +884,7 @@ function drawCounter() {
   // a service bell and a stack of clean plates on top
   ell(236, top1 - 8, 12, 4, '#9aa3b5', OL, 1); ctx.beginPath(); ctx.arc(236, top1 - 9, 9, Math.PI, 0); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.stroke(); circ(236, top1 - 19, 2.5, '#ffd23f', OL, 1);
   for (let i = 0; i < 4; i++) ell(60, top1 - 6 - i * 3.5, 20, 5, '#ffffff', '#9a9a9a', 1);
+  drawPassPlates();
 }
 function ellipsePot(x, y, t) {
   rr(x - 26, y - 22, 52, 26, 6, '#9aa3b5', OL, 2); rr(x - 30, y - 26, 60, 7, 3, '#b8c0cf', OL, 2);
@@ -950,7 +971,7 @@ function drawChairBack() { rr(-28, -150, 56, 86, 14, '#8a5a2a', OL, 1.5); rr(-20
 
 function drawChef(ch, t, stir) {
   const x = ch.x, f = FEET, sw = ch.walking ? Math.sin(t * 14) * 0.35 : 0, bob = ch.walking ? Math.abs(Math.sin(t * 14)) * 2 : 0;
-  const C = ch.carry, worried = ch.worry > 0;
+  const plates = ch.plates || [], C = plates[0], C2 = plates[1], worried = ch.worry > 0;
   ctx.save(); ctx.translate(x, f); ctx.scale(ch.dir, 1);
   ctx.lineJoin = 'round';
   ctx.save(); ctx.translate(-6, -42); ctx.rotate(sw); rr(-6, 0, 12, 42, 4, '#1b2a4a'); ctx.restore();
@@ -966,15 +987,16 @@ function drawChef(ch, t, stir) {
   if (worried) ctx.arc(9, -119, 4, Math.PI * 1.1, Math.PI * 1.9); else ctx.arc(8, -124, 5, 0.2, Math.PI - 0.6);
   ctx.stroke();
   if (worried) { ctx.beginPath(); ctx.moveTo(20, -148); ctx.quadraticCurveTo(25, -140, 20, -136); ctx.quadraticCurveTo(15, -140, 20, -148); ctx.fillStyle = '#7fc8ff'; ctx.fill(); }
+  if (C2) rr(-46, -96, 32, 10, 5, '#f1c08a', OL, 1.5);                  // the other arm out too, holding a second plate
   if (C) rr(14, -96, 32, 10, 5, '#f1c08a', OL, 1.5);                    // arm out, holding the plate
   else if (stir) { ctx.save(); ctx.translate(16, -98); ctx.rotate(Math.sin(t * 5) * 0.4); rr(-4, 0, 9, 30, 4, '#f1c08a', OL, 1.5); ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 28); ctx.lineTo(-2, 44); ctx.stroke(); ctx.restore(); }
   else { ctx.save(); ctx.translate(18, -100); ctx.rotate(-sw * 0.8); rr(-4, 0, 9, 34, 4, '#f1c08a', OL, 1.5); ctx.restore(); }
   ctx.restore();
-  if (C) {                                                            // the plate, with the order number so it's easy to match
-    const px = x + 44 * ch.dir, py = f - 96 - bob;
-    drawFood(C.P, clamp(C.userAns / fval(C.P.ans), 0.05, 4), px, py, C.userAns);
-    rr(px - 16, py + 6, 32, 16, 8, C.color, '#fff', 1.5); ctx.fillStyle = '#fff'; ctx.font = '900 11px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('#' + C.num, px, py + 18);
-  }
+  plates.forEach((P, i) => {                                          // each plate, with its order number so it's easy to match
+    const px = x + (i ? -44 : 44) * ch.dir, py = f - 96 - bob;
+    drawFood(P.P, clamp(P.userAns / fval(P.P.ans), 0.05, 4), px, py, P.userAns);
+    rr(px - 16, py + 6, 32, 16, 8, P.color, '#fff', 1.5); ctx.fillStyle = '#fff'; ctx.font = '900 11px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('#' + P.num, px, py + 18);
+  });
   if (ch.notepad && ch.notepad.length) {                              // orders taken but not yet on the rail
     const n = ch.notepad.length, w = 32, x0 = x - (n * w + (n - 1) * 4) / 2, y0 = f - 192 - bob;
     ch.notepad.forEach((c, i) => {
@@ -1076,12 +1098,15 @@ function hintInfo() {                                                 // the lit
   if (!G || G.cooking || G.state !== 'play' || paused) return null;
   const ch = G.chef, near = nearCustomer(), r = railOrders();
   const to = p => dirArrow(p.x - ch.x, p.y - ch.y);
-  if (ch.carry && near === ch.carry) return { t: 'Space: Serve!', key: true };
+  const room = ch.plates.length < MAX_HANDS;
+  if (near && ch.plates.includes(near)) return { t: 'Space: Serve!', key: true };
   if (near && near.state === 'ready') return { t: 'Space: Take order', key: true };
-  if (ch.carry && atStove()) return { t: `Serve #${ch.carry.num} ${to(serveSpot(ch.carry.seat))}  ·  Space: fix it` };
-  if (ch.carry) return { t: `Serve #${ch.carry.num} ${to(serveSpot(ch.carry.seat))}` };
+  if (inKitchen() && G.pass.length && room) return { t: 'Space: Pick up plates', key: true };
+  if (atStove() && r.length) return { t: 'Space: Cook', key: true };
+  if (ch.plates.length) return { t: ch.plates.map(c => `Serve #${c.num} ${to(serveSpot(c.seat))}`).join('  ·  ') };
   if (ch.notepad.length) return { t: `To the kitchen ${to(KITCHEN_SPOT)}` };
-  if (r.length) return atStove() ? { t: 'Space: Cook', key: true } : { t: `To the stove ${to(KITCHEN_SPOT)}` };
+  if (G.pass.length) return { t: `Plates on the counter ${to(KITCHEN_SPOT)}` };
+  if (r.length) return { t: `To the stove ${to(KITCHEN_SPOT)}` };
   if (inKitchen() && G.custs.some(c => c.state === 'ready' && c.arrive >= 1)) return { t: 'A customer is waiting!' };
   return null;
 }
@@ -1108,7 +1133,7 @@ function draw() {
     const fake = (i, mood, look) => ({ look, mood, num: i + 1, color: TICKET_COLORS[i + 1], bubble: mood === 'happy' ? 'Yum!' : '', state: 'hung', arrive: 1, patience: 1, patMax: Infinity });
     const guests = { 6: fake(0, 'happy', { skin: '#c68642', hair: '#2b1b10', shirt: '#5b8cff', style: 'pony' }), 1: fake(1, 'wait', { skin: '#ffd9b0', hair: '#a0522d', shirt: '#2eb872', style: 'curly' }) };
     SEATS.forEach((s, i) => items.push({ y: s.ty, f: () => drawSeat(i, guests[i], t) }));
-    items.push({ y: 250, f: () => atDepth(200, 250, depth(250), () => drawChef({ x: 0, dir: 1, walking: false, notepad: [], carry: null, worry: 0 }, t, true)) });
+    items.push({ y: 250, f: () => atDepth(200, 250, depth(250), () => drawChef({ x: 0, dir: 1, walking: false, notepad: [], plates: [], worry: 0 }, t, true)) });
     items.sort((a, b) => a.y - b.y).forEach(it => it.f());
     return;
   }
@@ -1140,22 +1165,33 @@ function drawSeat(i, C, t) {                                          // chair, 
   ctx.restore();
 }
 const hexA = (h, a) => `rgba(${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)},${a})`;
-// on the floor: a glowing spot right under the table you're carrying a plate to, with a trail leading there
+// on the floor: a glowing spot right under each table you're carrying a plate to, with a trail leading to each one
 function drawFloorMarks() {
-  const ch = G.chef, target = ch.carry && G.custs.includes(ch.carry) ? ch.carry : null;
-  if (target) {
+  const ch = G.chef;
+  ch.plates.filter(c => G.custs.includes(c)).forEach(target => {
     const s = SEATS[target.seat], sp = { x: s.tx, y: s.ty };
     ctx.save(); ctx.setLineDash([3, 13]); ctx.lineDashOffset = -G.t * 40; ctx.lineCap = 'round'; ctx.strokeStyle = hexA(target.color, 0.85); ctx.lineWidth = 6;
     ctx.beginPath(); ctx.moveTo(ch.x, ch.y); ctx.lineTo(sp.x, sp.y); ctx.stroke(); ctx.restore();
-  }
-  if (target && target.arrive >= 1 && target.state !== 'served') {
-    const s = SEATS[target.seat], k = depth(s.ty), p = 1 + Math.sin(G.t * 6) * 0.1;   // (the table stands on it)
-    ctx.save(); ell(s.tx, s.ty - 3 * k, 52 * k * p, 16 * k * p, hexA(target.color, 0.35), target.color, 4); ctx.restore();
-  }
+    if (target.arrive >= 1 && target.state !== 'served') {
+      const k = depth(s.ty), p = 1 + Math.sin(G.t * 6) * 0.1;          // (the table stands on it)
+      ctx.save(); ell(s.tx, s.ty - 3 * k, 52 * k * p, 16 * k * p, hexA(target.color, 0.35), target.color, 4); ctx.restore();
+    }
+  });
 }
-// big bouncing arrows: over the customer whose plate you're carrying, and over the kitchen when there's cooking to do
+// plates waiting on the kitchen counter for the chef to pick up, each with its order number on the counter's front
+function drawPassPlates() {
+  if (!G || !G.pass.length) return;
+  const kf = depth(COUNTER.y1), top1 = COUNTER.y1 - 72 * kf;
+  G.pass.forEach((C, i) => {
+    const x = 118 + i * 46;
+    ctx.save(); ctx.translate(x, top1 - 2); ctx.scale(0.62, 0.62); drawFood(C.P, clamp(C.userAns / fval(C.P.ans), 0.05, 4), 0, 0, C.userAns); ctx.restore();
+    rr(x - 14, top1 + 6, 28, 15, 7, C.color, '#fff', 1.5); ctx.fillStyle = '#fff'; ctx.font = '900 10px Fredoka, Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('#' + C.num, x, top1 + 17);
+  });
+}
+// big bouncing arrows: over each customer whose plate you're carrying, and over the kitchen when there's cooking
+// to do (or plates waiting on the counter)
 function drawGuideArrows() {
-  const ch = G.chef, C = ch.carry && G.custs.includes(ch.carry) ? ch.carry : null, bounce = Math.abs(Math.sin(G.t * 5)) * 10;
+  const ch = G.chef, held = ch.plates.filter(c => G.custs.includes(c)), bounce = Math.abs(Math.sin(G.t * 5)) * 10;
   const arrow = (x, y, col, label) => {
     ctx.save(); ctx.translate(x, y - bounce);
     ctx.font = '900 15px Fredoka, Trebuchet MS'; const w = ctx.measureText(label).width + 22;
@@ -1163,8 +1199,9 @@ function drawGuideArrows() {
     ctx.beginPath(); ctx.moveTo(-15, -12); ctx.lineTo(15, -12); ctx.lineTo(0, 8); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
     ctx.restore();
   };
-  if (C) { const s = SEATS[C.seat], k = depth(s.ty); arrow(s.tx, s.sy - 196 * k, C.color, `Serve #${C.num}`); }
-  else if ((ch.notepad.length || railOrders().length) && !inKitchen() && !G.cooking) arrow(KITCHEN_SPOT.x, 196, '#d9432f', ch.notepad.length ? 'Kitchen' : 'Cook');
+  held.forEach(C => { const s = SEATS[C.seat], k = depth(s.ty); arrow(s.tx, s.sy - 196 * k, C.color, `Serve #${C.num}`); });
+  if (!held.length && (ch.notepad.length || railOrders().length || G.pass.length) && !inKitchen() && !G.cooking)
+    arrow(KITCHEN_SPOT.x, 196, '#d9432f', ch.notepad.length ? 'Kitchen' : railOrders().length ? 'Cook' : 'Pick up');
 }
 
 /* ===================== HUD / TOAST ===================== */
