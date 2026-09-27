@@ -77,23 +77,23 @@ var CLASSIC_CAR_COLORS = ["red", "blue", "green", "purple", "orange", "pink", "y
 
 var shopData = {
   cars: [
-    { id: "classic", name: "Classic Colors", price: 0, isColorPicker: true },
-    { id: "ghost", name: "Ghost Car", price: 300 }, { id: "robot", name: "Robot", price: 300 },
-    { id: "alien", name: "UFO", price: 300 }, { id: "dragon", name: "Dragon", price: 300 },
-    { id: "bird", name: "Bird", price: 300 }, { id: "swervingtruck", name: "Swerving Truck", price: 300 },
-    { id: "plane", name: "Crop Duster", price: 300 }, { id: "motorcycle", name: "Motorcycle", price: 300 },
-    { id: "vintage", name: "Hamburger Car", price: 300 }, { id: "supercar", name: "Supercar", price: 300 },
-    { id: "superhero", name: "Superhero", price: 1000 }, { id: "rainbow", name: "Rainbow Car", price: 1000 }
+    { id: "classic", name: tl("Classic Colors", "Colores clásicos"), price: 0, isColorPicker: true },
+    { id: "ghost", name: tl("Ghost Car", "Auto fantasma"), price: 300 }, { id: "robot", name: "Robot", price: 300 },
+    { id: "alien", name: tl("UFO", "OVNI"), price: 300 }, { id: "dragon", name: tl("Dragon", "Dragón"), price: 300 },
+    { id: "bird", name: tl("Bird", "Pájaro"), price: 300 }, { id: "swervingtruck", name: tl("Swerving Truck", "Camión zigzag"), price: 300 },
+    { id: "plane", name: tl("Crop Duster", "Avioneta"), price: 300 }, { id: "motorcycle", name: tl("Motorcycle", "Moto"), price: 300 },
+    { id: "vintage", name: tl("Hamburger Car", "Auto hamburguesa"), price: 300 }, { id: "supercar", name: tl("Supercar", "Superauto"), price: 300 },
+    { id: "superhero", name: tl("Superhero", "Superhéroe"), price: 1000 }, { id: "rainbow", name: tl("Rainbow Car", "Auto arcoíris"), price: 1000 }
   ],
 
   // Ordered cheapest-first / most-expensive-last within each shop tab.
   trails: [
-    { id: "none", name: "Exhaust", price: 300 }, { id: "fire", name: "Fire Trail", price: 300 },
-    { id: "blue", name: "Spark Trail", price: 300 }, { id: "red", name: "Ember Trail", price: 300 },
-    { id: "pink", name: "Heart Trail", price: 300 }, { id: "purple", name: "Twinkle Trail", price: 300 },
-    { id: "bubbles", name: "Bubbles", price: 500 },
-    { id: "gold", name: "Diamond Trail", price: 500 }, { id: "ice", name: "Snowflake Trail", price: 500 },
-    { id: "rainbow", name: "Rainbow Trail", price: 1000 }, { id: "money", name: "Money Trail", price: 1000 }
+    { id: "none", name: tl("Exhaust", "Humo"), price: 300 }, { id: "fire", name: tl("Fire Trail", "Fuego"), price: 300 },
+    { id: "blue", name: tl("Spark Trail", "Chispas"), price: 300 }, { id: "red", name: tl("Ember Trail", "Brasas"), price: 300 },
+    { id: "pink", name: tl("Heart Trail", "Corazones"), price: 300 }, { id: "purple", name: tl("Twinkle Trail", "Destellos"), price: 300 },
+    { id: "bubbles", name: tl("Bubbles", "Burbujas"), price: 500 },
+    { id: "gold", name: tl("Diamond Trail", "Diamantes"), price: 500 }, { id: "ice", name: tl("Snowflake Trail", "Copos de nieve"), price: 500 },
+    { id: "rainbow", name: tl("Rainbow Trail", "Arcoíris"), price: 1000 }, { id: "money", name: tl("Money Trail", "Dinero"), price: 1000 }
   ],
   // No Powerup always sits first regardless of price, since it's the
   // "none of these" baseline option, not something being price-compared.
@@ -106,13 +106,13 @@ var shopData = {
   // Time Freeze. Magnet and Double Coins never prevent a loss - they're
   // pure economy/QoL.
   boosts: [
-    { id: "none", name: "No Powerup", price: 500 },
-    { id: "fuelsaver", name: "Electric (No Fuel)", price: 200 },
-    { id: "doublecoins", name: "Double Coins", price: 500 },
-    { id: "magnet", name: "Coin Magnet", price: 600 },
-    { id: "secondchance", name: "Second Chance", price: 700 },
-    { id: "shield", name: "Forcefield", price: 1000 },
-    { id: "timefreeze", name: "Time Freeze", price: 1000 }
+    { id: "none", name: tl("No Powerup", "Sin poder"), price: 500 },
+    { id: "fuelsaver", name: tl("Electric (No Fuel)", "Eléctrico"), price: 200 },
+    { id: "doublecoins", name: tl("Double Coins", "Monedas dobles"), price: 500 },
+    { id: "magnet", name: tl("Coin Magnet", "Imán de monedas"), price: 600 },
+    { id: "secondchance", name: tl("Second Chance", "Otro intento"), price: 700 },
+    { id: "shield", name: tl("Forcefield", "Campo de fuerza"), price: 1000 },
+    { id: "timefreeze", name: tl("Time Freeze", "Congelar tiempo"), price: 1000 }
   ],
 };
 
@@ -147,7 +147,7 @@ var biomeTransitionY = 500, currentScoreMilestone = 0;
 
 // Road details and signs
 var roadDecorations = [], spawnSignNext = false;
-var signMessages = ["KEEP\nIT UP!", "MATH\nRULES!", "GREAT\nJOB!", "YOU GOT\nTHIS!", "KEEP\nGOING", "AMAZING", "YOU'RE\nAWESOME", "YOU LOVE\nMATH!", "Mr. Hardy\n= GOAT!", "EXPONENT\nEXPERT!"];
+var signMessages = [tl("KEEP\nIT UP!", "¡SIGUE\nASÍ!"), tl("MATH\nRULES!", "¡VIVAN LAS\nMATES!"), tl("GREAT\nJOB!", "¡BUEN\nTRABAJO!"), tl("YOU GOT\nTHIS!", "¡TÚ\nPUEDES!"), tl("KEEP\nGOING", "¡NO TE\nDETENGAS!"), tl("AMAZING", "¡INCREÍBLE!"), tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!"), tl("YOU LOVE\nMATH!", "¡AMAS LAS\nMATES!"), "Mr. Hardy\n= GOAT!", tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")];
 var lastSignMessage = "", lastPickedAnswer = "", lastQuestionString = "", pauseTimer = 0;
 
 var skillStates = [true, true, true, true, true, true], showSkillError = false;
@@ -403,18 +403,18 @@ function drawStartScreen() {
 
   var hardLocked = !hasUnlockedHardMode;
 
-  drawMenuButton(40, 200, 140, 60, "#27ae60", "STREET RACING");
-  if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", "LOCKED", "(Finish Street\nRacing first)");
+  drawMenuButton(40, 200, 140, 60, "#27ae60", tl("STREET RACING", "CARRERAS\nURBANAS"));
+  if (hardLocked) drawMenuButton(220, 200, 140, 60, "#7f8c8d", tl("LOCKED", "BLOQUEADO"), tl("(Finish Street\nRacing first)", "(Termina Carreras\nUrbanas primero)"));
   else {
-    drawMenuButton(220, 200, 140, 60, "#e74c3c", "MAXIMUM\nVELOCITY");
+    drawMenuButton(220, 200, 140, 60, "#e74c3c", tl("MAXIMUM\nVELOCITY", "VELOCIDAD\nMÁXIMA"));
     // Best score in Maximum Velocity - an endless/survival mode with no
     // win condition, so a high score is the natural progress to chase.
     noStroke(); fill("white"); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD);
-    text("Best Score: " + hardHighScore, 290, 270);
+    text(tl("Best Score: ", "Mejor puntaje: ") + hardHighScore, 290, 270);
     textStyle(NORMAL);
   }
 
-  drawMenuButton(150, 280, 100, 45, "#8e44ad", "SHOP");
+  drawMenuButton(150, 280, 100, 45, "#8e44ad", tl("SHOP", "TIENDA"));
 
   noStroke(); fill("gold"); ellipse(25, 25, 24, 24); fill("yellow"); ellipse(25, 25, 16, 16);
   fill("white"); textAlign(LEFT, CENTER); textSize(24); textStyle(BOLD);
@@ -562,10 +562,10 @@ function drawShopScreen() {
         var isEquipped = (equipped[shopTab.slice(0, -1)] === item.id);
         var btnColor = isEquipped ? "#27ae60" : (isUnlocked ? "#f1c40f" : "#e74c3c");
         var textColor = (isUnlocked && !isEquipped) ? "black" : "white";
-        var btnText = isEquipped ? "EQUIPPED" : (isUnlocked ? "EQUIP" : (item.price === 0 ? "FREE" : ("BUY $" + (item.price/100).toFixed(2))));
+        var btnText = isEquipped ? tl("EQUIPPED", "EQUIPADO") : (isUnlocked ? tl("EQUIP", "EQUIPAR") : (item.price === 0 ? tl("FREE", "GRATIS") : (tl("BUY $", "COMPRAR $") + (item.price/100).toFixed(2))));
 
         fill(btnColor); stroke("black"); strokeWeight(2); rect(245, yPos + 5, 110, 30);
-        fill(textColor); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text(btnText, 300, yPos + 20); textStyle(NORMAL);
+        fill(textColor); noStroke(); textAlign(CENTER, CENTER); textSize(btnText.length > 11 ? 12 : 14); textStyle(BOLD); text(btnText, 300, yPos + 20); textStyle(NORMAL);
 
         if (mouseWentDown("leftButton") && mouseX > 245 && mouseX < 355 && mouseY > yPos + 5 && mouseY < yPos + 35) {
           if (mouseY >= 110 && mouseY <= 350) {
@@ -587,16 +587,16 @@ function drawShopScreen() {
   // Header Masks
   fill("#34495e"); noStroke(); rect(0, 0, 400, 110);
   fill("rgba(0, 0, 0, 0.5)"); rect(0,0,400,60);
-  fill("white"); textAlign(CENTER, CENTER); textSize(28); textStyle(BOLD); text("SHOP", 200, 32); textStyle(NORMAL);
+  fill("white"); textAlign(CENTER, CENTER); textSize(28); textStyle(BOLD); text(tl("SHOP", "TIENDA"), 200, 32); textStyle(NORMAL);
   noStroke(); fill("gold"); ellipse(25, 45, 20, 20); fill("yellow"); ellipse(25, 45, 14, 14);
   fill("white"); textAlign(LEFT, CENTER); textSize(18); textStyle(BOLD);
   text("$" + (totalCoins / 100).toFixed(2), 40, 46); textStyle(NORMAL);
 
   // Tabs
   var tabs = [
-    { id: "cars", name: "CARS", x: 60, w: 80 },
-    { id: "trails", name: "TRAILS", x: 150, w: 90 },
-    { id: "boosts", name: "BOOSTS", x: 250, w: 90 }
+    { id: "cars", name: tl("CARS", "AUTOS"), x: 60, w: 80 },
+    { id: "trails", name: tl("TRAILS", "ESTELAS"), x: 150, w: 90 },
+    { id: "boosts", name: tl("BOOSTS", "PODERES"), x: 250, w: 90 }
   ];
 
 
@@ -611,7 +611,7 @@ function drawShopScreen() {
   // Footer Mask
   fill("#34495e"); noStroke(); rect(0, 350, 400, 100);
   fill("#95a5a6"); stroke("black"); strokeWeight(2); rect(100, 365, 200, 30);
-  fill("black"); noStroke(); textSize(18); textStyle(BOLD); text("BACK TO MENU", 200, 380); textStyle(NORMAL);
+  fill("black"); noStroke(); textSize(18); textStyle(BOLD); text(tl("BACK TO MENU", "VOLVER AL MENÚ"), 200, 380); textStyle(NORMAL);
 
   if (mouseWentDown("leftButton") && mouseX > 100 && mouseX < 300 && mouseY > 365 && mouseY < 395) gameState = "start";
 
@@ -625,14 +625,14 @@ function drawShopScreen() {
 }
 
 function drawSkillSelectScreen() {
-  background("#2c3e50"); fill("white"); textAlign(CENTER, CENTER); textSize(28); textStyle(BOLD); text("SELECT SKILLS", 200, 50); textStyle(NORMAL);
+  background("#2c3e50"); fill("white"); textAlign(CENTER, CENTER); textSize(28); textStyle(BOLD); text(tl("SELECT SKILLS", "ELIGE DESTREZAS"), 200, 50); textStyle(NORMAL);
 
-  var skillNames = ["Evaluating Powers", "Multiplying and Dividing Powers", "Power of a Power", "Negative Exponents", "Exponents of Zero and One", "Vocabulary"];
+  var skillNames = [tl("Evaluating Powers", "Evaluar potencias"), tl("Multiplying and Dividing Powers", "Multiplicar y dividir potencias"), tl("Power of a Power", "Potencia de una potencia"), tl("Negative Exponents", "Exponentes negativos"), tl("Exponents of Zero and One", "Exponentes cero y uno"), tl("Vocabulary", "Vocabulario")];
   for (var i = 0; i < 6; i++) {
     var y = 75 + (i * 42); var isLocked = (gameMode === "hard" && !unlockedHardSkills[i]);
     fill(isLocked ? "#bdc3c7" : "white"); stroke("black"); strokeWeight(2); rect(20, y, 360, 36);
     fill(isLocked ? "#7f8c8d" : "black"); noStroke(); textAlign(LEFT, CENTER); textSize(15); textStyle(BOLD);
-    var displayName = skillNames[i]; if (isLocked) displayName += " (LOCKED)";
+    var displayName = skillNames[i]; if (isLocked) displayName += tl(" (LOCKED)", " (BLOQUEADO)");
     text(displayName, 30, y + 18); textStyle(NORMAL);
     fill(isLocked ? "#bdc3c7" : "white"); stroke("black"); strokeWeight(2); rect(340, y + 5, 26, 26);
     if (skillStates[i] && !isLocked) { stroke("green"); strokeWeight(4); line(346, y + 18, 351, y + 26); line(351, y + 26, 362, y + 10); }
@@ -640,11 +640,11 @@ function drawSkillSelectScreen() {
     if (mouseWentDown("leftButton") && !isLocked && mouseX > 20 && mouseX < 380 && mouseY > y && mouseY < y + 36) { playSound("sound://category_tap/puzzle_game_organic_wood_block_tone_tap_1.mp3"); skillStates[i] = !skillStates[i]; showSkillError = false; }
   }
 
-  if (showSkillError) { fill("red"); noStroke(); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text("Select at least 1 skill to begin!", 200, 335); textStyle(NORMAL); }
-  else if (gameMode === "hard") { fill("#e74c3c"); noStroke(); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD); text("WARNING: Maximum Velocity includes\nnegative powers and exponents!", 200, 335); textStyle(NORMAL); }
+  if (showSkillError) { fill("red"); noStroke(); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text(tl("Select at least 1 skill to begin!", "¡Elige al menos 1 destreza para empezar!"), 200, 335); textStyle(NORMAL); }
+  else if (gameMode === "hard") { fill("#e74c3c"); noStroke(); textAlign(CENTER, CENTER); textSize(12); textStyle(BOLD); text(tl("WARNING: Maximum Velocity includes\nnegative powers and exponents!", "AVISO: ¡Velocidad Máxima incluye\npotencias y exponentes negativos!"), 200, 335); textStyle(NORMAL); }
 
-  fill("gray"); stroke("white"); strokeWeight(2); rect(40, 350, 140, 40); fill("white"); noStroke(); textAlign(CENTER, CENTER); textSize(18); textStyle(BOLD); text("Menu", 110, 370);
-  fill("#27ae60"); stroke("white"); strokeWeight(2); rect(220, 350, 140, 40); fill("white"); noStroke(); textAlign(CENTER, CENTER); textSize(18); textStyle(BOLD); text("Confirm", 290, 370); textStyle(NORMAL);
+  fill("gray"); stroke("white"); strokeWeight(2); rect(40, 350, 140, 40); fill("white"); noStroke(); textAlign(CENTER, CENTER); textSize(18); textStyle(BOLD); text(tl("Menu", "Menú"), 110, 370);
+  fill("#27ae60"); stroke("white"); strokeWeight(2); rect(220, 350, 140, 40); fill("white"); noStroke(); textAlign(CENTER, CENTER); textSize(18); textStyle(BOLD); text(tl("Confirm", "Confirmar"), 290, 370); textStyle(NORMAL);
 
   // Handle Button Clicks
   if (mouseWentDown("leftButton")) {
@@ -690,7 +690,7 @@ function startGame() {
   gameState = "play"; score = 0; correctAnswersCount = 0;
   if (gameMode === "hard") questionTimeLimit = 6; else questionTimeLimit = 8;
   zoomFrames = 0; shakeFrames = 0; startSequencePhase = 1; startTimer = 120; startLineY = 280; currentStartSpeed = 0;
-  expressionString = "GET READY!"; fuelY = -1000;
+  expressionString = tl("GET READY!", "¡PREPÁRATE!"); fuelY = -1000;
   lightningFrames = 0; lightningPath = { main: [], branches: [] }; stormPhase = 0; coinPopupTimer = 0;
   damageFrames = 0; dayPhase = 1.0; lightPoles = [-100, 100, 300, 500]; gameOverReason = ""; wrongAnswersList = []; strikes = 0;
   roadDecorations = []; lastSignMessage = ""; lastPickedAnswer = ""; lastQuestionString = "";
@@ -777,20 +777,20 @@ function resetQuestion() {
         if (hardType === 0) {
           answer = Math.pow(-base, exponent);
           expressionString = "(-" + base + ")" + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
-          if (exponent === 0) { explanationString = "Rule: Any number to the power\nof 0 is ALWAYS 1"; }
-          else { var arr = []; for(var i=0; i<exponent; i++) arr.push("(-" + base + ")"); explanationString = "Parentheses mean the negative is grouped:\n" + arr.join(" × "); }
+          if (exponent === 0) { explanationString = tl("Rule: Any number to the power\nof 0 is ALWAYS 1", "Regla: cualquier número elevado\na 0 es SIEMPRE 1"); }
+          else { var arr = []; for(var i=0; i<exponent; i++) arr.push("(-" + base + ")"); explanationString = tl("Parentheses mean the negative is grouped:\n", "Los paréntesis agrupan el negativo:\n") + arr.join(" × "); }
           valid = true;
         } else {
           answer = -1 * Math.pow(base, exponent);
           expressionString = "-" + base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
-          if (exponent === 0) { explanationString = "Negative is OUTSIDE the power of 0.\n-(1) = -1"; }
-          else { var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = "No parentheses? Do the exponent FIRST,\nthen make it negative:\n-(" + arr.join(" × ") + ")"; }
+          if (exponent === 0) { explanationString = tl("Negative is OUTSIDE the power of 0.\n-(1) = -1", "El negativo está FUERA de la potencia 0.\n-(1) = -1"); }
+          else { var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = tl("No parentheses? Do the exponent FIRST,\nthen make it negative:\n-(", "¿Sin paréntesis? Haz el exponente PRIMERO\ny luego ponle el negativo:\n-(") + arr.join(" × ") + ")"; }
           valid = true;
         }
       } else {
         answer = Math.pow(base, exponent); expressionString = base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal";
-        if (exponent === 0) { explanationString = "Rule: Any number to the power\nof 0 is ALWAYS 1"; }
-        else { var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = base + " multiplied by itself " + exponent + " times:\n" + arr.join(" × "); }
+        if (exponent === 0) { explanationString = tl("Rule: Any number to the power\nof 0 is ALWAYS 1", "Regla: cualquier número elevado\na 0 es SIEMPRE 1"); }
+        else { var arr = []; for(var i=0; i<exponent; i++) arr.push(base); explanationString = base + tl(" multiplied by itself ", " multiplicado por sí mismo ") + exponent + tl(" times:\n", " veces:\n") + arr.join(" × "); }
         valid = true;
       }
     }
@@ -810,13 +810,13 @@ function resetQuestion() {
       }
       if (op === 0) {
         trueExp = exp1 + exp2; var multSym = symType === 0 ? " × " : " · "; expressionString = base + formatExponent(exp1) + multSym + base + formatExponent(exp2);
-        var strExp2 = exp2 < 0 ? "(" + exp2 + ")" : exp2; explanationString = "When multiplying powers with the same base,\nADD the exponents: " + exp1 + " + " + strExp2 + " = " + trueExp;
+        var strExp2 = exp2 < 0 ? "(" + exp2 + ")" : exp2; explanationString = tl("When multiplying powers with the same base,\nADD the exponents: ", "Al multiplicar potencias de la misma base,\nSUMA los exponentes: ") + exp1 + " + " + strExp2 + " = " + trueExp;
       } else if (op === 1) {
         trueExp = exp1 - exp2; var divSym = symType === 0 ? " ÷ " : " / "; expressionString = base + formatExponent(exp1) + divSym + base + formatExponent(exp2);
-        var strExp2 = exp2 < 0 ? "(" + exp2 + ")" : exp2; explanationString = "When dividing powers with the same base,\nSUBTRACT the exponents: " + exp1 + " - " + strExp2 + " = " + trueExp;
+        var strExp2 = exp2 < 0 ? "(" + exp2 + ")" : exp2; explanationString = tl("When dividing powers with the same base,\nSUBTRACT the exponents: ", "Al dividir potencias de la misma base,\nRESTA los exponentes: ") + exp1 + " - " + strExp2 + " = " + trueExp;
       } else {
         trueExp = exp1 * exp2; powerOfPowerSumTrick = base + formatExponent(exp1 + exp2); expressionString = "(" + base + formatExponent(exp1) + ")" + formatExponent(exp2);
-        var strExp2 = exp2 < 0 ? "(" + exp2 + ")" : exp2; explanationString = "Power of a Power Rule:\nMULTIPLY the exponents: " + exp1 + " × " + strExp2 + " = " + trueExp;
+        var strExp2 = exp2 < 0 ? "(" + exp2 + ")" : exp2; explanationString = tl("Power of a Power Rule:\nMULTIPLY the exponents: ", "Potencia de una potencia:\nMULTIPLICA los exponentes: ") + exp1 + " × " + strExp2 + " = " + trueExp;
       }
       answer = base + formatExponent(trueExp); currentBase = base;
       if (op === 0) { trickPool.push(base + formatExponent(exp1 - exp2)); trickPool.push(base + formatExponent(exp1 * exp2)); }
@@ -829,7 +829,7 @@ function resetQuestion() {
       base = randomNumber(2, 10); exponent = randomNumber(1, 6);
       if (Math.pow(base, exponent) <= 100) {
         currentBase = base; currentExp = exponent; expressionString = base + formatExponent("-" + exponent); answerFormat = "exp_fraction";
-        answer = "1\n—\n" + base + formatExponent(exponent); explanationString = "A negative exponent flips the base\nto the denominator:\n1 / " + base + formatExponent(exponent) + " = 1 / " + Math.pow(base, exponent); valid = true;
+        answer = "1\n—\n" + base + formatExponent(exponent); explanationString = tl("A negative exponent flips the base\nto the denominator:\n1 / ", "Un exponente negativo pasa la base\nal denominador:\n1 / ") + base + formatExponent(exponent) + " = 1 / " + Math.pow(base, exponent); valid = true;
       }
     }
     else if (pickedSkill === 4) {
@@ -839,14 +839,14 @@ function resetQuestion() {
         if (hardType === 0) { answer = Math.pow(-base, exponent); expressionString = "(-" + base + ")" + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal"; }
         else { answer = -1 * Math.pow(base, exponent); expressionString = "-" + base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal"; }
       } else { answer = Math.pow(base, exponent); expressionString = base + formatExponent(exponent); currentBase = base; currentExp = exponent; answerFormat = "normal"; }
-      if (exponent === 0) { explanationString = "Rule: Any number to the power\nof 0 is ALWAYS 1"; if (gameMode === "hard" && expressionString[0] === "-" && expressionString[1] !== "(") { explanationString = "Negative is OUTSIDE the power of 0.\n-(1) = -1"; } }
-      else { explanationString = "Rule: Any number to the power of 1\nis ALWAYS the base number"; } valid = true;
+      if (exponent === 0) { explanationString = tl("Rule: Any number to the power\nof 0 is ALWAYS 1", "Regla: cualquier número elevado\na 0 es SIEMPRE 1"); if (gameMode === "hard" && expressionString[0] === "-" && expressionString[1] !== "(") { explanationString = tl("Negative is OUTSIDE the power of 0.\n-(1) = -1", "El negativo está FUERA de la potencia 0.\n-(1) = -1"); } }
+      else { explanationString = tl("Rule: Any number to the power of 1\nis ALWAYS the base number", "Regla: cualquier número elevado a 1\nes SIEMPRE el mismo número"); } valid = true;
     }
     else if (pickedSkill === 5) {
       base = randomNumber(2, 9); exponent = randomNumber(2, 9); var powerStr = base + formatExponent(exponent); var qType = randomNumber(0, 2);
-      if (qType === 0) { expressionString = "Identify: BASE"; answer = "[B]" + powerStr; explanationString = "The BASE is the regular-sized number\nthat gets multiplied repeatedly."; }
-      else if (qType === 1) { expressionString = "Identify: EXPONENT"; answer = "[E]" + powerStr; explanationString = "The EXPONENT is the small, raised\nnumber telling how many times to multiply."; }
-      else { expressionString = "Identify: POWER"; answer = "[P]" + powerStr; explanationString = "The POWER is the entire expression,\ncombining the base and the exponent."; }
+      if (qType === 0) { expressionString = tl("Identify: BASE", "Identifica: BASE"); answer = "[B]" + powerStr; explanationString = tl("The BASE is the regular-sized number\nthat gets multiplied repeatedly.", "La BASE es el número de tamaño normal\nque se multiplica una y otra vez."); }
+      else if (qType === 1) { expressionString = tl("Identify: EXPONENT", "Identifica: EXPONENTE"); answer = "[E]" + powerStr; explanationString = tl("The EXPONENT is the small, raised\nnumber telling how many times to multiply.", "El EXPONENTE es el número pequeño y elevado\nque dice cuántas veces multiplicar."); }
+      else { expressionString = tl("Identify: POWER", "Identifica: POTENCIA"); answer = "[P]" + powerStr; explanationString = tl("The POWER is the entire expression,\ncombining the base and the exponent.", "La POTENCIA es la expresión completa,\nque combina la base y el exponente."); }
       answerFormat = "vocab"; trickPool = ["[B]" + powerStr, "[E]" + powerStr, "[P]" + powerStr]; trickPool.splice(trickPool.indexOf(answer), 1); valid = true;
     }
     if (valid && expressionString === lastQuestionString) { valid = false; trickPool = []; }
@@ -1050,7 +1050,7 @@ function drawRewindEffect() {
   text("⏪ ⏪ ⏪", 200, 55);
 
   fill("gold"); textSize(32);
-  text("SECOND CHANCE!", 200, 200);
+  text(tl("SECOND CHANCE!", "¡OTRO INTENTO!"), 200, 200);
   textStyle(NORMAL);
 
   if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
@@ -1199,7 +1199,7 @@ function playGame(isFrozen) {
 
     player.x += (targetCarX - player.x) * handling; player.y += (targetCarY - player.y) * handling;
 
-    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = "Ran out of gas!"; playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
+    if (fuel <= 0 && startSequencePhase === 0) { fuel = 0; if (gameOverReason === "") { gameOverReason = tl("Ran out of gas!", "¡Te quedaste sin gasolina!"); playSound("sound://category_alerts/vibrant_game_life_lost_1.mp3"); } gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
 
     if (frameCounter % 200 === 0 && !coinActive && startSequencePhase === 0) {
       coinActive = true;
@@ -1237,7 +1237,7 @@ function playGame(isFrozen) {
             triggerSecondChanceRewind();
         } else {
             strikes++;
-            if (strikes >= 3) { gameOverReason = "3 Strikes!"; gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
+            if (strikes >= 3) { gameOverReason = tl("3 Strikes!", "¡3 errores!"); gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); return; }
             else { damageFrames = 60; shakeFrames = 60; }
         }
       }
@@ -1308,7 +1308,7 @@ function playGame(isFrozen) {
             triggerSecondChanceRewind();
           } else {
             strikes++;
-            if (strikes >= 3) gameOverReason = "3 Strikes! I'm sure your brain is exhaust-ed.";
+            if (strikes >= 3) gameOverReason = tl("3 Strikes! I'm sure your brain is exhaust-ed.", "¡3 errores! Seguro que tu cerebro necesita gasolina.");
             shakeFrames = 30; gameState = "paused"; pauseTimer = 150;
             coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
           }
@@ -1402,8 +1402,8 @@ function playGame(isFrozen) {
         fill(signPostColor); noStroke(); rect(finalTreeX - 3, tree.y, 6, 40);
         fill(signBoardColor); stroke(signStrokeColor); strokeWeight(2);
         rect(finalTreeX - 35, tree.y - 30, 70, 40); noStroke(); fill(signTextColor); textAlign(CENTER, CENTER);
-        if (tree.signText === "BRILLIANT" || tree.signText === "YOU'RE\nAWESOME" || tree.signText === "AMAZING" || tree.signText === "Mr. Hardy\n= GOAT!" || tree.signText === "EXPONENT\nEXPERT!") textSize(11);
-        else if (tree.signText === "YOU GOT\nTHIS!" || tree.signText === "YOU LOVE\nMATH!") textSize(12); else textSize(14);
+        if (tree.signText === tl("BRILLIANT", "BRILLANTE") || tree.signText === tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!") || tree.signText === tl("AMAZING", "¡INCREÍBLE!") || tree.signText === "Mr. Hardy\n= GOAT!" || tree.signText === tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")) textSize(11);
+        else if (tree.signText === tl("YOU GOT\nTHIS!", "¡TÚ\nPUEDES!") || tree.signText === tl("YOU LOVE\nMATH!", "¡AMAS LAS\nMATES!")) textSize(12); else textSize(14);
         textLeading(15); textStyle(BOLD);
         var signLines = tree.signText.split('\n');
         for (var i = 0; i < signLines.length; i++) {
@@ -1517,7 +1517,7 @@ if (startSequencePhase > 0) {
   if (gameState === "winSequence" || gameState === "winScreen") {
     fill("white"); noStroke(); rect(80, finishLineY, 240, 40); fill("black");
     for (var x = 80; x < 320; x += 20) { rect(x, finishLineY, 10, 10); rect(x + 10, finishLineY + 10, 10, 10); rect(x, finishLineY + 20, 10, 10); rect(x + 10, finishLineY + 30, 10, 10); }
-    fill("yellow"); stroke("black"); strokeWeight(3); textSize(30); textAlign(CENTER, CENTER); textStyle(BOLD); text("FINISH", 200, finishLineY + 20); textStyle(NORMAL); noStroke();
+    fill("yellow"); stroke("black"); strokeWeight(3); textSize(30); textAlign(CENTER, CENTER); textStyle(BOLD); text(tl("FINISH", "META"), 200, finishLineY + 20); textStyle(NORMAL); noStroke();
   }
 
 
@@ -1957,12 +1957,12 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     if (alphaGo > 0) {
         fill("rgba(0,0,0," + (0.7 * alphaGo) + ")"); noStroke(); rect(120, 150, 160, 100);
         fill("rgba(46, 204, 113, " + alphaGo + ")"); rect(130, 160, 140, 80);
-        fill("rgba(255,255,255," + alphaGo + ")"); textAlign(CENTER, CENTER); textSize(50); textStyle(BOLD); text("GO!", 200, 204); textStyle(NORMAL);
+        fill("rgba(255,255,255," + alphaGo + ")"); textAlign(CENTER, CENTER); textSize(50); textStyle(BOLD); text(tl("GO!", "¡YA!"), 200, 204); textStyle(NORMAL);
     }
   }
 
   stroke("black"); strokeWeight(2); fill("white"); rect(-2, -2, 404, 47);
-  fill("black"); noStroke(); textAlign(LEFT, CENTER); textSize(20); text("Score: " + score, 10, 23);
+  fill("black"); noStroke(); textAlign(LEFT, CENTER); textSize(20); text(tl("Score: ", "Puntos: ") + score, 10, 23);
   stroke("black"); strokeWeight(1); fill("black"); rect(310, 10, 80, 25);
   var electricCar = (equipped.boost === "fuelsaver");                          // Electric never uses fuel: a full charge, shown as a lightning bolt
   if (electricCar) fill("lime"); else if (fuel > 25) fill("lime"); else if (fuel > 10) fill("yellow"); else { if (Math.floor(frameCounter / 4) % 2 === 0) fill("red"); else fill("white"); }
@@ -1971,10 +1971,10 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
     stroke("black"); strokeWeight(1.5); fill("#ffe14a");
     beginShape(); vertex(354, 11); vertex(343, 24); vertex(350, 24); vertex(346, 34); vertex(362, 20); vertex(354, 20); vertex(359, 11); endShape(CLOSE);
     noStroke();
-  } else { noStroke(); fill("black"); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text("FUEL", 350, 24); textStyle(NORMAL); }
+  } else { noStroke(); fill("black"); textAlign(CENTER, CENTER); textSize(15); textStyle(BOLD); text(tl("FUEL", "GAS"), 350, 24); textStyle(NORMAL); }
   noStroke(); fill("black"); textAlign(CENTER, CENTER);
 
-  if (expressionString.indexOf("Identify:") === 0) { textSize(18); drawSupText(expressionString, 200, 23); }
+  if (expressionString.indexOf(tl("Identify:", "Identifica:")) === 0) { textSize(18); drawSupText(expressionString, 200, 23); }
   else if (expressionString.length >= 20) { textSize(15); drawSupText(expressionString, 200, 23); }
   else if (expressionString.length > 14) { textSize(19); drawSupText(expressionString, 200, 23); }
   else { textSize(24); drawSupText(expressionString, 200, 23); }
@@ -2009,7 +2009,7 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
   textStyle(NORMAL);
 
   fill("white"); stroke("black"); strokeWeight(2); rect(10, 360, 60, 30);
-  fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text("MENU", 40, 375); textStyle(NORMAL);
+  fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(14); textStyle(BOLD); text(tl("MENU", "MENÚ"), 40, 375); textStyle(NORMAL);
   if (mouseWentDown("leftButton") && mouseX > 10 && mouseX < 70 && mouseY > 360 && mouseY < 390) {
     playSound("sound://category_app/perfect_clean_app_button_click.mp3");
     exitConfirmPending = true;
@@ -2019,16 +2019,16 @@ var isBlinking = (!isFrozen && damageFrames > 0 && Math.floor(frameCounter / 4) 
 function drawExitConfirmOverlay() {
   fill("#1a1d24"); noStroke(); rect(0, 0, 400, 400);
   fill("white"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(24);
-  text("Exit to Main Menu?", 200, 150);
+  text(tl("Exit to Main Menu?", "¿Salir al menú principal?"), 200, 150);
   fill("lightgray"); textSize(15); textStyle(NORMAL);
-  text("Your progress this run will be saved.", 200, 185);
+  text(tl("Your progress this run will be saved.", "Se guardará tu progreso de esta carrera."), 200, 185);
 
   var hoverYes = (mouseX > 60 && mouseX < 190 && mouseY > 230 && mouseY < 280);
   var hoverNo = (mouseX > 210 && mouseX < 340 && mouseY > 230 && mouseY < 280);
   fill(hoverYes ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(60, 230, 130, 50, 10);
   fill(hoverNo ? "#229954" : "#27ae60"); rect(210, 230, 130, 50, 10);
   fill("white"); noStroke(); textSize(17); textStyle(BOLD);
-  text("YES, EXIT", 125, 255); text("CANCEL", 275, 255); textStyle(NORMAL);
+  text(tl("YES, EXIT", "SÍ, SALIR"), 125, 255); text(tl("CANCEL", "CANCELAR"), 275, 255); textStyle(NORMAL);
 
   if (mouseWentDown("leftButton")) {
     if (hoverYes) {
@@ -2066,27 +2066,27 @@ function drawPausedScreen() {
   var topY = 55; var bottomY = 340;
   var h1 = 30; var h2 = 22; var h3_left = 20 + (pickedIsFraction ? 54 : 22); var h3_right = 20 + (correctIsFraction ? 54 : 22); var h3 = Math.max(h3_left, h3_right);
   var vExtra = (pIsVocab || cIsVocab) ? 12 : 0; h3 += vExtra;   // circled base/exponent/power answers sit lower so their circles never touch the "Your Answer" / "Correct Answer" labels
-  var h4 = explanationString.split('\n').length * 18; if (explanationString.indexOf("A negative exponent flips") === 0) h4 = 80;
+  var h4 = explanationString.split('\n').length * 18; if (explanationString.indexOf(tl("A negative exponent flips", "Un exponente negativo pasa")) === 0) h4 = 80;
   var h5 = 14;
   var totalContentHeight = h1 + h2 + h3 + h4 + h5; var gap = (bottomY - topY - totalContentHeight) / 4;
 
   var currentY = topY;
-  noStroke(); fill("red"); textSize(30); textStyle(BOLD); text("INCORRECT!", 200, currentY); textStyle(NORMAL);
+  noStroke(); fill("red"); textSize(30); textStyle(BOLD); text(tl("INCORRECT!", "¡INCORRECTO!"), 200, currentY); textStyle(NORMAL);
 
   currentY += h1 + gap;
-  fill("white"); if (expressionString.indexOf("Identify:") === 0) textSize(18); else textSize(22); drawSupText("Question: " + expressionString, 200, currentY, CENTER, TOP);
+  fill("white"); if (expressionString.indexOf(tl("Identify:", "Identifica:")) === 0) textSize(18); else textSize(22); drawSupText(tl("Question: ", "Pregunta: ") + expressionString, 200, currentY, CENTER, TOP);
 
   currentY += h2 + gap;
   var leftY = currentY; var rightY = currentY;
 
-  fill("red"); textSize(18); textStyle(BOLD); text("Your Answer:", 100, leftY); textStyle(NORMAL); leftY += 20;
+  fill("red"); textSize(18); textStyle(BOLD); text(tl("Your Answer:", "Tu respuesta:"), 100, leftY); textStyle(NORMAL); leftY += 20;
   if (pickedIsFraction) {
     var pParts = pAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(pParts[0], 100, leftY, CENTER, TOP); stroke("white"); strokeWeight(2); line(90, leftY + 22, 110, leftY + 22); noStroke(); drawSupText(pParts[1], 100, leftY + 35, CENTER, TOP); leftY += 60;
   } else if (pIsVocab) {
     fill("white"); textSize(22); drawSupText(pAns, 100, leftY + vExtra, CENTER, TOP, pCircleType); noStroke(); leftY += 30;
   } else { fill("white"); textSize(22); drawSupText(pAns, 100, leftY, CENTER, TOP); leftY += 30; }
 
-  fill("lime"); textSize(18); textStyle(BOLD); text("Correct Answer:", 300, rightY); textStyle(NORMAL); rightY += 20;
+  fill("lime"); textSize(18); textStyle(BOLD); text(tl("Correct Answer:", "Correcta:"), 300, rightY); textStyle(NORMAL); rightY += 20;
   if (correctIsFraction) {
     var cParts = cAns.split("\n—\n"); fill("white"); textSize(18); drawSupText(cParts[0], 300, rightY, CENTER, TOP); stroke("white"); strokeWeight(2); line(290, rightY + 22, 310, rightY + 22); noStroke(); drawSupText(cParts[1], 300, rightY + 35, CENTER, TOP); rightY += 60;
   } else if (cIsVocab) {
@@ -2095,7 +2095,7 @@ function drawPausedScreen() {
 
   currentY += h3 + gap;
 
-  if (explanationString.indexOf("A negative exponent flips") === 0) {
+  if (explanationString.indexOf(tl("A negative exponent flips", "Un exponente negativo pasa")) === 0) {
     var expParts = explanationString.split(":\n"); fill("lime"); textSize(15); textLeading(18); text(expParts[0] + ":", 200, currentY);
     var eqY = currentY + 40; var eqParts = expParts[1].split(" = "); var leftDenom = eqParts[0].substring(4); var rightDenom = eqParts[1].substring(4);
     text("1", 150, eqY); stroke("lime"); strokeWeight(2); line(138, eqY + 22, 162, eqY + 22); noStroke(); drawSupText(leftDenom, 150, eqY + 34, CENTER, TOP);
@@ -2106,9 +2106,9 @@ function drawPausedScreen() {
   fill("white"); textSize(14); textStyle(BOLD);
 
   if (pauseTimer > 0) {
-    pauseTimer--; var secondsLeft = Math.ceil(pauseTimer / 30); text("Wait " + secondsLeft + " seconds to continue...", 200, currentY);
+    pauseTimer--; var secondsLeft = Math.ceil(pauseTimer / 30); text(tl("Wait ", "Espera ") + secondsLeft + tl(" seconds to continue...", " segundos para continuar..."), 200, currentY);
   } else {
-    if (Math.floor(Date.now() / 500) % 2 === 0) { if (strikes >= 3) text("Press any key to finish", 200, currentY); else text("Press any key to continue", 200, currentY); }
+    if (Math.floor(Date.now() / 500) % 2 === 0) { if (strikes >= 3) text(tl("Press any key to finish", "Presiona una tecla para terminar"), 200, currentY); else text(tl("Press any key to continue", "Presiona una tecla para continuar"), 200, currentY); }
     if (keyWentDown("left") || keyWentDown("a") || keyWentDown("right") || keyWentDown("d") || keyWentDown("up") || keyWentDown("w") || keyWentDown("down") || keyWentDown("s") || keyWentDown("space") || keyWentDown(" ") || keyWentDown("enter") || keyWentDown("Enter")) {
       if (strikes >= 3) { gameState = "over"; if (gameMode === "hard" && score > hardHighScore) hardHighScore = score; saveExponentProgress(); } else { shakeFrames = 15; damageFrames = 90; resetQuestion(); moveCooldown = 15; gameState = "play"; }
     }
@@ -2139,32 +2139,32 @@ function drawGameOver() {
   var topY = 15; var bottomY = 385; var totalContent = h1 + h2 + h3 + h4 + h5; var gap = Math.max(5, (bottomY - topY - totalContent) / 4);
   var currentY = topY;
 
-  noStroke(); fill("red"); textSize(32); textStyle(BOLD); text("GAME OVER", 200, currentY); textStyle(NORMAL); currentY += h1 + gap;
+  noStroke(); fill("red"); textSize(32); textStyle(BOLD); text(tl("GAME OVER", "FIN DEL JUEGO"), 200, currentY); textStyle(NORMAL); currentY += h1 + gap;
   fill("yellow"); textSize(14); text(gameOverReason, 200, currentY); currentY += h2 + gap;
 
-  var displayMode = gameMode === "easy" ? "STREET RACING" : "MAXIMUM VELOCITY";
-  fill("orange"); textSize(14); text("MODE: " + displayMode, 200, currentY);
-  fill("white"); textSize(22); text("Final Score: " + score, 200, currentY + 20); currentY += h3 + gap;
+  var displayMode = gameMode === "easy" ? tl("STREET RACING", "CARRERAS URBANAS") : tl("MAXIMUM VELOCITY", "VELOCIDAD MÁXIMA");
+  fill("orange"); textSize(14); text(tl("MODE: ", "MODO: ") + displayMode, 200, currentY);
+  fill("white"); textSize(22); text(tl("Final Score: ", "Puntaje final: ") + score, 200, currentY + 20); currentY += h3 + gap;
 
-  fill("cyan"); textSize(16); text("Mistakes to Review:", 200, currentY);
+  fill("cyan"); textSize(16); text(tl("Mistakes to Review:", "Errores para repasar:"), 200, currentY);
   var reviewStartY = currentY + 25;
   if (wrongAnswersList.length === 0) {
-    fill("lime"); textSize(14); if (gameOverReason === "Crashed into an enemy car!") text("No math mistakes made.", 200, reviewStartY); else text("No mistakes made… except driving ones", 200, reviewStartY);
+    fill("lime"); textSize(14); if (gameOverReason === tl("Crashed into an enemy car!", "¡Chocaste con un auto enemigo!")) text(tl("No math mistakes made.", "Sin errores de matemáticas."), 200, reviewStartY); else text(tl("No mistakes made… except driving ones", "Sin errores… excepto al manejar"), 200, reviewStartY);
   } else {
     for (var w = 0; w < maxShow; w++) {
       var wa = wrongAnswersList[wrongAnswersList.length - 1 - w]; var itemY = reviewStartY + (w * 35);
       fill("white"); noStroke(); textAlign(LEFT, TOP);
-      var qText = wa.q; if (qText.indexOf("Identify: ") === 0) qText = qText.replace("Identify: ", "");
-      var fullQ = "Q: " + qText; if (fullQ.length > 22) textSize(14); else if (fullQ.length > 17) textSize(16); else textSize(18);
-      drawSupText(fullQ, 35, itemY + 4, LEFT, TOP); textSize(16); fill("#ff6b6b"); text("You:", 180, itemY + 5); fill("#2ecc71"); text("Cor:", 280, itemY + 5);
+      var qText = wa.q; if (qText.indexOf(tl("Identify: ", "Identifica: ")) === 0) qText = qText.replace(tl("Identify: ", "Identifica: "), "");
+      var fullQ = tl("Q: ", "P: ") + qText; if (fullQ.length > 22) textSize(14); else if (fullQ.length > 17) textSize(16); else textSize(18);
+      drawSupText(fullQ, 35, itemY + 4, LEFT, TOP); textSize(16); fill("#ff6b6b"); text(tl("You:", "Tú:"), 180, itemY + 5); fill("#2ecc71"); text(tl("Cor:", "Bien:"), 280, itemY + 5);
       drawReviewItem(wa.picked, 230, itemY + 12); drawReviewItem(wa.a, 330, itemY + 12); textAlign(CENTER, TOP);
     }
-    if (wrongAnswersList.length > 3) { fill("gray"); textSize(10); text("+ " + (wrongAnswersList.length - 3) + " more unlisted mistake(s)", 200, reviewStartY + (maxShow * 35)); }
+    if (wrongAnswersList.length > 3) { fill("gray"); textSize(10); text("+ " + (wrongAnswersList.length - 3) + tl(" more unlisted mistake(s)", " error(es) más sin mostrar"), 200, reviewStartY + (maxShow * 35)); }
   }
   currentY += h4 + gap; var btnY = currentY; window._goBtnY = btnY;                        // (the keyboard navigation needs to know where the buttons are)
 
-  fill("gray"); stroke("black"); strokeWeight(2); rect(40, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text("Menu", 115, btnY + 20);
-  fill("green"); stroke("black"); strokeWeight(2); rect(210, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text("Play Again", 285, btnY + 20); textStyle(NORMAL);
+  fill("gray"); stroke("black"); strokeWeight(2); rect(40, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text(tl("Menu", "Menú"), 115, btnY + 20);
+  fill("green"); stroke("black"); strokeWeight(2); rect(210, btnY, 150, 40); fill("white"); noStroke(); textSize(20); textAlign(CENTER, CENTER); textStyle(BOLD); text(tl("Play Again", "Jugar otra vez"), 285, btnY + 20); textStyle(NORMAL);
 
   if (mouseWentDown("leftButton")) {
     if (mouseY > btnY && mouseY < btnY + 40) {
@@ -2531,24 +2531,24 @@ function drawWinScreen() {
   textSize(45);
   textStyle(BOLD);
   textAlign(CENTER, CENTER);
-  text("YOU WIN!", 200, 100);
+  text(tl("YOU WIN!", "¡GANASTE!"), 200, 100);
 
   // Display the Final Score
   fill("white");
   textSize(24);
-  text("Final Score: " + score, 200, 170);
+  text(tl("Final Score: ", "Puntaje final: ") + score, 200, 170);
 
   // Display Coins
   fill("yellow");
   textSize(20);
-  text("Total Wealth: $" + (totalCoins / 100).toFixed(2), 200, 210);
+  text(tl("Total Wealth: $", "Riqueza total: $") + (totalCoins / 100).toFixed(2), 200, 210);
 
   // Prompt for Hard Mode
   if (gameMode === "easy") {
     fill("cyan");
     textSize(16);
     textStyle(BOLD);
-    text("MAXIMUM VELOCITY UNLOCKED - try it!", 200, 255);
+    text(tl("MAXIMUM VELOCITY UNLOCKED - try it!", "¡VELOCIDAD MÁXIMA DESBLOQUEADA! ¡Pruébala!"), 200, 255);
     textStyle(NORMAL);
   }
 
@@ -2562,7 +2562,7 @@ function drawWinScreen() {
   noStroke();
   textSize(20);
   textStyle(BOLD);
-  text("Menu", 115, 320);
+  text(tl("Menu", "Menú"), 115, 320);
 
   // Draw Play Again Button
   fill("green");
@@ -2573,7 +2573,7 @@ function drawWinScreen() {
   noStroke();
   textSize(20);
   textStyle(BOLD);
-  text("Play Again", 285, 320);
+  text(tl("Play Again", "Jugar otra vez"), 285, 320);
   textStyle(NORMAL);
 
 // Handle Button Clicks
@@ -2601,17 +2601,17 @@ function drawTimeFreezeTip() {
   fill("rgba(0, 0, 0, 0.85)"); noStroke(); rect(0, 0, 400, 450);
 
   fill("#7fdbff"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(26);
-  text("⏱ NEW CONTROL", 200, 90);
+  text(tl("⏱ NEW CONTROL", "⏱ NUEVO CONTROL"), 200, 90);
 
   fill("white"); textSize(18); textStyle(NORMAL);
-  text("You have Time Freeze equipped!", 200, 140);
+  text(tl("You have Time Freeze equipped!", "¡Tienes Congelar tiempo equipado!"), 200, 140);
 
   fill("lightgray"); textSize(15);
-  text("Press SPACE or ENTER during the race\nto freeze everything for 10 seconds.\n\nIt only works once per race, so\nsave it for a close call!", 200, 220);
+  text(tl("Press SPACE or ENTER during the race\nto freeze everything for 10 seconds.\n\nIt only works once per race, so\nsave it for a close call!", "Presiona ESPACIO o ENTER durante la carrera\npara congelar todo por 10 segundos.\n\nSolo funciona una vez por carrera, así que\n¡guárdalo para un momento difícil!"), 200, 220);
 
   fill("lime"); stroke("white"); strokeWeight(3); rect(80, 340, 240, 55, 10);
   fill("black"); noStroke(); textAlign(CENTER, CENTER); textSize(20); textStyle(BOLD);
-  text("GOT IT!", 200, 368); textStyle(NORMAL);
+  text(tl("GOT IT!", "¡ENTENDIDO!"), 200, 368); textStyle(NORMAL);
 
   if ((mouseWentDown("leftButton") && mouseX > 80 && mouseX < 320 && mouseY > 340 && mouseY < 395) || keyWentDown("space") || keyWentDown("enter")) {
     startGame();
@@ -2624,7 +2624,7 @@ function drawTimeFreezeOverlay() {
   fill("rgba(20, 60, 90, 0.14)"); noStroke(); rect(0, 46, 400, 354);
   fill("rgba(234, 249, 255, 0.95)"); stroke("#1b6ea8"); strokeWeight(3); rect(6, 150, 86, 74, 10);
   fill("#1b6ea8"); noStroke(); textAlign(CENTER, CENTER); textStyle(BOLD);
-  textSize(15); text("⏱ TIME", 49, 168); text("FROZEN!", 49, 187);
+  textSize(15); text(tl("⏱ TIME", "⏱ TIEMPO"), 49, 168); text(tl("FROZEN!", "¡CONGELADO!"), 49, 187);
   textSize(20); text(Math.ceil(timeFreezeFramesLeft / 30) + "s", 49, 210);
   textStyle(NORMAL);
 }
@@ -2639,16 +2639,16 @@ function drawMaxVelocityPrompt() {
   textSize(30);
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  text("🔥 UNLOCKED! 🔥", 200, 80);
+  text(tl("🔥 UNLOCKED! 🔥", "🔥 ¡DESBLOQUEADO! 🔥"), 200, 80);
 
   fill("white");
   textSize(22);
-  text("MAXIMUM VELOCITY MODE", 200, 130);
+  text(tl("MAXIMUM VELOCITY MODE", "MODO VELOCIDAD MÁXIMA"), 200, 130);
 
   fill("lightgray");
   textSize(16);
   textStyle(NORMAL);
-  text("You have mastered the basics.\nAre you ready for the ultimate challenge?\n(Bigger risks, much bigger rewards!)", 200, 180);
+  text(tl("You have mastered the basics.\nAre you ready for the ultimate challenge?\n(Bigger risks, much bigger rewards!)", "Ya dominas lo básico.\n¿Estás listo para el reto final?\n(¡Más riesgo, mucha más recompensa!)"), 200, 180);
 
   // --- BIG GREEN BUTTON (Start Max Velocity) ---
   fill("lime");
@@ -2660,7 +2660,7 @@ function drawMaxVelocityPrompt() {
   noStroke();
   textSize(20);
   textStyle(BOLD);
-  text("START MAXIMUM VELOCITY", 200, 280);
+  text(tl("START MAXIMUM VELOCITY", "¡A VELOCIDAD MÁXIMA!"), 200, 280);
 
   // --- SMALL GRAY BUTTON (Continue) ---
   fill("gray");
@@ -2672,7 +2672,7 @@ function drawMaxVelocityPrompt() {
   noStroke();
   textSize(16);
   textStyle(NORMAL);
-  text("Continue Normal Mode", 200, 360);
+  text(tl("Continue Normal Mode", "Seguir en modo normal"), 200, 360);
 
   // --- Click Detection ---
   if (mouseWentDown("leftButton")) {
@@ -2791,8 +2791,8 @@ function drawRewindEffect() {
   fill("rgba(0,0,0,0.55)"); rect(0, 46, 400, 34);
   var pulse = 0.65 + 0.35 * Math.sin(frameCount * 0.6);
   fill("rgba(255,255,255," + pulse + ")"); textAlign(CENTER, CENTER); textSize(22); textStyle(BOLD);
-  text("⏪ REWINDING  " + (Math.max(0, rwIdx + 1) / 30).toFixed(1) + "s", 200, 63);
-  fill("gold"); textSize(15); text("SECOND CHANCE!", 200, 92);
+  text(tl("⏪ REWINDING  ", "⏪ REBOBINANDO  ") + (Math.max(0, rwIdx + 1) / 30).toFixed(1) + "s", 200, 63);
+  fill("gold"); textSize(15); text(tl("SECOND CHANCE!", "¡OTRO INTENTO!"), 200, 92);
   textStyle(NORMAL);
   fill("rgba(255,255,255,0.25)"); rect(40, 388, 320, 6, 3);
   fill("gold"); rect(40, 388, 320 * (rwTotal ? Math.max(0, rwIdx + 1) / rwTotal : 0), 6, 3);
@@ -2807,7 +2807,7 @@ function drawLegacyRewind() {
   background("#0a0a12"); fill("#181820"); noStroke(); rect(100, 0, 200, 400);
   var ease = 1 - Math.pow(1 - frac, 3), curX = rewindAnim.fromX + (rewindAnim.toX - rewindAnim.fromX) * ease, curY = rewindAnim.fromY + (rewindAnim.toY - rewindAnim.fromY) * ease;
   push(); translate(curX, curY); drawVehicle(0, 0, "car", equipped.car, true, "", false, 0, 0); pop();
-  fill("gold"); textAlign(CENTER, CENTER); textSize(30); textStyle(BOLD); text("SECOND CHANCE!", 200, 200); textStyle(NORMAL);
+  fill("gold"); textAlign(CENTER, CENTER); textSize(30); textStyle(BOLD); text(tl("SECOND CHANCE!", "¡OTRO INTENTO!"), 200, 200); textStyle(NORMAL);
   if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
 }
 
