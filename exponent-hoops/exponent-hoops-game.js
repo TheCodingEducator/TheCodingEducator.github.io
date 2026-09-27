@@ -202,7 +202,7 @@ function draw() {
       noStroke();
       fill(canSteal ? "white" : "red");
       textSize(8); textAlign(CENTER);
-      text("STEAL", defender.x, defender.y - 64);
+      text(tl("STEAL", "ROBAR"), defender.x, defender.y - 64);
 
       // 3. PROGRESS BAR (Set to 45 frames = 1.5 seconds)
       var maxCooldown = 45;
@@ -251,7 +251,7 @@ function draw() {
 
         fill("rgba(231, 76, 60, " + alpha + ")");
         noStroke(); textSize(10); textAlign(CENTER); textStyle(BOLD);
-        text("STEAL FAILED", failedStealX, failedStealY);
+        text(tl("STEAL FAILED", "ROBO FALLIDO"), failedStealX, failedStealY);
         textStyle(NORMAL);
 
         failedStealY -= 0.3; // Gentle glide
@@ -312,7 +312,7 @@ function draw() {
     if (stealTimer <= 90) {
       fill("rgba(0,0,0,0.85)"); noStroke(); rect(0, 160, 400, 60);
       fill("#2ecc71"); textSize(32); textAlign(CENTER); textStyle(BOLD);
-      text("STEAL!", 200, 202);
+      text(tl("STEAL!", "¡ROBO!"), 200, 202);
       textStyle(NORMAL);
     }
 
@@ -335,8 +335,8 @@ function draw() {
     // 2. Draw the Violation Banner
     fill("rgba(0,0,0,0.85)"); noStroke(); rect(0, 160, 400, 60);
     fill("#e74c3c"); textSize(24); textAlign(CENTER); textStyle(BOLD);
-    text("SHOT CLOCK VIOLATION", 200, 192);
-    fill("white"); textSize(14); text("TURNOVER", 200, 212);
+    text(tl("SHOT CLOCK VIOLATION", "¡SE ACABÓ EL TIEMPO!"), 200, 192);
+    fill("white"); textSize(14); text(tl("TURNOVER", "PÉRDIDA DE BALÓN"), 200, 212);
     textStyle(NORMAL);
 
     // 3. Countdown the timer and reset
@@ -352,7 +352,7 @@ function draw() {
   } else if (gameState === "pre_question") {
     updateHumanoids(); renderWorld(); drawScoreUI(); drawControlsUI(); drawMenuButton();
     fill("rgba(0,0,0,0.85)"); noStroke(); rect(0, 170, 400, 60);
-    fill("#f1c40f"); textSize(28); textAlign(CENTER); textStyle(BOLD); text("GET READY!", 200, 208); textStyle(NORMAL);
+    fill("#f1c40f"); textSize(28); textAlign(CENTER); textStyle(BOLD); text(tl("GET READY!", "¡PREPÁRATE!"), 200, 208); textStyle(NORMAL);
     preQuestionTimer--;
     if (preQuestionTimer <= 0) gameState = pendingQuestionState;
   } else if (gameState === "scoring" || gameState === "missing" || gameState === "falling_from_net" || gameState === "rattling" || gameState === "blocked") {
@@ -414,15 +414,15 @@ function draw() {
 
   if (gameState === "paused") {
     fill("rgba(0, 0, 0, 0.75)"); rect(0, 0, 400, 400);
-    fill("white"); textSize(35); textAlign(CENTER); textStyle(BOLD); text("GAME PAUSED", 200, 150); textStyle(NORMAL);
+    fill("white"); textSize(35); textAlign(CENTER); textStyle(BOLD); text(tl("GAME PAUSED", "JUEGO EN PAUSA"), 200, 150); textStyle(NORMAL);
     var mx = World.mouseX; var my = World.mouseY;
     var hoverResume = (mx > 100 && mx < 300 && my > 190 && my < 240);
     fill(hoverResume ? "#27ae60" : "#2ecc71"); stroke("white"); strokeWeight(2); rect(100, 190, 200, 50, 10);
-    fill("white"); noStroke(); textSize(20); textStyle(BOLD); text("RESUME", 200, 223);
+    fill("white"); noStroke(); textSize(20); textStyle(BOLD); text(tl("RESUME", "CONTINUAR"), 200, 223);
     var hoverMenu = (mx > 100 && mx < 300 && my > 260 && my < 310);
     fill(hoverMenu ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(100, 260, 200, 50, 10);
-    fill("white"); noStroke(); text("MAIN MENU", 200, 293); textStyle(NORMAL);
-    fill("rgba(255,255,255,0.8)"); textSize(12); text("SPACE / ENTER = resume   |   ESC = main menu", 200, 340);
+    fill("white"); noStroke(); text(tl("MAIN MENU", "MENÚ PRINCIPAL"), 200, 293); textStyle(NORMAL);
+    fill("rgba(255,255,255,0.8)"); textSize(12); text(tl("SPACE / ENTER = resume   |   ESC = main menu", "ESPACIO / ENTER = continuar   |   ESC = menú principal"), 200, 340);
 
     if (keyWentDown("space") || keyWentDown("enter")) { hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
     else if (mouseWentDown("leftButton")) {
@@ -581,7 +581,7 @@ function drawNBACourt() {
 }
 
 function drawHeadIndicator(is3, activeBody) {
-  var txt = is3 ? "3-PTS" : "2-PTS"; var col = is3 ? "#f1c40f" : "#ffffff";
+  var txt = is3 ? tl("3-PTS", "3 PTS") : tl("2-PTS", "2 PTS"); var col = is3 ? "#f1c40f" : "#ffffff";
   fill("rgba(0,0,0,0.6)"); noStroke(); rect(activeBody.x - 22, activeBody.y - 82, 44, 18, 4);
   fill(col); textSize(10); textAlign(CENTER); textStyle(BOLD); text(txt, activeBody.x, activeBody.y - 69); textStyle(NORMAL);
 }
@@ -645,19 +645,19 @@ function drawControlsUI() {
   fill("rgba(0, 0, 0, 0.85)"); noStroke(); rect(0, 360, 400, 40);
   if (gameMode === "1P") {
     fill("#1d428a"); stroke("white"); strokeWeight(1.5); rect(15, 365, 150, 30, 5);
-    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("ARROWS: Move", 90, 385);
+    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text(tl("ARROWS: Move", "FLECHAS: Moverse"), 90, 385);
 
     fill("#c0392b"); stroke("white"); strokeWeight(1.5); rect(235, 365, 150, 30, 5);
-    fill("white"); noStroke(); text("SPACE/ENTER : Shoot", 310, 385); textStyle(NORMAL);
+    fill("white"); noStroke(); text(tl("SPACE/ENTER : Shoot", "ESPACIO/ENTER: Tirar"), 310, 385); textStyle(NORMAL);
   } else {
-    var p1Text = (possession === 1) ? "SPACE Shoot" : "SPACE Steal";
-    var p2Text = (possession === 2) ? "ENTER Shoot" : "ENTER Steal";
+    var p1Text = (possession === 1) ? tl("SPACE Shoot", "ESPACIO: tirar") : tl("SPACE Steal", "ESPACIO: robar");
+    var p2Text = (possession === 2) ? tl("ENTER Shoot", "ENTER: tirar") : tl("ENTER Steal", "ENTER: robar");
 
     fill("#1d428a"); stroke("white"); strokeWeight(1.5); rect(5, 365, 165, 30, 5);
-    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("WASD Move | " + p1Text, 87, 385);
+    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text(tl("WASD Move | ", "WASD | ") + p1Text, 87, 385);
 
     fill("#ce1141"); stroke("white"); strokeWeight(1.5); rect(230, 365, 165, 30, 5);
-    fill("white"); noStroke(); text("ARROWS Move | " + p2Text, 312, 385); textStyle(NORMAL);
+    fill("white"); noStroke(); text(tl("ARROWS Move | ", "FLECHAS | ") + p2Text, 312, 385); textStyle(NORMAL);
   }
 }
 
@@ -668,7 +668,7 @@ function drawMenuButton() {
   var hover = (mx > 175 && mx < 225 && my > 365 && my < 395);
   fill(hover ? "#e74c3c" : "#111111"); stroke("white"); strokeWeight(1.5); rect(175, 365, 50, 30, 4);
 
-  fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text("MENU", 200, 385); textStyle(NORMAL);
+  fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text(tl("MENU", "MENÚ"), 200, 385); textStyle(NORMAL);
   if (mouseWentDown("leftButton") && hover) {
     exitConfirmPending = true;
   }
@@ -677,9 +677,9 @@ function drawMenuButton() {
 function drawExitConfirmOverlay() {
   fill("#1a1d24"); noStroke(); rect(0, 0, 400, 400);
   fill("white"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(24);
-  text("Exit to Main Menu?", 200, 150);
+  text(tl("Exit to Main Menu?", "¿Salir al menú principal?"), 200, 150);
   fill("lightgray"); textSize(15); textStyle(NORMAL);
-  text("Your current game will end.", 200, 185);
+  text(tl("Your current game will end.", "Tu partido terminará."), 200, 185);
 
   var mx = World.mouseX; var my = World.mouseY;
   var hoverYes = (mx > 60 && mx < 190 && my > 230 && my < 280);
@@ -691,8 +691,8 @@ function drawExitConfirmOverlay() {
   fill(exitSel === 0 ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(exitSel === 0 ? 4 : 2); rect(60, 230, 130, 50, 10);
   fill(exitSel === 1 ? "#229954" : "#27ae60"); strokeWeight(exitSel === 1 ? 4 : 2); rect(210, 230, 130, 50, 10);
   fill("white"); noStroke(); textSize(17); textStyle(BOLD);
-  text("YES, EXIT", 125, 255); text("CANCEL", 275, 255); textStyle(NORMAL);
-  fill("lightgray"); textSize(12); text("◀ ▶ choose  |  SPACE / ENTER confirm  |  ESC cancel", 200, 320);
+  text(tl("YES, EXIT", "SÍ, SALIR"), 125, 255); text(tl("CANCEL", "CANCELAR"), 275, 255); textStyle(NORMAL);
+  fill("lightgray"); textSize(12); text(tl("◀ ▶ choose  |  SPACE / ENTER confirm  |  ESC cancel", "◀ ▶ elegir  |  ESPACIO / ENTER confirmar  |  ESC cancelar"), 200, 320);
 
   var go = keyWentDown("space") || keyWentDown("enter");
   if ((mouseWentDown("leftButton") && hoverYes) || (go && exitSel === 0)) {
@@ -802,7 +802,7 @@ function generateExponentQuestion(isHard) {
     questionText = v + toSuperscript(m) + " · " + v + toSuperscript(n);
     correctStr = formatPower(v, m + n);
     wrongExponents.push(m * n, m - n, m + n + 1, m + n - 1);
-    lastExplanation = "Rule: Add exponents (" + m + ((n < 0) ? " - " + Math.abs(n) : " + " + n) + " = " + (m + n) + ")";
+    lastExplanation = tl("Rule: Add exponents (", "Regla: suma los exponentes (") + m + ((n < 0) ? " - " + Math.abs(n) : " + " + n) + " = " + (m + n) + ")";
   } else if (qType === 1) {
     m = getNum(); n = getNum(); if (!isHard && m < n) { var temp = m; m = n; n = temp; }
     isFraction = randomNumber(0, 1) === 0;
@@ -810,18 +810,18 @@ function generateExponentQuestion(isHard) {
     else questionText = v + toSuperscript(m) + " ÷ " + v + toSuperscript(n);
     correctStr = formatPower(v, m - n);
     wrongExponents.push(m + n, m * n, m - n - 1, m - n + 1);
-    lastExplanation = "Rule: Subtract exponents (" + m + ((n < 0) ? " + " + Math.abs(n) : " - " + n) + " = " + (m - n) + ")";
+    lastExplanation = tl("Rule: Subtract exponents (", "Regla: resta los exponentes (") + m + ((n < 0) ? " + " + Math.abs(n) : " - " + n) + " = " + (m - n) + ")";
   } else if (qType === 2) {
     m = getNum(); if (m === 0) m = 5; if (m === 1) m = 6;
     questionText = "(" + v + toSuperscript(m) + ")" + toSuperscript(0);
     correctStr = "1";
-    lastExplanation = "Rule: Any base to the power of 0 is 1.";
+    lastExplanation = tl("Rule: Any base to the power of 0 is 1.", "Regla: cualquier base elevada a 0 es 1.");
   } else {
     m = isHard ? randomNumber(-4, 4) : randomNumber(2, 4); n = isHard ? randomNumber(-3, 3) : randomNumber(2, 3);
     questionText = "(" + v + toSuperscript(m) + ")" + toSuperscript(n);
     correctStr = formatPower(v, m * n);
     wrongExponents.push(m + n, Math.pow(m, 2), m * n + 1, m * n - 1);
-    lastExplanation = "Rule: Multiply exponents (" + m + " · " + n + " = " + (m * n) + ")";
+    lastExplanation = tl("Rule: Multiply exponents (", "Regla: multiplica los exponentes (") + m + " · " + n + " = " + (m * n) + ")";
   }
 
   usedStrings.push(correctStr);
@@ -887,7 +887,7 @@ function drawArrowShape(dir, cx, cy, s) {
 
 function renderMathUI_1P() {
   fill("#111111"); noStroke(); rect(20, 20, 360, 360, 12);
-  fill("white"); textAlign(CENTER); textSize(18); textStyle(BOLD); text("SOLVE TO SHOOT", 200, 45); textStyle(NORMAL);
+  fill("white"); textAlign(CENTER); textSize(18); textStyle(BOLD); text(tl("SOLVE TO SHOOT", "RESUELVE PARA TIRAR"), 200, 45); textStyle(NORMAL);
   stroke("#333333"); strokeWeight(1); line(50, 55, 350, 55); noStroke(); fill("white"); textSize(38);
 
   if (isFraction) {
@@ -934,7 +934,7 @@ function renderMathUI_1P() {
 
 function renderMathUI_2P() {
   fill("#111111"); noStroke(); rect(20, 20, 360, 360, 12);
-  fill((possession === 1) ? "#1d428a" : "#ce1141"); textAlign(CENTER); textSize(16); textStyle(BOLD); text("PLAYER SHOOTING", 200, 52); textStyle(NORMAL);
+  fill((possession === 1) ? "#1d428a" : "#ce1141"); textAlign(CENTER); textSize(16); textStyle(BOLD); text(tl("PLAYER SHOOTING", "JUGADOR TIRANDO"), 200, 52); textStyle(NORMAL);
   stroke("#333333"); strokeWeight(1); line(50, 62, 350, 62); noStroke(); fill("white"); textSize(36);
 
   if (isFraction) {
@@ -944,9 +944,9 @@ function renderMathUI_2P() {
   }
 
   if (defenderLockedOut) {
-    fill("#d44a4a"); textSize(13); textStyle(BOLD); text("DEFENDER WRONG - ATTACKER SHOOTS FREE", 200, 182); textStyle(NORMAL);
+    fill("#d44a4a"); textSize(13); textStyle(BOLD); text(tl("DEFENDER WRONG - ATTACKER SHOOTS FREE", "DEFENSOR FALLÓ: EL ATACANTE TIRA LIBRE"), 200, 182); textStyle(NORMAL);
   } else {
-    fill("#888888"); textSize(13); text("First correct answer wins", 200, 182);
+    fill("#888888"); textSize(13); text(tl("First correct answer wins", "Gana la primera respuesta correcta"), 200, 182);
   }
 
   for (var i = 0; i < 2; i++) {
@@ -980,10 +980,10 @@ function drawExplanationScreen(isCorrect) {
 
   if (isCorrect) {
     fill("#27ae60"); textSize(18); textAlign(CENTER); textStyle(BOLD);
-    text(gameMode === "2P" ? "SHOT MADE  +" + shotValue : "CORRECT!  +" + shotValue, 200, 285);
+    text(gameMode === "2P" ? tl("SHOT MADE  +", "¡ENCESTÓ!  +") + shotValue : tl("CORRECT!  +", "¡CORRECTO!  +") + shotValue, 200, 285);
   } else {
     fill("#c0392b"); textSize(18); textAlign(CENTER); textStyle(BOLD);
-    text(lastShotResult === "blocked" ? "SHOT BLOCKED!" : "WRONG ANSWER", 200, 285);
+    text(lastShotResult === "blocked" ? tl("SHOT BLOCKED!", "¡TIRO BLOQUEADO!") : tl("WRONG ANSWER", "RESPUESTA INCORRECTA"), 200, 285);
   }
   textStyle(NORMAL);
 
@@ -997,15 +997,15 @@ function drawExplanationScreen(isCorrect) {
 
   var nextIsRed = (gameMode === "2P" && possession === 1);
   var nextColor = nextIsRed ? "#ce1141" : "#1d428a";
-  var nextText = nextIsRed ? "RED PLAYER" : "BLUE PLAYER";
+  var nextText = nextIsRed ? tl("RED PLAYER", "JUGADOR ROJO") : tl("BLUE PLAYER", "JUGADOR AZUL");
   if (gameMode === "1P") {
-    nextColor = "#1d428a"; nextText = "BLUE PLAYER";
+    nextColor = "#1d428a"; nextText = tl("BLUE PLAYER", "JUGADOR AZUL");
   }
 
   if (penaltyTimer > 0) {
-    fill("#888888"); textSize(12); textStyle(BOLD); text("Wait " + Math.ceil(penaltyTimer / 30) + "s...", 200, 356); textStyle(NORMAL);
+    fill("#888888"); textSize(12); textStyle(BOLD); text(tl("Wait ", "Espera ") + Math.ceil(penaltyTimer / 30) + "s...", 200, 356); textStyle(NORMAL);
   } else {
-    fill(nextColor); textSize(12); textStyle(BOLD); text(nextText + " press any key to start", 200, 356); textStyle(NORMAL);
+    fill(nextColor); textSize(12); textStyle(BOLD); text(nextText + tl(" press any key to start", " presiona una tecla para empezar"), 200, 356); textStyle(NORMAL);
   }
 }
 
@@ -1067,20 +1067,20 @@ function drawInstructions2P() {
 
   // TITLE
   fill("#f1c40f"); textSize(24); textAlign(CENTER); textStyle(BOLD);
-  text("HOW TO PLAY", 200, 45); textStyle(NORMAL);
+  text(tl("HOW TO PLAY", "CÓMO JUGAR"), 200, 45); textStyle(NORMAL);
   stroke("#333333"); strokeWeight(2); line(40, 55, 360, 55); noStroke();
 
   // --- SECTION 1: ATTACKER ---
   var y = 90;
 
   fill("#3498db"); textSize(20); textStyle(BOLD);
-  text("ATTACKER", 200, y);
+  text(tl("ATTACKER", "ATACANTE"), 200, y);
 
   fill("white"); textSize(14); textStyle(NORMAL);
-  text("SHOOT the ball. 3-Pointers have harder math.", 200, y + 25);
+  text(tl("SHOOT the ball. 3-Pointers have harder math.", "TIRA el balón. Los triples tienen matemáticas más difíciles."), 200, y + 25);
 
   fill("#2ecc71"); textSize(14); textStyle(BOLD);
-  text("Correct: SCORE   |   Wrong: MISS", 200, y + 50);
+  text(tl("Correct: SCORE   |   Wrong: MISS", "Correcto: ANOTAS   |   Incorrecto: FALLAS"), 200, y + 50);
 
   // Minor dividing line between sections
   stroke("#222222"); strokeWeight(2); line(100, y + 80, 300, y + 80); noStroke();
@@ -1089,26 +1089,26 @@ function drawInstructions2P() {
   y = 210;
 
   fill("#ce1141"); textSize(20); textStyle(BOLD);
-  text("DEFENDER", 200, y);
+  text(tl("DEFENDER", "DEFENSOR"), 200, y);
 
   fill("white"); textSize(14); textStyle(NORMAL);
-  text("Get close to STEAL. Success chance is shown.", 200, y + 25);
+  text(tl("Get close to STEAL. Success chance is shown.", "Acércate para ROBAR. Se muestra la probabilidad de éxito."), 200, y + 25);
 
   fill("#2ecc71"); textSize(14); textStyle(BOLD);
-  text("Correct: BLOCK   |   Wrong: ATTACKER OPEN SHOT", 200, y + 50);
+  text(tl("Correct: BLOCK   |   Wrong: ATTACKER OPEN SHOT", "Correcto: BLOQUEAS   |   Incorrecto: TIRO LIBRE"), 200, y + 50);
 
   // --- YELLOW TEXT (Centered) ---
   fill("#f1c40f");
   textSize(13);
   textStyle(BOLD);
-  text("You need to be quick but you also need to be CORRECT", 200, 310);
+  text(tl("You need to be quick but you also need to be CORRECT", "Tienes que ser rápido, pero también CORRECTO"), 200, 310);
 
   // --- FOOTER / START BUTTON (FLASHING EFFECT) ---
   var flashAlpha = 0.6 + 0.4 * Math.sin(pulseCounter / 8);
   fill("rgba(255, 255, 255, " + flashAlpha + ")");
 
   textSize(16); textStyle(BOLD);
-  text("Press SPACE or ENTER to Start", 200, 360);
+  text(tl("Press SPACE or ENTER to Start", "Presiona ESPACIO o ENTER para empezar"), 200, 360);
   textStyle(NORMAL);
 
   if (keyWentDown("space") || keyWentDown("enter")) {
@@ -1141,7 +1141,7 @@ function drawTitleScreen() {
   stroke("#e67e22"); strokeWeight(3); fill("black"); textSize(48); textStyle(BOLD);
   text("EXPONENT", 200, 100); stroke("#e74c3c"); fill("#f1c40f");
   text("HOOPS", 200, 145); textStyle(NORMAL); noStroke();
-  fill("white"); textSize(18); text("Solve Exponents. Sink Shots.", 200, 190);
+  fill("white"); textSize(18); text(tl("Solve Exponents. Sink Shots.", "Resuelve exponentes. Encesta tiros."), 200, 190);
 
   var mx = World.mouseX; var my = World.mouseY;
   // keyboard: left/right (or A/D) choose a mode, Space/Enter starts it; 1 and 2 pick directly
@@ -1152,10 +1152,10 @@ function drawTitleScreen() {
   if (hover1P) titleSel = 0; else if (hover2P) titleSel = 1;
   var on1 = titleSel === 0, on2 = titleSel === 1;
   fill(on1 ? "#f1c40f" : "#1d428a"); stroke("white"); strokeWeight(on1 ? 4 : 2); rect(20, 300, 170, 50, 10);
-  fill("white"); noStroke(); textSize(18); textStyle(BOLD); text("SOLO MODE", 105, 331);
+  fill("white"); noStroke(); textSize(18); textStyle(BOLD); text(tl("SOLO MODE", "MODO SOLO"), 105, 331);
   fill(on2 ? "#f1c40f" : "#ce1141"); stroke("white"); strokeWeight(on2 ? 4 : 2); rect(210, 300, 170, 50, 10);
-  fill("white"); noStroke(); textSize(18); text("VERSUS MODE", 295, 331); textStyle(NORMAL);
-  fill("rgba(255,255,255,0.75)"); textSize(12); text("◀ ▶ choose  |  SPACE / ENTER to play", 200, 375);
+  fill("white"); noStroke(); textSize(18); text(tl("VERSUS MODE", "MODO VERSUS"), 295, 331); textStyle(NORMAL);
+  fill("rgba(255,255,255,0.75)"); textSize(12); text(tl("◀ ▶ choose  |  SPACE / ENTER to play", "◀ ▶ elegir  |  ESPACIO / ENTER para jugar"), 200, 375);
 
   var go = keyWentDown("space") || keyWentDown("enter");
   var pick1 = (mouseWentDown("leftButton") && hover1P) || keyWentDown("1") || (go && on1);
