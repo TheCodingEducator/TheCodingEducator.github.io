@@ -1,0 +1,72 @@
+/* Shared look for the printable worksheets and exit tickets (one of each per game). White paper on screen, clean
+   letter-size pages when printed; the toolbar and note never print. */
+:root { --ink: #1b2130; --muted: #5d6475; --line: #cfd5e2; --a: #e0674f; --b: #3a9a5b; --c: #2f6fd6; --accent: #2f6fd6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #e9ecf2; color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+a { color: var(--accent); }
+.toolbar { max-width: 8.5in; margin: 0 auto; padding: 16px 16px 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 14px; }
+.toolbar .home { font-weight: 800; color: var(--ink); text-decoration: none; margin-right: auto; }
+.toolbar button { font-family: inherit; font-size: 15px; font-weight: 700; background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; }
+.toolbar button:focus-visible, a:focus-visible { outline: 3px solid #f2b530; outline-offset: 2px; }
+.note { max-width: 8.5in; margin: 10px auto 0; padding: 0 16px; font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+.sheet { max-width: 8.5in; margin: 16px auto; background: #fff; padding: 0.6in 0.65in; box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+.head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+.head h1 { font-size: 24px; margin: 0; }
+.head .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.fields { font-size: 14px; white-space: nowrap; }
+.fields span { display: inline-block; border-bottom: 1px solid var(--ink); width: 1.6in; margin-left: 4px; }
+.fields div + div { margin-top: 8px; }
+.formula { margin: 14px 0 4px; padding: 8px 12px; background: #f3f6fb; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+.formula b { font-size: 16px; }
+.ca { color: var(--a); font-weight: 800; } .cb { color: var(--b); font-weight: 800; } .cc { color: var(--c); font-weight: 800; }
+h2 { font-size: 16px; margin: 18px 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; }
+.grid.three { grid-template-columns: repeat(3, 1fr); }
+.prob { break-inside: avoid; font-size: 14px; line-height: 1.45; }
+.prob .n { font-weight: 800; margin-right: 4px; }
+.prob svg { display: block; margin: 4px 0; max-width: 100%; }
+.work { height: 0.75in; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }
+.work.short { height: 0.45in; }
+.work.tall { height: 1.1in; }
+.ans { font-size: 13px; color: var(--muted); }
+.ans .blank { display: inline-block; border-bottom: 1px solid var(--ink); width: 0.9in; }
+.ans .blank.wide { width: 1.6in; }
+.wide { grid-column: 1 / -1; }
+.hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.m { font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+table.fill { border-collapse: collapse; margin: 6px 0; font-size: 14px; }
+table.fill th, table.fill td { border: 1px solid var(--ink); padding: 5px 12px; text-align: center; min-width: 0.6in; }
+table.fill th { background: #f3f6fb; }
+.foot { margin-top: 14px; font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; }
+
+/* answer keys */
+.key h1 { font-size: 22px; }
+.key ol { padding-left: 22px; font-size: 14px; line-height: 1.55; }
+.key ol li { margin-bottom: 6px; }
+.key code { font-family: Consolas, "Courier New", monospace; font-size: 13px; background: #f3f6fb; padding: 1px 4px; border-radius: 4px; }
+.key .tip { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+/* exit tickets: two identical tickets per page with a cut line between them */
+.ticket { border: 2px solid var(--ink); border-radius: 10px; padding: 14px 18px; }
+.ticket .head { border-bottom-width: 1.5px; }
+.ticket .head h1 { font-size: 20px; }
+.ticket .prob + .prob { margin-top: 8px; }
+.ticket .work { height: 0.95in; }
+.ticket .work.short { height: 0.6in; }
+.cut { text-align: center; font-size: 12px; color: var(--muted); border-top: 2px dashed var(--line); margin: 0.35in 0; padding-top: 4px; }
+
+@media (max-width: 640px) {
+  .sheet { padding: 20px 16px; }
+  .head { flex-direction: column; align-items: flex-start; }
+  .grid, .grid.three { grid-template-columns: 1fr; }
+}
+@media print {
+  @page { size: letter; margin: 0.5in; }
+  body { background: #fff; }
+  .toolbar, .note, .no-print { display: none !important; }
+  .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+  .key { break-before: page; }
+  a { color: inherit; text-decoration: none; }
+}
