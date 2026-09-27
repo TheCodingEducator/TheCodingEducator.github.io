@@ -70,6 +70,8 @@ var startGX = 0, startGY = 0;
 var targetGX = 0, targetGY = 0;
 var challengeLabel = "";
 var topicLabel = "";
+// the topic is also used as a key (Translation / Rotation / Reflection), so it is only translated where it is drawn
+function topicName(t) { return tl(t, { Translation: "Traslación", Rotation: "Rotación", Reflection: "Reflexión" }[t] || t); }
 var topicR = 150, topicG = 150, topicB = 150;
 var feedbackCorrect = false;
 var equivalentRotation = false; // correct endpoint reached via alternate rotation path
@@ -124,30 +126,30 @@ var practiceMastery = 0;
 // touching the "no accounts, no permanent record" design of the game.
 // `style` picks the extra visual flourish drawn by drawSkinnedFace().
 var PLAYER_SKINS = [
-  { name:"Classic Yellow", r:255, g:220, b:50,  style:"plain"      },
-  { name:"Cool Blue",      r:80,  g:180, b:255, style:"plain"      },
-  { name:"Hot Pink",       r:255, g:90,  b:180, style:"sparkle"    },
-  { name:"Lime Green",     r:140, g:230, b:60,  style:"spots"      },
-  { name:"Sunset Orange",  r:255, g:140, b:50,  style:"gradient"   },
-  { name:"Royal Purple",   r:170, g:100, b:255, style:"crown"      },
-  { name:"Fire Red",       r:255, g:80,  b:40,  style:"fire"       },
-  { name:"Ice Blue",       r:150, g:220, b:255, style:"halo"       },
-  { name:"Robot Silver",   r:190, g:200, b:210, style:"robot"      },
-  { name:"Alien Green",    r:110, g:220, b:110, style:"alien"      },
-  { name:"Cool Shades",    r:210, g:180, b:130, style:"sunglasses" },
-  { name:"Rainbow Burst",  r:255, g:255, b:255, style:"rainbow"    },
-  { name:"Cosmic Nebula",  r:90,  g:60,  b:160, style:"galaxy"     },
-  { name:"Tiger Stripes",  r:255, g:150, b:40,  style:"stripes"    },
-  { name:"Panda Pal",      r:250, g:250, b:250, style:"panda"      },
-  { name:"Shadow Ninja",   r:55,  g:55,  b:65,  style:"ninja"      },
-  { name:"Mystic Wizard",  r:130, g:90,  b:200, style:"wizard"     },
-  { name:"Space Cadet",    r:225, g:230, b:240, style:"astronaut"  },
-  { name:"Salty Pirate",   r:205, g:160, b:100, style:"pirate"     },
-  { name:"Count Dracula",  r:75,  g:25,  b:35,  style:"vampire"    },
-  { name:"Magic Unicorn",  r:255, g:225, b:245, style:"unicorn"    },
-  { name:"Brave Knight",   r:235, g:190, b:150, style:"knight"     },
-  { name:"Busy Bee",       r:255, g:210, b:40,  style:"bee"        },
-  { name:"Silly Clown",    r:255, g:90,  b:110, style:"clown"      }
+  { name:tl("Classic Yellow", "Amarillo clásico"), r:255, g:220, b:50,  style:"plain"      },
+  { name:tl("Cool Blue", "Azul fresco"),      r:80,  g:180, b:255, style:"plain"      },
+  { name:tl("Hot Pink", "Rosa intenso"),       r:255, g:90,  b:180, style:"sparkle"    },
+  { name:tl("Lime Green", "Verde lima"),     r:140, g:230, b:60,  style:"spots"      },
+  { name:tl("Sunset Orange", "Naranja atardecer"),  r:255, g:140, b:50,  style:"gradient"   },
+  { name:tl("Royal Purple", "Morado real"),   r:170, g:100, b:255, style:"crown"      },
+  { name:tl("Fire Red", "Rojo fuego"),       r:255, g:80,  b:40,  style:"fire"       },
+  { name:tl("Ice Blue", "Azul hielo"),       r:150, g:220, b:255, style:"halo"       },
+  { name:tl("Robot Silver", "Robot plateado"),   r:190, g:200, b:210, style:"robot"      },
+  { name:tl("Alien Green", "Alien verde"),    r:110, g:220, b:110, style:"alien"      },
+  { name:tl("Cool Shades", "Lentes de sol"),    r:210, g:180, b:130, style:"sunglasses" },
+  { name:tl("Rainbow Burst", "Arcoíris"),  r:255, g:255, b:255, style:"rainbow"    },
+  { name:tl("Cosmic Nebula", "Nebulosa cósmica"),  r:90,  g:60,  b:160, style:"galaxy"     },
+  { name:tl("Tiger Stripes", "Rayas de tigre"),  r:255, g:150, b:40,  style:"stripes"    },
+  { name:tl("Panda Pal", "Panda amigo"),      r:250, g:250, b:250, style:"panda"      },
+  { name:tl("Shadow Ninja", "Ninja sombra"),   r:55,  g:55,  b:65,  style:"ninja"      },
+  { name:tl("Mystic Wizard", "Mago místico"),  r:130, g:90,  b:200, style:"wizard"     },
+  { name:tl("Space Cadet", "Cadete espacial"),    r:225, g:230, b:240, style:"astronaut"  },
+  { name:tl("Salty Pirate", "Pirata salado"),   r:205, g:160, b:100, style:"pirate"     },
+  { name:tl("Count Dracula", "Conde Drácula"),  r:75,  g:25,  b:35,  style:"vampire"    },
+  { name:tl("Magic Unicorn", "Unicornio mágico"),  r:255, g:225, b:245, style:"unicorn"    },
+  { name:tl("Brave Knight", "Caballero valiente"),   r:235, g:190, b:150, style:"knight"     },
+  { name:tl("Busy Bee", "Abeja ocupada"),       r:255, g:210, b:40,  style:"bee"        },
+  { name:tl("Silly Clown", "Payaso chistoso"),    r:255, g:90,  b:110, style:"clown"      }
 ];
 var SKIN_PRICE = 3;
 
@@ -163,7 +165,7 @@ var cheatCoinsUsed = false;
 // completed (every round) this many times; the count is saved like the rest.
 var GEOMETRY_UNLOCK_RUNS = 3;
 var geniusCompletions = 0;
-var unlockPopup = false;     // the "new mode unlocked!" pop-up, shown once, right after the unlocking run
+var unlockPopup = false;     // the tl("new mode unlocked!", "¡nuevo modo desbloqueado!") pop-up, shown once, right after the unlocking run
 var lockNoticeFrame = -999;  // when someone last tried to open the locked mode (flashes a reminder)
 // (anyone who already has a Geometry Genius time from before this lock existed keeps access)
 function geometryLocked() { return geniusCompletions < GEOMETRY_UNLOCK_RUNS && !(hsGeometry > 0); }
@@ -220,7 +222,7 @@ loadCoinsAndSkins();
 // Awards a coin every 3rd consecutive correct answer (3, 6, 9, ...).
 // Wrong answers reset the streak to 0 elsewhere, right where
 // feedbackCorrect is determined.
-var coinPopup = 0; // frames remaining to show the "+1 coin!" toast
+var coinPopup = 0; // frames remaining to show the tl("+1 coin!", "¡+1 moneda!") toast
 function registerCorrectForStreak() {
   currentStreak++;
   if (currentStreak%3===0) {
@@ -357,77 +359,77 @@ var paperPointGX = 0, paperPointGY = 0;
 // ---------- CHALLENGE BANK ----------
 var challenges = [
   // ---- Translations (algebraic notation) ----
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 3, y + 2)", dx:3,  dy:2,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x - 4, y + 1)", dx:-4, dy:1,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 2, y - 3)", dx:2,  dy:-3, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x - 1, y - 4)", dx:-1, dy:-4, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 5, y - 2)", dx:5,  dy:-2, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 1, y + 3)", dx:1,  dy:3,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x - 3, y + 4)", dx:-3, dy:4,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 4, y + 3)", dx:4,  dy:3,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x - 2, y - 2)", dx:-2, dy:-2, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 3, y - 1)", dx:3,  dy:-1, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x - 5, y + 3)", dx:-5, dy:3,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate: (x + 2, y + 4)", dx:2,  dy:4,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 3, y + 2)", "Traslada: (x + 3, y + 2)"), dx:3,  dy:2,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x - 4, y + 1)", "Traslada: (x - 4, y + 1)"), dx:-4, dy:1,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 2, y - 3)", "Traslada: (x + 2, y - 3)"), dx:2,  dy:-3, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x - 1, y - 4)", "Traslada: (x - 1, y - 4)"), dx:-1, dy:-4, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 5, y - 2)", "Traslada: (x + 5, y - 2)"), dx:5,  dy:-2, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 1, y + 3)", "Traslada: (x + 1, y + 3)"), dx:1,  dy:3,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x - 3, y + 4)", "Traslada: (x - 3, y + 4)"), dx:-3, dy:4,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 4, y + 3)", "Traslada: (x + 4, y + 3)"), dx:4,  dy:3,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x - 2, y - 2)", "Traslada: (x - 2, y - 2)"), dx:-2, dy:-2, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 3, y - 1)", "Traslada: (x + 3, y - 1)"), dx:3,  dy:-1, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x - 5, y + 3)", "Traslada: (x - 5, y + 3)"), dx:-5, dy:3,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate: (x + 2, y + 4)", "Traslada: (x + 2, y + 4)"), dx:2,  dy:4,  type:"translate" },
   // ---- Translations (natural language) ----
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 3 units left and 2 units down",  dx:-3, dy:-2, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 4 units right and 1 unit up",    dx:4,  dy:1,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 2 units left and 3 units up",    dx:-2, dy:3,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 5 units right and 1 unit down",  dx:5,  dy:-1, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 1 unit right and 4 units up",    dx:1,  dy:4,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 3 units right and 4 units down", dx:3,  dy:-4, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 4 units left and 3 units up",    dx:-4, dy:3,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 2 units right and 2 units up",   dx:2,  dy:2,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 1 unit left and 1 unit down",    dx:-1, dy:-1, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 3 units left and 1 unit down",   dx:-3, dy:-1, type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 4 units right and 2 units up",   dx:4,  dy:2,  type:"translate" },
-  { topic:"Translation", r:0, g:180, b:255, label:"Translate 2 units right and 5 units down", dx:2,  dy:-5, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 3 units left and 2 units down", "Traslada 3 unidades a la izquierda y 2 unidades hacia abajo"),  dx:-3, dy:-2, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 4 units right and 1 unit up", "Traslada 4 unidades a la derecha y 1 unidad hacia arriba"),    dx:4,  dy:1,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 2 units left and 3 units up", "Traslada 2 unidades a la izquierda y 3 unidades hacia arriba"),    dx:-2, dy:3,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 5 units right and 1 unit down", "Traslada 5 unidades a la derecha y 1 unidad hacia abajo"),  dx:5,  dy:-1, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 1 unit right and 4 units up", "Traslada 1 unidad a la derecha y 4 unidades hacia arriba"),    dx:1,  dy:4,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 3 units right and 4 units down", "Traslada 3 unidades a la derecha y 4 unidades hacia abajo"), dx:3,  dy:-4, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 4 units left and 3 units up", "Traslada 4 unidades a la izquierda y 3 unidades hacia arriba"),    dx:-4, dy:3,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 2 units right and 2 units up", "Traslada 2 unidades a la derecha y 2 unidades hacia arriba"),   dx:2,  dy:2,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 1 unit left and 1 unit down", "Traslada 1 unidad a la izquierda y 1 unidad hacia abajo"),    dx:-1, dy:-1, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 3 units left and 1 unit down", "Traslada 3 unidades a la izquierda y 1 unidad hacia abajo"),   dx:-3, dy:-1, type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 4 units right and 2 units up", "Traslada 4 unidades a la derecha y 2 unidades hacia arriba"),   dx:4,  dy:2,  type:"translate" },
+  { topic:"Translation", r:0, g:180, b:255, label:tl("Translate 2 units right and 5 units down", "Traslada 2 unidades a la derecha y 5 unidades hacia abajo"), dx:2,  dy:-5, type:"translate" },
   // ---- Reflections ----
-  { topic:"Reflection", r:220, g:80, b:200, label:"Reflect over the x-axis", type:"reflect_x" },
-  { topic:"Reflection", r:220, g:80, b:200, label:"Reflect over the y-axis", type:"reflect_y" },
-  { topic:"Reflection", r:220, g:80, b:200, label:"Reflect over the x-axis", type:"reflect_x" },
-  { topic:"Reflection", r:220, g:80, b:200, label:"Reflect over the y-axis", type:"reflect_y" },
-  { topic:"Reflection", r:220, g:80, b:200, label:"Reflect over the x-axis", type:"reflect_x" },
-  { topic:"Reflection", r:220, g:80, b:200, label:"Reflect over the y-axis", type:"reflect_y" },
+  { topic:"Reflection", r:220, g:80, b:200, label:tl("Reflect over the x-axis", "Refleja sobre el eje x"), type:"reflect_x" },
+  { topic:"Reflection", r:220, g:80, b:200, label:tl("Reflect over the y-axis", "Refleja sobre el eje y"), type:"reflect_y" },
+  { topic:"Reflection", r:220, g:80, b:200, label:tl("Reflect over the x-axis", "Refleja sobre el eje x"), type:"reflect_x" },
+  { topic:"Reflection", r:220, g:80, b:200, label:tl("Reflect over the y-axis", "Refleja sobre el eje y"), type:"reflect_y" },
+  { topic:"Reflection", r:220, g:80, b:200, label:tl("Reflect over the x-axis", "Refleja sobre el eje x"), type:"reflect_x" },
+  { topic:"Reflection", r:220, g:80, b:200, label:tl("Reflect over the y-axis", "Refleja sobre el eje y"), type:"reflect_y" },
   // ---- Rotations about the origin — Practice, Genius in Training, Head-to-Head ----
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CCW about the origin",  cx:0, cy:0, type:"rot90ccw" },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CW about the origin",   cx:0, cy:0, type:"rot90cw"  },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CCW about the origin",  cx:0, cy:0, type:"rot90ccw" },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CW about the origin",   cx:0, cy:0, type:"rot90cw"  },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about the origin",     cx:0, cy:0, type:"rot180"   },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about the origin",     cx:0, cy:0, type:"rot180"   },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about the origin",     cx:0, cy:0, type:"rot180"   },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 360° about the origin",     cx:0, cy:0, type:"rot360"   },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 360° about the origin",     cx:0, cy:0, type:"rot360"   },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 360° about the origin",     cx:0, cy:0, type:"rot360"   },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CCW about the origin", cx:0, cy:0, type:"rot270ccw" },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CW about the origin",  cx:0, cy:0, type:"rot270cw"  },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CCW about the origin", cx:0, cy:0, type:"rot270ccw" },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CW about the origin",  cx:0, cy:0, type:"rot270cw"  },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CCW about the origin", "Gira 90° antihorario sobre el origen"),  cx:0, cy:0, type:"rot90ccw" },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CW about the origin", "Gira 90° horario sobre el origen"),   cx:0, cy:0, type:"rot90cw"  },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CCW about the origin", "Gira 90° antihorario sobre el origen"),  cx:0, cy:0, type:"rot90ccw" },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CW about the origin", "Gira 90° horario sobre el origen"),   cx:0, cy:0, type:"rot90cw"  },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about the origin", "Gira 180° sobre el origen"),     cx:0, cy:0, type:"rot180"   },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about the origin", "Gira 180° sobre el origen"),     cx:0, cy:0, type:"rot180"   },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about the origin", "Gira 180° sobre el origen"),     cx:0, cy:0, type:"rot180"   },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 360° about the origin", "Gira 360° sobre el origen"),     cx:0, cy:0, type:"rot360"   },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 360° about the origin", "Gira 360° sobre el origen"),     cx:0, cy:0, type:"rot360"   },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 360° about the origin", "Gira 360° sobre el origen"),     cx:0, cy:0, type:"rot360"   },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CCW about the origin", "Gira 270° antihorario sobre el origen"), cx:0, cy:0, type:"rot270ccw" },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CW about the origin", "Gira 270° horario sobre el origen"),  cx:0, cy:0, type:"rot270cw"  },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CCW about the origin", "Gira 270° antihorario sobre el origen"), cx:0, cy:0, type:"rot270ccw" },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CW about the origin", "Gira 270° horario sobre el origen"),  cx:0, cy:0, type:"rot270cw"  },
   // ---- Rotations about non-origin centers — Geometry Genius only ----
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CCW about point (1,1)",   cx:1,  cy:1,  type:"rot90ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CW about point (1,1)",    cx:1,  cy:1,  type:"rot90cw",  geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about point (1,1)",      cx:1,  cy:1,  type:"rot180",   geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CCW about point (-1,2)",  cx:-1, cy:2,  type:"rot90ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CW about point (2,-1)",   cx:2,  cy:-1, type:"rot90cw",  geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about point (-1,-1)",    cx:-1, cy:-1, type:"rot180",   geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CCW about point (1,-1)",  cx:1,  cy:-1, type:"rot90ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CW about point (-1,1)",   cx:-1, cy:1,  type:"rot90cw",  geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about point (2,1)",      cx:2,  cy:1,  type:"rot180",   geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CCW about point (0,2)",   cx:0,  cy:2,  type:"rot90ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 90° CW about point (2,0)",    cx:2,  cy:0,  type:"rot90cw",  geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 180° about point (-2,1)",     cx:-2, cy:1,  type:"rot180",   geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CCW about point (1,1)", "Gira 90° antihorario sobre el punto (1,1)"),   cx:1,  cy:1,  type:"rot90ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CW about point (1,1)", "Gira 90° horario sobre el punto (1,1)"),    cx:1,  cy:1,  type:"rot90cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about point (1,1)", "Gira 180° sobre el punto (1,1)"),      cx:1,  cy:1,  type:"rot180",   geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CCW about point (-1,2)", "Gira 90° antihorario sobre el punto (-1,2)"),  cx:-1, cy:2,  type:"rot90ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CW about point (2,-1)", "Gira 90° horario sobre el punto (2,-1)"),   cx:2,  cy:-1, type:"rot90cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about point (-1,-1)", "Gira 180° sobre el punto (-1,-1)"),    cx:-1, cy:-1, type:"rot180",   geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CCW about point (1,-1)", "Gira 90° antihorario sobre el punto (1,-1)"),  cx:1,  cy:-1, type:"rot90ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CW about point (-1,1)", "Gira 90° horario sobre el punto (-1,1)"),   cx:-1, cy:1,  type:"rot90cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about point (2,1)", "Gira 180° sobre el punto (2,1)"),      cx:2,  cy:1,  type:"rot180",   geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CCW about point (0,2)", "Gira 90° antihorario sobre el punto (0,2)"),   cx:0,  cy:2,  type:"rot90ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 90° CW about point (2,0)", "Gira 90° horario sobre el punto (2,0)"),    cx:2,  cy:0,  type:"rot90cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 180° about point (-2,1)", "Gira 180° sobre el punto (-2,1)"),     cx:-2, cy:1,  type:"rot180",   geometryOnly:true },
   // 270° non-origin
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CCW about point (1,1)",  cx:1,  cy:1,  type:"rot270ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CW about point (1,1)",   cx:1,  cy:1,  type:"rot270cw",  geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CCW about point (-1,2)", cx:-1, cy:2,  type:"rot270ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CW about point (2,-1)",  cx:2,  cy:-1, type:"rot270cw",  geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CCW about point (0,2)",  cx:0,  cy:2,  type:"rot270ccw", geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 270° CW about point (2,0)",   cx:2,  cy:0,  type:"rot270cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CCW about point (1,1)", "Gira 270° antihorario sobre el punto (1,1)"),  cx:1,  cy:1,  type:"rot270ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CW about point (1,1)", "Gira 270° horario sobre el punto (1,1)"),   cx:1,  cy:1,  type:"rot270cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CCW about point (-1,2)", "Gira 270° antihorario sobre el punto (-1,2)"), cx:-1, cy:2,  type:"rot270ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CW about point (2,-1)", "Gira 270° horario sobre el punto (2,-1)"),  cx:2,  cy:-1, type:"rot270cw",  geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CCW about point (0,2)", "Gira 270° antihorario sobre el punto (0,2)"),  cx:0,  cy:2,  type:"rot270ccw", geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 270° CW about point (2,0)", "Gira 270° horario sobre el punto (2,0)"),   cx:2,  cy:0,  type:"rot270cw",  geometryOnly:true },
   // 360° non-origin — answer is back to the starting point
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 360° about point (1,1)",      cx:1,  cy:1,  type:"rot360",    geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 360° about point (-1,2)",     cx:-1, cy:2,  type:"rot360",    geometryOnly:true },
-  { topic:"Rotation", r:80, g:220, b:120, label:"Rotate 360° about point (2,-1)",     cx:2,  cy:-1, type:"rot360",    geometryOnly:true }
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 360° about point (1,1)", "Gira 360° sobre el punto (1,1)"),      cx:1,  cy:1,  type:"rot360",    geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 360° about point (-1,2)", "Gira 360° sobre el punto (-1,2)"),     cx:-1, cy:2,  type:"rot360",    geometryOnly:true },
+  { topic:"Rotation", r:80, g:220, b:120, label:tl("Rotate 360° about point (2,-1)", "Gira 360° sobre el punto (2,-1)"),     cx:2,  cy:-1, type:"rot360",    geometryOnly:true }
 ];
 
 // challengePool is built per-mode in buildOrder()
@@ -861,7 +863,7 @@ function drawReflectionDistances() {
       // label above
       var midX1 = constrain((sxPX + axPX) / 2, LBL_MIN_X+28, LBL_MAX_X+54-28);
       var lbY1 = constrain(syPY-15, LBL_MIN_Y, LBL_MAX_Y);
-      drawTag(midX1, lbY1, sDist + " unit" + (sDist!==1?"s":""), 80,210,255);
+      drawTag(midX1, lbY1, sDist + (sDist!==1 ? tl(" units", " unidades") : tl(" unit", " unidad")), 80,210,255);
     }
 
     // --- Axis → player (dynamic, green), only when player has left the axis ---
@@ -1082,7 +1084,7 @@ function drawTranslationHelper() {
     var midHX=constrain((sxPX+cxPX)/2, LBL_MIN_X, LBL_MAX_X);
     var lbY=constrain(syPY+(cyPY>syPY?-14:14), LBL_MIN_Y, LBL_MAX_Y);
     var hLabel=isAlgebraic ? ("x "+(dxU>0?"+ ":"- ")+Math.abs(dxU))
-                           : ((Math.abs(dxU)===1?"1 unit":Math.abs(dxU)+" units")+(dxU>0?" right":" left"));
+                           : ((Math.abs(dxU)===1?tl("1 unit", "1 unidad"):Math.abs(dxU)+tl(" units", " unidades"))+(dxU>0?tl(" right", " a la derecha"):tl(" left", " a la izquierda")));
     drawTag(midHX, lbY, hLabel, 255,110,110);
   }
 
@@ -1095,7 +1097,7 @@ function drawTranslationHelper() {
     var midVY=constrain((syPY+cyPY)/2, LBL_MIN_Y, LBL_MAX_Y);
     var lbX=constrain(cxPX+(cxPX<300?34:-34), LBL_MIN_X, LBL_MAX_X);
     var vLabel=isAlgebraic ? ("y "+(dyU>0?"+ ":"- ")+Math.abs(dyU))
-                           : ((Math.abs(dyU)===1?"1 unit":Math.abs(dyU)+" units")+(dyU>0?" up":" down"));
+                           : ((Math.abs(dyU)===1?tl("1 unit", "1 unidad"):Math.abs(dyU)+tl(" units", " unidades"))+(dyU>0?tl(" up", " hacia arriba"):tl(" down", " hacia abajo")));
     drawTag(lbX, midVY, vLabel, 80,255,160);
   }
 }
@@ -1113,9 +1115,9 @@ function drawTracingPaper() {
     var bannerTop = hudHeight()+4;
     fill(10,20,60,230); stroke(80,120,220); strokeWeight(1); rect(10,bannerTop,380,32,8);
     fill(180,210,255); textSize(11); textAlign(CENTER,CENTER); noStroke();
-    text("STEP 1: Use arrow keys to move pencil to center of rotation",200,bannerTop+12);
+    text(tl("STEP 1: Use arrow keys to move pencil to center of rotation", "PASO 1: Usa las flechas para llevar el lápiz al centro de rotación"),200,bannerTop+12);
     fill(140,170,220); textSize(10);
-    text("Then press SPACE to pin it there",200,bannerTop+26);
+    text(tl("Then press SPACE to pin it there", "Luego presiona ESPACIO para fijarlo ahí"),200,bannerTop+26);
     for (var gx2=GRID_MIN;gx2<=GRID_MAX;gx2++)
       for (var gy2=GRID_MIN;gy2<=GRID_MAX;gy2++) {
         noFill(); stroke(80,120,200,80); strokeWeight(1);
@@ -1128,7 +1130,7 @@ function drawTracingPaper() {
     // Ends well above the bottom instruction bar (376-400) - it used to
     // reach into that bar's territory and visually collide with its
     // "Arrow keys: move pencil..." hint text.
-    if (drawButton(140,340,120,28,"CONFIRM CENTER",0,140,60)) confirmCenter();
+    if (drawButton(140,340,120,28,tl("CONFIRM CENTER", "CONFIRMAR CENTRO"),0,140,60)) confirmCenter();
     return;
   }
 
@@ -1248,7 +1250,7 @@ function drawTracingPaper() {
       fill(0,0,0,200); noStroke(); rect(alx-28,aly-9,56,18,6);
       fill(255,200,60); noStroke(); textSize(10); textAlign(CENTER,CENTER);
       var absDeg=Math.abs(Math.round(paperSignedAngle));
-      var arcLbl=absDeg===0?"0°":paperSignedAngle>0?absDeg+"° CCW":absDeg+"° CW";
+      var arcLbl=absDeg===0?"0°":paperSignedAngle>0?absDeg+tl("° CCW", "° antihorario"):absDeg+tl("° CW", "° horario");
       text(arcLbl,alx,aly);
     }
 
@@ -1256,7 +1258,7 @@ function drawTracingPaper() {
     fill(255,60,60); noStroke(); ellipse(cx,cy,10,10);
     fill(255); ellipse(cx,cy,4,4);
 
-    if (drawButton(8,350,130,26,"< Change Center (C)",60,30,100) || keyWentDown("c")) {   // C key = the same as clicking it
+    if (drawButton(8,350,130,26,tl("< Change Center (C)", "< Cambiar centro (C)"),60,30,100) || keyWentDown("c")) {   // C key = the same as clicking it
       tracingPhase="PENCIL";
       pencilX=toPixelX(centerGX); pencilY=toPixelY(centerGY);
       pencilGX=centerGX; pencilGY=centerGY;
@@ -1376,27 +1378,27 @@ function drawHUD(){
 
   if(gameMode==="HEADTOHEAD"){
     fill(55,10,10);    rect(8,  pY,pW,pH,7);
-    fill(255,100,100); textSize(12); text("P1: "+p1wins+" wins",  67, pCY);
+    fill(255,100,100); textSize(12); text("P1: "+p1wins+tl(" wins", " victorias"),  67, pCY);
     fill(20,20,50);    rect(141,pY,pW,pH,7);
-    fill(210,210,255); textSize(12); text("Round "+(round+1)+" / "+TOTAL_ROUNDS, 200,pCY);
+    fill(210,210,255); textSize(12); text(tl("Round ", "Ronda ")+(round+1)+" / "+TOTAL_ROUNDS, 200,pCY);
     fill(10,10,55);    rect(274,pY,pW,pH,7);
-    fill(100,160,255); textSize(12); text("P2: "+p2wins+" wins",  333,pCY);
+    fill(100,160,255); textSize(12); text("P2: "+p2wins+tl(" wins", " victorias"),  333,pCY);
   } else if(gameMode==="PRACTICE"){
     fill(topicR,topicG,topicB,200); rect(8,  pY,pW,pH,7);
-    fill(255);         textSize(13); text(topicLabel,             67, pCY);
+    fill(255);         textSize(13); text(topicName(topicLabel),              67, pCY);
     fill(50,38,0);     rect(141,pY,pW,pH,7);
-    fill(255,210,60);  textSize(13); text("Q #"+practiceQNum, 200,pCY);
+    fill(255,210,60);  textSize(13); text(tl("Q #", "P #")+practiceQNum, 200,pCY);
     // Pill 3: active skills indicator (no timer)
     var skStr=(skillTranslations?"T ":"")+(skillRotations?"R ":"")+(skillReflections?"F":"");
     fill(20,0,40);     rect(274,pY,pW,pH,7);
-    fill(200,160,255); textSize(11); text("Skills: "+skStr.trim(), 333,pCY);
+    fill(200,160,255); textSize(11); text(tl("Skills: ", "Destrezas: ")+skStr.trim(), 333,pCY);
   } else {
     // Pill 1: Transformation type (topic colour background)
     fill(topicR,topicG,topicB,200); rect(8,  pY,pW,pH,7);
-    fill(255);         textSize(13); text(topicLabel,             67, pCY);
+    fill(255);         textSize(13); text(topicName(topicLabel),              67, pCY);
     // Pill 2: Round number
     fill(50,38,0);     rect(141,pY,pW,pH,7);
-    fill(255,210,60);  textSize(13); text("Round "+(round+1)+" / "+TOTAL_ROUNDS, 200,pCY);
+    fill(255,210,60);  textSize(13); text(tl("Round ", "Ronda ")+(round+1)+" / "+TOTAL_ROUNDS, 200,pCY);
     // Pill 3: Timer
     var te=(timerFinished>0?timerFinished:(Date.now()-timerStart)/1000);
     fill(0,25,50);     rect(274,pY,pW,pH,7);
@@ -1436,7 +1438,7 @@ function drawHUD(){
     fill(mbCol); rect(mbX,mbY,mbFillW,mbH,5);
     noFill(); stroke(80,100,150); strokeWeight(1); rect(mbX,mbY,mbW,mbH,5);
     fill(200,215,255); noStroke(); textSize(8); textAlign(CENTER,CENTER);
-    text(practiceMastery>=50?"MASTERY "+practiceMastery+"% — harder questions unlocked!":"MASTERY "+practiceMastery+"%", 200, mbY+mbH/2);
+    text(practiceMastery>=50?tl("MASTERY ", "DOMINIO ")+practiceMastery+tl("% — harder questions unlocked!", "% — ¡preguntas más difíciles desbloqueadas!"):tl("MASTERY ", "DOMINIO ")+practiceMastery+"%", 200, mbY+mbH/2);
   }
 
   // Bottom bar
@@ -1449,14 +1451,14 @@ function drawHUD(){
     // MENU button always visible — shift hint text right so it doesn't overlap
     var hintCX = 235;
     if(gameMode==="HEADTOHEAD"){
-      text(h2hOnCircle()?"UP = CCW   DOWN = CW  |  P1: W/S + Space   P2: Arrows + Enter":"P1: WASD + Space   |   P2: Arrows + Enter",200,388);
+      text(h2hOnCircle()?tl("UP = CCW   DOWN = CW  |  P1: W/S + Space   P2: Arrows + Enter", "ARRIBA = antihorario   ABAJO = horario  |  J1: W/S + Espacio   J2: Flechas + Enter"):tl("P1: WASD + Space   |   P2: Arrows + Enter", "J1: WASD + Espacio   |   J2: Flechas + Enter"),200,388);
     } else if(isRotation(ch)&&tracingPhase==="PAPER"){
-      if(gameMode!=="GEOMETRY") text("UP=CCW  DOWN=CW  |  SPACE: submit",hintCX,388);
-      else text("SPACE: submit answer",hintCX,388);
+      if(gameMode!=="GEOMETRY") text(tl("UP=CCW  DOWN=CW  |  SPACE: submit", "ARRIBA=antihorario  ABAJO=horario  |  ESPACIO: enviar"),hintCX,388);
+      else text(tl("SPACE: submit answer", "ESPACIO: enviar respuesta"),hintCX,388);
     } else if(isRotation(ch)&&tracingPhase==="PENCIL"){
-      text("Arrow keys: move pencil  |  SPACE: confirm center",hintCX,388);
+      text(tl("Arrow keys: move pencil  |  SPACE: confirm center", "Flechas: mover el lápiz  |  ESPACIO: confirmar centro"),hintCX,388);
     } else {
-      text("Arrow keys: move  |  SPACE: submit",hintCX,388);
+      text(tl("Arrow keys: move  |  SPACE: submit", "Flechas: mover  |  ESPACIO: enviar"),hintCX,388);
     }
   }
 
@@ -1466,7 +1468,7 @@ function drawHUD(){
     fill(mbHov?110:65,mbHov?55:35,mbHov?155:110);
     stroke(120,70,180); strokeWeight(1); rect(5,379,56,16,6);
     fill(255); noStroke(); textSize(9); textAlign(CENTER,CENTER);
-    text("MENU",33,388);
+    text(tl("MENU", "MENÚ"),33,388);
     if(mbHov&&mouseWentDown("left")){ exitConfirmPending=true; exitConfirmSel=1; }
   }
 }
@@ -1474,9 +1476,9 @@ function drawHUD(){
 function drawExitConfirmOverlay(){
   fill(8,10,18); noStroke(); rect(0,0,400,400);
   fill(255); textAlign(CENTER,CENTER); textSize(20);
-  text("Exit to Main Menu?",200,150);
+  text(tl("Exit to Main Menu?", "¿Salir al menú principal?"),200,150);
   fill(180,190,220); textSize(13);
-  text("Your progress this round will be lost.",200,178);
+  text(tl("Your progress this round will be lost.", "Se perderá tu progreso en esta ronda."),200,178);
 
   var hoverYes=(mouseX>=60&&mouseX<=190&&mouseY>=225&&mouseY<=270);
   var hoverNo=(mouseX>=210&&mouseX<=340&&mouseY>=225&&mouseY<=270);
@@ -1486,9 +1488,9 @@ function drawExitConfirmOverlay(){
   fill(selYes?220:180,60,60); stroke(255); strokeWeight(selYes?4:2); rect(60,225,130,45,10);
   fill(selNo?40:20,selNo?190:150,selNo?90:70); stroke(255); strokeWeight(selNo?4:2); rect(210,225,130,45,10);
   fill(255); noStroke(); textSize(14);
-  text("YES, EXIT",125,247); text("CANCEL",275,247);
+  text(tl("YES, EXIT", "SÍ, SALIR"),125,247); text(tl("CANCEL", "CANCELAR"),275,247);
   fill(180,190,220); textSize(10);
-  text("Arrow keys: choose  |  Enter/Space: confirm  |  Esc: cancel",200,300);
+  text(tl("Arrow keys: choose  |  Enter/Space: confirm  |  Esc: cancel", "Flechas: elegir  |  Enter/Espacio: confirmar  |  Esc: cancelar"),200,300);
 
   if(mouseWentDown("left")){
     if(hoverYes){ exitConfirmPending=false; STATE="START"; }
@@ -1506,25 +1508,25 @@ function drawTimeoutPopup(){
   fill(8,10,18); noStroke(); rect(0,0,400,400);
   fill(255); textAlign(CENTER,CENTER); textStyle(BOLD); textSize(22);
   if(timeoutPopupState==="expired"){
-    text("Time Expired",200,165);
+    text(tl("Time Expired", "Se acabó el tiempo"),200,165);
     fill(180,190,220); textSize(13); textStyle(NORMAL);
-    text("This session has been open a while.",200,192);
+    text(tl("This session has been open a while.", "Esta sesión lleva un buen rato abierta."),200,192);
 
     var hoverMenu=(mouseX>=150&&mouseX<=250&&mouseY>=225&&mouseY<=268);
     fill(hoverMenu?"#1f8f4a":"#27ae60"); stroke(255); strokeWeight(2); rect(150,225,100,43,10);
     fill(255); noStroke(); textSize(15); textStyle(BOLD);
-    text("MENU",200,247); textStyle(NORMAL);
+    text(tl("MENU", "MENÚ"),200,247); textStyle(NORMAL);
 
     if((mouseWentDown("left")&&hoverMenu)||keyWentDown("space")||keyWentDown("enter")){ timeoutPopupState="none"; STATE="START"; }
   } else {
-    text("Still there?",200,165);
+    text(tl("Still there?", "¿Sigues ahí?"),200,165);
     fill(180,190,220); textSize(13); textStyle(NORMAL);
-    text("Tap below or press SPACE to keep going.",200,192);
+    text(tl("Tap below or press SPACE to keep going.", "Toca abajo o presiona ESPACIO para seguir."),200,192);
 
     var hoverYes=(mouseX>=100&&mouseX<=300&&mouseY>=225&&mouseY<=270);
     fill(hoverYes?"#229954":"#27ae60"); stroke(255); strokeWeight(2); rect(100,225,200,45,10);
     fill(255); noStroke(); textSize(16); textStyle(BOLD);
-    text("YES, I'M HERE",200,247); textStyle(NORMAL);
+    text(tl("YES, I'M HERE", "SÍ, AQUÍ ESTOY"),200,247); textStyle(NORMAL);
 
     if((mouseWentDown("left")&&hoverYes)||keyWentDown("space")||keyWentDown("enter")){ timeoutPopupState="none"; timerStart=Date.now(); }
   }
@@ -2029,7 +2031,7 @@ function drawPracticeHintGraphic(hintType, yShift) {
   if (hintType==="cwccw") {
     var hy=262;
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You rotated the right amount but the wrong direction!",200,197);
+    text(tl("You rotated the right amount but the wrong direction!", "¡Giraste bien la cantidad, pero al revés!"),200,197);
 
     // --- CW side (left): full circle + arrow at TOP pointing RIGHT + arrow at BOTTOM pointing LEFT ---
     var lcx=110, lcy=hy, lr=40;
@@ -2048,10 +2050,10 @@ function drawPracticeHintGraphic(hintType, yShift) {
              cwBotX+cos(330)*12, cwBotY+sin(330)*12,
              cwBotX+cos(30)*12,  cwBotY+sin(30)*12);
     fill(255,180,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("CW",lcx,lcy);
+    text(tl("CW","↻"),lcx,lcy);
     fill(255,140,60); textSize(12);
-    text("Clockwise",lcx,lcy+lr+15);
-    text("(like a clock)",lcx,lcy+lr+29);
+    text(tl("Clockwise", "Horario"),lcx,lcy+lr+15);
+    text(tl("(like a clock)", "(como el reloj)"),lcx,lcy+lr+29);
 
     // --- CCW side (right): full circle + arrow at TOP pointing LEFT + arrow at BOTTOM pointing RIGHT ---
     var rcx=290, rcy=hy, rr=40;
@@ -2070,16 +2072,16 @@ function drawPracticeHintGraphic(hintType, yShift) {
              ccwBotX+cos(150)*12, ccwBotY+sin(150)*12,
              ccwBotX+cos(-150)*12,ccwBotY+sin(-150)*12);
     fill(160,210,255); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("CCW",rcx,rcy);
+    text(tl("CCW","↺"),rcx,rcy);
     fill(100,180,255); textSize(12);
-    text("Counter-Clockwise",rcx,rcy+rr+15);
-    text("(opposite of clock)",rcx,rcy+rr+29);
+    text(tl("Counter-Clockwise", "Antihorario"),rcx,rcy+rr+15);
+    text(tl("(opposite of clock)", "(al revés del reloj)"),rcx,rcy+rr+29);
   }
 
   // Wrong degree amount diagram
   if (hintType==="degrees") {
     fill(220,220,255); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Each 90° = one right-angle turn.",200,198);
+    text(tl("Each 90° = one right-angle turn.", "Cada 90° = un giro de ángulo recto."),200,198);
 
     // Diagram: center + 4 arms at 90° intervals, showing 0°=start, 90°, 180°, 270°
     // - matching the CURRENT question's actual turn direction, not always
@@ -2091,7 +2093,7 @@ function drawPracticeHintGraphic(hintType, yShift) {
     // Arms - screen angles: -90=up, 0=right, 90=down, 180=left. Start is
     // always up; CW then goes up->right->down->left, CCW up->left->down->right.
     var armAngles = isCCWDeg ? [-90,180,90,0] : [-90,0,90,180];
-    var armLabels=["Start: 0°","90°","180°","270°"];
+    var armLabels=[tl("Start: 0°", "Inicio: 0°"),"90°","180°","270°"];
     var armColors=[[180,180,220],[100,220,120],[255,180,60],[220,100,100]];
     for(var ri=0;ri<4;ri++){
       stroke(armColors[ri][0],armColors[ri][1],armColors[ri][2]); strokeWeight(2.5);
@@ -2110,19 +2112,19 @@ function drawPracticeHintGraphic(hintType, yShift) {
   // rotation_other
   if (hintType==="rotation_other") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Make sure you set the center of rotation first,",200,210);
-    text("then rotate the paper until the point hits the target!",200,228);
+    text(tl("Make sure you set the center of rotation first,", "Primero fija el centro de rotación,"),200,210);
+    text(tl("then rotate the paper until the point hits the target!", "¡luego gira el papel hasta que el punto llegue a la meta!"),200,228);
   }
 
   // ---- REFLECTION HINTS ----
   if (hintType==="reflect_wrong_axis") {
     var ch2=curCh();
-    var correctAxis=(ch2.type==="reflect_x")?"x-axis":"y-axis";
-    var wrongAxis  =(ch2.type==="reflect_x")?"y-axis":"x-axis";
+    var correctAxis=(ch2.type==="reflect_x")?tl("x-axis", "eje x"):tl("y-axis", "eje y");
+    var wrongAxis  =(ch2.type==="reflect_x")?tl("y-axis", "eje y"):tl("x-axis", "eje x");
     fill(255,100,100); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You reflected over the "+wrongAxis+"!",200,200);
+    text(tl("You reflected over the ", "¡Reflejaste sobre el ")+wrongAxis+"!",200,200);
     fill(255,200,60); textSize(12);
-    text("This question asks you to reflect over the "+correctAxis+".",200,218);
+    text(tl("This question asks you to reflect over the ", "Esta pregunta pide reflejar sobre el ")+correctAxis+".",200,218);
     // Mini axis diagram
     var axcx=200, axcy=272, axr=34;
     stroke(80,80,80); strokeWeight(1);
@@ -2130,12 +2132,12 @@ function drawPracticeHintGraphic(hintType, yShift) {
     line(axcx,axcy-axr-14,axcx,axcy+axr+14);
     if(ch2.type==="reflect_x"){
       stroke(100,220,255); strokeWeight(3); line(axcx-axr,axcy,axcx+axr,axcy);
-      fill(100,220,255); noStroke(); textSize(10); text("x-axis ← reflect over this!",axcx,axcy+axr+16);
-      fill(180,80,80); textSize(10); text("y-axis",axcx+axr+18,axcy-7);
+      fill(100,220,255); noStroke(); textSize(10); text(tl("x-axis ← reflect over this!", "eje x ← ¡refleja sobre este!"),axcx,axcy+axr+16);
+      fill(180,80,80); textSize(10); text(tl("y-axis", "eje y"),axcx+axr+18,axcy-7);
     } else {
       stroke(100,220,255); strokeWeight(3); line(axcx,axcy-axr,axcx,axcy+axr);
-      fill(100,220,255); noStroke(); textSize(10); text("y-axis ← reflect over this!",axcx,axcy-axr-12);
-      fill(180,80,80); textSize(10); text("x-axis",axcx+axr+18,axcy-7);
+      fill(100,220,255); noStroke(); textSize(10); text(tl("y-axis ← reflect over this!", "eje y ← ¡refleja sobre este!"),axcx,axcy-axr-12);
+      fill(180,80,80); textSize(10); text(tl("x-axis", "eje x"),axcx+axr+18,axcy-7);
     }
     fill(255,220,60); noStroke(); ellipse(axcx-16,axcy-16,7,7);
     fill(255,220,60); textSize(9); text("you",axcx-16,axcy-26);
@@ -2143,89 +2145,89 @@ function drawPracticeHintGraphic(hintType, yShift) {
 
   if (hintType==="reflect_no_move") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You didn't move!",200,205);
+    text(tl("You didn't move!", "¡No te moviste!"),200,205);
     fill(220,220,255); textSize(12);
-    text("Reflecting means flipping the point across the axis.",200,224);
-    text("Move to the other side and submit.",200,242);
+    text(tl("Reflecting means flipping the point across the axis.", "Reflejar es voltear el punto al otro lado del eje."),200,224);
+    text(tl("Move to the other side and submit.", "Muévete al otro lado y envía."),200,242);
   }
 
   if (hintType==="reflect_other") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Reflecting flips the point straight across the axis.",200,210);
+    text(tl("Reflecting flips the point straight across the axis.", "Reflejar voltea el punto en línea recta al otro lado del eje."),200,210);
     fill(220,220,255); textSize(12);
-    text("Only one coordinate changes — the other stays the same.",200,229);
+    text(tl("Only one coordinate changes — the other stays the same.", "Solo cambia una coordenada — la otra se queda igual."),200,229);
   }
 
   // ---- TRANSLATION HINTS ----
   if (hintType==="translate_negated") {
     fill(255,100,100); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You went the exact OPPOSITE direction!",200,205);
+    text(tl("You went the exact OPPOSITE direction!", "¡Fuiste en la dirección exactamente CONTRARIA!"),200,205);
     fill(255,200,60); textSize(12);
-    text("+ x means RIGHT,  − x means LEFT",200,226);
-    text("+ y means UP,  − y means DOWN",200,244);
+    text(tl("+ x means RIGHT,  − x means LEFT", "+ x es DERECHA,  − x es IZQUIERDA"),200,226);
+    text(tl("+ y means UP,  − y means DOWN", "+ y es ARRIBA,  − y es ABAJO"),200,244);
   }
 
   if (hintType==="translate_wrong_x") {
     var ch3=curCh();
-    var xDir=(ch3.dx>0)?"right":"left";
+    var xDir=(ch3.dx>0)?tl("right","a la derecha"):tl("left","a la izquierda");
     fill(255,150,80); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Your left/right direction was wrong!",200,205);
+    text(tl("Your left/right direction was wrong!", "¡Tu dirección izquierda/derecha estuvo mal!"),200,205);
     fill(255,200,60); textSize(12);
-    text("The x value "+(ch3.dx>0?"+":"−")+Math.abs(ch3.dx)+" means "+(Math.abs(ch3.dx)===1?"1 unit":Math.abs(ch3.dx)+" units")+" "+xDir+".",200,226);
-    text("Positive x (+) = RIGHT,  Negative x (−) = LEFT",200,244);
+    text(tl("The x value ", "El valor x ")+(ch3.dx>0?"+":"−")+Math.abs(ch3.dx)+tl(" means ", " significa ")+(Math.abs(ch3.dx)===1?tl("1 unit", "1 unidad"):Math.abs(ch3.dx)+tl(" units", " unidades"))+" "+xDir+".",200,226);
+    text(tl("Positive x (+) = RIGHT,  Negative x (−) = LEFT", "x positiva (+) = DERECHA,  x negativa (−) = IZQUIERDA"),200,244);
   }
 
   if (hintType==="translate_wrong_y") {
     var ch4=curCh();
-    var yDir=(ch4.dy>0)?"up":"down";
+    var yDir=(ch4.dy>0)?tl("up","hacia arriba"):tl("down","hacia abajo");
     fill(255,150,80); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Your up/down direction was wrong!",200,205);
+    text(tl("Your up/down direction was wrong!", "¡Tu dirección arriba/abajo estuvo mal!"),200,205);
     fill(255,200,60); textSize(12);
-    text("The y value "+(ch4.dy>0?"+":"−")+Math.abs(ch4.dy)+" means "+(Math.abs(ch4.dy)===1?"1 unit":Math.abs(ch4.dy)+" units")+" "+yDir+".",200,226);
-    text("Positive y (+) = UP,  Negative y (−) = DOWN",200,244);
+    text(tl("The y value ", "El valor y ")+(ch4.dy>0?"+":"−")+Math.abs(ch4.dy)+tl(" means ", " significa ")+(Math.abs(ch4.dy)===1?tl("1 unit", "1 unidad"):Math.abs(ch4.dy)+tl(" units", " unidades"))+" "+yDir+".",200,226);
+    text(tl("Positive y (+) = UP,  Negative y (−) = DOWN", "y positiva (+) = ARRIBA,  y negativa (−) = ABAJO"),200,244);
   }
 
   if (hintType==="translate_missing_y") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You only moved left/right!",200,205);
+    text(tl("You only moved left/right!", "¡Solo te moviste a la izquierda/derecha!"),200,205);
     fill(220,220,255); textSize(12);
-    text("Don't forget to also move up or down.",200,226);
-    text("Translations move BOTH x and y.",200,244);
+    text(tl("Don't forget to also move up or down.", "No olvides moverte también arriba o abajo."),200,226);
+    text(tl("Translations move BOTH x and y.", "Las traslaciones mueven x Y y."),200,244);
   }
 
   if (hintType==="translate_missing_x") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You only moved up/down!",200,205);
+    text(tl("You only moved up/down!", "¡Solo te moviste arriba/abajo!"),200,205);
     fill(220,220,255); textSize(12);
-    text("Don't forget to also move left or right.",200,226);
-    text("Translations move BOTH x and y.",200,244);
+    text(tl("Don't forget to also move left or right.", "No olvides moverte también a la izquierda o derecha."),200,226);
+    text(tl("Translations move BOTH x and y.", "Las traslaciones mueven x Y y."),200,244);
   }
 
   if (hintType==="translate_swapped") {
     fill(255,150,80); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You swapped the x and y values!",200,205);
+    text(tl("You swapped the x and y values!", "¡Intercambiaste los valores de x y y!"),200,205);
     fill(255,200,60); textSize(12);
-    text("The FIRST number (x) = move LEFT or RIGHT.",200,226);
-    text("The SECOND number (y) = move UP or DOWN.",200,244);
+    text(tl("The FIRST number (x) = move LEFT or RIGHT.", "El PRIMER número (x) = mover a la IZQUIERDA o DERECHA."),200,226);
+    text(tl("The SECOND number (y) = move UP or DOWN.", "El SEGUNDO número (y) = mover ARRIBA o ABAJO."),200,244);
   }
 
   if (hintType==="translate_no_move") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("You didn't move!",200,210);
+    text(tl("You didn't move!", "¡No te moviste!"),200,210);
     fill(220,220,255); textSize(12);
-    text("Use the arrow keys to slide the point.",200,231);
+    text(tl("Use the arrow keys to slide the point.", "Usa las flechas para deslizar el punto."),200,231);
   }
 
   if (hintType==="translate_other") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Count the units carefully!",200,210);
+    text(tl("Count the units carefully!", "¡Cuenta las unidades con cuidado!"),200,210);
     fill(220,220,255); textSize(12);
-    text("Move exactly the right amount in each direction.",200,229);
+    text(tl("Move exactly the right amount in each direction.", "Muévete exactamente lo necesario en cada dirección."),200,229);
   }
 
   if (hintType==="generic") {
     fill(255,200,60); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("Review the challenge label and try again!",200,218);
+    text(tl("Review the challenge label and try again!", "¡Revisa el reto y vuelve a intentarlo!"),200,218);
   }
   pop();
 }
@@ -2263,81 +2265,81 @@ function drawFeedback(){
 
   // ---- HEAD TO HEAD ----
   if(gameMode==="HEADTOHEAD"){
-    var wName=roundWinner===1?"Player 1":"Player 2";
+    var wName=roundWinner===1?tl("Player 1", "Jugador 1"):tl("Player 2", "Jugador 2");
     if(roundWinner===1){fill(255,100,100);}else{fill(100,160,255);}
-    fitText(wName+" scores!",cx,cardY+44,bw,22);
-    fill(255); fitText("Correct: ("+targetGX+", "+targetGY+")",cx,cardY+100,bw,20);
+    fitText(wName+tl(" scores!", " ¡anota!"),cx,cardY+44,bw,22);
+    fill(255); fitText(tl("Correct: (", "Correcto: (")+targetGX+", "+targetGY+")",cx,cardY+100,bw,20);
     fill(255,220,60); fitText("P1: "+p1wins+"  |  P2: "+p2wins,cx,cardY+132,bw,20);
     stroke(255,255,255,50); strokeWeight(1);
     line(cardX+20,cardY+157,cardX+cardW-20,cardY+157); noStroke();
-    fill(200,220,255); fitText("SPACE or ENTER",cx,cardY+196,bw,15);
+    fill(200,220,255); fitText(tl("SPACE or ENTER", "ESPACIO o ENTER"),cx,cardY+196,bw,15);
     return;
   }
 
   // ---- CORRECT via a 0° "rotation" on a 360° question ----
   if(feedbackCorrect&&isZeroFor360){
-    fill(255); fitText("CORRECT!",cx,cardY+44,bw,28);
+    fill(255); fitText(tl("CORRECT!", "¡CORRECTO!"),cx,cardY+44,bw,28);
     fill(230,250,255); fitText("("+lockedGX+", "+lockedGY+")",cx,cardY+96,bw,22);
-    fill(255,230,80); fitText("Nice! A rotation of 0 degree is the same",cx,cardY+140,bw,14);
-    fitText("as 360 degrees! A full circle!",cx,cardY+158,bw,14);
-    fill(200,220,255); fitText("SPACE to continue",cx,cardY+208,bw,15);
+    fill(255,230,80); fitText(tl("Nice! A rotation of 0 degree is the same", "¡Bien! Una rotación de 0 grados es igual"),cx,cardY+140,bw,14);
+    fitText(tl("as 360 degrees! A full circle!", "a una de 360 grados. ¡Una vuelta completa!"),cx,cardY+158,bw,14);
+    fill(200,220,255); fitText(tl("SPACE to continue", "ESPACIO para continuar"),cx,cardY+208,bw,15);
     return;
   }
 
   // ---- CORRECT with equivalent rotation (other direction, same endpoint) ----
   if(feedbackCorrect&&equivalentRotation){
-    fill(255); fitText("CORRECT!",cx,cardY+44,bw,28);
+    fill(255); fitText(tl("CORRECT!", "¡CORRECTO!"),cx,cardY+44,bw,28);
     fill(230,250,255); fitText("("+lockedGX+", "+lockedGY+")",cx,cardY+96,bw,22);
-    fill(255,230,80); fitText("Nice — going the other direction",cx,cardY+140,bw,14);
-    fitText("reaches the same point!",cx,cardY+158,bw,14);
-    fill(200,220,255); fitText("SPACE to continue",cx,cardY+208,bw,15);
+    fill(255,230,80); fitText(tl("Nice — going the other direction", "¡Bien! Ir en la otra dirección"),cx,cardY+140,bw,14);
+    fitText(tl("reaches the same point!", "¡llega al mismo punto!"),cx,cardY+158,bw,14);
+    fill(200,220,255); fitText(tl("SPACE to continue", "ESPACIO para continuar"),cx,cardY+208,bw,15);
     return;
   }
 
   // ---- CORRECT (all non-H2H modes) ----
   if(feedbackCorrect){
-    fill(255); fitText("CORRECT!",cx,cardY+44,bw,28);
+    fill(255); fitText(tl("CORRECT!", "¡CORRECTO!"),cx,cardY+44,bw,28);
     fill(230,250,255); fitText("("+lockedGX+", "+lockedGY+")",cx,cardY+100,bw,22);
-    fill(200,220,255); fitText("SPACE to continue",cx,cardY+163,bw,15);
+    fill(200,220,255); fitText(tl("SPACE to continue", "ESPACIO para continuar"),cx,cardY+163,bw,15);
     return;
   }
 
   // ---- WRONG: rotation hint (all modes) ----
   // cardH=310 for diagram hints, 260 for text hints; prompt anchored 28px from card bottom.
   if(showRotHint){
-    fill(255); fitText("NOT QUITE!",cx,cardY+30,bw,22);
-    fill(230,250,255); fitText("You: ("+lockedGX+", "+lockedGY+")",cx,cardY+60,bw,16);
-    fitText("Correct: ("+targetGX+", "+targetGY+")",cx,cardY+82,bw,16);
+    fill(255); fitText(tl("NOT QUITE!", "¡CASI!"),cx,cardY+30,bw,22);
+    fill(230,250,255); fitText(tl("You: (", "Tú: (")+lockedGX+", "+lockedGY+")",cx,cardY+60,bw,16);
+    fitText(tl("Correct: (", "Correcto: (")+targetGX+", "+targetGY+")",cx,cardY+82,bw,16);
     drawPracticeHintGraphic(practiceHintType, cardY-90);
-    var contLabel=(gameMode==="GEOMETRY")?"SPACE to continue":"SPACE to try again";
+    var contLabel=(gameMode==="GEOMETRY")?tl("SPACE to continue", "ESPACIO para continuar"):tl("SPACE to try again", "ESPACIO para reintentar");
     fill(200,220,255); fitText(contLabel,cx,cardY+cardH-28,bw,15);
     return;
   }
 
   // ---- WRONG: PRACTICE non-rotation hints ----
   if(gameMode==="PRACTICE"){
-    fill(255); fitText("NOT QUITE!",cx,cardY+30,bw,22);
-    fill(230,250,255); fitText("You chose ("+lockedGX+", "+lockedGY+")",cx,cardY+60,bw,15);
-    fitText("Correct: ("+targetGX+", "+targetGY+")",cx,cardY+82,bw,15);
+    fill(255); fitText(tl("NOT QUITE!", "¡CASI!"),cx,cardY+30,bw,22);
+    fill(230,250,255); fitText(tl("You chose (", "Elegiste (")+lockedGX+", "+lockedGY+")",cx,cardY+60,bw,15);
+    fitText(tl("Correct: (", "Correcto: (")+targetGX+", "+targetGY+")",cx,cardY+82,bw,15);
     drawPracticeHintGraphic(practiceHintType, cardY-90);
-    fill(200,220,255); fitText("SPACE to try again",cx,cardY+cardH-28,bw,15);
+    fill(200,220,255); fitText(tl("SPACE to try again", "ESPACIO para reintentar"),cx,cardY+cardH-28,bw,15);
     return;
   }
 
   // ---- WRONG: GENIUS ----
   if(gameMode==="GENIUS"){
-    fill(255); fitText("NOT QUITE!",cx,cardY+40,bw,22);
-    fill(230,250,255); fitText("You: ("+lockedGX+", "+lockedGY+")",cx,cardY+90,bw,20);
-    fitText("Correct: ("+targetGX+", "+targetGY+")",cx,cardY+118,bw,20);
-    fill(200,220,255); fitText("SPACE to try again",cx,cardY+178,bw,15);
+    fill(255); fitText(tl("NOT QUITE!", "¡CASI!"),cx,cardY+40,bw,22);
+    fill(230,250,255); fitText(tl("You: (", "Tú: (")+lockedGX+", "+lockedGY+")",cx,cardY+90,bw,20);
+    fitText(tl("Correct: (", "Correcto: (")+targetGX+", "+targetGY+")",cx,cardY+118,bw,20);
+    fill(200,220,255); fitText(tl("SPACE to try again", "ESPACIO para reintentar"),cx,cardY+178,bw,15);
     return;
   }
 
   // ---- WRONG: GEOMETRY / default ----
-  fill(255); fitText("NOT QUITE!",cx,cardY+40,bw,22);
-  fill(230,250,255); fitText("You: ("+lockedGX+", "+lockedGY+")",cx,cardY+90,bw,20);
-  fitText("Correct: ("+targetGX+", "+targetGY+")",cx,cardY+118,bw,20);
-  fill(200,220,255); fitText("SPACE to continue",cx,cardY+178,bw,15);
+  fill(255); fitText(tl("NOT QUITE!", "¡CASI!"),cx,cardY+40,bw,22);
+  fill(230,250,255); fitText(tl("You: (", "Tú: (")+lockedGX+", "+lockedGY+")",cx,cardY+90,bw,20);
+  fitText(tl("Correct: (", "Correcto: (")+targetGX+", "+targetGY+")",cx,cardY+118,bw,20);
+  fill(200,220,255); fitText(tl("SPACE to continue", "ESPACIO para continuar"),cx,cardY+178,bw,15);
 }
 
 // ---------- HEAD-TO-HEAD ROTATION CIRCLE ----------
@@ -2385,51 +2387,51 @@ function drawH2HIntro() {
   fill(20,12,22); stroke(220,70,70); strokeWeight(3); rect(12,8,376,384,16);
   fill(170,30,30); noStroke(); rect(12,8,376,56,16); rect(12,40,376,24);
   fill(255); textAlign(CENTER,CENTER); textStyle(BOLD);
-  fitText("HEAD-TO-HEAD: 2 PLAYERS!",200,26,350,21);
-  textStyle(NORMAL); fill(255,225,225); fitText("A two-player battle - you can't play this one alone",200,50,350,11);
+  fitText(tl("HEAD-TO-HEAD: 2 PLAYERS!", "CARA A CARA: ¡2 JUGADORES!"),200,26,350,21);
+  textStyle(NORMAL); fill(255,225,225); fitText(tl("A two-player battle - you can't play this one alone", "Una batalla de dos jugadores: no se puede jugar solo"),200,50,350,11);
 
   // The big, can't-miss requirement
   fill(60,45,0); stroke(255,220,60); strokeWeight(3); rect(24,74,352,62,12);
   var pulse=(sin(frameCount*5)+1)/2;
   noFill(); stroke(255,220,60,Math.floor(60+pulse*160)); strokeWeight(2); rect(20,70,360,70,14);
   fill(255,225,80); noStroke(); textStyle(BOLD);
-  fitText("BEFORE YOU START:",200,90,330,13);
-  fill(255); fitText("Make sure 2 players are ready",200,109,330,16);
-  fitText("at THIS SAME computer!",200,127,330,16);
+  fitText(tl("BEFORE YOU START:", "ANTES DE EMPEZAR:"),200,90,330,13);
+  fill(255); fitText(tl("Make sure 2 players are ready", "Asegúrate de que haya 2 jugadores listos"),200,109,330,16);
+  fitText(tl("at THIS SAME computer!", "¡en ESTA MISMA computadora!"),200,127,330,16);
   textStyle(NORMAL);
 
   // Controls for each player
   fill(60,14,14); stroke(255,100,100); strokeWeight(2); rect(24,148,170,50,10);
   fill(15,20,65); stroke(100,160,255); rect(206,148,170,50,10);
   noStroke(); textStyle(BOLD);
-  fill(255,120,120); fitText("PLAYER 1",109,163,150,13);
-  fill(120,170,255); fitText("PLAYER 2",291,163,150,13);
+  fill(255,120,120); fitText(tl("PLAYER 1", "JUGADOR 1"),109,163,150,13);
+  fill(120,170,255); fitText(tl("PLAYER 2", "JUGADOR 2"),291,163,150,13);
   textStyle(NORMAL); fill(255);
-  fitText("W A S D + SPACE",109,183,155,12);
-  fitText("Arrow keys + ENTER",291,183,155,12);
+  fitText(tl("W A S D + SPACE", "W A S D + ESPACIO"),109,183,155,12);
+  fitText(tl("Arrow keys + ENTER", "Flechas + ENTER"),291,183,155,12);
 
   // Instructions
-  fill(0,220,255); textStyle(BOLD); fitText("HOW TO PLAY",200,214,300,13); textStyle(NORMAL);
+  fill(0,220,255); textStyle(BOLD); fitText(tl("HOW TO PLAY", "CÓMO JUGAR"),200,214,300,13); textStyle(NORMAL);
   var lines=[
-    "1. A point and a challenge appear on the grid.",
-    "2. Race to move YOUR point to the correct spot.",
-    "    (Rotations: hold UP = CCW or DOWN = CW to",
-    "    slide around the yellow circle. W/S or arrows.)",
-    "3. Very close? Press your submit key.",
-    "4. First player to submit the right spot wins",
-    "    the round. Best 2 out of 3 wins the match!"
+    tl("1. A point and a challenge appear on the grid.", "1. Aparecen un punto y un reto en la cuadrícula."),
+    tl("2. Race to move YOUR point to the correct spot.", "2. Corre a llevar TU punto al lugar correcto."),
+    tl("    (Rotations: hold UP = CCW or DOWN = CW to", "    (Rotaciones: mantén ARRIBA = antihorario o ABAJO = horario"),
+    tl("    slide around the yellow circle. W/S or arrows.)", "    para girar por el círculo amarillo. W/S o flechas.)"),
+    tl("3. Very close? Press your submit key.", "3. ¿Muy cerca? Presiona tu tecla de enviar."),
+    tl("4. First player to submit the right spot wins", "4. El primero en enviar el lugar correcto gana"),
+    tl("    the round. Best 2 out of 3 wins the match!", "    la ronda. ¡Gana el mejor de 3!")
   ];
   fill(225,235,255); textAlign(LEFT,CENTER); textSize(11);
   for(var li=0;li<lines.length;li++) text(lines[li],32,234+li*16);
   textAlign(CENTER,CENTER);
 
-  var startNow=drawButton(50,342,150,34,"START GAME",0,140,60);
-  var goBack=drawButton(215,342,135,34,"BACK",60,30,100);
+  var startNow=drawButton(50,342,150,34,tl("START GAME", "EMPEZAR"),0,140,60);
+  var goBack=drawButton(215,342,135,34,tl("BACK", "ATRÁS"),60,30,100);
   var canKey=(frameCount-h2hIntroFrame)>3;
   if(startNow||(canKey&&(keyWentDown("space")||keyWentDown("enter")))) resetGame();
   else if(goBack) STATE="START";
   fill(160,180,230); noStroke(); textSize(9); textAlign(CENTER,CENTER);
-  text("Press SPACE or ENTER to start  |  ESC to go back",200,384);
+  text(tl("Press SPACE or ENTER to start  |  ESC to go back", "ESPACIO o ENTER para empezar  |  ESC para regresar"),200,384);
   drawSprites();
 }
 
@@ -2441,18 +2443,18 @@ function drawSkillSelect() {
   for(var gy=0;gy<=400;gy+=30) line(0,gy,400,gy);
 
   // Title
-  var modeLabel = (gameMode==="GENIUS") ? "Genius in Training" :
-                  (gameMode==="PRACTICE") ? "Practice Mode" : "Geometry Genius";
+  var modeLabel = (gameMode==="GENIUS") ? tl("Genius in Training", "Genio en entrenamiento") :
+                  (gameMode==="PRACTICE") ? tl("Practice Mode", "Modo práctica") : tl("Geometry Genius", "Genio de la geometría");
   fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,16,360,62,12);
   fill(0,220,255); noStroke(); textSize(16); textAlign(CENTER,CENTER);
   text(modeLabel, 200, 36);
   fill(140,180,255); textSize(10);
-  text("Choose which skills to practice:", 200, 57);
+  text(tl("Choose which skills to practice:", "Elige qué destrezas practicar:"), 200, 57);
 
   var skills = [
-    { label:"Translations", desc:"SLIDING up, down, left, and right",    r:0,   g:180, b:255, flag:skillTranslations  },
-    { label:"Rotations",    desc:"TURNING around a center of rotation", r:80,  g:220, b:120, flag:skillRotations     },
-    { label:"Reflections",  desc:"FLIPPING over a line of reflection",  r:220, g:80,  b:200, flag:skillReflections   }
+    { label:tl("Translations", "Traslaciones"), desc:tl("SLIDING up, down, left, and right", "DESLIZAR arriba, abajo, izquierda y derecha"),    r:0,   g:180, b:255, flag:skillTranslations  },
+    { label:tl("Rotations", "Rotaciones"),    desc:tl("TURNING around a center of rotation", "GIRAR alrededor de un centro de rotación"), r:80,  g:220, b:120, flag:skillRotations     },
+    { label:tl("Reflections", "Reflexiones"),  desc:tl("FLIPPING over a line of reflection", "VOLTEAR sobre una línea de reflexión"),  r:220, g:80,  b:200, flag:skillReflections   }
   ];
 
   var rowH = 80, startY = 96;
@@ -2510,7 +2512,7 @@ function drawSkillSelect() {
   if(startHov) skillFocusIdx = 3;
   if (!anyOn) {
     fill(255,80,80); textSize(10); textAlign(CENTER,CENTER); noStroke();
-    text("Select at least one skill to continue", 200, 372);
+    text(tl("Select at least one skill to continue", "Elige al menos una destreza para continuar"), 200, 372);
   } else {
     var startFocused = (skillFocusIdx === 3);
     fill(startFocused?50:0, startFocused?180:130, startFocused?100:60);
@@ -2525,7 +2527,7 @@ function drawSkillSelect() {
 }
 
 // ---------- SKIN SELECT SCREEN (cosmetics — all free/unlocked) ----------
-var shopMsg = "", shopMsgTimer = 0; // brief "not enough coins" feedback
+var shopMsg = "", shopMsgTimer = 0; // brief tl("not enough coins", "no alcanzan las monedas") feedback
 var SKINS_PER_PAGE = 12; // 3 cols x 4 rows per page
 var shopPage = 0; // scrolls right/left through PLAYER_SKINS one page at a time
 var shopCursor = 0; // keyboard focus in the shop: arrows move it, Space/Enter buys or equips (the page follows it)
@@ -2538,7 +2540,7 @@ function drawShop() {
 
   fill(0,50,120); stroke(0,140,220); strokeWeight(2); rect(20,8,360,50,12);
   fill(0,220,255); noStroke(); textAlign(CENTER,CENTER);
-  fitText("SHOP: Get a Streak of 3 for a Coin!", 200, 24, 340, 15);
+  fitText(tl("SHOP: Get a Streak of 3 for a Coin!", "TIENDA: ¡Racha de 3 = 1 moneda!"), 200, 24, 340, 15);
   drawCoinLabel(200, 46, coins, 14);
   textAlign(CENTER,CENTER);
 
@@ -2584,8 +2586,8 @@ function drawShop() {
 
     fill(sel?255:owned?200:130); noStroke(); textSize(9); textAlign(CENTER,CENTER);
     fitText(sk.name, bx+cardW/2, by+45, cardW-10, 9);
-    if (sel)       { fill(255,220,60); textSize(8); text("EQUIPPED", bx+cardW/2, by+56); }
-    else if (owned){ fill(140,220,160); textSize(8); text("OWNED", bx+cardW/2, by+56); }
+    if (sel)       { fill(255,220,60); textSize(8); text(tl("EQUIPPED", "PUESTO"), bx+cardW/2, by+56); }
+    else if (owned){ fill(140,220,160); textSize(8); text(tl("OWNED", "TUYO"), bx+cardW/2, by+56); }
     else           { drawCoinLabel(bx+cardW/2, by+56, SKIN_PRICE, 9); }
 
     if (i===shopCursor) {   // keyboard focus ring
@@ -2595,7 +2597,7 @@ function drawShop() {
     if ((hov && mouseWentDown("left")) || shopPick===i) {
       shopCursor=i;
       if (owned) { equipSkin(i); }
-      else if (!buySkin(i)) { shopMsg="Not enough coins!"; shopMsgTimer=60; }
+      else if (!buySkin(i)) { shopMsg=tl("Not enough coins!", "¡No alcanzan las monedas!"); shopMsgTimer=60; }
     }
   }
 
@@ -2622,7 +2624,7 @@ function drawShop() {
       if (laHov && mouseWentDown("left")) { shopPage--; shopCursor=shopPage*SKINS_PER_PAGE; }
     }
     fill(140,170,255); noStroke(); textSize(8); textAlign(CENTER,CENTER);
-    text("Page "+(shopPage+1)+"/"+totalPages, 200, startY-4);
+    text(tl("Page ", "Página ")+(shopPage+1)+"/"+totalPages, 200, startY-4);
   }
 
   if (shopMsgTimer>0) {
@@ -2636,8 +2638,8 @@ function drawShop() {
   fill(backHov?70:40, backHov?80:40, backHov?170:130); stroke(100,120,220); strokeWeight(2);
   rect(150,360,100,32,16);
   fill(255); noStroke(); textSize(12); textAlign(CENTER,CENTER);
-  text("BACK", 200, 377);
-  fill(150,170,220); textSize(9); text("Arrows: choose  |  SPACE: buy / wear  |  ESC: back", 200, 350);
+  text(tl("BACK", "ATRÁS"), 200, 377);
+  fill(150,170,220); textSize(9); text(tl("Arrows: choose  |  SPACE: buy / wear  |  ESC: back", "Flechas: elegir  |  ESPACIO: comprar / usar  |  ESC: atrás"), 200, 350);
   if (backHov && mouseWentDown("left")) STATE="START";
 
   drawSprites();
@@ -2718,7 +2720,7 @@ function drawStart(){
   fill(0,220,255); textSize(20);
   text("Let's Get to the Point",200,20);
   fill(100,160,255); textSize(10);
-  text("Rigid Transformations",200,38);
+  text(tl("Rigid Transformations", "Transformaciones rígidas"),200,38);
 
   // Glowing divider
   var dg=(sin(t*3)+1)*0.5;
@@ -2727,24 +2729,24 @@ function drawStart(){
 
   // ---- MODE CARDS ----
   var modes=[
-    {id:"PRACTICE",   tier:"LEARNING",  name:"Practice",
-     tag1:"Your own pace!",   tag2:"No timer",
-     f1:"Choose your skills", f2:"Helpful hints",
+    {id:"PRACTICE",   tier:tl("LEARNING", "APRENDER"),  name:tl("Practice", "Práctica"),
+     tag1:tl("Your own pace!", "¡A tu ritmo!"),   tag2:tl("No timer", "Sin reloj"),
+     f1:tl("Choose your skills", "Elige tus destrezas"), f2:tl("Helpful hints", "Pistas útiles"),
      icon:"✓", ir:220, ig:180, ib:255,
      r:70, g:20,  b:120},
-    {id:"GENIUS",     tier:"GENIUS IN", name:"Training",
-     tag1:"Solo practice",    tag2:"Beat your best time!",
-     f1:"Hints & retries",    f2:"Extra Supports",
+    {id:"GENIUS",     tier:tl("GENIUS IN", "GENIO EN"), name:tl("Training", "Entrenamiento"),
+     tag1:tl("Solo practice", "Práctica individual"),    tag2:tl("Beat your best time!", "¡Supera tu mejor tiempo!"),
+     f1:tl("Hints & retries", "Pistas y reintentos"),    f2:tl("Extra Supports", "Apoyos extra"),
      icon:"★", ir:180, ig:220, ib:255,
      r:0,  g:100, b:200},
-    {id:"GEOMETRY",   tier:"GEOMETRY",  name:"Genius",
-     tag1:"Challenge mode!",  tag2:"Prove yourself!",
-     f1:"Advanced Questions",  f2:"Fewer supports",
+    {id:"GEOMETRY",   tier:tl("GEOMETRY", "GENIO DE LA"),  name:tl("Genius", "Geometría"),
+     tag1:tl("Challenge mode!", "¡Modo reto!"),  tag2:tl("Prove yourself!", "¡Demuestra lo que sabes!"),
+     f1:tl("Advanced Questions", "Preguntas avanzadas"),  f2:tl("Fewer supports", "Menos apoyos"),
      icon:"◆", ir:140, ig:255, ib:180,
      r:0,  g:150, b:65},
-    {id:"HEADTOHEAD", tier:"HEAD TO",   name:"Head!",
-     tag1:"2 players battle", tag2:"on the same computer!",
-     f1:"Fastest one wins!",  f2:"Best 2 out of 3",
+    {id:"HEADTOHEAD", tier:tl("HEAD TO", "CARA A"),   name:tl("Head!", "¡Cara!"),
+     tag1:tl("2 players battle", "2 jugadores compiten"), tag2:tl("on the same computer!", "¡en la misma computadora!"),
+     f1:tl("Fastest one wins!", "¡Gana el más rápido!"),  f2:tl("Best 2 out of 3", "El mejor de 3"),
      icon:"VS", ir:255, ig:160, ib:160,
      r:160,g:25,  b:25}
   ];
@@ -2834,7 +2836,7 @@ function drawStart(){
       fill(hs2>0?[255,220,100]:[120,120,160]);
       if(hs2>0)fill(255,220,100); else fill(130,140,180);
       textSize(9); textAlign(CENTER,CENTER); noStroke();
-      text(hs2>0?"Best: "+hs2.toFixed(2)+"s":"No record yet",cx,by2+bh-56);
+      text(hs2>0?tl("Best: ", "Mejor: ")+hs2.toFixed(2)+"s":tl("No record yet", "Aún sin récord"),cx,by2+bh-56);
     }
 
     // PLAY button
@@ -2846,7 +2848,7 @@ function drawStart(){
       strokeWeight(1); rect(bx2+14,by2+bh-44,bw-28,24,8);
     }
     fill(selVisual?10:35); noStroke(); textSize(13); textAlign(CENTER,CENTER);
-    text("PLAY",cx,by2+bh-32);
+    text(tl("PLAY", "JUGAR"),cx,by2+bh-32);
 
     // Geometry Genius stays locked until Genius in Training is fully completed 3 times
     var locked=(m.id==="GEOMETRY"&&geometryLocked());
@@ -2859,17 +2861,17 @@ function drawStart(){
       noStroke(); fill(255,220,60); rect(lx-17,ly-6,34,28,5);
       fill(8,12,30); ellipse(lx,ly+5,7,7); rect(lx-1.5,ly+5,3,8);
       fill(255); textAlign(CENTER,CENTER);
-      fitText("LOCKED", cx, by2+154, bw-12, 15);
+      fitText(tl("LOCKED", "BLOQUEADO"), cx, by2+154, bw-12, 15);
       fill(200,215,255);
-      fitText("Finish Genius", cx, by2+178, bw-10, 11);
-      fitText("in Training", cx, by2+193, bw-10, 11);
-      fitText(GEOMETRY_UNLOCK_RUNS+" times", cx, by2+208, bw-10, 11);
+      fitText(tl("Finish Genius", "Termina Genio"), cx, by2+178, bw-10, 11);
+      fitText(tl("in Training", "en entrenamiento"), cx, by2+193, bw-10, 11);
+      fitText(GEOMETRY_UNLOCK_RUNS+tl(" times", " veces"), cx, by2+208, bw-10, 11);
       // progress toward the unlock
       fill(0,0,0,140); rect(bx2+14,by2+bh-64,bw-28,16,5);
       fill(255,220,100); textSize(10);
-      text(Math.min(geniusCompletions,GEOMETRY_UNLOCK_RUNS)+" / "+GEOMETRY_UNLOCK_RUNS+" done",cx,by2+bh-56);
+      text(Math.min(geniusCompletions,GEOMETRY_UNLOCK_RUNS)+" / "+GEOMETRY_UNLOCK_RUNS+tl(" done", " hechas"),cx,by2+bh-56);
       fill(90,95,120); rect(bx2+12,by2+bh-46,bw-24,28,10);
-      fill(200); textSize(13); text("LOCKED",cx,by2+bh-32);
+      fill(200); fitText(tl("LOCKED", "BLOQUEADO"),cx,by2+bh-32,bw-34,13);
     }
 
     if(hov&&mouseWentDown("left")){
@@ -2899,7 +2901,7 @@ function drawStart(){
   }
   noStroke(); textAlign(CENTER,CENTER);
   fill(255); textSize(20); text("🎨",50,shopBarY+shopBarH/2+1);
-  fill(220,200,255); textSize(17); textStyle(BOLD); text("SHOP",205,shopBarY+shopBarH/2+1); textStyle(NORMAL);
+  fill(220,200,255); textSize(17); textStyle(BOLD); text(tl("SHOP", "TIENDA"),205,shopBarY+shopBarH/2+1); textStyle(NORMAL);
   drawCoinLabel(352, shopBarY+shopBarH/2+1, coins, 13);
   if(shopHov&&mouseWentDown("left")){STATE="SHOP";}
 
@@ -2922,14 +2924,14 @@ function drawUnlockPopup(){
   fill(0,150,65,Math.floor(40+p2*40)); rect(-160,-128,320,256,22);
   fill(12,40,28); stroke(140,255,180); strokeWeight(3); rect(-150,-118,300,236,18);
   noStroke(); textAlign(CENTER,CENTER);
-  fill(255,220,60); textSize(15); text("NEW MODE UNLOCKED!",0,-92);
+  fill(255,220,60); textSize(15); text(tl("NEW MODE UNLOCKED!", "¡NUEVO MODO DESBLOQUEADO!"),0,-92);
   fill(140,255,180,Math.floor(170+p2*85)); textSize(46); text("◆",0,-44);
-  fill(255); textSize(28); text("Geometry Genius",0,4);
+  fill(255); textSize(28); text(tl("Geometry Genius", "Genio de la geometría"),0,4);
   fill(200,235,215); textSize(12);
-  text("You finished Genius in Training "+GEOMETRY_UNLOCK_RUNS+" times.",0,38);
-  text("The challenge mode is now open on the menu!",0,56);
+  text(tl("You finished Genius in Training ", "Terminaste Genio en entrenamiento ")+GEOMETRY_UNLOCK_RUNS+tl(" times.", " veces."),0,38);
+  text(tl("The challenge mode is now open on the menu!", "¡El modo reto ya está abierto en el menú!"),0,56);
   fill(255,220,60,Math.floor(150+p2*105)); textSize(12);
-  text("Press SPACE or click to continue",0,92);
+  text(tl("Press SPACE or click to continue", "Presiona ESPACIO o haz clic para continuar"),0,92);
   pop();
 }
 
@@ -2945,7 +2947,7 @@ function drawSpeedResult(){
     noStroke(); ellipse(sx2,sy2,2+tw,2+tw);
   }
 
-  var modeName=(gameMode==="GENIUS")?"Genius in Training":"Geometry Genius";
+  var modeName=(gameMode==="GENIUS")?tl("Genius in Training", "Genio en entrenamiento"):tl("Geometry Genius", "Genio de la geometría");
   var p2=(sin(t*3)+1)*0.5;
 
   if(newHighScore){
@@ -2965,9 +2967,9 @@ function drawSpeedResult(){
     var cr=Math.floor(210+sin(t*2)*45), cg2=Math.floor(190+sin(t*2+120)*65);
     // Glow layer
     fill(255,220,0,Math.floor(p2*70)); textSize(40); textAlign(CENTER,CENTER); noStroke();
-    text("NEW RECORD!",200,48);
+    text(tl("NEW RECORD!", "¡NUEVO RÉCORD!"),200,48);
     fill(cr,cg2,50); textSize(36);
-    text("NEW RECORD!",200,46);
+    text(tl("NEW RECORD!", "¡NUEVO RÉCORD!"),200,46);
 
     // Animated star
     var starScale=1+p2*0.18;
@@ -2978,21 +2980,21 @@ function drawSpeedResult(){
     fill(0,220,255); textSize(42); noStroke();
     text(timerFinished.toFixed(2)+"s",200,182);
     fill(140,220,255); textSize(13);
-    text("NEW BEST — "+modeName,200,208);
+    text(tl("NEW BEST — ", "NUEVO RÉCORD — ")+modeName,200,208);
 
     // Previous record comparison
     stroke(255,200,0,50); strokeWeight(1); line(50,222,350,222); noStroke();
     if(prevBest>0){
       fill(255,200,80); textSize(18);
-      text("Previous best:  "+prevBest.toFixed(2)+"s",200,252);
+      text(tl("Previous best:  ", "Récord anterior:  ")+prevBest.toFixed(2)+"s",200,252);
       var imp=((prevBest-timerFinished)/prevBest*100);
       fill(120,255,160); textSize(22);
-      text(imp.toFixed(1)+"% faster!",200,283);
+      text(imp.toFixed(1)+tl("% faster!", "% más rápido!"),200,283);
     } else {
       fill(180,255,180); textSize(22);
-      text("First record set!",200,262);
+      text(tl("First record set!", "¡Primer récord!"),200,262);
       fill(140,220,150); textSize(13);
-      text("You're on the board!",200,288);
+      text(tl("You're on the board!", "¡Ya estás en la tabla!"),200,288);
     }
 
   } else {
@@ -3001,7 +3003,7 @@ function drawSpeedResult(){
 
     // Title
     fill(0,180,255); textSize(32); textAlign(CENTER,CENTER); noStroke();
-    text("GREAT JOB!",200,40);
+    text(tl("GREAT JOB!", "¡BUEN TRABAJO!"),200,40);
 
     // Mode label
     fill(140,200,255); textSize(13);
@@ -3012,7 +3014,7 @@ function drawSpeedResult(){
 
     // YOUR TIME
     fill(100,200,255); textSize(12); textAlign(CENTER,CENTER); noStroke();
-    text("YOUR TIME",200,100);
+    text(tl("YOUR TIME", "TU TIEMPO"),200,100);
     fill(0,220,255); textSize(42);
     text(timerFinished.toFixed(2)+"s",200,136);
 
@@ -3022,7 +3024,7 @@ function drawSpeedResult(){
 
       // BEST TIME
       fill(220,190,60); textSize(12); textAlign(CENTER,CENTER); noStroke();
-      text("BEST TIME",200,176);
+      text(tl("BEST TIME", "MEJOR TIEMPO"),200,176);
       fill(255,220,80); textSize(42);
       text(curBest.toFixed(2)+"s",200,212);
 
@@ -3032,16 +3034,16 @@ function drawSpeedResult(){
       // SLOWER THAN YOUR BEST
       var pctSlower=((timerFinished-curBest)/curBest*100);
       fill(220,100,100); textSize(12); textAlign(CENTER,CENTER); noStroke();
-      text("SLOWER THAN YOUR BEST",200,252);
+      text(tl("SLOWER THAN YOUR BEST", "MÁS LENTO QUE TU RÉCORD"),200,252);
       fill(255,120,120); textSize(38);
       text("+"+pctSlower.toFixed(1)+"%",200,287);
     } else {
       // No record yet
       stroke(80,180,80,60); strokeWeight(1); line(60,194,340,194); noStroke();
       fill(180,255,180); textSize(20);
-      text("No record yet!",200,240);
+      text(tl("No record yet!", "¡Aún sin récord!"),200,240);
       fill(140,220,140); textSize(12);
-      text("Finish again to set your first best time",200,268);
+      text(tl("Finish again to set your first best time", "Termina otra vez para fijar tu primer récord"),200,268);
     }
   }
 
@@ -3057,7 +3059,7 @@ function drawSpeedResult(){
   rect(60,308,125,36,13);
   if(s1){ noFill(); stroke(255,220,60,190); strokeWeight(2); rect(62,310,121,32,11); }
   fill(255); noStroke(); textSize(12); textAlign(CENTER,CENTER);
-  text("MENU",122,326);
+  text(tl("MENU", "MENÚ"),122,326);
 
   // PLAY AGAIN button
   fill(s2?10:r2h?0:20, s2?210:r2h?190:140, s2?125:r2h?110:70);
@@ -3065,10 +3067,10 @@ function drawSpeedResult(){
   rect(215,308,125,36,13);
   if(s2){ noFill(); stroke(255,220,60,190); strokeWeight(2); rect(217,310,121,32,11); }
   fill(255); noStroke(); textSize(12);
-  text("PLAY AGAIN",277,326);
+  text(tl("PLAY AGAIN", "JUGAR OTRA VEZ"),277,326);
 
   fill(150,170,220); textSize(9);
-  text("◄ ► = switch   SPACE = select",200,365);
+  text(tl("◄ ► = switch   SPACE = select", "◄ ► = cambiar   ESPACIO = elegir"),200,365);
 
   if(r1h&&mouseWentDown("left")){ STATE="START"; }
   if(r2h&&mouseWentDown("left")){ resetGame(); }
@@ -3098,25 +3100,25 @@ function drawWin(){
   if(gameMode==="PRACTICE"){
     fill(20,0,50); stroke(140,80,220); strokeWeight(2); rect(30,60,340,260,16);
     fill(200,140,255); noStroke(); textSize(26); textAlign(CENTER,CENTER);
-    text("PRACTICE COMPLETE!",200,106);
+    text(tl("PRACTICE COMPLETE!", "¡PRÁCTICA TERMINADA!"),200,106);
     fill(180,200,255); textSize(12);
-    text("You finished all "+TOTAL_ROUNDS+" questions.",200,136);
+    text(tl("You finished all ", "Terminaste las ")+TOTAL_ROUNDS+tl(" questions.", " preguntas."),200,136);
     // CHANGE SKILLS button (left)
     var ws1=(mouseX>=44&&mouseX<=188&&mouseY>=190&&mouseY<=228);
     fill(ws1?50:30,ws1?60:35,ws1?160:120); stroke(80,80,210); strokeWeight(2);
     rect(44,190,144,38,12);
-    fill(255); noStroke(); textSize(10); text("CHANGE SKILLS",116,209);
+    fill(255); noStroke(); textSize(10); text(tl("CHANGE SKILLS", "CAMBIAR DESTREZAS"),116,209);
     // PRACTICE AGAIN button (right)
     var ws2=(mouseX>=212&&mouseX<=356&&mouseY>=190&&mouseY<=228);
     fill(ws2?0:10,ws2?160:110,ws2?90:60); stroke(0,190,90); strokeWeight(2);
     rect(212,190,144,38,12);
-    fill(255); noStroke(); textSize(10); text("PRACTICE AGAIN",284,209);
-    fill(200,220,255); textSize(9); text("(same skills)",284,226);
+    fill(255); noStroke(); textSize(10); text(tl("PRACTICE AGAIN", "PRACTICAR OTRA VEZ"),284,209);
+    fill(200,220,255); textSize(9); text(tl("(same skills)", "(mismas destrezas)"),284,226);
     // MENU button (center, below)
     var ws3=(mouseX>=130&&mouseX<=270&&mouseY>=248&&mouseY<=278);
     fill(ws3?40:20,ws3?50:30,ws3?130:90); stroke(60,80,180); strokeWeight(2);
     rect(130,248,140,30,10);
-    fill(255); noStroke(); textSize(10); text("MAIN MENU",200,263);
+    fill(255); noStroke(); textSize(10); text(tl("MAIN MENU", "MENÚ PRINCIPAL"),200,263);
     if(ws1&&mouseWentDown("left")){skillFocusIdx=0;STATE="SKILL_SELECT";}
     if(ws2&&mouseWentDown("left")){resetGame();}
     if(ws3&&mouseWentDown("left")){STATE="START";}
@@ -3125,18 +3127,18 @@ function drawWin(){
 
   fill(10,50,30); stroke(0,180,90); strokeWeight(2); rect(30,75,340,240,16);
   fill(80,255,160); noStroke(); textSize(26); textAlign(CENTER,CENTER);
-  text("YOU WIN!",200,120);
+  text(tl("YOU WIN!", "¡GANASTE!"),200,120);
   fill(200,240,255); textSize(12);
-  text("All "+TOTAL_ROUNDS+" rounds complete!",200,152);
+  text(tl("All ", "Las ")+TOTAL_ROUNDS+tl(" rounds complete!", " rondas terminadas!"),200,152);
   if(gameMode==="HEADTOHEAD"){
-    var w=p1wins>p2wins?"Player 1 wins!":p2wins>p1wins?"Player 2 wins!":"It's a tie!";
+    var w=p1wins>p2wins?tl("Player 1 wins!", "¡Gana el Jugador 1!"):p2wins>p1wins?tl("Player 2 wins!", "¡Gana el Jugador 2!"):tl("It's a tie!", "¡Empate!");
     fill(p1wins>p2wins?[255]:[100],p1wins>p2wins?[100]:[160],p1wins>p2wins?[100]:[255]);
     if(p1wins>p2wins)fill(255,100,100);
     else if(p2wins>p1wins)fill(100,160,255);
     else fill(255,220,100);
     textSize(16); text(w,200,186);
     fill(200,220,255); textSize(12);
-    text("P1: "+p1wins+" rounds   P2: "+p2wins+" rounds",200,212);
+    text("P1: "+p1wins+tl(" rounds   P2: ", " rondas   J2: ")+p2wins+tl(" rounds", " rondas"),200,212);
     if (h2hWinner) {
       var pulse=(sin(t*4)+1)*0.5;
       fill(255,220,60,Math.floor(150+pulse*105));
@@ -3144,21 +3146,21 @@ function drawWin(){
       text("🏆", 200, 240);
     }
   } else {
-    fill(200,240,255); textSize(14); text("All 3 rounds complete!",200,186);
+    fill(200,240,255); textSize(14); text(tl("All 3 rounds complete!", "¡Las 3 rondas terminadas!"),200,186);
   }
   fill(0,120,55); stroke(0,180,90); strokeWeight(2); rect(125,270,150,36,17);
-  fill(255); noStroke(); textSize(12); text("Play Again (SPACE)",200,288);
+  fill(255); noStroke(); textSize(12); text(tl("Play Again (SPACE)", "Otra vez (ESPACIO)"),200,288);
   drawSprites();
 }
 
 function drawGameOver(){
   background(18,5,5);
   fill(50,8,8); stroke(180,40,40); strokeWeight(2); rect(30,80,340,200,16);
-  fill(255,80,80); noStroke(); textSize(26); textAlign(CENTER,CENTER); text("GAME OVER",200,130);
+  fill(255,80,80); noStroke(); textSize(26); textAlign(CENTER,CENTER); text(tl("GAME OVER", "FIN DEL JUEGO"),200,130);
   fill(200,220,255); textSize(11);
-  text("Round "+(round+1)+" of "+TOTAL_ROUNDS,200,175);
+  text(tl("Round ", "Ronda ")+(round+1)+tl(" of ", " de ")+TOTAL_ROUNDS,200,175);
   fill(0,80,130); stroke(0,140,200); strokeWeight(2); rect(125,248,150,34,17);
-  fill(255); noStroke(); textSize(12); text("Try Again (SPACE)",200,265);
+  fill(255); noStroke(); textSize(12); text(tl("Try Again (SPACE)", "Reintentar (ESPACIO)"),200,265);
   drawSprites();
 }
 
@@ -3197,7 +3199,7 @@ function draw(){
     return;
   }
 
-  // ---- The "new mode unlocked!" pop-up: any key or click closes it (and does nothing else) ----
+  // ---- The tl("new mode unlocked!", "¡nuevo modo desbloqueado!") pop-up: any key or click closes it (and does nothing else) ----
   if(unlockPopup && STATE==="SPEED_RESULT"){
     if(keyWentDown("space")||keyWentDown("enter")||mouseWentDown("left")){ unlockPopup=false; return; }
   }
@@ -3421,14 +3423,14 @@ function draw(){
     var sbw=scW-32;
     fill(255,220,60);
     if(geomShapeType!==""&&gameMode==="GEOMETRY")
-      fitText("Move the whole figure!",200,scY+42,sbw,22);
+      fitText(tl("Move the whole figure!", "¡Mueve toda la figura!"),200,scY+42,sbw,22);
     else
-      fitText("Start: ("+startGX+", "+startGY+")",200,scY+42,sbw,22);
+      fitText(tl("Start: (", "Inicio: (")+startGX+", "+startGY+")",200,scY+42,sbw,22);
     drawChallengeLabel(challengeLabel,200,scY+100,sbw,17,[200,230,255]);
     fill(160,200,255);
-    if(isRotation(curCh()))fitText("Place pencil at center, then rotate!",200,scY+152,sbw,14);
-    else if(geomShapeType!==""&&gameMode==="GEOMETRY")fitText("Apply the translation to all vertices",200,scY+152,sbw,14);
-    else fitText("Get ready...",200,scY+152,sbw,14);
+    if(isRotation(curCh()))fitText(tl("Place pencil at center, then rotate!", "¡Pon el lápiz en el centro y luego gira!"),200,scY+152,sbw,14);
+    else if(geomShapeType!==""&&gameMode==="GEOMETRY")fitText(tl("Apply the translation to all vertices", "Aplica la traslación a todos los vértices"),200,scY+152,sbw,14);
+    else fitText(tl("Get ready...", "Prepárate..."),200,scY+152,sbw,14);
     // Head-to-Head: big "3-2-1-GO" countdown on top of everything else,
     // building a little race-start tension before the timer unfreezes.
     if(gameMode==="HEADTOHEAD"){
@@ -3436,7 +3438,7 @@ function draw(){
       if(cdRemain>90){ cdLabel="3"; cdCol=[255,90,90]; cdPhaseT=(120-cdRemain)/30; }
       else if(cdRemain>60){ cdLabel="2"; cdCol=[255,190,60]; cdPhaseT=(90-cdRemain)/30; }
       else if(cdRemain>30){ cdLabel="1"; cdCol=[120,255,140]; cdPhaseT=(60-cdRemain)/30; }
-      else { cdLabel="GO!"; cdCol=[255,230,60]; cdPhaseT=(30-cdRemain)/30; }
+      else { cdLabel=tl("GO!", "¡YA!"); cdCol=[255,230,60]; cdPhaseT=(30-cdRemain)/30; }
       var cdPop=1+Math.max(0,0.4-cdPhaseT*0.4);
       noStroke(); textAlign(CENTER,CENTER);
       fill(0,0,0,150); textSize(Math.floor(70*cdPop)); text(cdLabel,202,204);
