@@ -129,20 +129,20 @@ function drawMenu() {
   text("Piggy Bank Math", 200, 45);
 
   textSize(16);
-  text("Select your difficulty:", 200, 85);
+  text(tl("Select your difficulty:", "Elige tu dificultad:"), 200, 85);
 
   textSize(20);
   fill("white");
-  text("Penny Prospect", easyBtn.x, easyBtn.y);
-  text("Coin Captain", hardBtn.x, hardBtn.y);
+  text(tl("Penny Prospect", "Buscacentavos"), easyBtn.x, easyBtn.y);
+  text(tl("Coin Captain", "Capitán Moneda"), hardBtn.x, hardBtn.y);
 
   fill("black");
   textSize(15);
-  text("Best times (4 questions)", 200, 250);
+  text(tl("Best times (4 questions)", "Mejores tiempos (4 preguntas)"), 200, 250);
 
   textSize(14);
-  text("Penny Prospect: " + formatTime(bestTimeEasy), 200, 270);
-  text("Coin Captain: " + formatTime(bestTimeHard), 200, 288);
+  text(tl("Penny Prospect: ", "Buscacentavos: ") + formatTime(bestTimeEasy), 200, 270);
+  text(tl("Coin Captain: ", "Capitán Moneda: ") + formatTime(bestTimeHard), 200, 288);
 
   // keyboard: up/down (or 1 / 2) choose a difficulty, Enter / Space starts
   if (keyWentDown("up") || keyWentDown("left") || keyWentDown("1")) menuSel = 0;
@@ -151,8 +151,8 @@ function drawMenu() {
   noFill(); stroke(255, 214, 60); strokeWeight(4);
   rect(sel.x - sel.width / 2 - 6, sel.y - sel.height / 2 - 6, sel.width + 12, sel.height + 12, 10);
   noStroke(); fill("black"); textSize(12);
-  text("▲ ▼ choose  ·  ENTER / SPACE to start", 200, 318);
-  text("Keys in play: 1 penny · 2 nickel · 3 dime · 4 quarter · U undo · C clear", 200, 338);
+  text(tl("▲ ▼ choose  ·  ENTER / SPACE to start", "▲ ▼ elegir  ·  ENTER / ESPACIO para empezar"), 200, 318);
+  text(tl("Keys in play: 1 penny · 2 nickel · 3 dime · 4 quarter · U undo · C clear", "Teclas: 1 centavo · 2 níquel · 3 dime · 4 cuarto · U quitar · C borrar"), 200, 338);
 
   var go = keyWentDown("enter") || keyWentDown("space");
   if ((mouseWentDown("leftButton") && mouseIsOver(easyBtn)) || (go && menuSel === 0)) {
@@ -182,9 +182,9 @@ function startGame() {
 function drawExitConfirmOverlay() {
   fill("#1a1d24"); noStroke(); rect(0, 0, 400, 400);
   fill("white"); textAlign(CENTER, CENTER); textStyle(BOLD); textSize(22);
-  text("Exit to Main Menu?", 200, 150);
+  text(tl("Exit to Main Menu?", "¿Salir al menú principal?"), 200, 150);
   fill("lightgray"); textSize(14); textStyle(NORMAL);
-  text("Your progress this round will be lost.", 200, 178);
+  text(tl("Your progress this round will be lost.", "Se perderá tu progreso en esta ronda."), 200, 178);
 
   var hoverYes = (mouseX > 60 && mouseX < 190 && mouseY > 225 && mouseY < 270);
   var hoverNo = (mouseX > 210 && mouseX < 340 && mouseY > 225 && mouseY < 270);
@@ -195,8 +195,8 @@ function drawExitConfirmOverlay() {
   fill(exitSel === 0 ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(exitSel === 0 ? 4 : 2); rect(60, 225, 130, 45, 10);
   fill(exitSel === 1 ? "#229954" : "#27ae60"); strokeWeight(exitSel === 1 ? 4 : 2); rect(210, 225, 130, 45, 10);
   fill("white"); noStroke(); textSize(15); textStyle(BOLD);
-  text("YES, EXIT", 125, 247); text("CANCEL", 275, 247); textStyle(NORMAL);
-  fill("lightgray"); textSize(12); text("◀ ▶ choose  |  ENTER confirm  |  ESC cancel", 200, 300);
+  text(tl("YES, EXIT", "SÍ, SALIR"), 125, 247); text(tl("CANCEL", "CANCELAR"), 275, 247); textStyle(NORMAL);
+  fill("lightgray"); textSize(12); text(tl("◀ ▶ choose  |  ENTER confirm  |  ESC cancel", "◀ ▶ elegir  |  ENTER confirmar  |  ESC cancelar"), 200, 300);
 
   var go = keyWentDown("enter") || keyWentDown("space");
   if ((mouseWentDown("leftButton") && hoverYes) || (go && exitSel === 0)) { exitConfirmPending = false; exitSel = 1; backToMenu(); }
@@ -239,25 +239,25 @@ function setupNextLevel() {
     var challengeRoll = randomNumber(1, 4);
 
     if (challengeRoll === 1) {
-      challengeText = "Challenge: Use only Pennies and Nickels!";
+      challengeText = tl("Challenge: Use only Pennies and Nickels!", "Reto: ¡Usa solo centavos y níqueles!");
       allowedCoins = ["penny", "nickel"];
       do {
         targetAmount = randomNumber(51, 99);
       } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     } else if (challengeRoll === 2) {
-      challengeText = "Challenge: Use only Dimes and Pennies!";
+      challengeText = tl("Challenge: Use only Dimes and Pennies!", "Reto: ¡Usa solo dimes y centavos!");
       allowedCoins = ["penny", "dime"];
       do {
         targetAmount = randomNumber(51, 199);
       } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     } else if (challengeRoll === 3) {
-      challengeText = "Challenge: Use only Dimes and Nickels!";
+      challengeText = tl("Challenge: Use only Dimes and Nickels!", "Reto: ¡Usa solo dimes y níqueles!");
       allowedCoins = ["nickel", "dime"];
       do {
         targetAmount = randomNumber(11, 39) * 5;
       } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
     } else {
-      challengeText = "Challenge: Use only Quarters and Nickels!";
+      challengeText = tl("Challenge: Use only Quarters and Nickels!", "Reto: ¡Usa solo cuartos y níqueles!");
       allowedCoins = ["nickel", "quarter"];
       do {
         targetAmount = Math.round(randomNumber(11, 100) * 5 / 5) * 5;
@@ -299,7 +299,7 @@ function drawGame() {
   checkClicks();
 
   if (currentTotal === targetAmount) {
-    message = "Great Job! You matched it!";
+    message = tl("Great Job! You matched it!", "¡Buen trabajo! ¡Lo lograste!");
     nextBtn.visible = true;
     if (!roundScored) {
       roundScored = true;
@@ -310,10 +310,10 @@ function drawGame() {
       }
     }
   } else if (currentTotal > targetAmount) {
-    message = "Oops, too much! Undo or Clear.";
+    message = tl("Oops, too much! Undo or Clear.", "¡Uy, demasiado! Quita o borra.");
     nextBtn.visible = false;
   } else {
-    message = "Click the coins to match the target!";
+    message = tl("Click the coins to match the target!", "¡Llega a la meta con monedas!");
     nextBtn.visible = false;
   }
 
@@ -449,23 +449,23 @@ function drawResults() {
 
     fill("#b8860b");
     textSize(28);
-    text("Congratulations!", 200, 110);
+    text(tl("Congratulations!", "¡Felicidades!"), 200, 110);
 
     fill("#ff9800");
     textSize(24);
-    text("New Record!", 200, 145);
+    text(tl("New Record!", "¡Nuevo récord!"), 200, 145);
   } else {
     fill("black");
     textSize(28);
-    text("Round Complete!", 200, 120);
+    text(tl("Round Complete!", "¡Ronda completa!"), 200, 120);
   }
 
   fill("black");
   textSize(18);
-  text("Your time: " + formatTime(resultsTime), 200, 195);
+  text(tl("Your time: ", "Tu tiempo: ") + formatTime(resultsTime), 200, 195);
 
   if (resultsPreviousBest !== null) {
-    var bestLabel = resultsIsNewRecord ? "Previous best: " : "Best time: ";
+    var bestLabel = resultsIsNewRecord ? tl("Previous best: ", "Récord anterior: ") : tl("Best time: ", "Mejor tiempo: ");
     textSize(15);
     fill("#333333");
     text(bestLabel + formatTime(resultsPreviousBest), 200, 220);
@@ -473,8 +473,8 @@ function drawResults() {
 
   fill("white");
   textSize(16);
-  text("Menu", resultsMenuBtn.x, resultsMenuBtn.y);
-  text("Play Again", playAgainBtn.x, playAgainBtn.y);
+  text(tl("Menu", "Menú"), resultsMenuBtn.x, resultsMenuBtn.y);
+  text(tl("Play Again", "Jugar otra vez"), playAgainBtn.x, playAgainBtn.y);
 
   if (resultsIsNewRecord) {
     updateAndDrawConfetti();
@@ -490,16 +490,16 @@ function drawGameOver() {
 
   fill("red");
   textSize(32);
-  text("Game Over!", 200, 120);
+  text(tl("Game Over!", "¡Fin del juego!"), 200, 120);
 
   fill("black");
   textSize(18);
-  text("You went over the target twice.", 200, 180);
+  text(tl("You went over the target twice.", "Te pasaste de la meta dos veces."), 200, 180);
 
   fill("white");
   textSize(16);
-  text("Menu", resultsMenuBtn.x, resultsMenuBtn.y);
-  text("Try Again", playAgainBtn.x, playAgainBtn.y);
+  text(tl("Menu", "Menú"), resultsMenuBtn.x, resultsMenuBtn.y);
+  text(tl("Try Again", "Reintentar"), playAgainBtn.x, playAgainBtn.y);
 }
 
 function checkGameOverClicks() {
@@ -616,7 +616,7 @@ function drawCoins() {
   }
 }
 
-var coinNames = { penny: "Penny", nickel: "Nickel", dime: "Dime", quarter: "Quarter" };
+var coinNames = { penny: tl("Penny", "Centavo"), nickel: tl("Nickel", "Níquel"), dime: tl("Dime", "Dime"), quarter: tl("Quarter", "Cuarto") };
 var coinCentLabels = { penny: "1¢", nickel: "5¢", dime: "10¢", quarter: "25¢" };
 var coinSizes = { penny: 40, nickel: 48, dime: 34, quarter: 60 };
 
@@ -847,7 +847,7 @@ function drawText() {
 
   textSize(22);
   fill("black");
-  text("Target: " + formatMoney(targetAmount), 200, 45);
+  text(tl("Target: ", "Meta: ") + formatMoney(targetAmount), 200, 45);
 
   if (challengeText !== "") {
     fill("red");
@@ -858,28 +858,28 @@ function drawText() {
   textSize(22);
   fill("black");
   var bankLabel = (difficulty === "hard") ? formatDollars(currentTotal) : formatMoney(currentTotal);
-  text("Bank: " + bankLabel, 200, 245);
+  text(tl("Bank: ", "Alcancía: ") + bankLabel, 200, 245);
 
   textSize(14);
   fill("white");
-  text("CLEAR (C)", clearBtn.x, clearBtn.y);
-  text("UNDO (U)", undoBtn.x, undoBtn.y);
+  text(tl("CLEAR (C)", "BORRAR"), clearBtn.x, clearBtn.y);
+  text(tl("UNDO (U)", "QUITAR"), undoBtn.x, undoBtn.y);
 
   // the key for each coin, under it
   fill(40, 60, 80); textSize(11);
   [[penny, "penny", "1"], [nickel, "nickel", "2"], [dime, "dime", "3"], [quarter, "quarter", "4"]].forEach(function (c) {
-    if (allowedCoins.indexOf(c[1]) !== -1) text("key " + c[2], c[0].x, c[0].y + 33);
+    if (allowedCoins.indexOf(c[1]) !== -1) text(tl("key ", "tecla ") + c[2], c[0].x, c[0].y + 33);
   });
 
   fill("black");
   if (nextBtn.visible) {
-    text("NEXT", nextBtn.x, nextBtn.y);
+    text(tl("NEXT", "SIGUIENTE"), nextBtn.x, nextBtn.y);
   }
 
   if (menuBtn.visible) {
     fill("white");
     textSize(13);
-    text("Menu", menuBtn.x, menuBtn.y);
+    text(tl("Menu", "Menú"), menuBtn.x, menuBtn.y);
   }
 
   fill("white");
@@ -888,7 +888,7 @@ function drawText() {
 
   fill("black");
   textSize(16);
-  text("Coins: " + clickHistory.length, 54, 105);
+  text(tl("Coins: ", "Monedas: ") + clickHistory.length, 54, 105);
 
   fill("white");
   noStroke();
@@ -898,14 +898,14 @@ function drawText() {
   var liveElapsed = (millis() - blockStartTime) / 1000;
 
   textSize(18);
-  text(solvedCount + "/4 solved", 346, 97);
+  text(solvedCount + tl("/4 solved", "/4 listas"), 346, 97);
 
   textSize(13);
-  text("Time: " + liveElapsed.toFixed(1) + "s", 346, 116);
+  text(tl("Time: ", "Tiempo: ") + liveElapsed.toFixed(1) + "s", 346, 116);
 
   fill("white");
   textSize(14);
-  text("Over Target:", 346, 180);
+  text(tl("Over Target:", "Te pasaste:"), 346, 180);
 
   if (overTargetCount >= 1) { stroke("red"); } else { stroke("#888888"); }
   strokeWeight(4);
