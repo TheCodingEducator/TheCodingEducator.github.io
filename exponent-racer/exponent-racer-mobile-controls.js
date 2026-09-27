@@ -38,7 +38,6 @@
     // notes further down the page can scroll into this same band.
     // .mc-active (toggled in refreshVisibility below) re-enables it
     // only while the car is actually being driven.
-    '#mobile-controls.mc-active { pointer-events: auto; }' +
     '#mc-joy-base { position: absolute; left: 20px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.35); touch-action: none; pointer-events: auto; }' +
     '#mc-joy-stick { position: absolute; left: 39px; top: 39px; width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.55); transition: transform 0.05s linear; }' +
     '#mc-action { position: absolute; right: 24px; bottom: 24px; width: 100px; height: 100px; border-radius: 50%; background: rgba(91,140,255,0.55); border: 2px solid rgba(255,255,255,0.5); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; pointer-events: auto; }' +
