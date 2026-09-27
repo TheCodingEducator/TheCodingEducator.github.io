@@ -384,7 +384,7 @@ function foodIcon(d) {
   const o = 'stroke="#5a3a1a" stroke-width="1.2"';
   if (d.food === 'stack') return svgI(`<ellipse cx="10" cy="14" rx="8" ry="3.2" fill="#e3a857" ${o}/><ellipse cx="10" cy="10" rx="8" ry="3.2" fill="#e3a857" ${o}/><rect x="7.5" y="6.2" width="5" height="2.6" rx="1" fill="#fff3a8"/>`);
   if (d.food === 'bowl') return svgI(`<path d="M2 8 Q10 22 18 8 Z" fill="#f4f1ea" ${o}/><ellipse cx="10" cy="8.6" rx="7" ry="1.8" fill="#d9432f"/>`);
-  if (d.food === 'pile') return svgI(`<path d="M4.5 10 L6 18 H14 L15.5 10 Z" fill="#d9a056" ${o}/><circle cx="10" cy="8.5" r="5.5" fill="#6a5acd" ${o}/>`);
+  if (d.food === 'pile') return svgI(`<path d="M4.5 10 L6 18 H14 L15.5 10 Z" fill="#e9c27a" ${o}/><path d="M7.5 11 L8 17 M10 11 V17 M12.5 11 L12 17" stroke="#b98a4a" stroke-width=".8"/><path d="M3 10.5 Q3 3 10 3 Q17 3 17 10.5 Z" fill="#c98a3f" ${o}/><circle cx="8" cy="7" r="1" fill="#4a4ab0"/><circle cx="12.5" cy="6" r="1" fill="#4a4ab0"/>`);
   return svgI(`<path d="M4 3 H16 L14.5 18 H5.5 Z" fill="${d.color || '#ffe066'}" ${o}/><path d="M13 3 L15 0.5" stroke="#e0483c" stroke-width="1.6"/>`);
 }
 const ING_COLORS = { egg: '#fff8e8', tomato: '#e0483c', clove: '#f3ead2', lemon: '#ffe066', banana: '#ffd84a', strawberry: '#e0245e' };
@@ -957,6 +957,16 @@ function drawTableTop() {
   ctx.restore(); ell(0, -67, 48, 14, null, OL, 1.5);
 }
 
+// one muffin standing with the bottom of its paper liner at (x, y): a pleated liner, a golden domed top, two berries
+function drawMuffin(x, y) {
+  ctx.beginPath(); ctx.moveTo(x - 7, y - 9); ctx.lineTo(x + 7, y - 9); ctx.lineTo(x + 5.5, y); ctx.lineTo(x - 5.5, y); ctx.closePath();
+  ctx.fillStyle = '#e9c27a'; ctx.fill(); ctx.strokeStyle = '#8a5a22'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(138,90,34,.55)'; ctx.lineWidth = 0.8; ctx.beginPath();
+  for (const dx of [-3.5, 0, 3.5]) { ctx.moveTo(x + dx, y - 8); ctx.lineTo(x + dx * 0.85, y - 1); } ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 9, y - 8); ctx.quadraticCurveTo(x - 9, y - 19, x, y - 19); ctx.quadraticCurveTo(x + 9, y - 19, x + 9, y - 8); ctx.closePath();
+  ctx.fillStyle = '#c98a3f'; ctx.fill(); ctx.strokeStyle = '#7a4a1a'; ctx.lineWidth = 1.2; ctx.stroke();
+  circ(x - 3, y - 13, 1.4, '#4a4ab0'); circ(x + 3.5, y - 15, 1.4, '#4a4ab0');
+}
 // the food itself, sized by what was actually made (ratio 1 = the right amount)
 function drawFood(P, ratio, x, y, val) {
   if (P.money) {                                                    // a bill instead of food
@@ -975,9 +985,9 @@ function drawFood(P, ratio, x, y, val) {
         ell(x + lean, y - 4 - i * 6, 20, 5, '#e3a857', '#8a5a22', 1.5);
       } else {
         const row = [3, 3, 2, 2, 1, 1], per = []; let k = i, r = 0; while (r < row.length && k >= row[r]) { k -= row[r]; r++; }
-        if (r >= row.length) { circ(x + 36 + (i % 4) * 11, FEET - 7 - (i % 2) * 4, 7, '#6a5acd', '#3b2f8a', 1.5); continue; }
+        if (r >= row.length) { drawMuffin(x + 36 + (i % 4) * 13, FEET - 4 - (i % 2) * 4); continue; }
         const mx = x + (k - (row[r] - 1) / 2) * 15, my = y - 7 - r * 10;
-        rr(mx - 7, my - 2, 14, 9, 2, '#d9a056', '#8a5a22', 1.2); circ(mx, my - 3, 7, '#6a5acd', '#3b2f8a', 1.2); per.push(0);
+        drawMuffin(mx, my + 6); per.push(0);
       }
     }
     if (f === 'stack') { const top = Math.min(n, 8); rr(x - 5 + (top > 7 ? 10 : 0), y - 8 - (top - 1) * 6, 10, 5, 2, '#fff3a8'); }
