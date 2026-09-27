@@ -25,6 +25,7 @@ https://thecodingeducator.github.io/proportional-plates/proportional-plates.html
 https://thecodingeducator.github.io/proportional-plates/guide.html
 https://thecodingeducator.github.io/pythagorean-platforms/pythagorean-platforms.html
 https://thecodingeducator.github.io/pythagorean-platforms/guide.html
+https://thecodingeducator.github.io/pythagorean-platforms/worksheet.html
 https://thecodingeducator.github.io/contact.html
 https://thecodingeducator.github.io/accessibility.html
 https://thecodingeducator.github.io/privacy-policy.html
