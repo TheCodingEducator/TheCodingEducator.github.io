@@ -51,8 +51,9 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = tip ? 'ccss-toggle' : 'sb-toggle';
-    btn.innerHTML = icon + ' ' + label;
+    btn.innerHTML = icon + ' <span class="sb-lbl">' + label + '</span>';   // just the icon on a narrow screen
     btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-label', label);
     btn.setAttribute('aria-controls', id);
     if (tip) {   // on Tip the Scales the page controls stay off the keyboard, like its Standards button
       btn.tabIndex = -1;
@@ -80,6 +81,29 @@
     panels.push({ panel: panel, btn: btn, onClose: onClose });
   }
 
+  // Phones and tablets: a game page is one screen that never scrolls (styles in site-layout.css). The game is
+  // sized to sit above the on-screen joystick / number pad, whose height goes in --mc.
+  function lockPhoneScroll() {
+    if (!matchMedia('(hover: none), (pointer: coarse)').matches) return;
+    if (!document.querySelector('.play-area, .game-frame')) return;   // only game pages (My Stats still scrolls)
+    var root = document.documentElement;
+    root.classList.add('site-lock');
+    var last = -1;
+    function measure() {
+      var mc = document.getElementById('mobile-controls');
+      var h = mc && getComputedStyle(mc).display !== 'none' ? Math.round(mc.getBoundingClientRect().height) : 0;
+      root.classList.toggle('site-pad', !!document.getElementById('mc-numpad'));
+      if (h === last) return;
+      last = h; root.style.setProperty('--mc', h + 'px');
+      try { window.dispatchEvent(new Event('resize')); } catch (err) {}
+    }
+    measure();
+    var n = 0, t = setInterval(function () { measure(); if (++n > 20) clearInterval(t); }, 250);   // the controls are added after load
+    window.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
+    // a page that scrolled anyway (focusing a text box, the address bar sliding) snaps back to the top
+    window.addEventListener('scroll', function () { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
+  }
+
   function setup() {
     var tipBar = document.querySelector('.site-topbar');
     var standards = document.querySelector('aside.standards-panel');
@@ -101,6 +125,13 @@
       document.body.insertBefore(bar, document.body.firstChild);
       document.body.classList.add('site-fit');
     }
+    // the bar's own buttons show just their icons on a narrow screen, like the pop-out buttons
+    [['#fullscreen-btn', 'Fullscreen'], ['.ccss-toggle', 'Standards']].forEach(function (b) {
+      var el = right.querySelector(b[0]);
+      if (!el || el.querySelector('.sb-lbl')) return;
+      el.innerHTML = el.innerHTML.replace(b[1], '<span class="sb-lbl">' + b[1] + '</span>');
+      el.setAttribute('aria-label', b[1]);
+    });
     if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', 'Standards', [standards], false);
     addPanel(right, 'sb-notes', '&#128221;', 'Teaching notes', [notes], !!tipBar);
     // this game's saved stats and badges (site-stats.js), read fresh each time it opens
@@ -127,6 +158,7 @@
       e.preventDefault(); e.stopImmediatePropagation();
       closeAll();
     }, true);
+    lockPhoneScroll();
     // let the games re-measure now that the page around them changed
     try { window.dispatchEvent(new Event('resize')); } catch (err) {}
   }

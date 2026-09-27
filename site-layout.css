@@ -49,8 +49,8 @@ html .sb-panel .standards-panel, html .sb-panel .teaching-notes, html .sb-panel 
 html .sb-panel .reset-progress { margin-top: 0 !important; }
 html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-top: 0 !important; }
 
-/* On a computer, the game fills the page under the bar */
-@media (hover: hover) and (pointer: fine) {
+/* The game fills the page under the bar, on a computer and on a phone or tablet (where the page never scrolls) */
+@media all {
   html body.site-fit { padding-top: 44px !important; box-sizing: border-box; }
   html body.site-fit .play-area {
     padding: 6px 8px !important; gap: 0 !important; flex-wrap: nowrap !important;
@@ -60,8 +60,8 @@ html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-t
   html body.site-fit #game-canvas-slot { display: flex; align-items: center; justify-content: center; }
   /* square p5 games: the largest square that fits */
   html body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) canvas.p5Canvas {
-    width: min(calc(100vw - 16px), calc(100vh - 56px)) !important; height: min(calc(100vw - 16px), calc(100vh - 56px)) !important;
-    width: min(calc(100vw - 16px), calc(100dvh - 56px)) !important; height: min(calc(100vw - 16px), calc(100dvh - 56px)) !important;
+    width: min(calc(100vw - 16px), calc(100vh - 56px - var(--mc, 0px))) !important; height: min(calc(100vw - 16px), calc(100vh - 56px - var(--mc, 0px))) !important;
+    width: min(calc(100vw - 16px), calc(100dvh - 56px - var(--mc, 0px))) !important; height: min(calc(100vw - 16px), calc(100dvh - 56px - var(--mc, 0px))) !important;
     max-width: none !important; max-height: none !important;
   }
   /* Proportional Plates and Similarity Builder: the wide 16:9 stage as big as fits, with its HUD above and controls below */
@@ -95,3 +95,47 @@ html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-t
 body.site-fit { padding-top: 44px; box-sizing: border-box; }
 .sb-panel .reset-progress h2 { font-size: 16px; margin: 0 0 6px; }
 .sb-panel .reset-progress p { margin: 0; font-size: 13px; color: #b7c0d4; }
+
+/* Phones and tablets: the game page is exactly one screen and never scrolls (no page scroll, no rubber-band
+   bounce). The game sits at the top, clear of the on-screen joystick / number pad, whose height site-layout.js
+   puts in --mc. */
+@media (hover: none), (pointer: coarse) {
+  html.site-lock, html.site-lock body {
+    height: 100% !important; min-height: 0 !important; overflow: hidden !important; overscroll-behavior: none;
+  }
+  html.site-lock body { position: fixed; inset: 0; width: 100%; }
+  html.site-lock body.site-fit .play-area {
+    align-items: flex-start; padding: 4px 0 0 !important; overflow: hidden;
+    height: calc(100vh - 44px - var(--mc, 0px)); height: calc(100dvh - 44px - var(--mc, 0px));
+  }
+  html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) { min-height: 0 !important; align-items: flex-start; }
+  html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) canvas.p5Canvas {
+    width: min(100vw, calc(100vh - 48px - var(--mc, 0px))) !important; height: min(100vw, calc(100vh - 48px - var(--mc, 0px))) !important;
+    width: min(100vw, calc(100dvh - 48px - var(--mc, 0px))) !important; height: min(100vw, calc(100dvh - 48px - var(--mc, 0px))) !important;
+  }
+  html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) .app {
+    width: 100vw !important; height: calc(100vh - 48px) !important; height: calc(100dvh - 48px) !important;
+  }
+  html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) #sb { width: 100vw !important; }
+  /* sideways: the controls sit in the bottom corners, beside the game, so the game gets the full height */
+  @media (orientation: landscape) {
+    html.site-lock body.site-fit .play-area { height: calc(100vh - 44px); height: calc(100dvh - 44px); }
+    html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) canvas.p5Canvas {
+      width: min(100vw, calc(100vh - 48px)) !important; height: min(100vw, calc(100vh - 48px)) !important;
+      width: min(100vw, calc(100dvh - 48px)) !important; height: min(100vw, calc(100dvh - 48px)) !important;
+    }
+    /* games with a number pad: the game on the left, the pad (and joystick) centered in the space to its right */
+    html.site-lock.site-pad body.site-fit .play-area { justify-content: flex-start; }
+    html.site-lock.site-pad #mc-numpad { left: calc(100dvh - 48px + (100vw - 100dvh + 48px - 256px) / 2) !important; transform: none !important; }
+    html.site-lock.site-pad #mc-joy-base { left: calc(100dvh - 48px + (100vw - 100dvh + 48px - 130px) / 2) !important; }
+  }
+}
+/* narrow screens: the bar's buttons show just their icons, so the whole bar fits */
+@media (max-width: 1000px) { .site-topbar .sb-lbl { display: none; } }
+@media (max-width: 780px) {
+  .site-bar .sb-lbl { display: none; }
+  .site-bar { padding: 0 6px; }
+  .site-bar .sb-right { gap: 5px; }
+  html .site-bar .fullscreen-btn, .site-bar .sb-toggle { padding: 6px 9px !important; }
+  html .site-bar .back-link { padding: 6px 10px !important; }
+}
