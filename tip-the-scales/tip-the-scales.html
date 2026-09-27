@@ -2171,7 +2171,8 @@
     fn.apply(null, argsAttr ? JSON.parse(argsAttr) : []);
   });
   // Arrow keys move between the buttons on the current screen (inside an open pop-up if there is one), to the
-  // nearest one in that direction; Enter or Space then presses it. The first arrow press picks the first button.
+  // nearest one in that direction; Enter or Space then presses it. The first arrow press picks the first button
+  // that isn't a corner Home / Back / Reset button.
   var TS_POPUPS = ['exit-confirm-layer', 'warning-layer', 'win-layer'];
   var TS_CHROME = '.ccss-toggle, .site-back-link, .back-link, .fullscreen-btn, .pseudo-fullscreen-exit-btn, .teaching-notes, .standards-panel, .reset-progress';
   document.addEventListener('keydown', function (e) {
@@ -2188,7 +2189,10 @@
     if (!els.length) return;
     e.preventDefault();
     var cur = els.indexOf(document.activeElement);
-    if (cur < 0) { els[0].focus(); return; }
+    if (cur < 0) {   // start on the screen's first real control, not the corner Home / Back / Reset buttons
+      (els.filter(function (el) { return !el.classList.contains('nav-btn'); })[0] || els[0]).focus();
+      return;
+    }
     var mid = function (el) { var r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
     var from = mid(els[cur]), best = null, bestScore = Infinity;
     els.forEach(function (el, i) {
