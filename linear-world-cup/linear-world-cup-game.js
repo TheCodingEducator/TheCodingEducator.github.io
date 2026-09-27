@@ -1868,7 +1868,7 @@ function drawEnemyPossessionScene() {
     if (windDuration !== null) windSpeedFrac = speedFracFromPixelsPerFrame(dist(wfx, wfy, wtx, wty) / windDuration);
     drawWindMarkers(ebx, eby, wtx - wfx, wty - wfy, windSpeedFrac);
   }
-  drawBall(ebx, eby);
+  drawBallOnField(ebx, eby);
   if (enemyPhase === "postHit") {
     drawPostPop(gridSX(enemyPostHitX >= 0 ? 3 : -3), FY1 - 4.5, enemyPostHitTimer / 12);
   }
@@ -2162,6 +2162,16 @@ function drawBall(x, y) {
   drawPentagonPatch(x - 0.6, y + 4.6, 1.7, 110);
 }
 
+// A shot ball, cut off at the goal line (the top edge of the field, FY1): as it
+// crosses into the goal it slips out of sight behind the line a little at a
+// time, instead of being drawn on top of the net.
+function drawBallOnField(x, y, alpha) {
+  drawingContext.save();
+  drawingContext.beginPath(); drawingContext.rect(0, FY1, 400, 400 - FY1); drawingContext.clip();
+  if (alpha === undefined) drawBall(x, y); else drawBallFading(x, y, alpha);
+  drawingContext.restore();
+}
+
 function drawBallFading(x, y, alpha) {
   var a = constrain(alpha, 0, 255);
   fill(255, 255, 255, a); stroke(30, 30, 30, a); strokeWeight(1.5);
@@ -2360,7 +2370,7 @@ function drawShootoutFlight(bx, by) {
   var sx = gridSX(bx), sy = gridSY(by);
 
   drawWindMarkers(sx, sy, gridSX(shootEndX) - gridSX(shootStartX), gridSY(shootEndY) - gridSY(shootStartY), shotPower);
-  drawBall(sx, sy);
+  drawBallOnField(sx, sy);
   return { x: dpx, y: dpy };
 }
 
@@ -2468,7 +2478,7 @@ function drawKickFlight(bx, by) {
   var kStartX = gridSX(0), kStartY = gridSY(ballB);
   var kDist = dist(kStartX, kStartY, kEndX, kEndY);
   drawWindMarkers(kbx, kby, kEndX - kStartX, kEndY - kStartY, speedFracFromPixelsPerFrame(kDist / kickDuration));
-  drawBall(kbx, kby);
+  drawBallOnField(kbx, kby);
 
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
@@ -3188,20 +3198,14 @@ function drawFrame() {
         drawGoalie(gridSX(celebrateSnapshot.goalie.x), gridSY(celebrateSnapshot.goalie.y), celebrateSnapshot.goalie.c);
       }
       // Keep the ball moving into the net at the same speed it was already
-      // travelling - no slow-down/freeze - and fade it out over a fixed
-      // DISTANCE traveled rather than a fixed time, so it always vanishes
-      // close to the net (never off-screen) no matter how fast the shot was.
+      // travelling - no slow-down/freeze - and let it disappear behind the
+      // goal line as it goes in (drawBallOnField cuts it off there).
       var celebElapsed = 60 - celebrateTimer;
       var cbPvx = constrain(celebrateSnapshot.ball.pvx || 0, -8, 8);
       var cbPvy = min(celebrateSnapshot.ball.pvy || 0, -3);
       var cbPxX = gridSX(celebrateSnapshot.ball.x) + cbPvx * celebElapsed;
-      // Never render above the scoreboard strip (rect at y:4..30, drawn
-      // separately every frame regardless of screenState) - the ball's
-      // distance-based fade below still finishes it off shortly after.
-      var cbPxY = max(gridSY(celebrateSnapshot.ball.y) + cbPvy * celebElapsed, 34);
-      var cbDistTraveled = abs(cbPvy) * celebElapsed;
-      var cbAlpha = constrain(map(cbDistTraveled, 5, 45, 255, 0), 0, 255);
-      if (cbAlpha > 0) drawBallFading(cbPxX, cbPxY, cbAlpha);
+      var cbPxY = gridSY(celebrateSnapshot.ball.y) + cbPvy * celebElapsed;
+      if (cbPxY > FY1 - 10) drawBallOnField(cbPxX, cbPxY);
     }
 
     fill(255, 255, 255, screenFlash); noStroke();
