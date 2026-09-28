@@ -10,7 +10,7 @@
     { id: 'sqrt', name: T('Square Roots', 'Raíces cuadradas'), ex: '√81 = ?' },
     { id: 'square', name: T('Squaring Numbers', 'Elevar al cuadrado'), ex: '9² = ?' },
     { id: 'area', name: T('Side of a Square', 'Lado de un cuadrado'), ex: T('Area 81 → side?', 'Área 81 → ¿lado?') },
-    { id: 'estimate', name: T('Estimating Square Roots', 'Estimar raíces cuadradas'), ex: T('√50 is between 7 and ?', '√50 está entre 7 y ?') },
+    { id: 'estimate', name: T('Estimating Roots', 'Estimar raíces'), ex: T('√50 is between ? and ?', '√50 está entre ? y ?') },
     { id: 'cube', name: T('Cube Roots', 'Raíces cúbicas'), ex: '∛64 = ?' }
   ];
   function load(key, fallback) {
@@ -26,9 +26,9 @@
   var $ = function (id) { return document.getElementById(id); };
   var app = $('ps'), canvas = $('ps-canvas');
   var scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
-  var qIn = $('q-in'), msg = $('msg'), chance = $('chance'), aimHint = $('aimhint'), hud = $('hud');
+  var qIn = $('q-in'), qIn2 = $('q-in2'), activeIn = null, msg = $('msg'), chance = $('chance'), aimHint = $('aimhint'), hud = $('hud');
   var isTouch = window.matchMedia && matchMedia('(hover: none), (pointer: coarse)').matches;
-  if (isTouch) { qIn.readOnly = true; qIn.setAttribute('inputmode', 'none'); }   // the on-screen pad instead of the phone keyboard
+  if (isTouch) [qIn, qIn2].forEach(function (el) { el.readOnly = true; el.setAttribute('inputmode', 'none'); });   // the on-screen pad instead of the phone keyboard
 
   function show(el) { el.hidden = false; }
   function hide(el) {
@@ -229,9 +229,19 @@
     }
     createCrowd();
 
-    var board = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 1), new THREE.MeshBasicMaterial({ color: 0x111111 }));
-    board.position.set(0, 25, -40);
+    // Big scoreboard behind the goal: lit, showing the shootout's goals and kick
+    boardCanvas = document.createElement('canvas');
+    boardCanvas.width = 512; boardCanvas.height = 256;
+    boardTex = new THREE.CanvasTexture(boardCanvas);
+    var frame = new THREE.MeshLambertMaterial({ color: 0x1f2937 });
+    var board = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 1),
+      [frame, frame, frame, frame, new THREE.MeshBasicMaterial({ map: boardTex }), frame]);
+    board.position.set(0, 19, -40);
     scene.add(board);
+    [-7, 7].forEach(function (x) {   // the posts it stands on
+      var post = new THREE.Mesh(new THREE.BoxGeometry(0.8, 14, 0.8), frame); post.position.set(x, 7, -40.2); scene.add(post);
+    });
+    updateBoard();
   }
 
   function createCrowd() {
@@ -362,41 +372,92 @@
     world.addBody(ballBody);
   }
 
-  function createKeeper(mats) {
-    keeperGroup = new THREE.Group();
-    var shirt = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.8 });
-    var shorts = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-    var skin = new THREE.MeshStandardMaterial({ color: 0xfcb096 });
-    var gloves = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    var bootMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+  // ---------- People ----------
+  // A player built from rounded parts: chest, shoulders, neck, a head with a face and hair, and arms and legs that bend
+  // at the elbow and knee. The hips sit 1 m up; each arm and leg is a group that turns at the shoulder or hip.
+  function buildPerson(o) {
+    var M = function (c, rough) { return new THREE.MeshStandardMaterial({ color: c, roughness: rough || 0.75 }); };
+    var shirt = M(o.shirt), trim = M(o.trim), shorts = M(o.shorts), socks = M(o.socks), skin = M(o.skin, 0.6);
+    var hair = M(o.hair, 0.95), boots = M(o.boots || 0x111111, 0.35), dark = M(0x1a1a1a, 0.4), white = M(0xf8fafc, 0.5);
+    var limb = function (r1, r2, len, mat) {   // hangs down from its group's origin
+      var m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, 14), mat); m.position.y = -len / 2; return m;
+    };
+    var sphere = function (r, mat) { return new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat); };
 
-    kTorso = new THREE.Group();
-    kTorso.position.y = 1.0;
-    var torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), shirt);
-    torso.position.y = 0.35; torso.castShadow = true;
-    kTorso.add(torso);
-    var head = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), skin);
-    head.position.y = 0.825; head.castShadow = true;
-    kTorso.add(head);
+    var root = new THREE.Group(), hips = new THREE.Group();
+    hips.position.y = 1.0;
+    root.add(hips);
 
-    var makeArm = function (x) {
-      var arm = new THREE.Group();
-      arm.position.set(x, 0.65, 0);
-      var a = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.15), shirt); a.position.y = -0.25; a.castShadow = true;
-      var g = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), gloves); g.position.y = -0.6; g.castShadow = true;
-      arm.add(a, g); kTorso.add(arm);
+    var chest = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.155, 0.56, 18), shirt);
+    chest.scale.z = 0.6; chest.position.y = 0.32; hips.add(chest);
+    var shoulders = sphere(0.205, shirt); shoulders.scale.set(1.08, 0.42, 0.6); shoulders.position.y = 0.58; hips.add(shoulders);
+    var collar = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.018, 8, 18), trim);
+    collar.rotation.x = Math.PI / 2; collar.position.y = 0.665; hips.add(collar);
+    var waist = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.175, 0.18, 18), shorts);
+    waist.scale.z = 0.72; waist.position.y = 0.02; hips.add(waist);
+    if (o.number) {   // a shirt number on the chest
+      var nc = document.createElement('canvas'); nc.width = nc.height = 64;
+      var nctx = nc.getContext('2d');
+      nctx.fillStyle = o.numberColor || '#111827'; nctx.font = 'bold 48px Arial'; nctx.textAlign = 'center'; nctx.fillText(o.number, 32, 50);
+      var num = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.14), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(nc), transparent: true }));
+      num.position.set(0, 0.4, 0.12); hips.add(num);
+    }
+
+    var neck = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.055, 0.12, 12), skin);
+    neck.position.y = 0.71; hips.add(neck);
+    var head = new THREE.Group(); head.position.y = 0.86; hips.add(head);
+    var skull = sphere(0.11, skin); skull.scale.set(0.88, 1.1, 0.96); head.add(skull);
+    var hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.116, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.52), hair);
+    hairCap.scale.set(0.92, 1.12, 1.0); hairCap.rotation.x = -0.45; hairCap.position.set(0, 0.012, -0.01); head.add(hairCap);
+    [-1, 1].forEach(function (s) {
+      var eye = sphere(0.016, white); eye.position.set(s * 0.036, 0.018, 0.095); head.add(eye);
+      var pupil = sphere(0.009, dark); pupil.position.set(s * 0.036, 0.018, 0.108); head.add(pupil);
+      var brow = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.008, 0.01), hair); brow.position.set(s * 0.037, 0.045, 0.1); head.add(brow);
+      var ear = sphere(0.026, skin); ear.scale.set(0.45, 1, 0.8); ear.position.set(s * 0.097, 0.0, 0); head.add(ear);
+    });
+    var nose = sphere(0.02, skin); nose.scale.set(0.8, 1.1, 1); nose.position.set(0, -0.012, 0.106); head.add(nose);
+    var mouth = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.007, 0.008), M(0x7f1d1d, 0.5)); mouth.position.set(0, -0.052, 0.098); head.add(mouth);
+
+    var makeArm = function (side) {
+      var arm = new THREE.Group(); arm.position.set(side * 0.235, 0.57, 0); hips.add(arm);
+      arm.add(sphere(0.062, shirt));
+      if (o.longSleeves) arm.add(limb(0.058, 0.05, 0.3, shirt));
+      else { arm.add(limb(0.064, 0.058, 0.13, shirt)); var up = limb(0.05, 0.046, 0.18, skin); up.position.y -= 0.12; arm.add(up); }
+      var fore = new THREE.Group(); fore.position.y = -0.3; fore.rotation.x = -0.25; arm.add(fore);   // a slight bend at the elbow
+      fore.add(sphere(0.048, o.longSleeves ? shirt : skin));
+      fore.add(limb(0.046, 0.038, 0.26, o.longSleeves ? shirt : skin));
+      if (o.gloves) {   // big goalkeeper gloves: cuff, palm and thumb
+        var cuff = limb(0.05, 0.05, 0.05, trim); cuff.position.y -= 0.24; fore.add(cuff);
+        var palm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.05), M(o.gloves, 0.6)); palm.position.y = -0.36; fore.add(palm);
+        var thumb = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.07, 0.04), M(o.gloves, 0.6)); thumb.position.set(-side * 0.06, -0.33, 0.01); thumb.rotation.z = side * 0.4; fore.add(thumb);
+      } else {
+        var hand = sphere(0.042, skin); hand.scale.set(0.8, 1.2, 0.6); hand.position.y = -0.3; fore.add(hand);
+      }
       return arm;
     };
-    var makeLeg = function (x) {
-      var leg = new THREE.Group();
-      leg.position.set(x, 0, 0);
-      var l = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 0.2), shorts); l.position.y = -0.45; l.castShadow = true;
-      var b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.15, 0.3), bootMat); b.position.set(0, -0.95, 0.05); b.castShadow = true;
-      leg.add(l, b); kTorso.add(leg);
+    var makeLeg = function (side) {
+      var leg = new THREE.Group(); leg.position.set(side * 0.095, 0, 0); hips.add(leg);
+      leg.add(limb(0.088, 0.082, 0.24, shorts));
+      leg.add(limb(0.074, 0.058, 0.45, skin));
+      var shin = new THREE.Group(); shin.position.y = -0.45; leg.add(shin);
+      shin.add(sphere(0.058, skin));
+      var band = limb(0.06, 0.06, 0.05, trim); band.position.y -= 0.04; shin.add(band);
+      shin.add(limb(0.058, 0.044, 0.44, socks));
+      var boot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.075, 0.25), boots); boot.position.set(0, -0.475, 0.05); shin.add(boot);
+      var toe = sphere(0.05, boots); toe.scale.set(1, 0.75, 1); toe.position.set(0, -0.48, 0.16); shin.add(toe);
       return leg;
     };
-    kLArm = makeArm(-0.3); kRArm = makeArm(0.3); kLLeg = makeLeg(-0.15); kRLeg = makeLeg(0.15);
-    keeperGroup.add(kTorso);
+    var p = { root: root, hips: hips, lArm: makeArm(-1), rArm: makeArm(1), lLeg: makeLeg(-1), rLeg: makeLeg(1) };
+    root.traverse(function (m) { if (m.isMesh) m.castShadow = true; });
+    return p;
+  }
+
+  function createKeeper(mats) {
+    keeperGroup = new THREE.Group();
+    var k = buildPerson({ shirt: 0xeab308, trim: 0x111827, shorts: 0x111827, socks: 0xeab308, skin: 0xe0ac69, hair: 0x2b1a10,
+      longSleeves: true, gloves: 0xf8fafc, number: '1' });
+    kTorso = k.hips; kLArm = k.lArm; kRArm = k.rArm; kLLeg = k.lLeg; kRLeg = k.rLeg;
+    keeperGroup.add(k.root);
     scene.add(keeperGroup);
 
     keeperBody = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC, material: mats.keeperMat });
@@ -406,38 +467,50 @@
   }
 
   function createReferee() {
-    var ref = new THREE.Group();
-    var shirt = new THREE.MeshStandardMaterial({ color: 0xeadb00, roughness: 0.9 });
-    var shorts = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    var skin = new THREE.MeshStandardMaterial({ color: 0x8d5524 });
-    var part = function (w, h, d, mat, x, y) {
-      var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      m.position.set(x, y, 0); m.castShadow = true; ref.add(m);
-    };
-    part(0.4, 0.6, 0.25, shirt, 0, 1.3); part(0.25, 0.25, 0.25, skin, 0, 1.7);
-    part(0.12, 0.5, 0.12, shirt, -0.28, 1.3); part(0.12, 0.5, 0.12, shirt, 0.28, 1.3);
-    part(0.15, 0.6, 0.15, shorts, -0.12, 0.7); part(0.15, 0.6, 0.15, shorts, 0.12, 0.7);
+    var r = buildPerson({ shirt: 0xa3e635, trim: 0x111111, shorts: 0x111111, socks: 0x111111, skin: 0x8d5524, hair: 0x111111 });
+    r.lArm.rotation.set(0.1, 0, -0.12); r.rArm.rotation.set(-0.3, 0, 0.12);   // arms relaxed at the sides
+    var ref = r.root;
     ref.position.set(4, 0, 7);
     ref.lookAt(0, 0, 11);   // watching the ball, standing upright
     scene.add(ref);
   }
 
   function createLeg() {
+    // the shooter's own kicking leg (first person): it swings from the hip, so the boot is at the bottom
     legGroup = new THREE.Group();
-    var boot = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.12, 0.35), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-    boot.position.set(0, 0.06, -0.1);
-    var sock = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.8), new THREE.MeshLambertMaterial({ color: 0xffffff }));
-    sock.position.set(0, 0.5, 0);
-    legGroup.add(boot, sock);
-    legGroup.position.set(0.2, 1.0, PENALTY_DIST + 0.5);
+    var M = function (c, rough) { return new THREE.MeshStandardMaterial({ color: c, roughness: rough || 0.7 }); };
+    var part = function (geo, mat, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(0, y, z || 0); legGroup.add(m); return m; };
+    part(new THREE.CylinderGeometry(0.1, 0.095, 0.25, 14), M(0x1d4ed8), -0.12);                 // shorts
+    part(new THREE.CylinderGeometry(0.08, 0.062, 0.45, 14), M(0xe0ac69, 0.6), -0.3);           // thigh
+    part(new THREE.SphereGeometry(0.064, 14, 10), M(0xe0ac69, 0.6), -0.52);                    // knee
+    part(new THREE.CylinderGeometry(0.064, 0.064, 0.06, 14), M(0x1d4ed8), -0.57);               // sock band
+    part(new THREE.CylinderGeometry(0.062, 0.048, 0.36, 14), M(0xf8fafc), -0.76);              // sock
+    part(new THREE.BoxGeometry(0.11, 0.08, 0.26), M(0xef4444, 0.35), -0.97, -0.05);             // boot
+    part(new THREE.SphereGeometry(0.055, 14, 10), M(0xef4444, 0.35), -0.975, -0.17).scale.set(1, 0.75, 1);
+    part(new THREE.BoxGeometry(0.112, 0.02, 0.12), M(0xf8fafc), -0.95, -0.02);                  // boot stripe
+    legGroup.traverse(function (m) { if (m.isMesh) m.castShadow = true; });
+    legGroup.position.set(0.22, 1.0, PENALTY_DIST + 0.3);
     legGroup.visible = false;
     scene.add(legGroup);
   }
 
   // ---------- Questions ----------
   function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
-  var rad = function (n) { return '<span class="rt">√<span class="rad">' + n + '</span></span>'; };
-  var crad = function (n) { return '<span class="rt">∛<span class="rad">' + n + '</span></span>'; };
+  // A textbook radical: the sign is drawn as a vector shape and its bar runs over the whole number. A hidden √ or ∛ keeps
+  // the text readable for screen readers.
+  function rootHTML(n, index) {
+    return '<span class="rt' + (index ? ' cube' : '') + '"><span class="rt-sr">' + (index ? '∛' : '√') + '</span>' +
+      (index ? '<span class="idx" data-i="' + index + '" aria-hidden="true"></span>' : '') +
+      '<svg class="rsym" viewBox="0 0 10 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0.6 11.6 L2.6 10.2 L5.4 19.2 L10 0.5"/></svg>' +
+      '<span class="rad">' + n + '</span></span>';
+  }
+  var rad = function (n) { return rootHTML(n, 0); };
+  var crad = function (n) { return rootHTML(n, 3); };
+  // turns √81 and ∛64 in a line of text into drawn radicals, and 9² into 9<sup>2</sup>
+  function roots(s) {
+    return String(s).replace(/√(\d+)/g, function (m, n) { return rad(n); }).replace(/∛(\d+)/g, function (m, n) { return crad(n); })
+      .replace(/(\d)²/g, '$1<sup>2</sup>').replace(/(\d)³/g, '$1<sup>3</sup>');
+  }
 
   function makeQuestion() {
     var active = [];
@@ -459,13 +532,18 @@
           'Un cuadrado tiene un área de <b>' + r * r + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
         q.plain = T('A square with area ' + r * r + ' has sides of ?', 'Un cuadrado de área ' + r * r + ' tiene lados de ?');
       } else if (skill === 'estimate') {
-        a = rnd(pro ? 3 : 1, maxRoot - 1); n = rnd(a * a + 1, (a + 1) * (a + 1) - 1);
-        q.a = a; q.n = n; q.low = Math.random() < 0.5;   // ask for the smaller or the larger whole number
-        q.answer = q.low ? a : a + 1;
+        // a square root (or, about a third of the time, a cube root) that isn't a whole number:
+        // the student finds BOTH whole numbers it's between
+        q.cube = Math.random() < 0.35;
+        var pw = q.cube ? 3 : 2;
+        a = q.cube ? rnd(pro ? 2 : 1, pro ? 9 : 4) : rnd(pro ? 3 : 1, maxRoot - 1);
+        q.lo = Math.pow(a, pw); q.hi = Math.pow(a + 1, pw);
+        n = rnd(q.lo + 1, q.hi - 1);
+        q.a = a; q.n = n; q.two = true; q.answer = [a, a + 1];
         var blank = '<b class="blank">?</b>';
-        q.html = rad(n) + T(' is between ', ' está entre ') + (q.low ? blank : a) + T(' and ', ' y ') + (q.low ? a + 1 : blank);
-        q.plain = '√' + n + T(' is between ', ' está entre ') + (q.low ? '?' : a) + T(' and ', ' y ') + (q.low ? a + 1 : '?');
-        q.sub = T('Type the missing whole number.', 'Escribe el número entero que falta.');
+        q.html = (q.cube ? crad(n) : rad(n)) + T(' is between ', ' está entre ') + blank + T(' and ', ' y ') + blank;
+        q.plain = (q.cube ? '∛' : '√') + n + T(' is between ', ' está entre ') + '?' + T(' and ', ' y ') + '?';
+        q.sub = T('Type the two whole numbers it is between.', 'Escribe los dos números enteros entre los que está.');
       } else {
         r = rnd(pro ? 3 : 2, pro ? 10 : 5); q.r = r; q.answer = r;
         q.html = T('What is ', '¿Cuánto es ') + crad(r * r * r) + '?';
@@ -484,25 +562,50 @@
     question = makeQuestion();
     $('q-kick').textContent = T('KICK ', 'TIRO ') + (kickNum + 1) + T(' OF ', ' DE ') + KICKS + ' · ' + skillName(question.skill).toUpperCase();
     $('q-text').innerHTML = question.html;
+    $('q-text').classList.toggle('long', !!question.two);
     $('q-sub').textContent = question.sub || T('Type a whole number.', 'Escribe un número entero.');
-    qIn.value = '';
+    qIn.value = ''; qIn2.value = '';
+    $('q-and').hidden = qIn2.hidden = !question.two;
+    $('q-ans').classList.toggle('two', !!question.two);
+    setActiveBox(qIn);
     hideAimHud();
     show(scrQ);
     state = STATE.MATH;
     if (!isTouch) qIn.focus({ preventScroll: true });
   }
 
+  // the answer box the number pad (and typing outside the boxes) fills
+  function setActiveBox(el) {
+    activeIn = el;
+    qIn.classList.toggle('active', !!question && question.two && el === qIn);
+    qIn2.classList.toggle('active', el === qIn2);
+  }
+  function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+  function answerText(ans) { return Array.isArray(ans) ? ans[0] + T(' and ', ' y ') + ans[1] : String(ans); }
+
   function submitAnswer() {
     if (state !== STATE.MATH) return;
-    var val = parseInt(qIn.value, 10);
-    if (isNaN(val)) { qIn.classList.remove('shake'); void qIn.offsetWidth; qIn.classList.add('shake'); return; }
+    var v1 = parseInt(qIn.value, 10), v2 = parseInt(qIn2.value, 10), ok, given;
+    if (isNaN(v1)) { shake(qIn); setActiveBox(qIn); if (!isTouch) qIn.focus(); return; }
+    if (question.two) {
+      if (isNaN(v2)) {   // first box done: on to the second one
+        if (activeIn === qIn2) shake(qIn2);
+        setActiveBox(qIn2); if (!isTouch) qIn2.focus();
+        return;
+      }
+      ok = Math.min(v1, v2) === question.answer[0] && Math.max(v1, v2) === question.answer[1];   // either order
+      given = [v1, v2];
+    } else {
+      ok = v1 === question.answer;
+      given = v1;
+    }
     hide(scrQ);
-    if (val === question.answer) {
+    if (ok) {
       rightCount++;
       startAiming();
     } else {
-      missed.push({ q: question.plain, you: val, ans: question.answer });
-      showExplanation(val);
+      missed.push({ q: question.plain, you: answerText(given), ans: question.answer });
+      showExplanation(answerText(given));
     }
   }
 
@@ -514,11 +617,38 @@
       '<div class="gcap">' + r + ' × ' + r + (layers ? T(' squares in each layer, ', ' cuadrados en cada capa, ') + r + T(' layers', ' capas') : '') + '</div>';
   }
 
+  // A cube of r × r × r little cubes, drawn at an angle so its top and two sides show
+  function cubeHTML(r, sizePx) {
+    var s = sizePx / (r * 1.8), c30 = Math.cos(Math.PI / 6), s30 = 0.5;
+    var P = function (x, y, z) { return [(x - z) * c30 * s, (x + z) * s30 * s - y * s]; };
+    var pts = [], faces = [
+      { fill: '#60a5fa', corner: function (u, v) { return P(u, r, v); } },   // top
+      { fill: '#3b82f6', corner: function (u, v) { return P(r, r - v, u); } },   // right side
+      { fill: '#1d4ed8', corner: function (u, v) { return P(u, r - v, r); } }    // front side
+    ];
+    var svg = '';
+    faces.forEach(function (f) {
+      var cs = [f.corner(0, 0), f.corner(r, 0), f.corner(r, r), f.corner(0, r)];
+      svg += '<polygon points="' + cs.map(function (p) { return p.join(','); }).join(' ') + '" fill="' + f.fill + '"/>';
+      for (var i = 1; i < r; i++) {   // the lines between the little cubes
+        var a = f.corner(i, 0), b = f.corner(i, r), c = f.corner(0, i), d = f.corner(r, i);
+        svg += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>' +
+          '<line x1="' + c[0] + '" y1="' + c[1] + '" x2="' + d[0] + '" y2="' + d[1] + '"/>';
+      }
+      cs.forEach(function (p) { pts.push(p); });
+    });
+    var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+    var minX = Math.min.apply(null, xs), minY = Math.min.apply(null, ys), w = Math.max.apply(null, xs) - minX, h = Math.max.apply(null, ys) - minY;
+    return '<svg class="cube" width="' + Math.round(w + 4) + '" height="' + Math.round(h + 4) + '" viewBox="' + (minX - 2) + ' ' + (minY - 2) + ' ' + (w + 4) + ' ' + (h + 4) + '" role="img" aria-label="' +
+      T('A cube made of ', 'Un cubo hecho de ') + r * r * r + T(' little cubes', ' cubitos') + '">' + svg + '</svg>' +
+      '<div class="gcap">' + r + ' × ' + r + ' × ' + r + ' = ' + r * r * r + T(' little cubes', ' cubitos') + '</div>';
+  }
+
   function showExplanation(given) {
     state = STATE.EXPLANATION;
     var q = question, r = q.r, body = '', lines = [];
-    $('exp-you').innerHTML = T('You answered <b>' + given + '</b>. The answer is <b class="ok">' + q.answer + '</b>.',
-      'Respondiste <b>' + given + '</b>. La respuesta es <b class="ok">' + q.answer + '</b>.');
+    $('exp-you').innerHTML = T('You answered <b>' + given + '</b>. The answer is <b class="ok">' + answerText(q.answer) + '</b>.',
+      'Respondiste <b>' + given + '</b>. La respuesta es <b class="ok">' + answerText(q.answer) + '</b>.');
     var px = Math.max(6, Math.floor(Math.min(200, app.clientHeight * 0.3) / (r || 1)));
 
     if (q.skill === 'sqrt' || q.skill === 'square' || q.skill === 'area') {
@@ -534,21 +664,24 @@
         lines.push(r + ' × ' + r + ' = ' + r * r + T(', so each side is ', ', así que cada lado mide ') + '<b class="ok">' + r + '</b>');
       }
     } else if (q.skill === 'cube') {
-      body = gridHTML(r, px, true);
+      body = cubeHTML(r, Math.min(220, app.clientHeight * 0.34));
       lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + r * r * r + '?');
       lines.push(r + ' × ' + r + ' × ' + r + ' = ' + r * r * r + T(', so ', ', entonces ') + '∛' + r * r * r + ' = <b class="ok">' + r + '</b>');
     } else {
-      var a = q.a, lo = a * a, hi = (a + 1) * (a + 1), pct = Math.round((q.n - lo) / (hi - lo) * 100);
+      var a = q.a, b = a + 1, lo = q.lo, hi = q.hi, pct = Math.round((q.n - lo) / (hi - lo) * 100);
+      var pw = q.cube ? '³' : '²', times = function (x) { return x + ' × ' + x + (q.cube ? ' × ' + x : ''); };
       body = '<div class="nl"><div class="nl-bar"></div>' +
-        '<div class="nl-tick" style="left:0"><b>' + lo + '</b><span>' + a + '²</span></div>' +
-        '<div class="nl-tick" style="left:100%"><b>' + hi + '</b><span>' + (a + 1) + '²</span></div>' +
+        '<div class="nl-tick" style="left:0"><b>' + lo + '</b><span>' + a + pw + '</span></div>' +
+        '<div class="nl-tick" style="left:100%"><b>' + hi + '</b><span>' + b + pw + '</span></div>' +
         '<div class="nl-pt" style="left:' + pct + '%"><b>' + q.n + '</b></div></div>';
-      lines.push(a + ' × ' + a + ' = ' + lo + T(' and ', ' y ') + (a + 1) + ' × ' + (a + 1) + ' = ' + hi);
-      lines.push(lo + ' < ' + q.n + ' < ' + hi + T(', so ', ', entonces ') + '√' + q.n + T(' is between ', ' está entre ') +
-        '<b class="ok">' + a + '</b>' + T(' and ', ' y ') + '<b class="ok">' + (a + 1) + '</b>');
+      lines.push(q.cube ? T('Find the perfect cubes on either side of ', 'Busca los cubos perfectos a cada lado de ') + q.n + ':'
+        : T('Find the perfect squares on either side of ', 'Busca los cuadrados perfectos a cada lado de ') + q.n + ':');
+      lines.push(times(a) + ' = ' + lo + T(' and ', ' y ') + times(b) + ' = ' + hi);
+      lines.push(lo + ' < ' + q.n + ' < ' + hi + T(', so ', ', entonces ') + (q.cube ? '∛' : '√') + q.n + T(' is between ', ' está entre ') +
+        '<b class="ok">' + a + '</b>' + T(' and ', ' y ') + '<b class="ok">' + b + '</b>');
     }
     $('exp-visual').innerHTML = body;
-    $('exp-lines').innerHTML = lines.map(function (l) { return '<p>' + l + '</p>'; }).join('');
+    $('exp-lines').innerHTML = lines.map(function (l) { return '<p>' + roots(l) + '</p>'; }).join('');
     show(scrExp);
     $('exp-go').focus({ preventScroll: true });
   }
@@ -718,10 +851,10 @@
     keeperGroup.quaternion.copy(keeperBody.quaternion);
     kTorso.position.y = 1.0;
     if (keeperTarget.x < 0) {
-      kLArm.rotation.set(0, 0, Math.PI - 0.4); kRArm.rotation.set(-0.5, 0, 0.5);
+      kLArm.rotation.set(0, 0, -(Math.PI - 0.3)); kRArm.rotation.set(0, 0, -(Math.PI - 0.95));   // both arms reach to the left
       kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3);
     } else {
-      kRArm.rotation.set(0, 0, -Math.PI + 0.4); kLArm.rotation.set(-0.5, 0, -0.5);
+      kRArm.rotation.set(0, 0, Math.PI - 0.3); kLArm.rotation.set(0, 0, Math.PI - 0.95);   // both arms reach to the right
       kRLeg.rotation.set(0, 0, 0.2); kLLeg.rotation.set(-0.3, 0, -0.3);
     }
   }
@@ -729,10 +862,10 @@
   function keeperIdle() {
     var time = clock.elapsedTime, bob = Math.sin(time * 6);
     kTorso.position.y = 1.0 + Math.abs(bob) * 0.08;
-    kLLeg.rotation.set(-0.1 + bob * 0.05, 0, 0);
-    kRLeg.rotation.set(-0.1 + bob * 0.05, 0, 0);
-    kLArm.rotation.set(0.3, 0, 0.4);
-    kRArm.rotation.set(0.3, 0, -0.4);
+    kLLeg.rotation.set(-0.1 + bob * 0.05, 0, -0.1);
+    kRLeg.rotation.set(-0.1 + bob * 0.05, 0, 0.1);
+    kLArm.rotation.set(0.35, 0, -1.2 - bob * 0.05);   // ready stance: arms spread wide, gloves out
+    kRArm.rotation.set(0.35, 0, 1.2 + bob * 0.05);
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.quaternion.copy(keeperBody.quaternion);
   }
@@ -785,7 +918,24 @@
     nextKick();
   }
 
+  var boardCanvas = null, boardTex = null;
+  function updateBoard() {
+    if (!boardCanvas) return;
+    var c = boardCanvas.getContext('2d'), inGame = !hud.hidden;
+    c.fillStyle = '#05070d'; c.fillRect(0, 0, 512, 256);
+    c.strokeStyle = '#3b82f6'; c.lineWidth = 8; c.strokeRect(8, 8, 496, 240);
+    c.textAlign = 'center';
+    c.fillStyle = '#60a5fa'; c.font = 'bold 40px Arial';
+    c.fillText(T('PRO PENALTY', 'PRO PENALTY'), 256, 62);
+    c.fillStyle = '#facc15'; c.font = 'bold 96px Arial';
+    c.fillText(inGame ? goals + ' / ' + KICKS : '⚽', 256, 165);
+    c.fillStyle = '#e2e8f0'; c.font = 'bold 30px Arial';
+    c.fillText(inGame ? T('GOALS', 'GOLES') + ' · ' + T('KICK ', 'TIRO ') + Math.min(kickNum + 1, KICKS) + '/' + KICKS : T('MATH EDITION', 'EDICIÓN MATEMÁTICA'), 256, 222);
+    boardTex.needsUpdate = true;
+  }
+
   function drawHud() {
+    updateBoard();
     $('hud-goals').textContent = goals;
     var dots = '';
     for (var i = 0; i < KICKS; i++) {
@@ -838,7 +988,9 @@
     var list = $('over-missed');
     if (missed.length) {
       list.innerHTML = '<h3>' + T('Questions to review', 'Preguntas para repasar') + '</h3>' + missed.map(function (m) {
-        return '<li><span class="mq">' + m.q.replace('?', '<b class="ok">' + m.ans + '</b>') + '</span><span class="you">' + T('you said ', 'dijiste ') + m.you + '</span></li>';
+        var line = m.q;
+        [].concat(m.ans).forEach(function (x) { line = line.replace('?', '<b class="ok">' + x + '</b>'); });   // fill in each blank
+        return '<li><span class="mq">' + roots(line) + '</span><span class="you">' + T('you said ', 'dijiste ') + m.you + '</span></li>';
       }).join('');
       list.hidden = false;
     } else {
@@ -853,6 +1005,7 @@
     state = STATE.MENU;
     hide(scrOver); hide(scrQ); hide(scrExp);
     hud.hidden = true;
+    updateBoard();
     hideAimHud();
     show(scrMenu);
   }
@@ -865,7 +1018,7 @@
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'skill';
       b.setAttribute('aria-pressed', String(!!skillOn[i]));
-      b.innerHTML = '<span class="chk" aria-hidden="true"></span><span class="nm">' + s.name + '</span><span class="ex">' + s.ex + '</span>';
+      b.innerHTML = '<span class="chk" aria-hidden="true"></span><span class="nm">' + s.name + '</span><span class="ex">' + roots(s.ex) + '</span>';
       b.addEventListener('click', function () {
         skillOn[i] = !skillOn[i];
         b.setAttribute('aria-pressed', String(skillOn[i]));
@@ -990,8 +1143,8 @@
     if (state === STATE.MATH) {
       if (go && tag !== 'BUTTON') { e.preventDefault(); submitAnswer(); return; }
       if (tag !== 'INPUT') {   // typing works even when the answer box isn't focused
-        if (/^[0-9]$/.test(e.key) && qIn.value.length < 3) { qIn.value += e.key; e.preventDefault(); }
-        else if (e.key === 'Backspace') { qIn.value = qIn.value.slice(0, -1); e.preventDefault(); }
+        if (/^[0-9]$/.test(e.key) && activeIn.value.length < 3) { activeIn.value += e.key; e.preventDefault(); }
+        else if (e.key === 'Backspace') { activeIn.value = activeIn.value.slice(0, -1); e.preventDefault(); }
       }
       return;
     }
@@ -1011,14 +1164,18 @@
   });
   window.addEventListener('blur', function () { keysDown = {}; endCharge(); });
 
-  qIn.addEventListener('input', function () { qIn.value = qIn.value.replace(/[^0-9]/g, '').slice(0, 3); });
+  [qIn, qIn2].forEach(function (el) {
+    el.addEventListener('input', function () { el.value = el.value.replace(/[^0-9]/g, '').slice(0, 3); });
+    el.addEventListener('focus', function () { setActiveBox(el); });
+    el.addEventListener('click', function () { setActiveBox(el); });   // on a phone, tap a box to fill it with the pad
+  });
   $('q-go').addEventListener('click', submitAnswer);
   Array.prototype.forEach.call(document.querySelectorAll('#q-pad button'), function (b) {
     b.addEventListener('click', function () {
       var k = b.getAttribute('data-k');
-      if (k === 'back') qIn.value = qIn.value.slice(0, -1);
+      if (k === 'back') activeIn.value = activeIn.value.slice(0, -1);
       else if (k === 'go') submitAnswer();
-      else if (qIn.value.length < 3) qIn.value += k;
+      else if (activeIn.value.length < 3) activeIn.value += k;
     });
   });
   $('exp-go').addEventListener('click', closeExplanation);

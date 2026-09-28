@@ -122,17 +122,27 @@
   /* Question */
   #ps .kicker { color: var(--yellow); font-size: clamp(20px, 3.8cqmin, 28px); }
   #ps .qtext { font-size: clamp(30px, 7.5cqmin, 58px); font-weight: 800; margin: 6px 0 4px; line-height: 1.2; }
+  #ps .qtext.long { font-size: clamp(24px, 5.6cqmin, 44px); }
   #ps .qtext .qsm { display: block; font-size: 0.6em; font-weight: 600; line-height: 1.35; }
   #ps .qtext .qsm b { color: var(--yellow); }
   #ps .qtext sup { font-size: 0.55em; }
   #ps .qtext .blank { color: var(--yellow); }
-  #ps .rt { white-space: nowrap; }
-  #ps .rad { border-top: 0.07em solid currentColor; padding: 0 0.08em; margin-left: 0.02em; }
+  /* square and cube root signs: a drawn radical whose bar runs over the whole number */
+  #ps .rt { display: inline-flex; align-items: stretch; position: relative; white-space: nowrap; vertical-align: bottom; margin: 0 0.04em; }
+  #ps .rt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+  #ps .rsym { width: 0.55em; height: auto; flex: none; overflow: visible; margin-right: -0.02em; }
+  #ps .rsym path { fill: none; stroke: currentColor; stroke-width: 0.075em; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  #ps .rad { border-top: 0.075em solid currentColor; padding: 0.1em 0.08em 0 0.04em; line-height: 1.05; }
+  #ps .rt.cube { padding-left: 0.12em; }
+  #ps .rt .idx { position: absolute; left: 0; top: 0.28em; font-size: 0.4em; font-weight: 800; line-height: 1; }
+  #ps .rt .idx::before { content: attr(data-i); }
   #ps .qsub { color: var(--soft); font-size: clamp(13px, 2.4cqmin, 16px); margin: 0 0 12px; }
   #ps .ansrow { display: flex; justify-content: center; align-items: center; gap: 12px; }
-  #ps #q-in { width: clamp(90px, 20cqmin, 140px); background: #1e293b; color: #fff; font: 800 clamp(30px, 7cqmin, 48px) 'Inter', sans-serif; text-align: center; padding: 4px; border: 4px solid #475569; border-radius: 16px; outline: none; }
-  #ps #q-in:focus { border-color: var(--yellow); }
-  #ps #q-in.shake { animation: ps-shake 0.3s; border-color: var(--red); }
+  #ps #q-in, #ps #q-in2 { width: clamp(90px, 20cqmin, 140px); background: #1e293b; color: #fff; font: 800 clamp(30px, 7cqmin, 48px) 'Inter', sans-serif; text-align: center; padding: 4px; border: 4px solid #475569; border-radius: 16px; outline: none; }
+  #ps .ansrow.two #q-in, #ps .ansrow.two #q-in2 { width: clamp(72px, 16cqmin, 120px); }
+  #ps .ansrow .and { font-weight: 800; font-size: clamp(18px, 3.6cqmin, 26px); color: var(--soft); }
+  #ps #q-in:focus, #ps #q-in2:focus, #ps #q-in.active, #ps #q-in2.active { border-color: var(--yellow); }
+  #ps #q-in.shake, #ps #q-in2.shake { animation: ps-shake 0.3s; border-color: var(--red); }
   @keyframes ps-shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   #ps .pad { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 260px; margin: 12px auto 0; }
   #ps .pad button { background: #334155; color: #fff; border: 0; border-radius: 12px; font: 800 22px 'Inter', sans-serif; padding: 8px 0; cursor: pointer; touch-action: manipulation; }
@@ -150,6 +160,9 @@
   #ps .grid { display: grid; width: max-content; gap: 2px; background: #0f172a; padding: 4px; border-radius: 8px; margin: 0 auto; }
   #ps .grid i { background: #334155; border-radius: 2px; animation: ps-fill 0.25s forwards; }
   @keyframes ps-fill { to { background: var(--blue); } }
+  #ps svg.cube { display: block; margin: 0 auto; }
+  #ps svg.cube line { stroke: #0b1a3a; stroke-width: 1.2; }
+  #ps svg.cube polygon { stroke: #0b1a3a; stroke-width: 1.5; stroke-linejoin: round; }
   #ps .gcap { color: var(--soft); font-size: 14px; margin-top: 4px; }
   #ps .exp-lines { flex: 1 1 240px; text-align: left; font-size: clamp(15px, 3cqmin, 21px); line-height: 1.45; }
   #ps .exp-lines p { margin: 0 0 8px; }
@@ -230,8 +243,10 @@
           <div class="kicker" id="q-kick">KICK 1 OF 5</div>
           <div class="qtext" id="q-text" aria-live="polite"></div>
           <p class="qsub" id="q-sub"></p>
-          <div class="ansrow">
+          <div class="ansrow" id="q-ans">
             <input type="text" id="q-in" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="?" aria-label="Your answer" data-es-aria="Tu respuesta">
+            <span class="and" id="q-and" hidden data-es="y">and</span>
+            <input type="text" id="q-in2" hidden inputmode="numeric" maxlength="3" autocomplete="off" placeholder="?" aria-label="The second number" data-es-aria="El segundo número">
             <button type="button" class="btn green" id="q-go" data-es="TIRAR">KICK</button>
           </div>
           <div class="pad" id="q-pad">
@@ -253,7 +268,7 @@
             <div class="exp-lines" id="exp-lines"></div>
           </div>
           <p class="wild" data-es="Como fallaste la pregunta, ¡tu tiro sale desviado!">Because you missed the question, your shot goes wild!</p>
-          <div class="go-row"><button type="button" class="btn red" id="exp-go" data-es="VER EL TIRO">WATCH THE SHOT</button></div>
+          <div class="go-row"><button type="button" class="btn red" id="exp-go" data-es="VER EL FALLO">WATCH THE MISS</button></div>
         </div>
       </div>
 
@@ -287,7 +302,7 @@
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.8.NS.A.2</span>
       <p>Use rational approximations of irrational numbers to compare their size and locate them on a number line.</p>
-      <p class="applies">Applies to: Estimating Square Roots (&radic;50 is between 7 and 8).</p>
+      <p class="applies">Applies to: Estimating Roots (&radic;50 is between 7 and 8; &#8731;50 is between 3 and 4).</p>
     </div>
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.6.EE.A.1</span>
@@ -301,9 +316,9 @@
   <h2>Teaching Notes for Educators</h2>
   <p>Students earn each penalty kick by answering a question about squares and roots, then aim and time their shot in a 3D stadium. A shootout is five kicks.</p>
   <ul>
-    <li><strong>Five skills to choose from:</strong> square roots of perfect squares (&radic;81), squaring numbers (9&sup2;), finding the side of a square from its area, estimating square roots between two whole numbers, and cube roots (&#8731;64).</li>
+    <li><strong>Five skills to choose from:</strong> square roots of perfect squares (&radic;81), squaring numbers (9&sup2;), finding the side of a square from its area, estimating square and cube roots between two whole numbers, and cube roots (&#8731;64).</li>
     <li><strong>Two levels:</strong> Rookie uses numbers from 1 to 10 (cube roots to 5); Pro goes up to 15 (cube roots to 10), and its keeper is a little sharper.</li>
-    <li><strong>Wrong answers:</strong> the game shows why. Squares and square roots are drawn as a square of unit squares, cube roots as layers of a cube, and estimates on a number line between two perfect squares. That kick then goes wild, so accuracy matters more than speed.</li>
+    <li><strong>Wrong answers:</strong> the game shows why. Squares and square roots are drawn as a square of unit squares, cube roots as a 3D cube built from little cubes, and estimates on a number line between two perfect squares or cubes. That kick then goes wild, so accuracy matters more than speed.</li>
     <li><strong>The shot:</strong> the scoring chance depends on where students aim (corners are hardest to save) and how well they time the power circle, so the soccer part rewards patience too.</li>
     <li><strong>Review:</strong> the final screen shows goals, questions right, and every missed question beside its correct answer.</li>
   </ul>
