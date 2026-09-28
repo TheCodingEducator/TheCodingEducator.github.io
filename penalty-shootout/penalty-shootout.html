@@ -80,7 +80,10 @@
   #ps #msg { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: clamp(64px, 18cqmin, 170px); font-weight: 700; font-style: italic; text-shadow: 0 0 30px #000, 0 4px 0 rgba(0,0,0,0.6); pointer-events: none; z-index: 6; white-space: nowrap; animation: ps-pop 0.35s ease-out; }
   #ps #msg.goal { color: #4ade80; } #ps #msg.saved { color: var(--yellow); } #ps #msg.miss { color: #f87171; }
   @keyframes ps-pop { from { transform: translate(-50%, -50%) scale(0.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-  #ps #chance { position: absolute; top: clamp(52px, 11cqmin, 80px); left: 50%; transform: translateX(-50%); font-size: clamp(26px, 5.5cqmin, 46px); font-weight: 700; text-shadow: 0 0 14px #000; pointer-events: none; z-index: 5; white-space: nowrap; }
+  #ps #chance { position: absolute; bottom: clamp(56px, 10cqmin, 84px); background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 6px 16px 8px; left: 50%; transform: translateX(-50%); font-size: clamp(26px, 5.5cqmin, 46px); font-weight: 700; text-shadow: 0 0 14px #000; pointer-events: none; z-index: 5; white-space: nowrap; }
+  #ps #chance { text-align: center; line-height: 1; }
+  #ps #chance .sub { font: 600 clamp(12px, 2.4cqmin, 17px) 'Inter', sans-serif; letter-spacing: 0; color: #e2e8f0; background: rgba(0,0,0,0.55); border-radius: 999px; padding: 4px 12px; margin-top: 4px; display: inline-block; }
+  #ps #chance .sub b { color: #fff; }
   #ps #chance.good { color: #4ade80; } #ps #chance.mid { color: var(--yellow); } #ps #chance.bad { color: #f87171; }
   #ps #aimhint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.65); border: 1px solid var(--line); border-radius: 14px; padding: 6px 16px; text-align: center; font-size: clamp(13px, 2.6cqmin, 18px); font-weight: 600; pointer-events: none; z-index: 5; width: max-content; max-width: calc(100% - 24px); animation: ps-pulse 2s ease-in-out infinite; }
   @keyframes ps-pulse { 50% { opacity: 0.65; } }
@@ -215,7 +218,7 @@
         <div class="hudbox"><span data-es="GOLES">GOALS</span> <span class="gl" id="hud-goals">0</span><span id="hud-dots" role="img"></span></div>
         <div class="hudbox" id="weather">DAY</div>
       </div>
-      <div id="chance" hidden><span data-es="PROBABILIDAD DE GOL">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div>
+      <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div><div class="sub" id="chance-sub"></div></div>
       <div id="msg" hidden aria-live="assertive"></div>
       <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Mantén presionado (o la barra espaciadora) para cargar &middot; Suelta cuando el círculo sea más pequeño">Aim with the mouse, a finger or the arrow keys &middot; Hold down (or hold Space) to power up &middot; Let go when the circle is smallest</div>
 
@@ -319,7 +322,7 @@
     <li><strong>Five skills to choose from:</strong> square roots of perfect squares (&radic;81), squaring numbers (9&sup2;), finding the side of a square from its area, estimating square and cube roots between two whole numbers, and cube roots (&#8731;64).</li>
     <li><strong>Two levels:</strong> Rookie uses numbers from 1 to 10 (cube roots to 5); Pro goes up to 15 (cube roots to 10), and its keeper is a little sharper.</li>
     <li><strong>Wrong answers:</strong> the game shows why. Squares and square roots are drawn as a square of unit squares, cube roots as a 3D cube built from little cubes, and estimates on a number line between two perfect squares or cubes. That kick then goes wild, so accuracy matters more than speed.</li>
-    <li><strong>The shot:</strong> the scoring chance depends on where students aim (corners are hardest to save) and how well they time the power circle, so the soccer part rewards patience too.</li>
+    <li><strong>The shot:</strong> the scoring chance is shown live as students aim and power up, and it is worked out as a probability: the chance the shot is on target times the chance it beats the keeper (on target 90% &times; beats the keeper 70% = 63%). Corners are hardest to save; a shot right at the keeper, or a weak one, gets caught. The game decides each shot with that same chance, so the percentage is honest.</li>
     <li><strong>Review:</strong> the final screen shows goals, questions right, and every missed question beside its correct answer.</li>
   </ul>
 </section>

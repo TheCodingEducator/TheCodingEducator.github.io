@@ -762,6 +762,7 @@
       y = 3.5 + Math.random() * 2;
       speed = 22;
     } else {
+      showOdds(shotOdds(aimX, aimY, aimPower), false);   // the chance at the moment of release stays on screen
       var errR = errorRadiusFor(aimPower) * Math.sqrt(Math.random()), errA = Math.random() * Math.PI * 2;
       x += Math.cos(errA) * errR;
       y = Math.max(BALL_RADIUS, y + Math.sin(errA) * errR);
@@ -772,46 +773,78 @@
     ballBody.velocity.set(x / t, (y - BALL_RADIUS + 0.5 * g * t * t) / t, -PENALTY_DIST / t);
     ballBody.angularVelocity.set(-PENALTY_DIST / t * 2, 0, 0);
 
-    var pct = keeperDecision(x, y, t, aimX, aimY);
-    if (!isAutoMiss) {
-      $('chance-n').textContent = pct;
-      chance.className = pct > 65 ? 'good' : pct > 35 ? 'mid' : 'bad';
-      chance.hidden = false;
+    keeperDecision(x, y, t);
+  }
+
+  // ---------- The scoring chance ----------
+  // Chance of scoring = chance the shot is on target × chance it beats the keeper once it is.
+  // The shot lands somewhere in the power circle (any spot equally likely), so both parts are worked out over
+  // evenly spread points in that circle. The game decides every shot with these same numbers, so the % is honest.
+  var DISC = (function () {   // 240 evenly spread points in a circle of radius 1
+    var pts = [], n = 240, golden = Math.PI * (3 - Math.sqrt(5));
+    for (var i = 0; i < n; i++) { var r = Math.sqrt((i + 0.5) / n), a = i * golden; pts.push([Math.cos(a) * r, Math.sin(a) * r]); }
+    return pts;
+  })();
+
+  // the whole ball clears the posts and the bar (so it can't clip the frame)
+  function onTarget(x, y) { var m = BALL_RADIUS + POST_RADIUS; return Math.abs(x) < GOAL_WIDTH / 2 - m && y < GOAL_HEIGHT - m; }
+
+  // Chance a shot landing at (x, y) in the goal beats the keeper. Right at the keeper is easy to stop; the further
+  // toward a corner the better, top corners best. A weak (badly timed) shot is easier to stop.
+  function beatChance(x, y, power) {
+    var dx = Math.min(1, Math.abs(x) / (GOAL_WIDTH / 2)), dy = Math.min(1, y / GOAL_HEIGHT);
+    var place = 0.12 + 0.62 * Math.pow(dx, 1.3) + 0.12 * dy + 0.12 * dx * dy;
+    var strike = 0.5 + 0.5 * power;
+    var p = place * strike * (level === 'pro' ? 0.92 : 1);   // Pro keepers are a little sharper
+    return Math.max(0.02, Math.min(0.97, p));
+  }
+
+  function shotOdds(ax, ay, power) {
+    var R = errorRadiusFor(power), on = 0, beat = 0;
+    for (var i = 0; i < DISC.length; i++) {
+      var x = ax + DISC[i][0] * R, y = Math.max(BALL_RADIUS, ay + DISC[i][1] * R);
+      if (onTarget(x, y)) { on++; beat += beatChance(x, y, power); }
     }
+    return { on: on / DISC.length, beat: on ? beat / on : 0, total: beat / DISC.length };
+  }
+
+  var lastOdds = '';
+  function showOdds(o, best) {
+    var pct = function (v) { return Math.round(v * 100) + '%'; };
+    var total = Math.round(o.total * 100);
+    var key = (best ? 'b' : 'c') + total + pct(o.on) + pct(o.beat);
+    if (key === lastOdds && !chance.hidden) return;   // only touch the page when something changed
+    lastOdds = key;
+    $('chance-lbl').textContent = best ? T('BEST CHANCE HERE', 'MEJOR PROBABILIDAD AQUÍ') : T('SCORING CHANCE', 'PROBABILIDAD DE GOL');
+    $('chance-n').textContent = total;
+    $('chance-sub').innerHTML = best
+      ? T('if you let go when the circle is smallest', 'si sueltas cuando el círculo sea más pequeño')
+      : T('on target ', 'a puerta ') + '<b>' + pct(o.on) + '</b> × ' + T('beats the keeper ', 'supera al portero ') + '<b>' + pct(o.beat) + '</b> = <b>' + total + '%</b>';
+    chance.className = total > 65 ? 'good' : total > 35 ? 'mid' : 'bad';
+    chance.hidden = false;
   }
 
   // ---------- Keeper: the scoring chance decides the save ----------
   var keeperTarget = { x: 0, y: 0 }, keeperDiving = false, keeperReactionDelay = 0, keeperDiveTime = 0, keeperDiveDuration = 0.6;
+  var catching = false, standingCatch = false, caught = false, caughtTime = 0;
 
-  function keeperDecision(targetX, targetY, flight, aimX, aimY) {
+  function keeperDecision(targetX, targetY, flight) {
     keeperStartX = keeperBody.position.x;
     keeperStartY = keeperBody.position.y;
-    var offTarget = Math.abs(targetX) > GOAL_WIDTH / 2 + BALL_RADIUS * 2 || targetY > GOAL_HEIGHT + BALL_RADIUS * 2;
+    catching = standingCatch = caught = false;
+    var inGoal = !isAutoMiss && onTarget(targetX, targetY);
+    var goesIn = inGoal && Math.random() < beatChance(targetX, targetY, aimPower);
 
-    // Where it was aimed: corners are hardest to save, the middle is easiest
-    var ax = Math.abs(aimX), base = 25;
-    if (ax > 2.5 && ax < 3.66 && aimY > 1.5 && aimY < 2.44) base = 95;
-    else if (ax > 2.5 && ax < 3.66 && aimY < 0.8) base = 80;
-    else if (ax > 1.8 || aimY > 1.6) base = 55;
-
-    var timing = 0.3 + aimPower * 0.7;                     // a big circle means a weak, sloppy strike
-    var er = errorRadiusFor(aimPower), penalty = 0;          // and a circle spilling past the frame costs more
-    if (ax + er > GOAL_WIDTH / 2) penalty += (ax + er - GOAL_WIDTH / 2) * 15;
-    if (aimY + er > GOAL_HEIGHT) penalty += (aimY + er - GOAL_HEIGHT) * 15;
-    if (level === 'pro') base -= 5;                          // Pro keepers are a little sharper
-
-    var pct = Math.max(1, Math.min(99, Math.round(base * timing - penalty)));
-    if (offTarget) pct = 0;
-    var goesIn = Math.random() * 100 < pct;
-
-    if (!goesIn && !offTarget) {
-      // a save: the keeper gets there just as the ball does
-      keeperTarget = { x: targetX, y: Math.min(targetY, GOAL_HEIGHT) };
+    if (inGoal && !goesIn) {
+      // a save: the keeper gets there just as the ball does. A shot right at the keeper, or a weak one, is caught.
+      standingCatch = Math.abs(targetX) < 1.1;
+      catching = standingCatch || aimPower < 0.45;
+      keeperTarget = standingCatch ? { x: targetX, y: Math.max(0, targetY - 1.45) } : { x: targetX, y: Math.min(targetY, GOAL_HEIGHT) };
       var intercept = flight * ((PENALTY_DIST - 0.5) / PENALTY_DIST);
       keeperReactionDelay = intercept * 0.1;
       keeperDiveDuration = intercept * 0.9;
       enforceSave = true;
-      keeperBody.collisionResponse = true;
+      keeperBody.collisionResponse = !catching;
     } else {
       // a goal (or a miss): the keeper guesses wrong, or dives too late
       if (Math.random() > 0.5) {
@@ -826,8 +859,9 @@
     }
     keeperDiving = true;
     keeperDiveTime = 0;
-    return pct;
+    catchY = targetY;
   }
+  var catchY = 1;
 
   function updateKeeper(delta) {
     if (!keeperDiving) { keeperIdle(); return; }
@@ -843,14 +877,19 @@
       var fall = keeperDiveTime - keeperReactionDelay - keeperDiveDuration;
       y = Math.max(0, y - 0.5 * 15 * fall * fall);
     }
-    var tilt = Math.abs(keeperTarget.x) > 0.5 ? (x / (GOAL_WIDTH / 2)) * -(Math.PI / 2.3) : 0;
+    var tilt = !standingCatch && Math.abs(keeperTarget.x) > 0.5 ? (x / (GOAL_WIDTH / 2)) * -(Math.PI / 2.3) : 0;
     keeperBody.position.set(x, y, keeperBody.position.z);
     keeperBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), tilt);
 
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.quaternion.copy(keeperBody.quaternion);
     kTorso.position.y = 1.0;
-    if (keeperTarget.x < 0) {
+    if (standingCatch) {
+      // both hands out in front, at the height of the ball, to gather it in
+      var reach = -(Math.PI / 2 + Math.atan2(catchY - keeperTarget.y - 1.57, 0.45));
+      kLArm.rotation.set(reach, 0, 0.18); kRArm.rotation.set(reach, 0, -0.18);
+      kLLeg.rotation.set(-0.15, 0, -0.08); kRLeg.rotation.set(-0.15, 0, 0.08);
+    } else if (keeperTarget.x < 0) {
       kLArm.rotation.set(0, 0, -(Math.PI - 0.3)); kRArm.rotation.set(0, 0, -(Math.PI - 0.95));   // both arms reach to the left
       kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3);
     } else {
@@ -870,6 +909,20 @@
     keeperGroup.quaternion.copy(keeperBody.quaternion);
   }
 
+  // A caught ball stays between the keeper's gloves; after a moment the kick is marked CAUGHT
+  var handL = new THREE.Vector3(), handR = new THREE.Vector3();
+  function holdCaughtBall(delta) {
+    keeperGroup.updateMatrixWorld(true);
+    kLArm.localToWorld(handL.set(0, -0.6, 0.14));
+    kRArm.localToWorld(handR.set(0, -0.6, 0.14));
+    ballBody.position.set((handL.x + handR.x) / 2, Math.max(BALL_RADIUS, (handL.y + handR.y) / 2), (handL.z + handR.z) / 2 + 0.06);
+    ballBody.velocity.set(0, 0, 0);
+    ballBody.angularVelocity.set(0, 0, 0);
+    ballMesh.position.copy(ballBody.position);
+    caughtTime += delta;
+    if (caughtTime > 0.6 && !resultDecided) kickResult('caught');
+  }
+
   var lastHitTime = 0;
   function onContact(e) {
     var other = e.bodyA === ballBody ? e.bodyB : (e.bodyB === ballBody ? e.bodyA : null);
@@ -885,7 +938,7 @@
 
   // ---------- Result of each kick ----------
   function checkResult() {
-    if (resultDecided) return;
+    if (resultDecided || caught) return;   // a caught ball is decided once the keeper has hold of it
     var p = ballBody.position, v = ballBody.velocity;
     var crossed = p.z + BALL_RADIUS < -0.05;   // the whole ball over the line
     var inPosts = p.x > -GOAL_WIDTH / 2 && p.x < GOAL_WIDTH / 2, underBar = p.y < GOAL_HEIGHT;
@@ -903,8 +956,9 @@
     state = STATE.RESULT;
     results[kickNum] = kind;
     if (kind === 'goal') { goals++; playSound('cheer'); } else playSound('groan');
-    msg.textContent = kind === 'goal' ? T('GOAL!', '¡GOL!') : kind === 'saved' ? T('SAVED', '¡ATAJADA!') : T('MISS', 'FUERA');
-    msg.className = kind;
+    msg.textContent = kind === 'goal' ? T('GOAL!', '¡GOL!') : kind === 'saved' ? T('SAVED', '¡ATAJADA!') :
+      kind === 'caught' ? T('CAUGHT!', '¡ATRAPADA!') : T('MISS', 'FUERA');
+    msg.className = kind === 'caught' ? 'saved' : kind;
     msg.hidden = false;
     kickNum++;
     drawHud();
@@ -960,6 +1014,7 @@
 
   function nextKick() {
     enforceSave = false;
+    catching = standingCatch = caught = false;
     resultDecided = false;
     legGroup.visible = false;
     resetBall();
@@ -1082,6 +1137,9 @@
       errorCircle.scale.set(er / 0.1, er / 0.1, 1);
       errorCircle.material.color.setHex(aimPower < 0.4 ? 0xff3333 : aimPower < 0.75 ? 0xffff33 : 0x33ff33);
     }
+    // the scoring chance, live: the best it could be while aiming, the real one while powering up
+    if (state === STATE.AIMING) showOdds(shotOdds(targetCrosshair.position.x, targetCrosshair.position.y, 1), true);
+    else if (state === STATE.CHARGING) showOdds(shotOdds(targetCrosshair.position.x, targetCrosshair.position.y, aimPower), false);
 
     if (state === STATE.KICKING) {
       kickPhase += delta * 12;
@@ -1094,9 +1152,12 @@
       // a save is a save, however fast the shot: stop the ball in front of the line
       if (enforceSave && ballBody.position.z < 1.2 && ballBody.velocity.z < 0) {
         hitKeeper = true;
-        ballBody.position.z = 0.8;
-        ballBody.velocity.set((Math.random() - 0.5) * 4, -1, 2 + Math.random() * 3);
         enforceSave = false;
+        if (catching) { caught = true; caughtTime = 0; playSound('catch'); }   // into the gloves (see holdCaughtBall)
+        else {
+          ballBody.position.z = 0.8;
+          ballBody.velocity.set((Math.random() - 0.5) * 4, -1, 2 + Math.random() * 3);
+        }
       }
       ballMesh.position.copy(ballBody.position);
       ballMesh.quaternion.copy(ballBody.quaternion);
@@ -1104,6 +1165,7 @@
     }
 
     updateKeeper(delta);
+    if (caught && state === STATE.RESULT) holdCaughtBall(delta);
 
     if (rainParticles) {
       var rp = rainParticles.geometry.attributes.position.array;
@@ -1234,6 +1296,13 @@
       gain.gain.setValueAtTime(1.0, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
       osc.connect(gain); thud.connect(filt).connect(gain); gain.connect(master);
       osc.start(now); thud.start(now); osc.stop(now + 0.15);
+    } else if (type === 'catch') {   // a soft thud into the gloves
+      var slap = noiseBuffer(0.12), lp = audioCtx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 500;
+      gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.9, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      slap.connect(lp).connect(gain).connect(master);
+      slap.start(now);
     } else if (type === 'woodwork') {
       osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
       osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.4);
