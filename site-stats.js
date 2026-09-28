@@ -58,6 +58,12 @@
       played: has('grapplerope_best_score'), bestScore: readNum('grapplerope_best_score', 0),
       bestCombo: readNum('grapplerope_best_combo', 0), worlds: (readJSON('grapplerope_worlds_done', []) || []).length
     };
+    var gal = readJSON('areaartist_gallery', []) || [], cre = readJSON('areaartist_creations', []) || [];
+    var aa = {
+      played: gal.length > 0 || cre.length > 0, pictures: gal.length, creations: cre.length,
+      monet: gal.filter(function (e) { return e.m === 'h'; }).length,
+      firstTry: gal.filter(function (e) { return e.n && e.ft === e.n; }).length
+    };
     var games = [
       { key: 'lgttp', folder: 'lets-get-to-the-point', icon: '🎯', name: "Let's Get to the Point", played: lg.played,
         best: lg.hsGenius > 0 || lg.hsGeometry > 0, coins: lg.coins, rows: [
@@ -81,6 +87,10 @@
       { key: 'plates', folder: 'proportional-plates', icon: '🍳', name: 'Proportional Plates', played: pp.played,
         best: pp.bestServed > 0, coins: 0, rows: [
           ['Best shift', pp.bestServed + ' orders'], ['Highest level', pp.bestLevel + ' / 5'], ['Stars', pp.stars]] },
+      { key: 'artist', folder: 'area-artist', icon: '🎨', name: 'Area Artist', played: aa.played,
+        best: aa.firstTry > 0, coins: 0, rows: [
+          ['Masterpieces painted', aa.pictures], ['Multiplication Monet masterpieces', aa.monet],
+          ['Perfect pictures (every piece right the first time)', aa.firstTry], ['Creations in the studio', aa.creations]] },
       { key: 'rope', folder: 'pythagorean-platforms', icon: '🧗', name: 'Pythagorean Platforms', played: rp.played,
         best: rp.bestScore > 0, coins: 0, rows: [
           ['Best score', rp.bestScore], ['Best combo', 'x' + rp.bestCombo], ['Worlds finished', rp.worlds + ' / 5']] }
@@ -91,7 +101,7 @@
     var badges = [
       { game: 'all', icon: '🎮', name: 'First Steps', desc: 'Play any game once', earned: played >= 1 },
       { game: 'all', icon: '🕹️', name: 'Multi-Gamer', desc: 'Save progress in 2+ games', earned: played >= 2 },
-      { game: 'all', icon: '🏆', name: 'Completionist', desc: 'Save progress in all 7 tracked games', earned: played >= 7 },
+      { game: 'all', icon: '🏆', name: 'Completionist', desc: 'Save progress in all ' + games.length + ' tracked games', earned: played >= games.length },
       { game: 'all', icon: '⏱️', name: 'Personal Best', desc: 'Record a best time or high score', earned: games.some(function (g) { return g.best; }) },
       { game: 'all', icon: '🪙', name: 'Coin Collector', desc: 'Earn 20+ coins in total', earned: coinsAll >= 20 },
       { game: 'lgttp', icon: '🔥', name: 'Streak Starter', desc: 'Reach a streak of 3', earned: lg.streak >= 3 },
@@ -109,6 +119,11 @@
       { game: 'plates', icon: '🍳', name: 'Order Up!', desc: 'Play a shift', earned: pp.played },
       { game: 'plates', icon: '🍽️', name: 'Head Chef', desc: 'Serve 15+ orders in one shift', earned: pp.bestServed >= 15 },
       { game: 'plates', icon: '⭐', name: 'Five-Star Diner', desc: 'Reach level 5', earned: pp.bestLevel >= 5 },
+      { game: 'artist', icon: '🖼️', name: 'First Masterpiece', desc: 'Finish a picture', earned: aa.pictures >= 1 },
+      { game: 'artist', icon: '🎨', name: 'Gallery Opening', desc: 'Finish 10 pictures', earned: aa.pictures >= 10 },
+      { game: 'artist', icon: '🌸', name: 'Monet Master', desc: 'Finish a Multiplication Monet picture', earned: aa.monet >= 1 },
+      { game: 'artist', icon: '💯', name: 'Perfect Picture', desc: 'Get every piece of a picture right the first time', earned: aa.firstTry >= 1 },
+      { game: 'artist', icon: '🧑‍🎨', name: 'Studio Artist', desc: 'Save a creation in the art studio', earned: aa.creations >= 1 },
       { game: 'rope', icon: '🧗', name: 'First Swing', desc: 'Finish a world', earned: rp.worlds >= 1 },
       { game: 'rope', icon: '🔥', name: 'Swing Streak', desc: 'Get a combo of 15+', earned: rp.bestCombo >= 15 },
       { game: 'rope', icon: '🛕', name: 'Temple Explorer', desc: 'Finish all 5 worlds', earned: rp.worlds >= 5 }

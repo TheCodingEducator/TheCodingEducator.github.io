@@ -51,3 +51,7 @@ https://thecodingeducator.github.io/similarity-builder/exit-ticket.html
 https://thecodingeducator.github.io/proportional-plates/worksheet.html
 https://thecodingeducator.github.io/proportional-plates/exit-ticket.html
 https://thecodingeducator.github.io/pythagorean-platforms/exit-ticket.html
+https://thecodingeducator.github.io/area-artist/area-artist.html
+https://thecodingeducator.github.io/area-artist/guide.html
+https://thecodingeducator.github.io/area-artist/worksheet.html
+https://thecodingeducator.github.io/area-artist/exit-ticket.html
