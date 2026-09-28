@@ -430,7 +430,7 @@
     solvedSizes = {};
     screen = 'create'; game = null; confetti = [];
     hideOverlays(); hide('playPanel'); show('createPanel'); hide('clearConfirm');
-    $('cHint').innerHTML = T('<b>Arrow keys</b> move &middot; <b>Enter</b> paints &middot; <b>R</b> turns &middot; <b>E</b> eraser &middot; <b>Ctrl+Z</b> undo', '<b>Flechas</b> mueven &middot; <b>Enter</b> pinta &middot; <b>R</b> gira &middot; <b>E</b> borrador &middot; <b>Ctrl+Z</b> deshace');
+    $('cHint').innerHTML = T('<b>Arrow keys</b> move &middot; <b>Enter</b> paints &middot; <b>R</b> rotates &middot; <b>E</b> eraser &middot; <b>Ctrl+Z</b> undo', '<b>Flechas</b> mueven &middot; <b>Enter</b> pinta &middot; <b>R</b> gira &middot; <b>E</b> borrador &middot; <b>Ctrl+Z</b> deshace');
     buildSwatches(); setTool('paint'); studioEq();
     resize(); snapCam();
   }
@@ -479,7 +479,7 @@
     st.rows = r; st.cols = c; st.showCount = false;
     if (wasFlip && !studioSolved()) {
       solvedSizes[r + 'x' + c] = true;
-      studioEq(['info', T('You turned it! ' + r + ' &times; ' + c + ' is still ' + r * c + ': turning a rectangle doesn\'t change how many squares it has.',
+      studioEq(['info', T('You rotated it! ' + r + ' &times; ' + c + ' is still ' + r * c + ': rotating a rectangle doesn\'t change how many squares it has.',
         '¡Lo giraste! ' + r + ' &times; ' + c + ' sigue siendo ' + r * c + ': girar un rectángulo no cambia cuántos cuadritos tiene.')]);
     } else studioEq();
   }
