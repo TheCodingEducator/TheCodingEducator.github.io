@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Penalty Shootout: Math Edition</title>
+    <meta name="description" content="Answer square root questions to earn penalty kicks, then aim for the corners in a 3D stadium. A free browser math game for students.">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cannon.js for Realistic Physics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Teko:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Inter', sans-serif; user-select: none; touch-action: none; }
+        #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        .hud-font { font-family: 'Teko', sans-serif; }
+        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+        .pointer-events-auto { pointer-events: auto; }
+        .hidden { display: none !important; }
+
+        /* Grid Animation for Math Explanation */
+        .grid-cell { transition: all 0.3s ease; }
+        .grid-cell.highlight { background-color: #3b82f6; border-color: #2563eb; transform: scale(1.05); }
+
+        /* Hide number spinner arrows */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WebGL Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- User Interface Layer -->
+    <div id="ui-layer">
+
+        <!-- Top Info Bar -->
+        <div class="w-full flex justify-between items-start p-3 md:p-6 gap-2">
+            <div class="glass-panel text-white p-3 md:p-4 rounded-xl shadow-2xl flex items-center gap-3 md:gap-6">
+                <div class="text-3xl md:text-5xl hud-font font-bold text-yellow-400">SCORE: <span id="ui-score">0</span></div>
+                <div class="w-px h-10 bg-gray-500"></div>
+                <div class="text-2xl md:text-3xl hud-font text-gray-300">STREAK: <span id="ui-streak">0</span></div>
+            </div>
+
+            <div id="weather-indicator" class="glass-panel text-white px-4 md:px-6 py-2 md:py-3 rounded-xl shadow-2xl text-xl md:text-2xl hud-font uppercase tracking-widest text-blue-300">
+                CONDITIONS: DAY
+            </div>
+        </div>
+
+        <!-- Center Messages -->
+        <div id="center-message" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-7xl md:text-9xl hud-font font-bold text-white drop-shadow-[0_0_30px_rgba(0,0,0,1)] tracking-widest hidden text-center italic z-20">
+            GOAL!
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="absolute top-0 left-0 w-full h-full bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center pointer-events-auto z-50 overflow-y-auto p-4">
+            <div class="glass-panel p-8 md:p-16 rounded-3xl flex flex-col items-center border-t-8 border-blue-600 shadow-[0_0_50px_rgba(37,99,235,0.3)]">
+                <h1 class="text-6xl md:text-8xl hud-font font-bold text-white mb-2 tracking-wider text-center drop-shadow-lg">PRO PENALTY</h1>
+                <h2 class="text-4xl md:text-5xl hud-font text-blue-400 mb-8 tracking-widest">MATH EDITION</h2>
+                <div class="text-gray-300 mb-10 max-w-2xl text-center text-lg md:text-xl space-y-4">
+                    <p>Answer the square root question correctly to earn your shot.</p>
+                    <p class="text-yellow-400 font-semibold">AIMING MECHANICS:</p>
+                    <ul class="list-disc text-left pl-10 space-y-2">
+                        <li>Point your <span class="text-blue-400 font-bold">MOUSE</span> or drag your <span class="text-blue-400 font-bold">FINGER</span> to aim anywhere in the goal.</li>
+                        <li>Press and <span class="text-red-400 font-bold">HOLD SPACEBAR OR CLICK</span> to build power.</li>
+                        <li><strong>TIMING IS EVERYTHING:</strong> Release when the circle is SMALLEST for the most accurate and powerful shot!</li>
+                        <li>Shots in the top corners have the best chance to score!</li>
+                    </ul>
+                </div>
+                <button id="btn-start" class="px-16 py-5 bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white rounded-full text-4xl hud-font transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(37,99,235,0.6)]">ENTER THE PITCH</button>
+            </div>
+        </div>
+
+        <!-- Math Question Panel -->
+        <div id="math-panel" class="absolute top-0 left-0 w-full h-full bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto z-40 hidden p-4">
+            <div class="glass-panel p-8 md:p-12 rounded-3xl shadow-2xl flex flex-col items-center border-t-4 border-yellow-500 w-full max-w-2xl">
+                <div class="text-yellow-400 text-2xl font-bold tracking-widest mb-4 hud-font">QUALIFY FOR THE SHOT</div>
+                <h2 id="math-question" class="text-4xl md:text-6xl font-bold text-white mb-10 text-center">What is the square root of 169?</h2>
+                <div class="flex flex-row items-center justify-center w-full gap-6">
+                    <input type="number" id="math-input" inputmode="numeric" class="w-32 bg-slate-800 text-white text-5xl p-4 rounded-2xl border-4 border-slate-600 focus:border-yellow-500 focus:outline-none text-center font-bold shadow-inner" placeholder="?" autocomplete="off">
+                    <button id="btn-submit-math" class="px-10 py-4 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-4xl hud-font transition-colors shadow-lg">KICK</button>
+                </div>
+                <p class="text-gray-400 mt-8 text-lg font-semibold">Type a whole number and press ENTER</p>
+            </div>
+        </div>
+
+        <!-- Math Explanation Pop-up (Wrong Answer) -->
+        <div id="explanation-panel" class="absolute top-0 left-0 w-full h-full bg-slate-900/95 flex flex-col items-center justify-center pointer-events-auto z-50 hidden overflow-y-auto p-4">
+            <div class="max-w-5xl w-full flex flex-col items-center">
+                <h2 class="text-6xl md:text-7xl hud-font font-bold text-red-500 mb-4 drop-shadow-lg">INCORRECT</h2>
+                <p class="text-2xl md:text-3xl text-white mb-8 text-center">The square root is the side length of a square area.</p>
+
+                <div class="bg-slate-800 p-6 md:p-10 rounded-3xl shadow-2xl mb-8 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 border-2 border-slate-700 w-full">
+                    <div id="grid-container" class="grid gap-1 bg-slate-900 p-2 rounded-xl"></div>
+                    <div class="text-white text-3xl md:text-4xl font-bold flex flex-col gap-6">
+                        <div class="flex items-center gap-4"><div class="w-6 h-6 bg-blue-500 rounded"></div> Total Area = <span id="exp-area" class="text-yellow-400 text-5xl">169</span></div>
+                        <div class="flex items-center gap-4"><div class="w-6 h-1 bg-green-400 rounded"></div> Side Length = <span id="exp-root" class="text-green-400 text-5xl">13</span></div>
+                        <div class="text-3xl text-gray-300 mt-4 border-t-2 border-slate-600 pt-6">Therefore, <br>√<span id="exp-area-2">169</span> = <span id="exp-root-2" class="text-green-400 text-5xl">13</span></div>
+                    </div>
+                </div>
+
+                <p class="text-2xl md:text-3xl text-red-400 mb-8 italic font-semibold text-center">Because you missed the calculation, your shot will go wild!</p>
+                <button id="btn-close-exp" class="px-12 py-5 bg-red-600 hover:bg-red-500 text-white rounded-full text-3xl hud-font transition-transform transform hover:scale-105 shadow-[0_0_30px_rgba(220,38,38,0.5)]">WATCH THE MISS</button>
+            </div>
+        </div>
+
+        <!-- Aiming HUD -->
+        <div id="aim-hud" class="w-full flex-1 flex flex-col justify-start items-center p-4 md:p-16 hidden pointer-events-none z-30">
+            <div id="aim-instructions" class="text-white text-xl md:text-3xl hud-font tracking-widest mb-4 drop-shadow-2xl text-center bg-black/60 px-6 md:px-10 py-3 rounded-3xl border border-white/20 animate-pulse">
+                MOVE MOUSE/FINGER TO AIM.<br>HOLD CLICK OR SPACE TO BUILD POWER.<br>RELEASE TO SHOOT.
+            </div>
+            <div id="chance-display" class="text-5xl hud-font font-bold text-yellow-400 mt-10 hidden drop-shadow-[0_0_15px_rgba(0,0,0,0.8)] transition-all">
+                SCORING CHANCE: <span id="chance-text">0</span>%
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Game State Enums ---
+        const STATE = {
+            MENU: 0, MATH: 1, EXPLANATION: 2,
+            AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6
+        };
+
+        const ENV = { DAY: 0, NIGHT: 1, RAIN: 2 };
+
+        let currentState = STATE.MENU;
+        let currentEnv = ENV.DAY;
+
+        // --- Core Variables ---
+        let score = 0, streak = 0;
+        let currentRoot = 1, currentArea = 1, lastRoot = 0;
+        let hitKeeper = false;
+
+        // --- Aiming Variables ---
+        let aimPower = 0;    // 0 (huge circle) to 1 (tiny circle)
+
+        // --- Engine Variables ---
+        let scene, camera, renderer, world, clock;
+        let ballMesh, ballBody;
+        let keeperGroup, keeperBody;
+        let legGroup;
+        let rainParticles, flashParticles;
+        let resultTimeout;
+        let targetCrosshair;
+        let errorCircle;
+
+        let kickPhase = 0;
+        let isAutoMiss = false;
+        let resultDecided = false;
+        let enforceSave = false; // Forces the physics engine to obey the %
+
+        // --- Goalkeeper Rig & Animation ---
+        let kTorso, kHead, kLArm, kRArm, kLLeg, kRLeg;
+        let keeperStartX = 0;
+        let keeperStartY = 0;
+
+        // --- Referee ---
+        let refGroup;
+
+        // --- Audio Context ---
+        let audioCtx = null;
+        const audioNodes = {};
+
+        // --- DOM Elements ---
+        const uiLayer = document.getElementById('ui-layer');
+        const menuPanel = document.getElementById('main-menu');
+        const mathPanel = document.getElementById('math-panel');
+        const expPanel = document.getElementById('explanation-panel');
+        const aimHud = document.getElementById('aim-hud');
+
+        const mathInput = document.getElementById('math-input');
+        const mathQuestion = document.getElementById('math-question');
+        const centerMessage = document.getElementById('center-message');
+        const uiScore = document.getElementById('ui-score');
+        const uiStreak = document.getElementById('ui-streak');
+
+        const aimInst = document.getElementById('aim-instructions');
+        const chanceDisplay = document.getElementById('chance-display');
+        const chanceText = document.getElementById('chance-text');
+
+        // --- Constants ---
+        const GOAL_WIDTH = 7.32;
+        const GOAL_HEIGHT = 2.44;
+        const POST_RADIUS = 0.06;
+        const PENALTY_DIST = 11;
+        const BALL_RADIUS = 0.11;
+        const BALL_MASS = 0.43; // Standard FIFA weight
+        const MAX_ROOT = 13;
+
+        // --- Raycaster for Aiming ---
+        const raycaster = new THREE.Raycaster();
+        const mouseVector = new THREE.Vector2();
+        const goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // Invisible wall on the goal line (z=0)
+
+        function errorRadiusFor(power) { return 2.5 - (power * 2.35); }
+
+        function initEngine() {
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.8, PENALTY_DIST + 2.5);
+            camera.lookAt(0, GOAL_HEIGHT / 2, 0);
+            fitCameraToGoal();
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('game-canvas'), antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            clock = new THREE.Clock();
+
+            world = new CANNON.World();
+            world.gravity.set(0, -9.81, 0);
+            world.broadphase = new CANNON.SAPBroadphase(world);
+            world.solver.iterations = 30;
+
+            const materials = setupPhysicsMaterials();
+
+            setupEnvironment();
+            buildStadium();
+            buildGoal(materials);
+            createBall(materials);
+            createKeeper(materials);
+            createReferee();
+            createLeg();
+
+            // Target crosshair
+            const ringGeo = new THREE.RingGeometry(0.15, 0.25, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthTest: false });
+            targetCrosshair = new THREE.Mesh(ringGeo, ringMat);
+            targetCrosshair.renderOrder = 999;
+            targetCrosshair.visible = false;
+            scene.add(targetCrosshair);
+
+            // Error circle (unit radius 0.1, scaled at runtime)
+            const errorGeo = new THREE.RingGeometry(0.08, 0.12, 64);
+            const errorMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthTest: false });
+            errorCircle = new THREE.Mesh(errorGeo, errorMat);
+            errorCircle.renderOrder = 998;
+            errorCircle.visible = false;
+            scene.add(errorCircle);
+
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+
+        // Widen the field of view on narrow (portrait) screens so the whole goal stays visible
+        function fitCameraToGoal() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.fov = aspect < 1.2 ? Math.min(90, 55 * (1.2 / aspect) * 0.8 + 11) : 55;
+            camera.updateProjectionMatrix();
+        }
+
+        function setupPhysicsMaterials() {
+            const ballMat = new CANNON.Material("ball");
+            const pitchMat = new CANNON.Material("pitch");
+            const postMat = new CANNON.Material("post");
+            const netMat = new CANNON.Material("net");
+            const keeperMat = new CANNON.Material("keeper");
+
+            world.addContactMaterial(new CANNON.ContactMaterial(pitchMat, ballMat, { friction: 0.7, restitution: 0.55 }));
+            world.addContactMaterial(new CANNON.ContactMaterial(postMat, ballMat, { friction: 0.2, restitution: 0.85 }));
+            world.addContactMaterial(new CANNON.ContactMaterial(netMat, ballMat, { friction: 0.9, restitution: 0.05 }));
+            world.addContactMaterial(new CANNON.ContactMaterial(keeperMat, ballMat, { friction: 0.8, restitution: 0.1 }));
+
+            return { ballMat, pitchMat, postMat, netMat, keeperMat };
+        }
+
+        function setupEnvironment() {
+            const envs = [ENV.DAY, ENV.NIGHT, ENV.RAIN];
+            currentEnv = envs[Math.floor(Math.random() * envs.length)];
+            const weatherInd = document.getElementById('weather-indicator');
+
+            const ambient = new THREE.AmbientLight(0xffffff, currentEnv === ENV.DAY ? 0.7 : 0.2);
+            scene.add(ambient);
+
+            if (currentEnv === ENV.DAY) {
+                weatherInd.innerText = "CONDITIONS: DAY";
+                scene.background = new THREE.Color(0x5ca8df);
+                scene.fog = new THREE.Fog(0x5ca8df, 60, 250);
+
+                const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+                sun.position.set(100, 150, 50);
+                sun.castShadow = true;
+                sun.shadow.mapSize.width = 2048; sun.shadow.mapSize.height = 2048;
+                sun.shadow.camera.near = 10; sun.shadow.camera.far = 300;
+                const d = 80;
+                sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+                sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
+                scene.add(sun);
+            } else {
+                weatherInd.innerText = currentEnv === ENV.NIGHT ? "CONDITIONS: NIGHT" : "CONDITIONS: RAIN";
+                scene.background = new THREE.Color(0x050510);
+                scene.fog = new THREE.Fog(0x050510, 40, 200);
+
+                // Stadium floodlights (only two cast shadows, to keep phones fast)
+                const addSpot = (x, z, shadows) => {
+                    const spot = new THREE.SpotLight(0xffffff, 2.5);
+                    spot.position.set(x, 60, z);
+                    spot.target.position.set(0, 0, 0);
+                    spot.angle = Math.PI / 4;
+                    spot.penumbra = 0.6;
+                    spot.castShadow = shadows;
+                    spot.shadow.mapSize.width = 1024; spot.shadow.mapSize.height = 1024;
+                    scene.add(spot);
+                    scene.add(spot.target);
+
+                    const bulb = new THREE.Mesh(new THREE.SphereGeometry(2), new THREE.MeshBasicMaterial({color: 0xffffff}));
+                    bulb.position.set(x, 60, z);
+                    scene.add(bulb);
+                };
+                addSpot(-60, 30, true); addSpot(60, 30, true);
+                addSpot(-40, -40, false); addSpot(40, -40, false);
+
+                if (currentEnv === ENV.RAIN) createRain();
+            }
+        }
+
+        function createRain() {
+            const count = 20000;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count; i++) {
+                pos[i*3] = (Math.random() - 0.5) * 150;
+                pos[i*3+1] = Math.random() * 80;
+                pos[i*3+2] = (Math.random() - 0.5) * 150;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            rainParticles = new THREE.Points(geo, new THREE.PointsMaterial({color: 0xcccccc, size: 0.15, transparent: true, opacity: 0.5}));
+            scene.add(rainParticles);
+        }
+
+        function buildStadium() {
+            // Procedural grass pitch (10 pixels = 1 meter on a 120m x 180m plane)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200; canvas.height = 1800;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#26541f'; ctx.fillRect(0, 0, 1200, 1800);
+            ctx.fillStyle = '#2d6325';
+            for(let i=0; i<1800; i+=100) ctx.fillRect(0, i, 1200, 50);
+
+            const imgData = ctx.getImageData(0,0,1200,1800);
+            const data = imgData.data;
+            for(let i=0; i<data.length; i+=4) {
+                const noise = (Math.random() - 0.5) * 15;
+                data[i] = Math.max(0, Math.min(255, data[i] + noise));
+                data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
+                data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+            }
+            ctx.putImageData(imgData, 0, 0);
+
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5; ctx.fillStyle = '#ffffff';
+
+            const fieldWidth = 680;
+            const leftX = 600 - (fieldWidth / 2);
+            const rightX = 600 + (fieldWidth / 2);
+
+            ctx.beginPath(); ctx.moveTo(leftX, 900); ctx.lineTo(rightX, 900); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(leftX, 900); ctx.lineTo(leftX, 1800); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rightX, 900); ctx.lineTo(rightX, 1800); ctx.stroke();
+
+            const centerY = 900 + 525;
+            ctx.beginPath(); ctx.moveTo(leftX, centerY); ctx.lineTo(rightX, centerY); ctx.stroke();
+            ctx.beginPath(); ctx.arc(600, centerY, 91.5, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(600, centerY, 4, 0, Math.PI*2); ctx.fill();
+
+            ctx.strokeRect(600 - 91.5, 900, 183, 55);
+            ctx.strokeRect(600 - 201.5, 900, 403, 165);
+
+            const arcAngle = Math.asin(55 / 91.5);
+            ctx.beginPath();
+            ctx.arc(600, 1010, 91.5, arcAngle, Math.PI - arcAngle);
+            ctx.stroke();
+
+            ctx.beginPath(); ctx.arc(600, 1010, 5, 0, Math.PI*2); ctx.fill();
+
+            const pitchTex = new THREE.CanvasTexture(canvas);
+            const pitchMesh = new THREE.Mesh(new THREE.PlaneGeometry(120, 180), new THREE.MeshLambertMaterial({ map: pitchTex }));
+            pitchMesh.rotation.x = -Math.PI / 2;
+            pitchMesh.receiveShadow = true;
+            scene.add(pitchMesh);
+
+            // Ad boards
+            const adCanvas = document.createElement('canvas');
+            adCanvas.width = 1024; adCanvas.height = 64;
+            const adCtx = adCanvas.getContext('2d');
+            adCtx.fillStyle = '#0f172a'; adCtx.fillRect(0,0,1024,64);
+            adCtx.fillStyle = '#3b82f6'; adCtx.font = 'bold 40px Arial';
+            for(let i=0; i<2; i++) adCtx.fillText("PRO PENALTY MATH", 60 + (i*512), 45);
+
+            const adTex = new THREE.CanvasTexture(adCanvas);
+            adTex.wrapS = THREE.RepeatWrapping; adTex.repeat.set(4, 1);
+            const adMat = new THREE.MeshLambertMaterial({ map: adTex });
+
+            const buildWall = (w, h, d, x, y, z, rotY) => {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), adMat);
+                mesh.position.set(x,y,z); mesh.rotation.y = rotY; mesh.castShadow = true; mesh.receiveShadow = true;
+                scene.add(mesh);
+            };
+            buildWall(100, 1.5, 0.5, 0, 0.75, -20, 0);
+            buildWall(80, 1.5, 0.5, -45, 0.75, 20, Math.PI/2);
+            buildWall(80, 1.5, 0.5, 45, 0.75, 20, -Math.PI/2);
+
+            // Grandstands
+            const standMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+            const backGeo = new THREE.BoxGeometry(100, 1, 2);
+            const sideGeo = new THREE.BoxGeometry(2, 1, 100);
+            for(let i=1; i<=15; i++) {
+                const backRow = new THREE.Mesh(backGeo, standMat);
+                backRow.position.set(0, i, -20 - i*2);
+                scene.add(backRow);
+
+                const leftRow = new THREE.Mesh(sideGeo, standMat);
+                leftRow.position.set(-45 - i*2, i, 20);
+                scene.add(leftRow);
+
+                const rightRow = new THREE.Mesh(sideGeo, standMat);
+                rightRow.position.set(45 + i*2, i, 20);
+                scene.add(rightRow);
+            }
+            createCrowd();
+
+            const board = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 1), new THREE.MeshBasicMaterial({color: 0x111111}));
+            board.position.set(0, 25, -40);
+            scene.add(board);
+        }
+
+        function createCrowd() {
+            const count = 30000;
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            const palette = [new THREE.Color(0xef4444), new THREE.Color(0x3b82f6), new THREE.Color(0xffffff), new THREE.Color(0xeab308), new THREE.Color(0x0f172a)];
+
+            let idx = 0;
+            for(let i=0; i<count; i++) {
+                const section = Math.random();
+                let x, z;
+                const row = Math.floor(Math.random() * 15) + 1;
+                const y = row + (Math.random() * 0.5);
+
+                if (section < 0.4) {
+                    x = (Math.random() - 0.5) * 96;
+                    z = -20 - (row * 2) + (Math.random() * 1.5);
+                } else if (section < 0.7) {
+                    x = -45 - (row * 2) + (Math.random() * 1.5);
+                    z = -30 + (Math.random() * 96);
+                } else {
+                    x = 45 + (row * 2) + (Math.random() * 1.5);
+                    z = -30 + (Math.random() * 96);
+                }
+
+                pos[idx] = x; pos[idx+1] = y; pos[idx+2] = z;
+                const c = palette[Math.floor(Math.random() * palette.length)];
+                colors[idx] = c.r; colors[idx+1] = c.g; colors[idx+2] = c.b;
+                idx += 3;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.35, vertexColors: true })));
+
+            // Camera flashes in the crowd
+            const flashCount = 150;
+            const flashGeo = new THREE.BufferGeometry();
+            const flashPos = new Float32Array(flashCount * 3);
+            const flashOpacities = new Float32Array(flashCount);
+
+            for(let i=0; i<flashCount; i++) {
+                const srcIdx = Math.floor(Math.random() * count) * 3;
+                flashPos[i*3] = pos[srcIdx];
+                flashPos[i*3+1] = pos[srcIdx+1];
+                flashPos[i*3+2] = pos[srcIdx+2];
+                flashOpacities[i] = Math.random();
+            }
+            flashGeo.setAttribute('position', new THREE.BufferAttribute(flashPos, 3));
+            flashGeo.setAttribute('alpha', new THREE.BufferAttribute(flashOpacities, 1));
+
+            const flashMat = new THREE.ShaderMaterial({
+                uniforms: { time: { value: 0 } },
+                vertexShader: `
+                    attribute float alpha;
+                    varying float vAlpha;
+                    uniform float time;
+                    void main() {
+                        vAlpha = sin(time * 15.0 + alpha * 100.0) * 0.5 + 0.5;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_PointSize = 12.0 * (1.0 / -mvPosition.z) * vAlpha;
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying float vAlpha;
+                    void main() {
+                        float dist = length(gl_PointCoord - vec2(0.5));
+                        if (dist > 0.5) discard;
+                        float intensity = (0.5 - dist) * 2.0;
+                        gl_FragColor = vec4(1.0, 1.0, 1.0, vAlpha * intensity);
+                    }
+                `,
+                transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+            });
+
+            flashParticles = new THREE.Points(flashGeo, flashMat);
+            scene.add(flashParticles);
+        }
+
+        function buildGoal(materials) {
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.4 });
+
+            const postGeo = new THREE.CylinderGeometry(POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 16);
+            const lp = new THREE.Mesh(postGeo, metalMat); lp.position.set(-GOAL_WIDTH/2, GOAL_HEIGHT/2, 0); lp.castShadow = true; scene.add(lp);
+            const rp = new THREE.Mesh(postGeo, metalMat); rp.position.set(GOAL_WIDTH/2, GOAL_HEIGHT/2, 0); rp.castShadow = true; scene.add(rp);
+
+            const barGeo = new THREE.CylinderGeometry(POST_RADIUS, POST_RADIUS, GOAL_WIDTH + POST_RADIUS*2, 16);
+            const cb = new THREE.Mesh(barGeo, metalMat); cb.rotation.z = Math.PI/2; cb.position.set(0, GOAL_HEIGHT, 0); cb.castShadow = true; scene.add(cb);
+
+            // Net texture
+            const netCanvas = document.createElement('canvas');
+            netCanvas.width = 128; netCanvas.height = 128;
+            const netCtx = netCanvas.getContext('2d');
+            netCtx.strokeStyle = 'rgba(255,255,255,0.7)'; netCtx.lineWidth = 4;
+            netCtx.beginPath();
+            for(let i=0; i<128; i+=16) { netCtx.moveTo(i, 0); netCtx.lineTo(i+16, 128); netCtx.moveTo(i, 128); netCtx.lineTo(i+16, 0); }
+            netCtx.stroke();
+
+            const makeNetMat = (repeatX, repeatY) => {
+                const tex = new THREE.CanvasTexture(netCanvas);
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(repeatX, repeatY);
+                return new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.85 });
+            };
+
+            const backNet = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_WIDTH, GOAL_HEIGHT), makeNetMat(10, 5));
+            backNet.position.set(0, GOAL_HEIGHT/2, -2.4); scene.add(backNet);
+
+            const topNet = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_WIDTH, 2.4), makeNetMat(10, 3));
+            topNet.rotation.x = Math.PI/2; topNet.position.set(0, GOAL_HEIGHT, -1.2); scene.add(topNet);
+
+            const leftNet = new THREE.Mesh(new THREE.PlaneGeometry(2.4, GOAL_HEIGHT), makeNetMat(3, 5));
+            leftNet.rotation.y = Math.PI/2; leftNet.position.set(-GOAL_WIDTH/2, GOAL_HEIGHT/2, -1.2); scene.add(leftNet);
+
+            const rightNet = new THREE.Mesh(new THREE.PlaneGeometry(2.4, GOAL_HEIGHT), makeNetMat(3, 5));
+            rightNet.rotation.y = -Math.PI/2; rightNet.position.set(GOAL_WIDTH/2, GOAL_HEIGHT/2, -1.2); scene.add(rightNet);
+
+            // Physics: posts and crossbar
+            const lpShape = new CANNON.Cylinder(POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 16);
+            const qX = new CANNON.Quaternion(); qX.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
+
+            const lpBody = new CANNON.Body({ mass: 0, material: materials.postMat });
+            lpBody.addShape(lpShape); lpBody.quaternion.copy(qX); lpBody.position.set(-GOAL_WIDTH/2, GOAL_HEIGHT/2, 0); world.addBody(lpBody);
+
+            const rpBody = new CANNON.Body({ mass: 0, material: materials.postMat });
+            rpBody.addShape(lpShape); rpBody.quaternion.copy(qX); rpBody.position.set(GOAL_WIDTH/2, GOAL_HEIGHT/2, 0); world.addBody(rpBody);
+
+            const cbShape = new CANNON.Cylinder(POST_RADIUS, POST_RADIUS, GOAL_WIDTH + POST_RADIUS*2, 16);
+            const cbBody = new CANNON.Body({ mass: 0, material: materials.postMat });
+            cbBody.addShape(cbShape);
+            const qY = new CANNON.Quaternion(); qY.setFromAxisAngle(new CANNON.Vec3(0,1,0), Math.PI/2);
+            cbBody.quaternion.copy(qY); cbBody.position.set(0, GOAL_HEIGHT, 0); world.addBody(cbBody);
+
+            const ground = new CANNON.Body({ mass: 0, material: materials.pitchMat });
+            ground.addShape(new CANNON.Plane()); ground.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
+            world.addBody(ground);
+
+            // Net cage colliders
+            const netThickness = 0.1;
+            const addNet = (hx, hy, hz, x, y, z) => {
+                const body = new CANNON.Body({ mass: 0, material: materials.netMat });
+                body.addShape(new CANNON.Box(new CANNON.Vec3(hx, hy, hz)));
+                body.position.set(x, y, z);
+                world.addBody(body);
+            };
+            addNet(GOAL_WIDTH/2, GOAL_HEIGHT/2, netThickness, 0, GOAL_HEIGHT/2, -2.4 - netThickness);
+            addNet(netThickness, GOAL_HEIGHT/2, 1.2, -GOAL_WIDTH/2 - netThickness, GOAL_HEIGHT/2, -1.2);
+            addNet(netThickness, GOAL_HEIGHT/2, 1.2, GOAL_WIDTH/2 + netThickness, GOAL_HEIGHT/2, -1.2);
+            addNet(GOAL_WIDTH/2, netThickness, 1.2, 0, GOAL_HEIGHT + netThickness, -1.2);
+        }
+
+        function createBall(materials) {
+            // Classic black-and-white panel look (evenly spaced patches instead of random blobs)
+            const cvs = document.createElement('canvas');
+            cvs.width = 256; cvs.height = 128;
+            const ctx = cvs.getContext('2d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,256,128);
+            ctx.fillStyle = '#111111';
+            const pentagon = (cx, cy, r) => {
+                ctx.beginPath();
+                for (let k = 0; k < 5; k++) {
+                    const a = -Math.PI/2 + k * (Math.PI * 2 / 5);
+                    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+                }
+                ctx.closePath(); ctx.fill();
+            };
+            for (let i = 0; i < 5; i++) {
+                pentagon(25 + i * 51, 38, 13);
+                pentagon(50 + i * 51, 90, 13);
+            }
+            pentagon(128, 4, 20); ctx.fillRect(0, 0, 256, 6);
+            ctx.fillRect(0, 122, 256, 6);
+            const tex = new THREE.CanvasTexture(cvs);
+
+            ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 32), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }));
+            ballMesh.castShadow = true;
+            scene.add(ballMesh);
+
+            // linearDamping must be 0 so the inverse-ballistics targeting lands exactly
+            ballBody = new CANNON.Body({ mass: BALL_MASS, material: materials.ballMat, linearDamping: 0.0, angularDamping: 0.0 });
+            ballBody.addShape(new CANNON.Sphere(BALL_RADIUS));
+            resetBall();
+            world.addBody(ballBody);
+        }
+
+        function createKeeper(materials) {
+            keeperGroup = new THREE.Group();
+            const shirt = new THREE.MeshStandardMaterial({color: 0xeab308, roughness: 0.8});
+            const shorts = new THREE.MeshStandardMaterial({color: 0x1e293b});
+            const skin = new THREE.MeshStandardMaterial({color: 0xfcb096});
+            const gloves = new THREE.MeshStandardMaterial({color: 0xffffff});
+            const bootMat = new THREE.MeshStandardMaterial({color: 0x111111});
+
+            kTorso = new THREE.Group();
+            kTorso.position.y = 1.0;
+            const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), shirt);
+            torsoMesh.position.y = 0.35; torsoMesh.castShadow = true;
+            kTorso.add(torsoMesh);
+
+            kHead = new THREE.Group();
+            kHead.position.set(0, 0.7, 0);
+            const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), skin);
+            headMesh.position.y = 0.125; headMesh.castShadow = true;
+            kHead.add(headMesh); kTorso.add(kHead);
+
+            const makeArm = (x) => {
+                const arm = new THREE.Group();
+                arm.position.set(x, 0.65, 0);
+                const armMesh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.15), shirt);
+                armMesh.position.y = -0.25; armMesh.castShadow = true;
+                const gloveMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), gloves);
+                gloveMesh.position.y = -0.6; gloveMesh.castShadow = true;
+                arm.add(armMesh, gloveMesh); kTorso.add(arm);
+                return arm;
+            };
+            kLArm = makeArm(-0.3);
+            kRArm = makeArm(0.3);
+
+            const makeLeg = (x) => {
+                const leg = new THREE.Group();
+                leg.position.set(x, 0, 0);
+                const legMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 0.2), shorts);
+                legMesh.position.y = -0.45; legMesh.castShadow = true;
+                const bootMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.15, 0.3), bootMat);
+                bootMesh.position.set(0, -0.95, 0.05); bootMesh.castShadow = true;
+                leg.add(legMesh, bootMesh); kTorso.add(leg);
+                return leg;
+            };
+            kLLeg = makeLeg(-0.15);
+            kRLeg = makeLeg(0.15);
+
+            keeperGroup.add(kTorso);
+            scene.add(keeperGroup);
+
+            keeperBody = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC, material: materials.keeperMat });
+            keeperBody.addShape(new CANNON.Box(new CANNON.Vec3(0.4, 0.95, 0.3)), new CANNON.Vec3(0, 0.95, 0));
+            resetKeeper();
+            world.addBody(keeperBody);
+        }
+
+        function createReferee() {
+            refGroup = new THREE.Group();
+            const shirt = new THREE.MeshStandardMaterial({color: 0xeadb00, roughness: 0.9});
+            const shorts = new THREE.MeshStandardMaterial({color: 0x111111});
+            const skin = new THREE.MeshStandardMaterial({color: 0x8d5524});
+
+            const part = (w, h, d, mat, x, y) => {
+                const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+                m.position.set(x, y, 0); m.castShadow = true;
+                refGroup.add(m);
+            };
+            part(0.4, 0.6, 0.25, shirt, 0, 1.3);      // Torso
+            part(0.25, 0.25, 0.25, skin, 0, 1.7);     // Head
+            part(0.12, 0.5, 0.12, shirt, -0.28, 1.3); // Arms
+            part(0.12, 0.5, 0.12, shirt, 0.28, 1.3);
+            part(0.15, 0.6, 0.15, shorts, -0.12, 0.7); // Legs
+            part(0.15, 0.6, 0.15, shorts, 0.12, 0.7);
+
+            refGroup.position.set(4, 0, 7);
+            refGroup.lookAt(0, 0, 11); // Watching the ball (stays upright)
+            scene.add(refGroup);
+        }
+
+        function createLeg() {
+            legGroup = new THREE.Group();
+            const boot = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.12, 0.35), new THREE.MeshStandardMaterial({color: 0xef4444}));
+            boot.position.set(0, 0.06, -0.1); boot.castShadow = true;
+            legGroup.add(boot);
+
+            const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.8), new THREE.MeshLambertMaterial({color: 0xffffff}));
+            sock.position.set(0, 0.5, 0); sock.castShadow = true;
+            legGroup.add(sock);
+
+            legGroup.position.set(0.2, 1.0, PENALTY_DIST + 0.5);
+            scene.add(legGroup);
+            legGroup.visible = false;
+        }
+
+        function generateMathQuestion() {
+            // Don't repeat the same question twice in a row
+            do { currentRoot = Math.floor(Math.random() * MAX_ROOT) + 1; } while (currentRoot === lastRoot);
+            lastRoot = currentRoot;
+            currentArea = currentRoot * currentRoot;
+
+            mathQuestion.innerText = `What is the square root of ${currentArea}?`;
+            mathInput.value = '';
+
+            aimHud.classList.add('hidden');
+            chanceDisplay.classList.add('hidden');
+            uiLayer.style.pointerEvents = 'auto';
+            mathPanel.classList.remove('hidden');
+            mathInput.focus();
+            currentState = STATE.MATH;
+        }
+
+        document.getElementById('btn-submit-math').addEventListener('click', checkMathAnswer);
+
+        function checkMathAnswer() {
+            if (currentState !== STATE.MATH) return;
+            const val = parseInt(mathInput.value, 10);
+            if (isNaN(val)) { mathInput.focus(); return; }
+
+            mathPanel.classList.add('hidden');
+            mathInput.blur();
+
+            if (val === currentRoot) {
+                startAiming();
+            } else {
+                showExplanation();
+            }
+        }
+
+        function showExplanation() {
+            currentState = STATE.EXPLANATION;
+            expPanel.classList.remove('hidden');
+
+            document.getElementById('exp-area').innerText = currentArea;
+            document.getElementById('exp-area-2').innerText = currentArea;
+            document.getElementById('exp-root').innerText = currentRoot;
+            document.getElementById('exp-root-2').innerText = currentRoot;
+
+            const grid = document.getElementById('grid-container');
+            grid.innerHTML = '';
+
+            const size = currentRoot > 10 ? 12 : (currentRoot > 7 ? 16 : 24);
+            grid.style.gridTemplateColumns = `repeat(${currentRoot}, ${size}px)`;
+            grid.style.gridTemplateRows = `repeat(${currentRoot}, ${size}px)`;
+
+            for(let i=0; i<currentArea; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'w-full h-full bg-slate-700 border border-slate-800 grid-cell rounded-sm';
+                grid.appendChild(cell);
+            }
+
+            setTimeout(() => {
+                const cells = grid.querySelectorAll('.grid-cell');
+                cells.forEach((c, i) => setTimeout(() => c.classList.add('highlight'), i * (1200/currentArea)));
+            }, 300);
+        }
+
+        function closeExplanation() {
+            if (currentState !== STATE.EXPLANATION) return;
+            expPanel.classList.add('hidden');
+            uiLayer.style.pointerEvents = 'none';
+            executeKick(true); // Auto miss
+        }
+        document.getElementById('btn-close-exp').addEventListener('click', closeExplanation);
+
+        function startAiming() {
+            currentState = STATE.AIMING;
+            uiLayer.style.pointerEvents = 'none';
+            aimHud.classList.remove('hidden');
+            chanceDisplay.classList.add('hidden');
+            aimInst.classList.remove('hidden');
+
+            aimPower = 0.0;
+
+            targetCrosshair.visible = true;
+            targetCrosshair.position.set(0, 1.2, 0);
+            errorCircle.position.set(0, 1.2, 0);
+            targetCrosshair.material.color.setHex(0x33ff33);
+
+            if(!audioCtx) initAudio();
+            playSound('whistle');
+        }
+
+        function updateMouseAim(e) {
+            if (currentState !== STATE.AIMING && currentState !== STATE.CHARGING) return;
+
+            const point = e.touches ? e.touches[0] : e;
+            if (!point) return;
+
+            mouseVector.x = (point.clientX / window.innerWidth) * 2 - 1;
+            mouseVector.y = -(point.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouseVector, camera);
+            const intersectPoint = new THREE.Vector3();
+            if (!raycaster.ray.intersectPlane(goalPlane, intersectPoint)) return;
+
+            // Let the player aim slightly outside the goal so they can go for the posts
+            const maxX = 6; const maxY = 4;
+            const tx = Math.max(-maxX, Math.min(maxX, intersectPoint.x));
+            const ty = Math.max(0.1, Math.min(maxY, intersectPoint.y));
+
+            targetCrosshair.position.set(tx, ty, 0);
+            errorCircle.position.set(tx, ty, 0);
+
+            // Red crosshair if the aim point itself is off target
+            if (ty > GOAL_HEIGHT - 0.1 || Math.abs(tx) > GOAL_WIDTH/2 - 0.1) {
+                targetCrosshair.material.color.setHex(0xff3333);
+            } else {
+                targetCrosshair.material.color.setHex(0x33ff33);
+            }
+        }
+
+        window.addEventListener('mousemove', updateMouseAim);
+        window.addEventListener('touchmove', updateMouseAim, {passive: true});
+
+        function startCharge(e) {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
+
+            // Tap/click/space skips the result screen
+            if (currentState === STATE.RESULT && resultDecided) {
+                clearTimeout(resultTimeout);
+                centerMessage.classList.add('hidden');
+                resetGame();
+                return;
+            }
+
+            if (currentState === STATE.AIMING) {
+                if (e.touches) updateMouseAim(e); // On phones, aim where the finger lands
+                currentState = STATE.CHARGING;
+                aimPower = 0.0;
+                errorCircle.visible = true;
+                playSound('blip');
+            }
+        }
+
+        function endCharge() {
+            if (currentState === STATE.CHARGING) {
+                executeKick(false);
+            }
+        }
+
+        window.addEventListener('mousedown', startCharge);
+        window.addEventListener('touchstart', startCharge, {passive: true});
+        window.addEventListener('mouseup', endCharge);
+        window.addEventListener('touchend', endCharge);
+        window.addEventListener('touchcancel', endCharge);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+                if (currentState === STATE.MATH) { e.preventDefault(); checkMathAnswer(); return; }
+                if (currentState === STATE.EXPLANATION) { e.preventDefault(); closeExplanation(); return; }
+            }
+            if (e.code === 'Space' && currentState !== STATE.MATH) e.preventDefault(); // stop page scroll / button re-press
+            if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) startCharge({ target: null });
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') endCharge();
+        });
+
+        function executeKick(autoMiss) {
+            currentState = STATE.KICKING;
+            isAutoMiss = autoMiss;
+            resultDecided = false;
+            kickPhase = 0;
+            hitKeeper = false;
+
+            legGroup.visible = true;
+            legGroup.rotation.x = -Math.PI / 3;
+
+            aimInst.classList.add('hidden');
+
+            if(!audioCtx) initAudio();
+        }
+
+        // --- Zone-Based Keeper Probability AI ---
+        let keeperTarget = {x: 0, y: 0.9};
+        let keeperDiving = false;
+        let keeperReactionDelay = 0;
+        let keeperDiveTime = 0;
+        let keeperDiveDuration = 0.6;
+
+        function calculateKeeperLogic(targetX, targetY, timeOfFlight, aimX, aimY) {
+            const absX = Math.abs(targetX);
+
+            keeperStartX = keeperBody.position.x;
+            keeperStartY = keeperBody.position.y;
+
+            // Off target only if the ball fully clears the outside of the frame
+            const isOffTarget = (absX > GOAL_WIDTH/2 + (BALL_RADIUS * 2)) || (targetY > GOAL_HEIGHT + (BALL_RADIUS * 2));
+
+            const absAimX = Math.abs(aimX);
+            let baseChance = 25; // Middle shots are easy to save
+
+            const isTopCorner = absAimX > 2.5 && aimY > 1.5 && absAimX < 3.66 && aimY < 2.44;
+            const isBottomCorner = absAimX > 2.5 && aimY < 0.8 && absAimX < 3.66;
+            const isEdges = absAimX > 1.8 || aimY > 1.6;
+
+            if (isTopCorner) baseChance = 95;
+            else if (isBottomCorner) baseChance = 80;
+            else if (isEdges) baseChance = 55;
+
+            // Timing: big circle = weak shot
+            const timingMultiplier = 0.3 + (aimPower * 0.7);
+
+            // Penalty if the error circle spills outside the frame
+            const currentErrorRadius = errorRadiusFor(aimPower);
+            let boundsPenalty = 0;
+            if (absAimX + currentErrorRadius > GOAL_WIDTH / 2) {
+                boundsPenalty += ((absAimX + currentErrorRadius) - (GOAL_WIDTH / 2)) * 15;
+            }
+            if (aimY + currentErrorRadius > GOAL_HEIGHT) {
+                boundsPenalty += ((aimY + currentErrorRadius) - GOAL_HEIGHT) * 15;
+            }
+
+            let finalChance = Math.round((baseChance * timingMultiplier) - boundsPenalty);
+            finalChance = Math.max(1, Math.min(99, finalChance));
+            if (isOffTarget) finalChance = 0;
+
+            const roll = Math.random() * 100;
+            const goesIn = roll < finalChance;
+
+            if (!goesIn && !isOffTarget) {
+                // Guaranteed save: keeper arrives as the ball reaches them
+                keeperTarget = { x: targetX, y: Math.min(targetY, 2.44) };
+                const interceptTime = timeOfFlight * ((PENALTY_DIST - 0.5) / PENALTY_DIST);
+                keeperReactionDelay = interceptTime * 0.1;
+                keeperDiveDuration = interceptTime * 0.9;
+                enforceSave = true;
+                keeperBody.collisionResponse = true;
+            } else {
+                // Goal (or wide miss): keeper guesses wrong or dives too late
+                if (Math.random() > 0.5) {
+                    keeperTarget = { x: targetX > 0 ? -2 : 2, y: 0 };
+                    keeperReactionDelay = timeOfFlight * 0.2;
+                    keeperDiveDuration = timeOfFlight * 1.2;
+                } else {
+                    keeperTarget = { x: targetX * 0.5, y: 0 };
+                    keeperReactionDelay = timeOfFlight * 0.5;
+                    keeperDiveDuration = timeOfFlight * 1.5;
+                }
+                enforceSave = false;
+                // The roll said "goal", so the keeper can't accidentally block it
+                keeperBody.collisionResponse = false;
+            }
+
+            keeperDiving = true;
+            keeperDiveTime = 0;
+
+            return finalChance;
+        }
+
+        function updateKeeper(delta) {
+            if (!keeperDiving) {
+                animateKeeperIdle();
+                return;
+            }
+
+            keeperDiveTime += delta;
+            if (keeperDiveTime < keeperReactionDelay) {
+                animateKeeperIdle();
+                return;
+            }
+
+            const diveT = (keeperDiveTime - keeperReactionDelay) / keeperDiveDuration;
+            const clampedT = Math.min(1.0, diveT);
+
+            const easeOut = 1 - Math.pow(1 - clampedT, 3);
+            let curX = keeperStartX + (keeperTarget.x - keeperStartX) * easeOut;
+            curX = Math.max(-GOAL_WIDTH/2 + 0.4, Math.min(GOAL_WIDTH/2 - 0.4, curX));
+
+            let curY = keeperStartY + (keeperTarget.y - keeperStartY) * Math.sin(clampedT * (Math.PI / 2));
+
+            if (diveT > 1.0) {
+                const fallTime = keeperDiveTime - keeperReactionDelay - keeperDiveDuration;
+                curY -= (0.5 * 15 * fallTime * fallTime);
+                curY = Math.max(0, curY);
+            }
+
+            let diveTilt = 0;
+            if (Math.abs(keeperTarget.x) > 0.5) {
+                diveTilt = (curX / (GOAL_WIDTH/2)) * -(Math.PI / 2.3);
+            }
+
+            keeperBody.position.set(curX, curY, keeperBody.position.z);
+            keeperBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), diveTilt);
+
+            animateKeeperDive();
+        }
+
+        function animateKeeperIdle() {
+            const time = clock.elapsedTime;
+            kTorso.position.y = 1.0 + Math.abs(Math.sin(time * 6)) * 0.08;
+
+            kLLeg.rotation.set(-0.1 + Math.sin(time * 6) * 0.05, 0, 0);
+            kRLeg.rotation.set(-0.1 + Math.sin(time * 6) * 0.05, 0, 0);
+
+            kLArm.rotation.set(0.3, 0, 0.4);
+            kRArm.rotation.set(0.3, 0, -0.4);
+
+            keeperGroup.position.copy(keeperBody.position);
+            keeperGroup.quaternion.copy(keeperBody.quaternion);
+        }
+
+        function animateKeeperDive() {
+            keeperGroup.position.copy(keeperBody.position);
+            keeperGroup.quaternion.copy(keeperBody.quaternion);
+            kTorso.position.y = 1.0;
+
+            if (keeperTarget.x < 0) { // Diving left
+                kLArm.rotation.set(0, 0, Math.PI - 0.4);
+                kRArm.rotation.set(-0.5, 0, 0.5);
+                kLLeg.rotation.set(0, 0, -0.2);
+                kRLeg.rotation.set(-0.3, 0, 0.3);
+            } else { // Diving right
+                kRArm.rotation.set(0, 0, -Math.PI + 0.4);
+                kLArm.rotation.set(-0.5, 0, -0.5);
+                kRLeg.rotation.set(0, 0, 0.2);
+                kLLeg.rotation.set(-0.3, 0, -0.3);
+            }
+        }
+
+        function checkResult() {
+            if (resultDecided) return;
+            const pos = ballBody.position;
+            const vel = ballBody.velocity;
+
+            // The ENTIRE ball must cross the goal line
+            const entireBallCrossedLine = (pos.z + BALL_RADIUS) < -0.05;
+            const insidePosts = pos.x > -GOAL_WIDTH/2 && pos.x < GOAL_WIDTH/2;
+            const underCrossbar = pos.y < GOAL_HEIGHT;
+
+            if (entireBallCrossedLine && pos.z > -3 && insidePosts && underCrossbar) {
+                triggerResult("GOAL!", "text-green-400", true);
+                return;
+            }
+
+            const ballWentWideOrHigh = pos.z < -BALL_RADIUS && (!insidePosts || !underCrossbar);
+            const ballStopped = vel.lengthSquared() < 2.0 && Math.abs(vel.z) < 1.0;
+            const ballBouncingAway = vel.z > 0.5 && pos.z > -0.5 && pos.z < 8;
+            const ballGoneFar = Math.abs(pos.x) > 30 || pos.z < -15 || pos.y < -1;
+
+            if (ballWentWideOrHigh || ballStopped || ballBouncingAway || ballGoneFar) {
+                if (hitKeeper) triggerResult("SAVED", "text-yellow-400", false);
+                else triggerResult("MISS", "text-red-500", false);
+            }
+        }
+
+        function triggerResult(text, color, isGoal) {
+            resultDecided = true;
+            currentState = STATE.RESULT;
+            centerMessage.innerText = text;
+            centerMessage.className = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-7xl md:text-9xl hud-font font-bold drop-shadow-[0_0_30px_rgba(0,0,0,1)] tracking-widest text-center italic z-20 ${color}`;
+            centerMessage.classList.remove('hidden');
+
+            if(isGoal) { score++; streak++; playSound('cheer'); }
+            else { streak = 0; playSound('groan'); }
+
+            uiScore.innerText = score;
+            uiStreak.innerText = streak;
+
+            resultTimeout = setTimeout(() => {
+                if (currentState === STATE.RESULT) {
+                    centerMessage.classList.add('hidden');
+                    resetGame();
+                }
+            }, 2000);
+        }
+
+        function resetBall() {
+            ballBody.position.set(0, BALL_RADIUS, PENALTY_DIST);
+            ballBody.velocity.set(0,0,0);
+            ballBody.angularVelocity.set(0,0,0);
+            ballBody.quaternion.set(0,0,0,1);
+            ballMesh.position.copy(ballBody.position);
+            ballMesh.quaternion.set(0,0,0,1);
+        }
+
+        function resetKeeper() {
+            keeperBody.position.set(0, 0.0, 0.5);
+            keeperBody.quaternion.set(0,0,0,1);
+            keeperBody.collisionResponse = true;
+            keeperGroup.position.copy(keeperBody.position);
+            keeperGroup.quaternion.set(0,0,0,1);
+            keeperDiving = false;
+        }
+
+        function resetGame() {
+            enforceSave = false;
+            resultDecided = false;
+            legGroup.visible = false;
+            resetBall();
+            resetKeeper();
+            generateMathQuestion();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.05); // Avoid huge jumps after a tab switch
+
+            if (currentState === STATE.CHARGING) {
+                aimPower += 1.5 * delta;
+                if (aimPower > 1.0) aimPower = 0.0; // Sawtooth: big → tiny, then restart
+
+                const r = errorRadiusFor(aimPower);
+                errorCircle.scale.set(r / 0.1, r / 0.1, 1);
+
+                if (aimPower < 0.4) errorCircle.material.color.setHex(0xff3333);
+                else if (aimPower < 0.75) errorCircle.material.color.setHex(0xffff33);
+                else errorCircle.material.color.setHex(0x33ff33);
+            }
+
+            // Kick animation, then launch the ball
+            if (currentState === STATE.KICKING) {
+                kickPhase += delta * 12;
+                legGroup.rotation.x = -Math.PI / 3 + Math.sin(kickPhase) * (Math.PI/1.5);
+
+                if (kickPhase > Math.PI / 2.5) {
+                    legGroup.visible = false;
+                    currentState = STATE.RESULT;
+                    playSound('kick');
+
+                    targetCrosshair.visible = false;
+                    errorCircle.visible = false;
+
+                    const aim_x = targetCrosshair.position.x;
+                    const aim_y = targetCrosshair.position.y;
+                    let x_target = aim_x;
+                    let y_target = aim_y;
+                    let speed = 18 + (aimPower * 14);
+
+                    if (isAutoMiss) {
+                        x_target = (Math.random() > 0.5 ? 1 : -1) * (4 + Math.random() * 2);
+                        y_target = 3.5 + Math.random() * 2;
+                        speed = 22;
+                    } else {
+                        const errRadius = errorRadiusFor(aimPower) * Math.sqrt(Math.random());
+                        const errAngle = Math.random() * Math.PI * 2;
+                        x_target += Math.cos(errAngle) * errRadius;
+                        y_target += Math.sin(errAngle) * errRadius;
+                        y_target = Math.max(BALL_RADIUS, y_target); // can't aim underground
+                    }
+
+                    // Inverse ballistics: velocity needed to reach (x_target, y_target) on the goal line
+                    const g = 9.81;
+                    const distXZ = Math.sqrt(x_target * x_target + PENALTY_DIST * PENALTY_DIST);
+                    const t = distXZ / speed;
+                    const vX = x_target / t;
+                    const vZ = -PENALTY_DIST / t;
+                    const vY = (y_target - BALL_RADIUS + 0.5 * g * t * t) / t;
+
+                    ballBody.velocity.set(vX, vY, vZ);
+                    ballBody.angularVelocity.set(-vZ * 2, 0, 0); // a little topspin for looks
+
+                    const chanceToScore = calculateKeeperLogic(x_target, y_target, t, aim_x, aim_y);
+
+                    if (!isAutoMiss) {
+                        chanceText.innerText = Math.round(chanceToScore);
+                        const color = chanceToScore > 65 ? 'text-green-400' : chanceToScore > 35 ? 'text-yellow-400' : 'text-red-500';
+                        chanceDisplay.className = `text-3xl md:text-5xl hud-font font-bold mt-10 drop-shadow-[0_0_15px_rgba(0,0,0,1)] ${color}`;
+                    }
+                }
+            }
+
+            // Physics step
+            if (currentState === STATE.RESULT) {
+                world.step(1/60, delta, 3);
+
+                // Enforce a save: block the ball in front of the line no matter how fast it is
+                if (enforceSave && ballBody.position.z < 1.2 && ballBody.velocity.z < 0) {
+                    hitKeeper = true;
+                    ballBody.position.z = 0.8;
+                    ballBody.velocity.set((Math.random() - 0.5) * 4, -1, 2 + Math.random() * 3);
+                    enforceSave = false;
+                }
+
+                ballMesh.position.copy(ballBody.position);
+                ballMesh.quaternion.copy(ballBody.quaternion);
+                checkResult();
+            }
+
+            // Keeper always animates (idle bounce between shots too)
+            if (keeperBody) updateKeeper(delta);
+
+            if (currentEnv === ENV.RAIN && rainParticles) {
+                const pos = rainParticles.geometry.attributes.position.array;
+                for(let i=1; i<pos.length; i+=3) {
+                    pos[i] -= 25 * delta;
+                    if(pos[i] < 0) pos[i] = 80;
+                }
+                rainParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            if (flashParticles) {
+                flashParticles.material.uniforms.time.value = clock.elapsedTime;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            fitCameraToGoal();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function initAudio() {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            audioCtx = new AC();
+            const master = audioCtx.createGain();
+            master.gain.value = 0.4;
+            master.connect(audioCtx.destination);
+            audioNodes.master = master;
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+
+            if (type === 'whistle') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(2000, now);
+                osc.frequency.exponentialRampToValueAtTime(2200, now + 0.1);
+                osc.frequency.exponentialRampToValueAtTime(2000, now + 0.4);
+
+                const lfo = audioCtx.createOscillator();
+                lfo.type = 'sine';
+                lfo.frequency.value = 45;
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 100;
+                lfo.connect(lfoGain).connect(osc.frequency);
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.4, now + 0.05);
+                gain.gain.linearRampToValueAtTime(0.4, now + 0.3);
+                gain.gain.linearRampToValueAtTime(0, now + 0.4);
+
+                osc.connect(gain).connect(audioNodes.master);
+                lfo.start(now); lfo.stop(now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            }
+            if (type === 'blip') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(400, now);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.1);
+                osc.connect(gain).connect(audioNodes.master);
+                osc.start(now); osc.stop(now+0.1);
+            }
+            if (type === 'kick') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(120, now); osc.frequency.exponentialRampToValueAtTime(30, now+0.15);
+
+                const bs = Math.floor(audioCtx.sampleRate * 0.15); const buf = audioCtx.createBuffer(1, bs, audioCtx.sampleRate);
+                const data = buf.getChannelData(0); for(let i=0;i<bs;i++) data[i] = Math.random()*2-1;
+                const noise = audioCtx.createBufferSource(); noise.buffer = buf;
+                const filt = audioCtx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 800;
+
+                gain.gain.setValueAtTime(1.0, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.15);
+                osc.connect(gain); noise.connect(filt).connect(gain); gain.connect(audioNodes.master);
+                osc.start(now); noise.start(now); osc.stop(now+0.15);
+            }
+            if (type === 'woodwork') {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now); osc.frequency.exponentialRampToValueAtTime(400, now+0.4);
+                gain.gain.setValueAtTime(0.8, now); gain.gain.exponentialRampToValueAtTime(0.01, now+0.4);
+                osc.connect(gain).connect(audioNodes.master);
+                osc.start(now); osc.stop(now+0.4);
+            }
+            if (type === 'cheer' || type === 'groan') {
+                const bs = Math.floor(audioCtx.sampleRate * 2.5); const buf = audioCtx.createBuffer(1, bs, audioCtx.sampleRate);
+                const data = buf.getChannelData(0); for(let i=0;i<bs;i++) data[i] = Math.random()*2-1;
+                const noise = audioCtx.createBufferSource(); noise.buffer = buf;
+
+                const filt = audioCtx.createBiquadFilter(); filt.type = 'bandpass';
+                filt.frequency.value = type === 'cheer' ? 600 : 250; filt.Q.value = 0.4;
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(type === 'cheer' ? 0.8 : 0.6, now+0.3);
+                gain.gain.linearRampToValueAtTime(0, now+2.5);
+
+                noise.connect(filt).connect(gain).connect(audioNodes.master);
+                noise.start(now);
+            }
+        }
+
+        // Woodwork sound + keeper contact detection
+        let lastHitTime = 0;
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            menuPanel.classList.add('hidden');
+            initEngine();
+            initAudio();
+
+            world.addEventListener("beginContact", (e) => {
+                const other = e.bodyA === ballBody ? e.bodyB : (e.bodyB === ballBody ? e.bodyA : null);
+                if (!other) return;
+
+                if (other === keeperBody && keeperBody.collisionResponse) {
+                    hitKeeper = true;
+                    // Kill forward momentum so a save can't deflect into the net
+                    if (ballBody.velocity.z < 0) {
+                        ballBody.velocity.set(ballBody.velocity.x * 0.2, -1, 2);
+                    }
+                }
+
+                if (currentState !== STATE.RESULT) return;
+                const now = performance.now();
+                if (now - lastHitTime < 500) return;
+
+                if (other.shapes[0] instanceof CANNON.Cylinder) {
+                    playSound('woodwork');
+                    lastHitTime = now;
+                }
+            });
+
+            generateMathQuestion();
+        });
+
+    </script>
+</body>
+</html>

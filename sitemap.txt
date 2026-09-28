@@ -55,3 +55,4 @@ https://thecodingeducator.github.io/area-artist/area-artist.html
 https://thecodingeducator.github.io/area-artist/guide.html
 https://thecodingeducator.github.io/area-artist/worksheet.html
 https://thecodingeducator.github.io/area-artist/exit-ticket.html
+https://thecodingeducator.github.io/penalty-shootout/penalty-shootout.html
