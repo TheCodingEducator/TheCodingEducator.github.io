@@ -856,7 +856,7 @@
   }
 
   function aimAt(clientX, clientY) {
-    if (state !== STATE.AIMING && state !== STATE.CHARGING) return;
+    if (state !== STATE.AIMING) return;   // once the power starts, the aim is locked
     var rect = canvas.getBoundingClientRect();
     mouseVector.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     mouseVector.y = -((clientY - rect.top) / rect.height) * 2 + 1;
@@ -1026,18 +1026,22 @@
     if (standingCatch) {
       // both hands out in front, at the height of the ball, to gather it in
       var reach = -(Math.PI / 2 + Math.atan2(catchY - keeperTarget.y - 1.57, 0.45));
-      kLArm.rotation.set(reach, 0, 0.18); kRArm.rotation.set(reach, 0, -0.18);
+      kLArm.rotation.set(reach + 0.35, 0, 0.2); kRArm.rotation.set(reach + 0.35, 0, -0.2);
+      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.75;   // elbows bent to cradle the ball
       kLLeg.rotation.set(-0.15, 0, -0.08); kRLeg.rotation.set(-0.15, 0, 0.08);
     } else if (keeperTarget.x < 0) {
+      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
       kLArm.rotation.set(0, 0, -(Math.PI - 0.3)); kRArm.rotation.set(0, 0, -(Math.PI - 0.95));   // both arms reach to the left
       kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3);
     } else {
+      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
       kRArm.rotation.set(0, 0, Math.PI - 0.3); kLArm.rotation.set(0, 0, Math.PI - 0.95);   // both arms reach to the right
       kRLeg.rotation.set(0, 0, 0.2); kLLeg.rotation.set(-0.3, 0, -0.3);
     }
   }
 
   function keeperIdle() {
+    kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
     var time = clock.elapsedTime, bob = Math.sin(time * 6);
     kTorso.position.y = 1.0 + Math.abs(bob) * 0.08;
     kLLeg.rotation.set(-0.1 + bob * 0.05, 0, -0.1);
@@ -1052,8 +1056,8 @@
   var handL = new THREE.Vector3(), handR = new THREE.Vector3();
   function holdCaughtBall(delta) {
     keeperGroup.updateMatrixWorld(true);
-    kLArm.localToWorld(handL.set(0, -0.6, 0.14));
-    kRArm.localToWorld(handR.set(0, -0.6, 0.14));
+    kLArm.userData.fore.localToWorld(handL.set(0, -0.36, 0.05));   // the middle of each glove
+    kRArm.userData.fore.localToWorld(handR.set(0, -0.36, 0.05));
     ballBody.position.set((handL.x + handR.x) / 2, Math.max(BALL_RADIUS, (handL.y + handR.y) / 2), (handL.z + handR.z) / 2 + 0.06);
     ballBody.velocity.set(0, 0, 0);
     ballBody.angularVelocity.set(0, 0, 0);
@@ -1295,7 +1299,7 @@
     if (paused) { clock.getDelta(); renderer.render(scene, camera); return; }   // frozen while the menu is open
     var delta = Math.min(clock.getDelta(), 0.05);   // no huge jump after switching tabs
 
-    if (state === STATE.AIMING || state === STATE.CHARGING) {   // keyboard aiming
+    if (state === STATE.AIMING) {   // keyboard aiming (locked once the power starts)
       var dx = (keysDown.ArrowRight || keysDown.KeyD ? 1 : 0) - (keysDown.ArrowLeft || keysDown.KeyA ? 1 : 0);
       var dy = (keysDown.ArrowUp || keysDown.KeyW ? 1 : 0) - (keysDown.ArrowDown || keysDown.KeyS ? 1 : 0);
       if (dx || dy) setAim(targetCrosshair.position.x + dx * 4 * delta, targetCrosshair.position.y + dy * 2.5 * delta);
@@ -1390,7 +1394,7 @@
       return;
     }
     if (tag === 'BUTTON' && go) return;   // a focused button presses itself
-    if (AIM_KEYS[e.code] && (state === STATE.AIMING || state === STATE.CHARGING)) { keysDown[e.code] = true; e.preventDefault(); return; }
+    if (AIM_KEYS[e.code] && (state === STATE.AIMING || state === STATE.CHARGING)) { if (state === STATE.AIMING) keysDown[e.code] = true; e.preventDefault(); return; }
     if (!go) return;
     e.preventDefault();
     if (e.repeat) return;
