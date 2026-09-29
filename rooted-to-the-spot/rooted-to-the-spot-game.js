@@ -24,7 +24,7 @@
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };
   var app = $('ps'), canvas = $('ps-canvas');
-  var scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
+  var scrTitle = $('scr-title'), scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
   var qIn = $('q-in'), qIn2 = $('q-in2'), activeIn = null, msg = $('msg'), chance = $('chance'), aimHint = $('aimhint'), hud = $('hud');
   var isTouch = window.matchMedia && matchMedia('(hover: none), (pointer: coarse)').matches;
   if (isTouch) [qIn, qIn2].forEach(function (el) { el.readOnly = true; el.setAttribute('inputmode', 'none'); });   // the on-screen pad instead of the phone keyboard
@@ -37,9 +37,9 @@
   function focusGame() { try { canvas.focus({ preventScroll: true }); } catch (e) {} }
 
   // ---------- Game state ----------
-  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8 };
+  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8, TITLE: 9 };
   var ENV = { DAY: 0, NIGHT: 1, RAIN: 2 };
-  var state = STATE.MENU, env = ENV.DAY;
+  var state = STATE.TITLE, env = ENV.DAY;
 
   var kickNum = 0, goals = 0, rightCount = 0, results = [], missed = [], usedQ = {}, question = null, lastKey = '';
   var aimPower = 0, hitKeeper = false, kickPhase = 0, isAutoMiss = false, resultDecided = false, enforceSave = false;
@@ -360,7 +360,7 @@
 
   function animateCrowd(delta) {
     if (crowdCheer > 0) crowdCheer -= delta;
-    if (crowdWave === null && crowdCheer <= 0 && Math.random() < delta / 25) crowdWave = -55;   // about every 25 seconds
+    if (crowdWave === null && crowdCheer <= 0 && (state === STATE.TITLE || Math.random() < delta / 25)) crowdWave = -55;   // about every 25 seconds (nonstop on the title screen)
     if (crowdWave !== null) { crowdWave += 16 * delta; if (crowdWave > 55) crowdWave = null; }
     updateCrowd(clock.elapsedTime, false);
   }
@@ -423,7 +423,7 @@
       nb.position.set(x, y, z);
       world.addBody(nb);
     };
-    addNet(GOAL_WIDTH / 2, GOAL_HEIGHT / 2, t, 0, GOAL_HEIGHT / 2, -2.4 - t);
+    addNet(GOAL_WIDTH / 2, GOAL_HEIGHT / 2, 0.6, 0, GOAL_HEIGHT / 2, -2.4 - 0.6);   // thick, so a fast ball can't skip through
     addNet(t, GOAL_HEIGHT / 2, 1.2, -GOAL_WIDTH / 2 - t, GOAL_HEIGHT / 2, -1.2);
     addNet(t, GOAL_HEIGHT / 2, 1.2, GOAL_WIDTH / 2 + t, GOAL_HEIGHT / 2, -1.2);
     addNet(GOAL_WIDTH / 2, t, 1.2, 0, GOAL_HEIGHT + t, -1.2);
@@ -868,7 +868,6 @@
   function startCharge() {
     if (state === STATE.RESULT && resultDecided) { skipResult(); return; }
     if (state !== STATE.AIMING) return;
-    if (refWhistleT >= 0 && !refBlown) return;   // no kicking before the whistle (under half a second)
     state = STATE.CHARGING;
     aimPower = 0;
     errorCircle.visible = true;
@@ -1174,6 +1173,23 @@
     if (now - lastHitTime > 500 && other.shapes[0] instanceof CANNON.Cylinder) { playSound('woodwork'); lastHitTime = now; }
   }
 
+  // ---------- The net holds the ball ----------
+  // Once the ball has gone into the goal it stays inside the netting (back, sides and roof), however fast it was.
+  var ballInNet = false;
+  function keepInNet() {
+    var p = ballBody.position, v = ballBody.velocity, r = BALL_RADIUS;
+    var side = GOAL_WIDTH / 2 - r, back = -2.4 + r, roof = GOAL_HEIGHT - r;
+    if (!ballInNet) {
+      if (p.z < -r && p.z > -2.6 - r && Math.abs(p.x) < GOAL_WIDTH / 2 && p.y < GOAL_HEIGHT) ballInNet = true;
+      else return;
+    }
+    if (p.z < back) { p.z = back; if (v.z < 0) v.z = -v.z * 0.08; v.x *= 0.5; }   // the back of the net takes the pace off
+    if (p.x > side) { p.x = side; if (v.x > 0) v.x = -v.x * 0.08; }
+    if (p.x < -side) { p.x = -side; if (v.x < 0) v.x = -v.x * 0.08; }
+    if (p.y > roof) { p.y = roof; if (v.y > 0) v.y = -v.y * 0.08; }
+    if (p.z > -r) { p.z = -r; if (v.z > 0) v.z = 0; }   // and it doesn't roll back out
+  }
+
   // ---------- Result of each kick ----------
   function checkResult() {
     if (resultDecided || caught) return;   // a caught ball is decided once the keeper has hold of it
@@ -1306,6 +1322,42 @@
     $('over-again').focus({ preventScroll: true });
   }
 
+  // ---------- Title screen ----------
+  // The camera sweeps slowly around the stadium while the crowd does the wave. Any key or click blows the whistle and
+  // flies the camera down to the penalty spot as the skills menu appears.
+  var titleT = 0, titleLeave = -1;
+  var camHome = new THREE.Vector3(0, 1.8, PENALTY_DIST + 2.5), lookHome = new THREE.Vector3(0, GOAL_HEIGHT / 2, 0);
+  var camTmp = new THREE.Vector3(), lookTmp = new THREE.Vector3();
+  function titleOrbit(t, pos, look) {
+    var a = Math.sin(t * 0.16) * 0.95;
+    pos.set(Math.sin(a) * 17, 6 + Math.sin(t * 0.37) * 1.4, 7 + Math.cos(a) * 12);
+    look.set(Math.sin(a) * 3, 2.2, -6);
+  }
+  function updateTitleCamera(delta) {
+    if (state === STATE.TITLE) {
+      titleT += delta;
+      titleOrbit(titleT, camTmp, lookTmp);
+      camera.position.copy(camTmp); camera.lookAt(lookTmp);
+    } else if (titleLeave >= 0 && titleLeave < 1) {   // fly down to the spot
+      titleLeave = Math.min(1, titleLeave + delta / 1.4);
+      var k = titleLeave * titleLeave * (3 - 2 * titleLeave);
+      titleOrbit(titleT, camTmp, lookTmp);
+      camera.position.lerpVectors(camTmp, camHome, k);
+      lookTmp.lerp(lookHome, k);
+      camera.lookAt(lookTmp);
+    }
+  }
+  function leaveTitle() {
+    if (state !== STATE.TITLE) return;
+    unlockAudio();
+    playSound('whistle');
+    titleLeave = 0;
+    hide(scrTitle);
+    showMenu();
+  }
+  if (isTouch) $('btn-title').innerHTML = T('&#9654; TAP TO PLAY', '&#9654; TOCA PARA JUGAR');
+  scrTitle.addEventListener('click', leaveTitle);
+
   // ---------- Pause menu (the MENU button, or Esc) ----------
   var paused = false, scrPause = $('scr-pause');
   function openPause() {
@@ -1370,6 +1422,7 @@
 
   // ---------- Physics reset ----------
   function resetBall() {
+    ballInNet = false;
     ballBody.position.set(0, BALL_RADIUS, PENALTY_DIST);
     ballBody.velocity.set(0, 0, 0);
     ballBody.angularVelocity.set(0, 0, 0);
@@ -1419,7 +1472,8 @@
     }
 
     if (state === STATE.RESULT) {
-      world.step(1 / 60, delta, 3);
+      world.step(1 / 120, delta, 8);   // small steps, so a fast ball doesn't skip through the net
+      keepInNet();
       // a save is a save, however fast the shot: stop the ball in front of the line
       if (enforceSave && ballBody.position.z < (catching ? catchZ + BALL_RADIUS : 1.2) && ballBody.velocity.z < 0) {
         hitKeeper = true;
@@ -1446,6 +1500,7 @@
     flashParticles.material.uniforms.time.value = clock.elapsedTime;
     animateCrowd(delta);
     animateReferee(delta);
+    updateTitleCamera(delta);
     renderer.render(scene, camera);
   }
 
@@ -1471,14 +1526,35 @@
   canvas.addEventListener('touchmove', function (e) { e.preventDefault(); var t = e.touches[0]; aimAt(t.clientX, t.clientY); }, { passive: false });
   canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
 
+  // On every screen (menu, question, explanation, final whistle, pause), the arrow keys move between its buttons and
+  // answer boxes; Enter or Space presses the one that's highlighted. While aiming, the arrows move the aim instead.
+  function moveFocus(dir) {
+    var screen = paused ? scrPause : [scrTitle, scrMenu, scrQ, scrExp, scrOver].filter(function (s) { return !s.hidden; })[0];
+    if (!screen) return false;
+    var items = Array.prototype.filter.call(screen.querySelectorAll('button, input'), function (el) {
+      return !el.hidden && !el.disabled && el.offsetParent !== null;
+    });
+    if (!items.length) return false;
+    var i = items.indexOf(document.activeElement);
+    i = i < 0 ? (dir > 0 ? 0 : items.length - 1) : (i + dir + items.length) % items.length;
+    items[i].focus({ preventScroll: true });
+    if (items[i].tagName === 'INPUT') setActiveBox(items[i]);
+    return true;
+  }
+
   var AIM_KEYS = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, KeyA: 1, KeyD: 1, KeyW: 1, KeyS: 1 };
   window.addEventListener('keydown', function (e) {
     if (window.isPageControlKey && isPageControlKey(e)) return;
+    if (state === STATE.TITLE) {   // title screen: any key plays (Tab and modifier keys excepted)
+      if (/^(Tab|Shift|Control|Alt|Meta|CapsLock)$/.test(e.key)) return;
+      e.preventDefault(); leaveTitle(); return;
+    }
     if (e.key === 'Escape') {   // Esc does what the MENU button does
       if (paused) closePause(); else openPause();
       e.preventDefault();
       return;
     }
+    if (/^Arrow/.test(e.key) && moveFocus(e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 1)) { e.preventDefault(); return; }
     if (paused) return;   // the menu's own buttons take Tab, Enter and Space
     unlockAudio();
     var tag = e.target && e.target.tagName, go = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
