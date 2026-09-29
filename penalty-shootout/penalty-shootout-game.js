@@ -561,10 +561,10 @@
   }
 
   // the referee blows the whistle, then `then` runs (start aiming, or take the wild shot)
+  // With `then`, play waits for the whistle; without it, the referee just blows it while the student is already aiming.
   function refWhistle(then) {
-    state = STATE.WHISTLE;
-    hideAimHud();
-    refWhistleT = 0; refWhistleThen = then; refBlown = false;
+    if (then) { state = STATE.WHISTLE; hideAimHud(); }
+    refWhistleT = 0; refWhistleThen = then || null; refBlown = false;
   }
 
   function animateReferee(delta) {
@@ -732,7 +732,8 @@
     hide(scrQ);
     if (ok) {
       rightCount++;
-      refWhistle(startAiming);   // the referee blows the whistle, then the student aims
+      startAiming();   // aim right away, while the referee blows the whistle
+      refWhistle();
     } else {
       missed.push({ q: question.plain, you: answerText(given), ans: question.answer });
       showExplanation(answerText(given));
@@ -862,6 +863,7 @@
   function startCharge() {
     if (state === STATE.RESULT && resultDecided) { skipResult(); return; }
     if (state !== STATE.AIMING) return;
+    if (refWhistleT >= 0 && !refBlown) return;   // no kicking before the whistle (under half a second)
     state = STATE.CHARGING;
     aimPower = 0;
     errorCircle.visible = true;
