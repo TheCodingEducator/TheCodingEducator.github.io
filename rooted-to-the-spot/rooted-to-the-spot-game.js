@@ -212,9 +212,9 @@
     ad.width = 1024; ad.height = 64;
     var actx = ad.getContext('2d');
     actx.fillStyle = '#0f172a'; actx.fillRect(0, 0, 1024, 64);
-    actx.fillStyle = '#3b82f6'; actx.font = 'bold 40px Arial';
+    actx.fillStyle = '#3b82f6'; actx.font = 'bold 34px Arial';
     var adText = 'ROOTED TO THE SPOT';
-    for (i = 0; i < 2; i++) actx.fillText(adText, 40 + i * 512, 45);
+    for (i = 0; i < 2; i++) actx.fillText(adText, 56 + i * 512, 43);
     var adTex = new THREE.CanvasTexture(ad);
     adTex.wrapS = THREE.RepeatWrapping; adTex.repeat.set(4, 1);
     var adMat = new THREE.MeshLambertMaterial({ map: adTex });
@@ -1035,13 +1035,13 @@
       // standing: the pose whose gloves come closest to the ball without his feet going below the grass
       ['ground', 'low', 'mid', 'high'].forEach(function (kind) {
         var o = gloveOffset(kind, catchDir, 0), zz = keeperBody.position.z + o.z, pp = at(zz);
-        var gap = pp.y - o.y;   // how far he'd have to jump (below 0: his gloves are above the ball)
-        var score = gap >= -0.02 ? gap * 0.3 : -gap;   // a small jump is fine; gloves above the ball are not
+        var gap = pp.y - o.y;   // how far the gloves are from the ball, up or down
+        var score = Math.abs(gap);   // feet stay on the grass: just the closest gloves
         if (!best || score < best.score) best = { kind: kind, off: o, p: pp, z: zz, score: score };
       });
       catchKind = best.kind; off = best.off; p = best.p; z = best.z;
     }
-    keeperTarget = { x: p.x - off.x, y: Math.max(0, p.y - off.y) };   // jumps if the ball is above his reach
+    keeperTarget = { x: p.x - off.x, y: catchKind === 'dive' ? Math.max(0, p.y - off.y) : 0 };   // only a dive leaves the ground
     catchZ = z;
     keeperReactionDelay = p.t * 0.1;
     keeperDiveDuration = p.t * 0.9;   // the gloves arrive just as the ball does
@@ -1124,19 +1124,19 @@
     }
   }
 
-  // Ready stance, bouncing on his toes and leaning from side to side. The lean is only for show: it never changes
+  // Ready stance, leaning from side to side (no bouncing). The lean is only for show: it never changes
   // the scoring chance or whether a shot is saved.
   var keeperSway = 0;
   function keeperIdle() {
     kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
-    var time = clock.elapsedTime, bob = keeperStay ? 0 : Math.sin(time * 6);   // rooted: perfectly still
+    var time = clock.elapsedTime;
     if (!keeperDiving) keeperSway = Math.sin(time * 1.3) * 0.28 + Math.sin(time * 0.47) * 0.1;   // holds still once the shot is struck
-    kTorso.position.y = 1.0 + Math.abs(bob) * 0.08;
+    kTorso.position.y = 1.0;   // steady: no bouncing
     kTorso.rotation.set(0, 0, -keeperSway * 0.45);   // leans the way he's shuffling
-    kLLeg.rotation.set(-0.1 + bob * 0.05, 0, -0.1 + keeperSway * 0.2);
-    kRLeg.rotation.set(-0.1 + bob * 0.05, 0, 0.1 + keeperSway * 0.2);
-    kLArm.rotation.set(0.35, 0, -1.2 - bob * 0.05);   // ready stance: arms spread wide, gloves out
-    kRArm.rotation.set(0.35, 0, 1.2 + bob * 0.05);
+    kLLeg.rotation.set(-0.1, 0, -0.1 + keeperSway * 0.2);
+    kRLeg.rotation.set(-0.1, 0, 0.1 + keeperSway * 0.2);
+    kLArm.rotation.set(0.35, 0, -1.2);   // ready stance: arms spread wide, gloves out
+    kRArm.rotation.set(0.35, 0, 1.2);
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.position.x += keeperSway;
     keeperGroup.quaternion.copy(keeperBody.quaternion);
@@ -1404,7 +1404,9 @@
       aimPower += 1.5 * delta;
       if (aimPower > 1) aimPower = 0;   // big → tiny, then starts over
       var er = errorRadiusFor(aimPower);
-      errorCircle.scale.set(er / 0.1, er / 0.1, 1);
+      // the ball's center lands within er, so the ball itself can reach a ball's width further: show all of that
+      var shown = (er + BALL_RADIUS) / 0.1;
+      errorCircle.scale.set(shown, shown, 1);
     }
     // the scoring chance, live: the best it could be while aiming, the real one while powering up
     if (state === STATE.AIMING) showOdds(shotOdds(targetCrosshair.position.x, targetCrosshair.position.y, 1), true);
