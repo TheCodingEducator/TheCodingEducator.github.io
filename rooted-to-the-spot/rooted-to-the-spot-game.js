@@ -979,7 +979,8 @@
       y = 3.5 + Math.random() * 2;
       speed = 22;
     } else {
-      showOdds(shotOdds(aimX, aimY, aimPower), false);   // the chance at the moment of release stays on screen
+      releaseOdds = shotOdds(aimX, aimY, aimPower);
+      showOdds(releaseOdds, false);   // the chance at the moment of release stays on screen
       var errR = errorRadiusFor(aimPower) * Math.sqrt(Math.random()), errA = Math.random() * Math.PI * 2;
       x += Math.cos(errA) * errR;
       y = Math.max(BALL_RADIUS, y + Math.sin(errA) * errR);
@@ -1008,11 +1009,25 @@
 
   // Chance a shot landing at (x, y) in the goal beats the keeper. Right at the keeper is easy to stop; the further
   // toward a corner the better, top corners best. A weak (badly timed) shot is easier to stop.
+  // ---------- The keeper adapts to the student ----------
+  // A rating from 0 (brand new) to 1 (expert), saved on this device and never shown to the student. Everyone starts on an easy
+  // keeper; each goal makes him a little better (more for a goal from a hard spot) and each miss or save a little easier,
+  // so strong players soon need precise, well-timed corner shots while students who are struggling get an easier keeper.
+  // The shown chance always uses the current level, so it stays the true chance.
+  var skillRating = Math.max(0, Math.min(1, +load('rating', 0) || 0)), releaseOdds = null;
+  function adaptKeeper(kind) {
+    if (kind === 'goal') skillRating += 0.05 + (releaseOdds && releaseOdds.total < 0.6 ? 0.03 : 0);
+    else skillRating -= 0.05;
+    skillRating = Math.max(0, Math.min(1, skillRating));
+    save('rating', Math.round(skillRating * 1000) / 1000);
+  }
+
   function beatChance(x, y, power) {
     var dx = Math.min(1, Math.abs(x) / (GOAL_WIDTH / 2)), dy = Math.min(1, y / GOAL_HEIGHT);
     var place = 0.4 + 0.46 * Math.pow(dx, 1.2) + 0.1 * dy + 0.1 * dx * dy;
     var strike = 0.7 + 0.3 * power;
-    var p = place * strike;
+    // level 1: a generous keeper (even a shot at him goes in about 2 times in 3); level 10: a sharp one
+    var p = place * strike * (1.2 - 0.45 * skillRating) + 0.12 * (1 - skillRating);
     return Math.max(0.05, Math.min(0.98, p));
   }
 
@@ -1360,6 +1375,7 @@
     state = STATE.RESULT;
     results[kickNum] = kind;
     if (kind === 'goal') { goals++; playSound('cheer'); crowdCheer = 3; crowdWave = null; } else playSound('groan');
+    if (!isAutoMiss) adaptKeeper(kind);   // wild shots after a wrong answer don't count
     msg.textContent = {
       goal: T('GOAL!', '¡GOL!'), saved: T('SAVED', '¡ATAJADA!'), caught: T('CAUGHT!', '¡ATRAPADA!'),
       post: T('OFF THE POST', '¡AL PALO!'), wide: T('WIDE', 'DESVIADO'), over: T('OVER THE BAR', 'POR ENCIMA')
@@ -1608,7 +1624,7 @@
     }
 
     if (state === STATE.CHARGING) {
-      aimPower += 1.5 * delta;
+      aimPower += (1.5 + 1.3 * skillRating) * delta;   // better players get a faster power circle to time
       if (aimPower > 1) aimPower = 0;   // big → tiny, then starts over
       var er = errorRadiusFor(aimPower);
       // the ball's center lands within er, so the ball itself can reach a ball's width further: show all of that
