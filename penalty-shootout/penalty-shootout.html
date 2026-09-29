@@ -76,6 +76,13 @@
   #ps .dot.x { background: var(--red); border-color: var(--red); }
   #ps .dot.now { border-color: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
   #ps #weather { color: #93c5fd; font-size: clamp(18px, 3.4cqmin, 28px); }
+  #ps .hudright { display: flex; gap: 8px; align-items: flex-start; }
+  #ps .hudbtn { pointer-events: auto; cursor: pointer; background: var(--glass); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 4px 14px; font: 500 clamp(18px, 3.4cqmin, 28px) 'Teko', Impact, sans-serif; letter-spacing: 0.06em; line-height: 1.1; }
+  #ps .hudbtn:hover { background: rgba(30, 41, 59, 0.95); border-color: rgba(255,255,255,0.6); }
+  #ps .hudbtn:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+  #ps .card.pause { border-top: 5px solid var(--blue); width: min(100%, 420px); }
+  #ps .card.pause h2 { margin: 0 0 12px; font: 700 clamp(40px, 8cqmin, 64px) 'Teko', sans-serif; line-height: 1; }
+  #ps .pause-btns { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
 
   #ps #msg { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: clamp(64px, 18cqmin, 170px); font-weight: 700; font-style: italic; text-shadow: 0 0 30px #000, 0 4px 0 rgba(0,0,0,0.6); pointer-events: none; z-index: 6; white-space: nowrap; animation: ps-pop 0.35s ease-out; }
   #ps #msg.goal { color: #4ade80; } #ps #msg.saved { color: var(--yellow); } #ps #msg.miss { color: #f87171; }
@@ -203,20 +210,23 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Pro Penalty Shootout</h1>
-<p class="sr-only">A penalty shootout math game. Each shootout is 5 kicks. Answer a square root question to earn each kick; a wrong answer shows why, and that shot goes wild. Then aim at the goal with the mouse, a finger or the arrow keys, hold the mouse button or your finger to build power and let go to shoot, or press the space bar once to start the power and again to shoot, when the circle is smallest. Corner shots have the best chance to score.</p>
+<p class="sr-only">A penalty shootout math game. Each shootout is 5 kicks. Answer a square root question to earn each kick; a wrong answer shows why, and that shot goes wild. Then aim at the goal with the mouse, a finger or the arrow keys, click, tap or press the space bar once to start the power and again to shoot. Corner shots have the best chance to score.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
     <div class="app" id="ps">
-      <canvas id="ps-canvas" tabindex="0" aria-label="The stadium. Aim with the mouse, a finger or the arrow keys; hold to build power and let go to shoot." data-es-aria="El estadio. Apunta con el ratón, un dedo o las flechas; mantén presionado para cargar y suelta para tirar."></canvas>
+      <canvas id="ps-canvas" tabindex="0" aria-label="The stadium. Aim with the mouse, a finger or the arrow keys; click, tap or press Space to power up, and again to shoot. Escape opens the menu." data-es-aria="El estadio. Apunta con el ratón, un dedo o las flechas; haz clic, toca o pulsa Espacio para cargar, y otra vez para tirar. Escape abre el menú."></canvas>
 
       <div id="hud" hidden>
         <div class="hudbox"><span data-es="GOLES">GOALS</span> <span class="gl" id="hud-goals">0</span><span id="hud-dots" role="img"></span></div>
-        <div class="hudbox" id="weather">DAY</div>
+        <div class="hudright">
+          <div class="hudbox" id="weather">DAY</div>
+          <button type="button" class="hudbtn" id="btn-menu" aria-label="Menu (Esc)" data-es-aria="Menú (Esc)"><span aria-hidden="true">&#9776;</span> <span data-es="MENÚ">MENU</span></button>
+        </div>
       </div>
       <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div></div>
       <div id="msg" hidden aria-live="assertive"></div>
-      <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Mantén presionado para cargar y suelta para tirar (o pulsa Espacio para cargar y otra vez para tirar) &middot; Tira cuando el círculo sea más pequeño">Aim with the mouse, a finger or the arrow keys &middot; Hold down to power up and let go to shoot (or press Space to power up, and Space again to shoot) &middot; Shoot when the circle is smallest</div>
+      <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Haz clic (o pulsa Espacio) para cargar, y otra vez para tirar">Aim with the mouse, a finger or the arrow keys &middot; Click, tap or press Space to power up, then again to shoot</div>
 
       <!-- Menu: level and skills -->
       <div class="scr" id="scr-menu">
@@ -226,7 +236,7 @@
           <div class="lbl" data-es="ELIGE DESTREZAS">SELECT SKILLS</div>
           <div class="skills" id="skill-list"></div>
           <p class="err" id="skill-err" hidden data-es="¡Elige al menos 1 destreza para empezar!">Select at least 1 skill to begin!</p>
-          <p class="howto" data-es="<b>5 tiros.</b> Responde bien para ganarte cada tiro. Apunta, mantén presionado para cargar y suelta cuando el círculo sea más pequeño. ¡Las esquinas superiores son las más difíciles de atajar!"><b>5 kicks.</b> Answer right to earn each shot. Aim, hold to power up, and let go when the circle is smallest. The top corners are the hardest to save!</p>
+          <p class="howto" data-es="<b>5 tiros.</b> Responde bien para ganarte cada tiro. Apunta, haz clic para cargar y otra vez para tirar. ¡Las esquinas superiores son las más difíciles de atajar!"><b>5 kicks.</b> Answer right to earn each shot. Aim, click to power up, and click again to shoot. The top corners are the hardest to save!</p>
           <div class="go-row"><button type="button" class="btn" id="btn-start" data-es="¡A JUGAR!">KICK OFF</button></div>
         </div>
       </div>
@@ -263,6 +273,19 @@
           </div>
           <p class="wild" data-es="Como fallaste la pregunta, ¡tu tiro sale desviado!">Because you missed the question, your shot goes wild!</p>
           <div class="go-row"><button type="button" class="btn red" id="exp-go" data-es="VER EL FALLO">WATCH THE MISS</button></div>
+        </div>
+      </div>
+
+      <!-- Pause menu (the MENU button or Esc) -->
+      <div class="scr solid" id="scr-pause" hidden role="dialog" aria-labelledby="pause-title">
+        <div class="card pause">
+          <h2 id="pause-title" data-es="PAUSA">PAUSED</h2>
+          <div class="pause-btns">
+            <button type="button" class="btn green" id="pause-resume" data-es="CONTINUAR">RESUME</button>
+            <button type="button" class="btn" id="pause-restart" data-es="REINICIAR TANDA">RESTART SHOOTOUT</button>
+            <button type="button" class="btn ghost" id="pause-skills" data-es="CAMBIAR DESTREZAS">CHANGE SKILLS</button>
+          </div>
+          <p class="howto" data-es="Pulsa <b>Esc</b> para continuar.">Press <b>Esc</b> to resume.</p>
         </div>
       </div>
 

@@ -37,7 +37,7 @@
   function focusGame() { try { canvas.focus({ preventScroll: true }); } catch (e) {} }
 
   // ---------- Game state ----------
-  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7 };
+  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8 };
   var ENV = { DAY: 0, NIGHT: 1, RAIN: 2 };
   var state = STATE.MENU, env = ENV.DAY;
 
@@ -54,7 +54,7 @@
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
   var goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // invisible wall on the goal line (z = 0)
 
-  function errorRadiusFor(p) { return 1.9 - p * 1.78; }   // big circle at 0 power, tiny at full
+  function errorRadiusFor(p) { return 1.9 - p * 1.55; }   // big circle at 0 power, tiny at full
 
   function initEngine() {
     scene = new THREE.Scene();
@@ -219,12 +219,14 @@
     wall(100, 0, -20, 0); wall(80, -45, 20, Math.PI / 2); wall(80, 45, 20, -Math.PI / 2);
 
     // Grandstands
-    var standMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+    // tiers of seating in two alternating shades
+    var standMats = [new THREE.MeshLambertMaterial({ color: 0x1e293b }), new THREE.MeshLambertMaterial({ color: 0x334155 })];
     var backGeo = new THREE.BoxGeometry(100, 1, 2), sideGeo = new THREE.BoxGeometry(2, 1, 100);
     for (i = 1; i <= 15; i++) {
-      var b = new THREE.Mesh(backGeo, standMat); b.position.set(0, i, -20 - i * 2); scene.add(b);
-      var l = new THREE.Mesh(sideGeo, standMat); l.position.set(-45 - i * 2, i, 20); scene.add(l);
-      var r = new THREE.Mesh(sideGeo, standMat); r.position.set(45 + i * 2, i, 20); scene.add(r);
+      var sm = standMats[i % 2];
+      var b = new THREE.Mesh(backGeo, sm); b.position.set(0, i, -20 - i * 2); scene.add(b);
+      var l = new THREE.Mesh(sideGeo, sm); l.position.set(-45 - i * 2, i, 20); scene.add(l);
+      var r = new THREE.Mesh(sideGeo, sm); r.position.set(45 + i * 2, i, 20); scene.add(r);
     }
     createCrowd();
 
@@ -243,28 +245,58 @@
     updateBoard();
   }
 
+  // ---------- The crowd ----------
+  // Real fans in the seats: each has a body, a head and two arms, drawn as shared ("instanced") shapes so thousands
+  // of them stay fast. They bob a little while waiting, jump with their arms up after a goal, and now and then a wave
+  // goes around the back stand.
+  var fans = [], crowdParts = null, crowdCheer = 0, crowdWave = null, crowdTick = 0;
+  var fanDummy = new THREE.Object3D();
+  fanDummy.rotation.order = 'YXZ';
+
   function createCrowd() {
-    var count = 12000, pos = new Float32Array(count * 3), colors = new Float32Array(count * 3);
-    var palette = [0xef4444, 0x3b82f6, 0xffffff, 0xeab308, 0x0f172a].map(function (h) { return new THREE.Color(h); });
-    for (var i = 0; i < count; i++) {
-      var section = Math.random(), row = Math.floor(Math.random() * 15) + 1, x, z;
-      if (section < 0.4) { x = (Math.random() - 0.5) * 96; z = -20 - row * 2 + Math.random() * 1.5; }
-      else if (section < 0.7) { x = -45 - row * 2 + Math.random() * 1.5; z = -30 + Math.random() * 96; }
-      else { x = 45 + row * 2 + Math.random() * 1.5; z = -30 + Math.random() * 96; }
-      pos[i * 3] = x; pos[i * 3 + 1] = row + Math.random() * 0.5; pos[i * 3 + 2] = z;
-      var col = palette[Math.floor(Math.random() * palette.length)];
-      colors[i * 3] = col.r; colors[i * 3 + 1] = col.g; colors[i * 3 + 2] = col.b;
+    var shirts = [0x2563eb, 0x2563eb, 0x1d4ed8, 0xdc2626, 0xdc2626, 0xf8fafc, 0xfacc15, 0x111827, 0x16a34a, 0xf97316]
+      .map(function (h) { return new THREE.Color(h); });
+    var skins = [0x8d5524, 0xc68642, 0xe0ac69, 0xf1c27d, 0xffdbac, 0x5c3a1e].map(function (h) { return new THREE.Color(h); });
+    var addFan = function (x, y, z, face) {
+      if (Math.random() < 0.15) return;   // a few empty seats
+      fans.push({ x: x + (Math.random() - 0.5) * 0.25, y: y, z: z, face: face, phase: Math.random() * Math.PI * 2,
+        shirt: shirts[Math.floor(Math.random() * shirts.length)], skin: skins[Math.floor(Math.random() * skins.length)],
+        size: 0.9 + Math.random() * 0.2 });
+    };
+    for (var row = 1; row <= 15; row++) {
+      var seatY = row + 0.5;
+      for (var x = -47; x <= 47; x += 1.0) addFan(x, seatY, -20 - row * 2 + 0.2, 0);          // behind the goal, facing the pitch
+      for (var z = -28; z <= 30; z += 1.0) {                                                  // the side stands, facing in
+        addFan(-45 - row * 2 + 0.2, seatY, z, Math.PI / 2);
+        addFan(45 + row * 2 - 0.2, seatY, z, -Math.PI / 2);
+      }
     }
-    var geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.45, vertexColors: true })));
+    var n = fans.length;
+    var torsoGeo = new THREE.BoxGeometry(0.44, 0.62, 0.26);
+    var headGeo = new THREE.SphereGeometry(0.13, 6, 5);
+    var armGeo = new THREE.BoxGeometry(0.11, 0.5, 0.11); armGeo.translate(0, -0.25, 0);   // turns at the shoulder
+    var mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    crowdParts = {
+      torso: new THREE.InstancedMesh(torsoGeo, mat, n), head: new THREE.InstancedMesh(headGeo, mat, n),
+      armL: new THREE.InstancedMesh(armGeo, mat, n), armR: new THREE.InstancedMesh(armGeo, mat, n)
+    };
+    fans.forEach(function (f, i) {
+      crowdParts.torso.setColorAt(i, f.shirt); crowdParts.armL.setColorAt(i, f.shirt); crowdParts.armR.setColorAt(i, f.shirt);
+      crowdParts.head.setColorAt(i, f.skin);
+    });
+    Object.keys(crowdParts).forEach(function (k) {
+      var m = crowdParts[k];
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.instanceColor.needsUpdate = true;
+      scene.add(m);
+    });
+    updateCrowd(0, true);
 
     // Camera flashes in the crowd
     var fc = 120, fpos = new Float32Array(fc * 3), phase = new Float32Array(fc);
-    for (i = 0; i < fc; i++) {
-      var s = Math.floor(Math.random() * count) * 3;
-      fpos[i * 3] = pos[s]; fpos[i * 3 + 1] = pos[s + 1]; fpos[i * 3 + 2] = pos[s + 2];
+    for (var i = 0; i < fc; i++) {
+      var f = fans[Math.floor(Math.random() * n)];
+      fpos[i * 3] = f.x; fpos[i * 3 + 1] = f.y + 1.1; fpos[i * 3 + 2] = f.z;
       phase[i] = Math.random();
     }
     var fgeo = new THREE.BufferGeometry();
@@ -280,6 +312,50 @@
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     }));
     scene.add(flashParticles);
+  }
+
+  function setFanPart(mesh, i, x, y, z, face, roll, s) {
+    fanDummy.position.set(x, y, z);
+    fanDummy.rotation.set(0, face, roll);
+    fanDummy.scale.setScalar(s);
+    fanDummy.updateMatrix();
+    mesh.setMatrixAt(i, fanDummy.matrix);
+  }
+
+  // t = seconds since the game started. force = draw now even if nothing is happening.
+  function updateCrowd(t, force) {
+    if (!crowdParts) return;
+    var excited = crowdCheer > 0, waving = crowdWave !== null;
+    crowdTick++;
+    if (!force && !excited && !waving && crowdTick % 4) return;   // waiting: a gentle bob, a few times a second is plenty
+    for (var i = 0; i < fans.length; i++) {
+      var f = fans[i], s = f.size, lift, arms;
+      if (excited) {   // a goal! jump up and down with arms in the air
+        lift = Math.max(0, Math.sin(t * 10 + f.phase)) * 0.4 * s;
+        arms = 2.5 + 0.35 * Math.sin(t * 12 + f.phase);
+      } else {
+        lift = Math.max(0, Math.sin(t * 1.5 + f.phase)) * 0.03;
+        arms = 0.12;
+      }
+      if (waving && f.face === 0) {   // the wave: stand up and throw your arms up as it passes
+        var d = Math.abs(f.x - crowdWave);
+        if (d < 4) { var w = Math.cos(d / 4 * Math.PI / 2); lift = Math.max(lift, w * 0.5); arms = Math.max(arms, w * 2.9); }
+      }
+      var y = f.y + lift, sx = 0.25 * s * Math.cos(f.face), sz = -0.25 * s * Math.sin(f.face);
+      setFanPart(crowdParts.torso, i, f.x, y + 0.31 * s, f.z, f.face, 0, s);
+      setFanPart(crowdParts.head, i, f.x, y + 0.78 * s, f.z, f.face, 0, s);
+      setFanPart(crowdParts.armL, i, f.x - sx, y + 0.58 * s, f.z - sz, f.face, -arms, s);
+      setFanPart(crowdParts.armR, i, f.x + sx, y + 0.58 * s, f.z + sz, f.face, arms, s);
+    }
+    crowdParts.torso.instanceMatrix.needsUpdate = crowdParts.head.instanceMatrix.needsUpdate = true;
+    crowdParts.armL.instanceMatrix.needsUpdate = crowdParts.armR.instanceMatrix.needsUpdate = true;
+  }
+
+  function animateCrowd(delta) {
+    if (crowdCheer > 0) crowdCheer -= delta;
+    if (crowdWave === null && crowdCheer <= 0 && Math.random() < delta / 25) crowdWave = -55;   // about every 25 seconds
+    if (crowdWave !== null) { crowdWave += 16 * delta; if (crowdWave > 55) crowdWave = null; }
+    updateCrowd(clock.elapsedTime, false);
   }
 
   function buildGoal(mats) {
@@ -432,6 +508,7 @@
       } else {
         var hand = sphere(0.042, skin); hand.scale.set(0.8, 1.2, 0.6); hand.position.y = -0.3; fore.add(hand);
       }
+      arm.userData.fore = fore;
       return arm;
     };
     var makeLeg = function (side) {
@@ -446,7 +523,7 @@
       var toe = sphere(0.05, boots); toe.scale.set(1, 0.75, 1); toe.position.set(0, -0.48, 0.16); shin.add(toe);
       return leg;
     };
-    var p = { root: root, hips: hips, lArm: makeArm(-1), rArm: makeArm(1), lLeg: makeLeg(-1), rLeg: makeLeg(1) };
+    var p = { root: root, hips: hips, head: head, lArm: makeArm(-1), rArm: makeArm(1), lLeg: makeLeg(-1), rLeg: makeLeg(1) };
     root.traverse(function (m) { if (m.isMesh) m.castShadow = true; });
     return p;
   }
@@ -465,13 +542,61 @@
     world.addBody(keeperBody);
   }
 
+  // ---------- Referee ----------
+  // Stands relaxed (breathing, shifting his weight, looking around) with a whistle in his right hand. Before each kick
+  // he lifts it to his mouth, points to the spot, blows, and only then does the kick go ahead.
+  var refP = null, refYaw = 0, refWhistleT = -1, refWhistleThen = null, refBlown = false;
+
   function createReferee() {
-    var r = buildPerson({ shirt: 0xa3e635, trim: 0x111111, shorts: 0x111111, socks: 0x111111, skin: 0x8d5524, hair: 0x111111 });
-    r.lArm.rotation.set(0.1, 0, -0.12); r.rArm.rotation.set(-0.3, 0, 0.12);   // arms relaxed at the sides
-    var ref = r.root;
+    refP = buildPerson({ shirt: 0xa3e635, trim: 0x111111, shorts: 0x111111, socks: 0x111111, skin: 0x8d5524, hair: 0x111111 });
+    var ref = refP.root;
     ref.position.set(4, 0, 7);
-    ref.lookAt(0, 0, 11);   // watching the ball, standing upright
+    ref.lookAt(0, 0, 11);   // watching the ball
+    refYaw = ref.rotation.y;
+    var whistle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.035, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8, roughness: 0.25 }));
+    whistle.position.set(0, -0.33, 0.035);
+    refP.rArm.userData.fore.add(whistle);
     scene.add(ref);
+  }
+
+  // the referee blows the whistle, then `then` runs (start aiming, or take the wild shot)
+  function refWhistle(then) {
+    state = STATE.WHISTLE;
+    hideAimHud();
+    refWhistleT = 0; refWhistleThen = then; refBlown = false;
+  }
+
+  function animateReferee(delta) {
+    if (!refP) return;
+    var t = clock.elapsedTime, p = refP, mix = function (a, b, k) { return a + (b - a) * k; };
+    // relaxed: breathing, weight shifting from foot to foot, turning a little and glancing around
+    var sway = Math.sin(t * 0.55);
+    p.hips.position.y = 1.0 + Math.sin(t * 1.7) * 0.006;
+    p.hips.rotation.z = sway * 0.035;
+    p.root.rotation.y = refYaw + Math.sin(t * 0.27) * 0.15;
+    p.lLeg.rotation.set(Math.sin(t * 0.55 + 1) * 0.03, 0, -0.05 - sway * 0.035);
+    p.rLeg.rotation.set(-Math.sin(t * 0.55 + 1) * 0.03, 0, 0.05 - sway * 0.035);
+    var headY = Math.sin(t * 0.45 + 1) * 0.4, headX = 0.05 + Math.sin(t * 0.8) * 0.03;
+    var lx = 0.08 + Math.sin(t * 1.1) * 0.05, lz = -0.1 - sway * 0.03, lf = -0.3;       // left arm hangs loose
+    var rx = -0.3 + Math.sin(t * 1.1 + 2) * 0.04, rz = 0.12, rf = -0.9;                  // right hand holds the whistle at the waist
+
+    if (refWhistleT >= 0) {
+      refWhistleT += delta;
+      var w = refWhistleT;
+      // up (0-0.35 s), hold and blow (0.35-0.9 s), back down (0.9-1.25 s)
+      var k = w < 0.35 ? w / 0.35 : w < 0.9 ? 1 : Math.max(0, 1 - (w - 0.9) / 0.35);
+      k = k * k * (3 - 2 * k);
+      rx = mix(rx, -1.25, k); rz = mix(rz, -0.45, k); rf = mix(rf, -2.3, k);          // whistle to the mouth
+      lx = mix(lx, -1.35, k); lz = mix(lz, -0.25, k); lf = mix(lf, -0.15, k);         // other arm points to the spot
+      headY = mix(headY, 0, k); headX = mix(headX, -0.05, k);
+      if (w >= 0.42 && !refBlown) { refBlown = true; playSound('whistle'); }
+      if (w >= 0.9 && refWhistleThen) { var go = refWhistleThen; refWhistleThen = null; go(); }
+      if (w >= 1.25) refWhistleT = -1;
+    }
+    p.head.rotation.set(headX, headY, 0);
+    p.lArm.rotation.set(lx, 0, lz); p.lArm.userData.fore.rotation.x = lf;
+    p.rArm.rotation.set(rx, 0, rz); p.rArm.userData.fore.rotation.x = rf;
   }
 
   function createLeg() {
@@ -607,7 +732,7 @@
     hide(scrQ);
     if (ok) {
       rightCount++;
-      startAiming();
+      refWhistle(startAiming);   // the referee blows the whistle, then the student aims
     } else {
       missed.push({ q: question.plain, you: answerText(given), ans: question.answer });
       showExplanation(answerText(given));
@@ -699,7 +824,7 @@
   function closeExplanation() {
     if (state !== STATE.EXPLANATION) return;
     hide(scrExp);
-    executeKick(true);   // missed the math: the shot goes wild
+    refWhistle(function () { executeKick(true); });   // missed the math: after the whistle, the shot goes wild
   }
 
   // ---------- Aiming and shooting ----------
@@ -711,7 +836,6 @@
     targetCrosshair.visible = true;
     setAim(0, 1.2);
     focusGame();
-    playSound('whistle');
   }
 
   function hideAimHud() { aimHint.hidden = true; chance.hidden = true; }
@@ -971,7 +1095,7 @@
     resultDecided = true;
     state = STATE.RESULT;
     results[kickNum] = kind;
-    if (kind === 'goal') { goals++; playSound('cheer'); } else playSound('groan');
+    if (kind === 'goal') { goals++; playSound('cheer'); crowdCheer = 3; crowdWave = null; } else playSound('groan');
     msg.textContent = {
       goal: T('GOAL!', '¡GOL!'), saved: T('SAVED', '¡ATAJADA!'), caught: T('CAUGHT!', '¡ATRAPADA!'),
       post: T('OFF THE POST', '¡AL PALO!'), wide: T('WIDE', 'DESVIADO'), over: T('OVER THE BAR', 'POR ENCIMA')
@@ -980,7 +1104,11 @@
     msg.hidden = false;
     kickNum++;
     drawHud();
-    resultTimeout = setTimeout(function () { if (state === STATE.RESULT) skipResult(); }, 2200);
+    var next = function () {
+      if (paused) { resultTimeout = setTimeout(next, 300); return; }   // wait until the menu is closed
+      if (state === STATE.RESULT) skipResult();
+    };
+    resultTimeout = setTimeout(next, 2200);
   }
 
   function skipResult() {
@@ -1073,6 +1201,34 @@
     $('over-again').focus({ preventScroll: true });
   }
 
+  // ---------- Pause menu (the MENU button, or Esc) ----------
+  var paused = false, scrPause = $('scr-pause');
+  function openPause() {
+    if (paused || hud.hidden) return;   // only while a shootout is being played
+    paused = true;
+    show(scrPause);
+    $('pause-resume').focus({ preventScroll: true });
+  }
+  function closePause() {
+    if (!paused) return;
+    paused = false;
+    hide(scrPause);
+    clock.getDelta();   // don't count the paused time
+    if (state === STATE.MATH && !isTouch) activeIn.focus({ preventScroll: true });
+  }
+  // stop whatever is happening mid-kick, so the shootout can restart or go back to the skills
+  function stopPlay() {
+    paused = false; hide(scrPause);
+    clearTimeout(resultTimeout);
+    refWhistleT = -1; refWhistleThen = null;
+    msg.hidden = true;
+    hide(scrQ); hide(scrExp);
+    hideAimHud();
+    targetCrosshair.visible = errorCircle.visible = false;
+    legGroup.visible = false;
+    clock.getDelta();
+  }
+
   function showMenu() {
     state = STATE.MENU;
     hide(scrOver); hide(scrQ); hide(scrExp);
@@ -1129,6 +1285,7 @@
   // ---------- Main loop ----------
   function animate() {
     requestAnimationFrame(animate);
+    if (paused) { clock.getDelta(); renderer.render(scene, camera); return; }   // frozen while the menu is open
     var delta = Math.min(clock.getDelta(), 0.05);   // no huge jump after switching tabs
 
     if (state === STATE.AIMING || state === STATE.CHARGING) {   // keyboard aiming
@@ -1180,33 +1337,42 @@
       rainParticles.geometry.attributes.position.needsUpdate = true;
     }
     flashParticles.material.uniforms.time.value = clock.elapsedTime;
+    animateCrowd(delta);
+    animateReferee(delta);
     renderer.render(scene, camera);
   }
 
   // ---------- Input ----------
+  // Click (or tap) once to start the power, and again to shoot, the same as the space bar
+  function clickShot(x, y) {
+    unlockAudio();
+    if (state === STATE.CHARGING) { endCharge(); return; }
+    aimAt(x, y);
+    startCharge();
+  }
   canvas.addEventListener('mousedown', function (e) {
     if (e.button !== 0) return;
-    unlockAudio();
-    aimAt(e.clientX, e.clientY);
-    startCharge();
+    clickShot(e.clientX, e.clientY);
   });
   canvas.addEventListener('mousemove', function (e) { aimAt(e.clientX, e.clientY); });
-  window.addEventListener('mouseup', endCharge);
 
   canvas.addEventListener('touchstart', function (e) {
     e.preventDefault();   // no pretend mouse clicks afterwards
-    unlockAudio();
     var t = e.touches[0];
-    aimAt(t.clientX, t.clientY);
-    startCharge();
+    clickShot(t.clientX, t.clientY);
   }, { passive: false });
   canvas.addEventListener('touchmove', function (e) { e.preventDefault(); var t = e.touches[0]; aimAt(t.clientX, t.clientY); }, { passive: false });
-  canvas.addEventListener('touchend', function (e) { e.preventDefault(); endCharge(); }, { passive: false });
-  canvas.addEventListener('touchcancel', endCharge);
+  canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
 
   var AIM_KEYS = { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1, KeyA: 1, KeyD: 1, KeyW: 1, KeyS: 1 };
   window.addEventListener('keydown', function (e) {
     if (window.isPageControlKey && isPageControlKey(e)) return;
+    if (e.key === 'Escape') {   // Esc does what the MENU button does
+      if (paused) closePause(); else openPause();
+      e.preventDefault();
+      return;
+    }
+    if (paused) return;   // the menu's own buttons take Tab, Enter and Space
     unlockAudio();
     var tag = e.target && e.target.tagName, go = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
     if (state === STATE.MATH) {
@@ -1249,6 +1415,18 @@
   $('btn-start').addEventListener('click', function () { unlockAudio(); tryStart(); });
   $('over-again').addEventListener('click', startShootout);
   $('over-menu').addEventListener('click', showMenu);
+  $('btn-menu').addEventListener('click', function () { if (paused) closePause(); else openPause(); });
+  $('pause-resume').addEventListener('click', closePause);
+  $('pause-restart').addEventListener('click', function () { stopPlay(); startShootout(); });
+  $('pause-skills').addEventListener('click', function () { stopPlay(); showMenu(); });
+  // In fullscreen, Esc opens this menu instead of leaving fullscreen (students leave with the Exit Fullscreen button)
+  document.addEventListener('fullscreenchange', function () {
+    try {
+      if (!navigator.keyboard) return;
+      if (document.fullscreenElement) navigator.keyboard.lock(['Escape']).catch(function () {});
+      else navigator.keyboard.unlock();
+    } catch (e) {}
+  });
 
   // ---------- Sound (made on the fly, no files) ----------
   var audioCtx = null, master = null;
