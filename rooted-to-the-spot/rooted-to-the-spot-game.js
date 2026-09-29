@@ -6,20 +6,20 @@
 
   // ---------- Settings and saved stats (localStorage, keys start with penaltyshootout_) ----------
   var KICKS = 5, MAX_DIGITS = 9;   // answers go up to 1,000,000 (1,000² and 100³)
-  // Squares and square roots are one skill (√81 = ? and 9² = ?), and so are cubes and cube roots (∛64 = ? and 4³ = ?).
+  // Three skills. Squares and square roots: √81 = ?, 9² = ? and the side of a square from its area. Cubes and cube roots:
+  // ∛64 = ?, 4³ = ? and the edge of a cube from its volume. Estimating: where a square or cube root falls between whole numbers.
   var SKILLS = [
-    { id: 'sqrt', name: T('Squares and Square Roots', 'Cuadrados y raíces cuadradas'), ex: '√81 · 9²' },
-    { id: 'area', name: T('Side of a Square', 'Lado de un cuadrado'), ex: T('Area 81 → side?', 'Área 81 → ¿lado?') },
-    { id: 'estimate', name: T('Estimating Roots', 'Estimar raíces'), ex: T('√50 is between ? and ?', '√50 está entre ? y ?') },
-    { id: 'cube', name: T('Cubes and Cube Roots', 'Cubos y raíces cúbicas'), ex: '∛64 · 4³' }
+    { id: 'sqrt', name: T('Squares and Square Roots', 'Cuadrados y raíces cuadradas'), ex: T('√81, 9², area 81 → side', '√81, 9², área 81 → lado') },
+    { id: 'cube', name: T('Cubes and Cube Roots', 'Cubos y raíces cúbicas'), ex: T('∛64, 4³, volume 64 → edge', '∛64, 4³, volumen 64 → arista') },
+    { id: 'estimate', name: T('Estimating Square and Cube Roots', 'Estimar raíces cuadradas y cúbicas'), ex: T('√50 is between ? and ?', '√50 está entre ? y ?') }
   ];
   function load(key, fallback) {
     try { var v = localStorage.getItem('penaltyshootout_' + key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
   }
   function save(key, val) { try { localStorage.setItem('penaltyshootout_' + key, JSON.stringify(val)); } catch (e) {} }
 
-  var skillOn = load('skills', [false, false, false, false]);   // nothing picked until the student chooses
-  if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [false, false, false, false];   // (an older 5-skill list resets)
+  var skillOn = load('skillset', [false, false, false]);   // nothing picked until the student chooses
+  if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [false, false, false];   // (an older skill list resets)
 
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };
@@ -54,8 +54,11 @@
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
   var goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // invisible wall on the goal line (z = 0)
 
-  var powerShot = false;   // earned by the bonus question: this kick's aiming circle is 40% smaller
-  function errorRadiusFor(p) { return (3.5 - p * 3.15) * (powerShot ? 0.6 : 1); }   // big circle at 0 power, tiny at full
+  var powerShot = false;   // earned by the bonus question: a much tighter (green) aiming circle for this kick
+  // Where the ball can land, around the aim point: the circle starts big and shrinks as the power builds.
+  // Regular shot (yellow): 4.2 m down to 0.9 m, so even a perfect release scatters. Power shot (green): 2.6 m down to 0.25 m.
+  function errorRadiusFor(p) { return powerShot ? 2.6 - p * 2.35 : 4.2 - p * 3.3; }
+  var AIM_YELLOW = 0xfacc15, AIM_GREEN = 0x33ff33;
 
   function initEngine() {
     scene = new THREE.Scene();
@@ -764,8 +767,9 @@
     for (var tries = 0; tries < 40; tries++) {
       var skill = active[Math.floor(Math.random() * active.length)], q = { cat: skill, bonus: !!hard }, r, a, n;
       // each combined skill asks both ways: a root (√81, ∛64) or a power (9², 4³)
-      if (skill === 'sqrt' && Math.random() < 0.5) skill = 'square';
-      if (skill === 'cube' && Math.random() < 0.5) skill = 'cubed';
+      if (skill === 'sqrt') skill = pick(['sqrt', 'square', 'area']);   // √81, 9², or the side of a square
+      if (skill === 'cube') skill = pick(['cube', 'cubed', 'cubeside']);   // ∛64, 4³, or the edge of a cube
+      if (skill === 'estimate' && hard) skill = 'closest';               // challenge: "Which whole number is closest to √50?"
       q.skill = skill;
       if (skill === 'sqrt') {
         r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r;
@@ -808,17 +812,40 @@
           q.plain = (q.cube ? '∛' : '√') + n + T(' is between ', ' está entre ') + '?' + T(' and ', ' y ') + '?';
           q.sub = T('Type the two whole numbers it is between.', 'Escribe los dos números enteros entre los que está.');
         }
+      } else if (skill === 'closest') {
+        // "Which whole number is closest to √50?" (answer 7): square roots between 11 and 16, cube roots between 6 and 10.
+        // Never a near-tie, and for cube roots the root's closeness and the number's closeness always agree.
+        q.cube = Math.random() < 0.4;
+        var cpw = q.cube ? 3 : 2, root = q.cube ? Math.cbrt : Math.sqrt;
+        a = q.cube ? rnd(6, 9) : rnd(11, 15);
+        q.lo = Math.pow(a, cpw); q.hi = Math.pow(a + 1, cpw);
+        var cands = [];
+        for (var cm = q.lo + 1; cm < q.hi; cm++) {
+          var rt = root(cm), nearA = rt < a + 0.5, byNumber = (cm - q.lo) < (q.hi - cm);
+          if (Math.abs(rt - (a + 0.5)) > 0.12 && nearA === byNumber) cands.push(cm);
+        }
+        n = pick(cands);
+        q.a = a; q.n = n; q.closer = true; q.closest = true; q.answer = Math.round(root(n));
+        var sym = q.cube ? crad(fmt(n)) : rad(fmt(n));
+        q.html = '<span class="qsm">' + T('Which whole number is closest to ' + sym + '?', '¿Qué número entero está más cerca de ' + sym + '?') + '</span>';
+        q.plain = T('The whole number closest to ' + (q.cube ? '∛' : '√') + fmt(n) + ' is ?', 'El entero más cercano a ' + (q.cube ? '∛' : '√') + fmt(n) + ' es ?');
+        q.sub = T('Type one whole number.', 'Escribe un número entero.');
+      } else if (skill === 'cubeside') {   // the edge of a cube from its volume
+        r = big() ? pick([10, 100]) : rnd(Math.max(1, LOW_CUBE), MAX_CUBE); q.r = r; q.answer = r;
+        if (r > 1 && r < 100 && wordy()) wordQ(q, CUBE_WORDS, r * r * r);
+        else {
+          q.html = '<span class="qsm">' + T('A cube has a volume of <b>' + fmt(r * r * r) + '</b> cubic units.<br>How long is each edge?',
+            'Un cubo tiene un volumen de <b>' + fmt(r * r * r) + '</b> unidades cúbicas.<br>¿Cuánto mide cada arista?') + '</span>';
+          q.plain = T('A cube with volume ' + fmt(r * r * r) + ' has edges of ?', 'Un cubo de volumen ' + fmt(r * r * r) + ' tiene aristas de ?');
+        }
       } else if (skill === 'cubed') {   // 4³ = ? (challenge: 6³ to 10³; 10³ = 1,000 is the power of ten)
         r = big() ? pick([10, 100]) : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r * r * r;   // up to 100³ = 1,000,000
         q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>3</sup>?';
         q.plain = fmt(r) + '³ = ?';
       } else {
         r = big() ? bigCube() : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r;
-        if (r > 1 && r < 100 && wordy()) wordQ(q, CUBE_WORDS, r * r * r);
-        else {
-          q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
-          q.plain = '∛' + fmt(r * r * r) + ' = ?';
-        }
+        q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
+        q.plain = '∛' + fmt(r * r * r) + ' = ?';
       }
       q.key = q.plain;
       if (!usedQ[q.key] && q.key !== lastKey) { usedQ[q.key] = true; lastKey = q.key; return q; }
@@ -962,7 +989,7 @@
     } else if (q.skill === 'square') {
       if (v === r * 2) tip = r + '² ' + T('means ', 'significa ') + r + ' × ' + r + T(', not ', ', no ') + r + ' × 2.';
       else if (v === r + 2) tip = r + '² ' + T('means ', 'significa ') + r + ' × ' + r + T(', not ', ', no ') + r + ' + 2.';
-    } else if (q.skill === 'cube') {
+    } else if (q.skill === 'cube' || q.skill === 'cubeside') {
       A = r * r * r;
       if (v * 3 === A) tip = T('A cube root isn\'t dividing by 3: ', 'La raíz cúbica no es dividir entre 3: ') + fmt(v) + ' × ' + fmt(v) + ' × ' + fmt(v) + ' = ' + fmt(v * v * v) + '.';
       else if (v * v === A) tip = T('That\'s the square root. A cube root uses 3 equal factors: ', 'Esa es la raíz cuadrada. La raíz cúbica usa 3 factores iguales: ') + r + ' × ' + r + ' × ' + r + ' = ' + fmt(A) + '.';
@@ -1000,9 +1027,12 @@
         lines.push(T('Side × side = area. Which number times itself makes ', 'Lado × lado = área. ¿Qué número por sí mismo da ') + fmt(r * r) + '?');
         lines.push(r + ' × ' + r + ' = ' + fmt(r * r) + T(', so each side is ', ', así que cada lado mide ') + '<b class="ok">' + r + '</b>');
       }
-    } else if (q.skill === 'cube' || q.skill === 'cubed') {
+    } else if (q.skill === 'cube' || q.skill === 'cubed' || q.skill === 'cubeside') {
       body = cubeHTML(r, Math.min(220, Math.max(130, app.clientHeight * 0.34)));
-      if (q.skill === 'cubed') {
+      if (q.skill === 'cubeside') {
+        lines.push(T('Edge × edge × edge = volume. Which number, used 3 times, multiplies to ', 'Arista × arista × arista = volumen. ¿Qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + '?');
+        lines.push(r + ' × ' + r + ' × ' + r + ' = ' + fmt(r * r * r) + T(', so each edge is ', ', así que cada arista mide ') + '<b class="ok">' + fmt(r) + '</b>');
+      } else if (q.skill === 'cubed') {
         lines.push(r + '<sup>3</sup>' + T(' means ', ' significa ') + r + ' × ' + r + ' × ' + r + T(': a cube with edges of ', ': un cubo con aristas de ') + r + '.');
         lines.push(r + ' × ' + r + ' × ' + r + ' = <b class="ok">' + fmt(r * r * r) + '</b>' + (r * r * r === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')));
       } else {
@@ -1011,13 +1041,14 @@
       }
     } else if (q.closer) {
       var ca = q.a, cb = ca + 1, clo = q.lo, chi = q.hi, cpct = Math.round((q.n - clo) / (chi - clo) * 100);
+      var cp = q.cube ? '³' : '²', cs = q.cube ? '∛' : '√', ct = function (x) { return x + ' × ' + x + (q.cube ? ' × ' + x : ''); };
       body = '<div class="nl"><div class="nl-bar"></div>' +
-        '<div class="nl-tick" style="left:0"><b>' + clo + '</b><span>' + ca + '²</span></div>' +
-        '<div class="nl-tick" style="left:100%"><b>' + chi + '</b><span>' + cb + '²</span></div>' +
-        '<div class="nl-pt" style="left:' + cpct + '%"><b>' + q.n + '</b></div></div>';
-      lines.push(ca + ' × ' + ca + ' = ' + clo + T(' and ', ' y ') + cb + ' × ' + cb + ' = ' + chi + T(', so ', ', así que ') + '√' + q.n + T(' is between ', ' está entre ') + ca + T(' and ', ' y ') + cb + '.');
-      lines.push(q.n + T(' is closer to ', ' está más cerca de ') + (q.answer === ca ? clo : chi) + T(', so ', ', así que ') + '√' + q.n + T(' is closer to ', ' está más cerca de ') +
-        '<b class="ok">' + q.answer + '</b> (√' + q.n + ' ≈ ' + Math.sqrt(q.n).toFixed(2) + ').');
+        '<div class="nl-tick" style="left:0"><b>' + fmt(clo) + '</b><span>' + ca + cp + '</span></div>' +
+        '<div class="nl-tick" style="left:100%"><b>' + fmt(chi) + '</b><span>' + cb + cp + '</span></div>' +
+        '<div class="nl-pt" style="left:' + cpct + '%"><b>' + fmt(q.n) + '</b></div></div>';
+      lines.push(ct(ca) + ' = ' + fmt(clo) + T(' and ', ' y ') + ct(cb) + ' = ' + fmt(chi) + T(', so ', ', así que ') + cs + fmt(q.n) + T(' is between ', ' está entre ') + ca + T(' and ', ' y ') + cb + '.');
+      lines.push(fmt(q.n) + T(' is closer to ', ' está más cerca de ') + fmt(q.answer === ca ? clo : chi) + T(', so ', ', así que ') + cs + fmt(q.n) + T(' is closer to ', ' está más cerca de ') +
+        '<b class="ok">' + q.answer + '</b> (' + cs + fmt(q.n) + ' ≈ ' + (q.cube ? Math.cbrt(q.n) : Math.sqrt(q.n)).toFixed(2) + ').');
     } else {
       var a = q.a, b = a + 1, lo = q.lo, hi = q.hi, pct = Math.round((q.n - lo) / (hi - lo) * 100);
       var pw = q.cube ? '³' : '²', times = function (x) { return x + ' × ' + x + (q.cube ? ' × ' + x : ''); };
@@ -1053,6 +1084,9 @@
     $('power-badge').hidden = !powerShot;
     chance.hidden = true;
     targetCrosshair.visible = true;
+    var aimColor = powerShot ? AIM_GREEN : AIM_YELLOW;   // yellow for a regular shot, green for a power shot
+    targetCrosshair.material.color.setHex(aimColor);
+    errorCircle.children.forEach(function (m) { m.material.color.setHex(aimColor); });
     setAim(0, 1.2);
     focusGame();
   }
@@ -1804,7 +1838,7 @@
         skillOn[i] = !skillOn[i];
         b.setAttribute('aria-pressed', String(skillOn[i]));
         $('skill-err').hidden = true;
-        save('skills', skillOn);
+        save('skillset', skillOn);
         playSound('blip');
       });
       list.appendChild(b);
