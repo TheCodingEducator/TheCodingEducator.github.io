@@ -959,6 +959,9 @@ function resetQuestion() {
     playerX: nearestLane(player.x), playerY: player.y, fuel: fuel, score: score, totalCoins: totalCoins,
     strikes: strikes, speed: speed, questionTimeLimit: questionTimeLimit
   };
+  // A new question: Second Chance's rewind may only go back to here (just after the last question was answered),
+  // never far enough to show the previous question's answer choices again.
+  rwHistory = [];
 }
 
 function rewindToQuestionCheckpoint() {
