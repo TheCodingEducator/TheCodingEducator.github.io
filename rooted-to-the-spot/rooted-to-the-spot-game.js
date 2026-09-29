@@ -604,6 +604,7 @@
       shin.add(limb(0.058, 0.044, 0.44, socks));
       var boot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.075, 0.25), boots); boot.position.set(0, -0.475, 0.05); shin.add(boot);
       var toe = sphere(0.05, boots); toe.scale.set(1, 0.75, 1); toe.position.set(0, -0.48, 0.16); shin.add(toe);
+      leg.userData.shin = shin;   // the knee, so the keeper can bring his knees up
       return leg;
     };
     var p = { root: root, hips: hips, head: head, lArm: makeArm(-1), rArm: makeArm(1), lLeg: makeLeg(-1), rLeg: makeLeg(1) };
@@ -1049,6 +1050,7 @@
   function applyCatchPose(kind, dir) {
     var fl = kLArm.userData.fore, fr = kRArm.userData.fore;
     kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
+    kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0;   // straight knees for dives and catches
     if (kind === 'dive') {
       fl.rotation.x = fr.rotation.x = -0.25;
       if (dir < 0) { kLArm.rotation.set(-0.3, 0, -(Math.PI - 0.35)); kRArm.rotation.set(-0.3, 0, -(Math.PI - 0.75)); kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3); }
@@ -1165,9 +1167,9 @@
   }
 
   function updateKeeper(delta) {
-    if (!keeperDiving) { keeperIdle(); return; }
+    if (!keeperDiving) { keeperIdle(delta); return; }
     keeperDiveTime += delta;
-    if (keeperStay || keeperDiveTime < keeperReactionDelay) { keeperIdle(); return; }   // rooted: watches it go by
+    if (keeperStay || keeperDiveTime < keeperReactionDelay) { keeperIdle(delta); return; }   // rooted: watches it go by
 
     var diveT = (keeperDiveTime - keeperReactionDelay) / keeperDiveDuration, t = Math.min(1, diveT);
     var ease = 1 - Math.pow(1 - t, 3);
@@ -1186,6 +1188,7 @@
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.quaternion.copy(keeperBody.quaternion);
     kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
+    kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0;   // straight knees for dives and catches
     if (catching) {
       applyCatchPose(catchKind, catchDir);   // gloves where the ball is going
     } else if (keeperTarget.x < 0) {
@@ -1199,31 +1202,86 @@
     }
   }
 
-  // Ready stance. Every few seconds he takes a slow, small side-step to the left, then back to the right, lifting the
-  // leading foot and keeping his body upright. It's only for show: it never changes the chance or whether a shot is saved.
-  var keeperSway = 0, keeperLift = 0, keeperStepLeft = true;
-  function keeperIdle() {
-    kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
-    var time = clock.elapsedTime;
-    if (!keeperDiving) {   // holds still once the shot is struck
-      var c = time % 5, from, to, prog;   // 5-second cycle: step left (1 s), wait, step right (1 s), wait
-      if (c < 1) { from = 0.3; to = -0.3; prog = c; }
-      else if (c < 2.5) { from = to = -0.3; prog = 1; }
-      else if (c < 3.5) { from = -0.3; to = 0.3; prog = c - 2.5; }
-      else { from = to = 0.3; prog = 1; }
-      keeperSway = from + (to - from) * prog * prog * (3 - 2 * prog);
-      keeperLift = from !== to ? Math.sin(prog * Math.PI) : 0;
-      keeperStepLeft = to < from;
+  // While the student aims, the keeper does what real keepers do on the line, picking a move at random (never the same one
+  // twice in a row) with a moment in his ready stance between moves:
+  //   sway    - rocks gently left and right
+  //   shuffle - two quick side-steps one way (lead foot out, the other foot follows)
+  //   hops    - two quick, small jumps bringing his knees up high
+  //   clap    - claps his gloves together in front of him
+  //   ready   - still, just breathing
+  // It's only for show: it never changes the chance or whether a shot is saved. Once the shot is struck he holds still.
+  var keeperSway = 0;                          // how far he has shuffled from the middle (visual only)
+  var kAct = 'ready', kLastAct = 'ready', kActT = 0, kActDur = 1.5, kFrom = 0, kTo = 0;
+
+  function pickKeeperAct() {
+    var acts = ['sway', 'shuffle', 'hops', 'clap', 'shuffle', 'hops'];
+    if (kLastAct !== 'ready') { kAct = 'ready'; kActDur = 0.6 + Math.random() * 1.2; }   // a pause between moves
+    else {
+      do { kAct = acts[Math.floor(Math.random() * acts.length)]; } while (kAct === kLastMove);
+      kLastMove = kAct;
+      kActDur = { sway: 2.2, shuffle: 0.9, hops: 0.95, clap: 0.9 }[kAct];
+      kFrom = keeperSway;
+      if (kAct === 'shuffle') {   // two steps toward the other side (or back toward the middle)
+        var dir = keeperSway > 0.15 ? -1 : keeperSway < -0.15 ? 1 : (Math.random() < 0.5 ? -1 : 1);
+        kTo = Math.max(-0.6, Math.min(0.6, keeperSway + dir * 0.55));
+      } else kTo = kFrom;
     }
-    kTorso.position.y = 1.0;   // steady: no bouncing
-    kTorso.rotation.set(0, 0, 0);   // upright
-    var lead = keeperLift * 0.22, trail = keeperLift * 0.06;   // the leading foot lifts out to the side
-    kLLeg.rotation.set(-0.1, 0, -0.1 - (keeperStepLeft ? lead : -trail));
-    kRLeg.rotation.set(-0.1, 0, 0.1 + (keeperStepLeft ? -trail : lead));
-    kLArm.rotation.set(0.35, 0, -1.2);   // ready stance: arms spread wide, gloves out
-    kRArm.rotation.set(0.35, 0, 1.2);
+    kLastAct = kAct; kActT = 0;
+  }
+  var kLastMove = '';
+
+  function keeperIdle(delta) {
+    var time = clock.elapsedTime, fl = kLArm.userData.fore, fr = kRArm.userData.fore;
+    var shinL = kLLeg.userData.shin, shinR = kRLeg.userData.shin;
+    // the ready stance: knees soft, arms out, gloves open
+    var x = keeperSway, lift = 0, lean = 0, bodyY = 1.0 + Math.sin(time * 2.2) * 0.006;
+    var lx = -0.12, lz = -0.1, rx = -0.12, rz = 0.1, lk = 0.18, rk = 0.18;       // legs: hip swing / splay, and knee bend
+    var ax = 0.35, alz = -1.2, arz = 1.2, af = -0.25;                              // arms
+
+    if (!keeperDiving) {
+      kActT += (delta || 0);
+      if (kActT >= kActDur) pickKeeperAct();
+      var u = Math.min(1, kActT / kActDur), s, ph, k;
+      if (kAct === 'sway') {
+        s = Math.sin(u * Math.PI * 2);
+        x = kFrom + s * 0.16; lean = -s * 0.07;
+        lz -= s * 0.05; rz -= s * 0.05;
+      } else if (kAct === 'shuffle') {
+        var dirS = kTo < kFrom ? -1 : 1;
+        s = u * 2; ph = s - Math.floor(s); if (u >= 1) ph = 1;
+        var stepsDone = Math.min(2, Math.floor(s));
+        var e = ph * ph * (3 - 2 * ph);
+        x = kFrom + (kTo - kFrom) * ((stepsDone + (u >= 1 ? 0 : e)) / 2);
+        lift = Math.sin(ph * Math.PI) * 0.03;
+        var leadOut = ph < 0.5 ? Math.sin(ph * 2 * Math.PI) : 0;   // lead foot steps out...
+        var trailIn = ph >= 0.5 ? Math.sin((ph - 0.5) * 2 * Math.PI) : 0;   // ...then the other foot follows
+        if (dirS < 0) { lz -= leadOut * 0.35; lk += leadOut * 0.3; rz -= trailIn * 0.2; rk += trailIn * 0.3; }
+        else { rz += leadOut * 0.35; rk += leadOut * 0.3; lz += trailIn * 0.2; lk += trailIn * 0.3; }
+        if (u >= 1) keeperSway = kTo; else keeperSway = x;
+      } else if (kAct === 'hops') {
+        s = u * 2; ph = s - Math.floor(s); if (u >= 1) ph = 0;
+        k = Math.sin(ph * Math.PI);
+        lift = k * 0.3;                                   // up off the grass...
+        lx = rx = -0.12 - k * 1.25;                       // ...knees driving up high
+        lk = rk = 0.18 + k * 1.7;
+        ax = 0.35 - k * 0.5;                              // arms pump up
+      } else if (kAct === 'clap') {
+        k = Math.sin(u * Math.PI);                        // arms come in, two claps, back out
+        var clap = Math.abs(Math.sin(u * Math.PI * 2));
+        ax = 0.35 - k * 1.25; alz = -1.2 + k * (0.95 + clap * 0.15); arz = -alz; af = -0.25 - k * 0.35;
+      }
+      if (kAct !== 'shuffle') keeperSway = x;
+    }
+
+    kTorso.position.y = bodyY;
+    kTorso.rotation.set(0, 0, lean);
+    kLLeg.rotation.set(lx, 0, lz); kRLeg.rotation.set(rx, 0, rz);
+    shinL.rotation.x = lk; shinR.rotation.x = rk;
+    kLArm.rotation.set(ax, 0, alz); kRArm.rotation.set(ax, 0, arz);
+    fl.rotation.x = fr.rotation.x = af;
     keeperGroup.position.copy(keeperBody.position);
-    keeperGroup.position.x += keeperSway;
+    keeperGroup.position.x += x;
+    keeperGroup.position.y += lift;
     keeperGroup.quaternion.copy(keeperBody.quaternion);
   }
 
