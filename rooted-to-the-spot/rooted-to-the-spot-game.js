@@ -54,7 +54,7 @@
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
   var goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // invisible wall on the goal line (z = 0)
 
-  function errorRadiusFor(p) { return 2.6 - p * 2.25; }   // big circle at 0 power, tiny at full
+  function errorRadiusFor(p) { return 3.5 - p * 3.15; }   // big circle at 0 power, tiny at full
 
   function initEngine() {
     scene = new THREE.Scene();
