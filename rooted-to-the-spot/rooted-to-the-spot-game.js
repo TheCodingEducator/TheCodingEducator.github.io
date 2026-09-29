@@ -6,6 +6,7 @@
 
   // ---------- Settings and saved stats (localStorage, keys start with penaltyshootout_) ----------
   var KICKS = 5, MAX_DIGITS = 9;   // answers go up to 1,000,000 (1,000² and 100³)
+  var GOAL_ZOOM = 1.18;   // camera zoom: makes the goal look bigger without moving anything in the 3D world
   // Three skills. Squares and square roots: √81 = ?, 9² = ? and the side of a square from its area. Cubes and cube roots:
   // ∛64 = ?, 4³ = ? and the edge of a cube from its volume. Estimating: where a square or cube root falls between whole numbers.
   var SKILLS = [
@@ -118,6 +119,7 @@
     camera.aspect = aspect;
     var needV = 2 * Math.atan(Math.tan(20 * Math.PI / 180) / aspect) * 180 / Math.PI;
     camera.fov = Math.min(95, Math.max(55, needV));
+    camera.zoom = GOAL_ZOOM;   // a pure dilation of the picture about the goal's center; the 3D world (and every percentage) is unchanged
     camera.updateProjectionMatrix();
   }
 
@@ -719,6 +721,8 @@
       '<span class="rad">' + n + '</span></span>';
   }
   var rad = function (n) { return rootHTML(n, 0); };
+  // keeps a root and the punctuation after it together, so a lone "?" never drops to the next line
+  var nw = function (h) { return '<span class="nw">' + h + '</span>'; };
   var crad = function (n) { return rootHTML(n, 3); };
   // turns √81 and ∛64 in a line of text into drawn radicals, and 9² into 9<sup>2</sup>
   function roots(s) {
@@ -773,7 +777,7 @@
       q.skill = skill;
       if (skill === 'sqrt') {
         r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r;
-        q.html = T('What is ', '¿Cuánto es ') + rad(fmt(r * r)) + T('?', '?');
+        q.html = T('What is ', '¿Cuánto es ') + nw(rad(fmt(r * r)) + '?');
         q.plain = '√' + fmt(r * r) + ' = ?';
       } else if (skill === 'square') {
         r = big() ? pick([10, 100, 1000]) : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r * r;   // up to 1,000² = 1,000,000
@@ -827,7 +831,7 @@
         n = pick(cands);
         q.a = a; q.n = n; q.closer = true; q.closest = true; q.answer = Math.round(root(n));
         var sym = q.cube ? crad(fmt(n)) : rad(fmt(n));
-        q.html = '<span class="qsm">' + T('Which whole number is closest to ' + sym + '?', '¿Qué número entero está más cerca de ' + sym + '?') + '</span>';
+        q.html = '<span class="qsm">' + T('Which whole number is closest to ' + nw(sym + '?'), '¿Qué número entero está más cerca de ' + nw(sym + '?')) + '</span>';
         q.plain = T('The whole number closest to ' + (q.cube ? '∛' : '√') + fmt(n) + ' is ?', 'El entero más cercano a ' + (q.cube ? '∛' : '√') + fmt(n) + ' es ?');
         q.sub = T('Type one whole number.', 'Escribe un número entero.');
       } else if (skill === 'cubeside') {   // the edge of a cube from its volume
@@ -844,7 +848,7 @@
         q.plain = fmt(r) + '³ = ?';
       } else {
         r = big() ? bigCube() : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r;
-        q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
+        q.html = T('What is ', '¿Cuánto es ') + nw(crad(fmt(r * r * r)) + '?');
         q.plain = '∛' + fmt(r * r * r) + ' = ?';
       }
       q.key = q.plain;
