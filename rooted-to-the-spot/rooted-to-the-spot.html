@@ -105,6 +105,8 @@
 
   #ps #msg { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: clamp(64px, 18cqmin, 170px); font-weight: 700; font-style: italic; text-shadow: 0 0 30px #000, 0 4px 0 rgba(0,0,0,0.6); pointer-events: none; z-index: 6; white-space: nowrap; animation: ps-pop 0.35s ease-out; }
   #ps #msg.goal { color: #4ade80; } #ps #msg.saved { color: var(--yellow); } #ps #msg.miss { color: #f87171; }
+  #ps #caption { position: absolute; left: 50%; top: calc(42% + clamp(48px, 11cqmin, 100px)); transform: translateX(-50%); z-index: 6; pointer-events: none; background: rgba(0,0,0,0.65); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 6px 18px; font: 700 clamp(14px, 2.8cqmin, 20px) 'Inter', sans-serif; text-align: center; width: max-content; max-width: calc(100% - 24px); animation: ps-rise 0.4s ease-out; }
+  #ps #power-badge { position: absolute; top: clamp(52px, 10cqmin, 76px); left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; background: linear-gradient(90deg, #f59e0b, #facc15); color: #1c1917; border-radius: 999px; padding: 4px 16px 1px; font: 700 clamp(18px, 3.4cqmin, 26px) 'Teko', sans-serif; letter-spacing: 0.06em; box-shadow: 0 0 18px rgba(250,204,21,0.6); white-space: nowrap; }
   @keyframes ps-pop { from { transform: translate(-50%, -50%) scale(0.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
   #ps #chance { position: absolute; bottom: clamp(56px, 10cqmin, 84px); background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 6px 16px 8px; left: 50%; transform: translateX(-50%); font-size: clamp(26px, 5.5cqmin, 46px); font-weight: 700; text-shadow: 0 0 14px #000; pointer-events: none; z-index: 5; white-space: nowrap; }
   #ps #chance { text-align: center; line-height: 1; }
@@ -146,6 +148,9 @@
 
   /* Question */
   #ps .kicker { color: var(--yellow); font-size: clamp(20px, 3.8cqmin, 28px); }
+  #ps .kicker.bonus { color: #fde047; text-shadow: 0 0 12px rgba(250,204,21,0.7); }
+  #ps .qbonus { color: #fde68a; font-size: clamp(13px, 2.4cqmin, 16px); margin: 2px 0 0; }
+  #ps #q-skip { font-size: clamp(22px, 4.2cqmin, 32px); padding: 4px 22px 0; }
   #ps .qtext { font-size: clamp(30px, 7.5cqmin, 58px); font-weight: 800; margin: 6px 0 4px; line-height: 1.2; }
   #ps .qtext.long { font-size: clamp(24px, 5.6cqmin, 44px); }
   #ps .qtext .qsm { display: block; font-size: 0.6em; font-weight: 600; line-height: 1.35; }
@@ -199,6 +204,7 @@
   #ps .nl-pt { top: -8px; } #ps .nl-pt b { display: block; color: var(--yellow); font-size: 16px; }
   #ps .nl-pt::after { content: ""; display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--yellow); margin: 2px auto 0; box-shadow: 0 0 10px var(--yellow); }
   #ps .exp .wild { color: #fca5a5; font-style: italic; font-weight: 600; margin: 12px 0 0; }
+  #ps .exp .tip { background: rgba(250,204,21,0.12); border: 1px solid rgba(250,204,21,0.45); color: #fef3c7; border-radius: 12px; padding: 8px 12px; margin: 0 0 10px; font-weight: 600; font-size: clamp(14px, 2.8cqmin, 18px); }
 
   /* Final whistle */
   #ps .over h2 { margin: 0; font: 700 clamp(40px, 9cqmin, 72px) 'Teko', sans-serif; line-height: 1; color: var(--yellow); }
@@ -245,6 +251,8 @@
       </div>
       <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div></div>
       <div id="msg" hidden aria-live="assertive"></div>
+      <div id="caption" hidden aria-live="polite"></div>
+      <div id="power-badge" hidden data-es="&#9889; TIRO POTENTE: círculo más pequeño">&#9889; POWER SHOT: smaller circle</div>
       <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Haz clic (o pulsa Espacio) para cargar, y otra vez para tirar">Aim with the mouse, a finger or the arrow keys &middot; Click, tap or press Space to power up, then again to shoot</div>
 
       <!-- Title screen -->
@@ -277,6 +285,7 @@
       <div class="scr" id="scr-q" hidden>
         <div class="card q">
           <div class="kicker" id="q-kick">KICK 1 OF 5</div>
+          <p class="qbonus" id="q-bonus" hidden data-es="Acierta para un <b>tiro potente</b> con un círculo más pequeño, o sáltala.">Get it right for a <b>power shot</b> with a smaller aiming circle, or skip it.</p>
           <div class="qtext" id="q-text" aria-live="polite"></div>
           <p class="qsub" id="q-sub"></p>
           <div class="ansrow" id="q-ans">
@@ -284,6 +293,7 @@
             <span class="and" id="q-and" hidden data-es="y">and</span>
             <input type="text" id="q-in2" hidden inputmode="numeric" maxlength="5" autocomplete="off" placeholder="?" aria-label="The second number" data-es-aria="El segundo número">
             <button type="button" class="btn green" id="q-go" data-es="TIRAR">KICK</button>
+            <button type="button" class="btn ghost" id="q-skip" hidden data-es="SALTAR">SKIP</button>
           </div>
           <div class="pad" id="q-pad">
             <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
@@ -299,11 +309,12 @@
         <div class="card exp">
           <h2 data-es="INCORRECTO">NOT QUITE</h2>
           <p class="you" id="exp-you"></p>
+          <p class="tip" id="exp-tip" hidden></p>
           <div class="exp-body">
             <div id="exp-visual"></div>
             <div class="exp-lines" id="exp-lines"></div>
           </div>
-          <p class="wild" data-es="Como fallaste la pregunta, ¡tu tiro sale desviado!">Because you missed the question, your shot goes wild!</p>
+          <p class="wild" id="exp-wild" data-es="Como fallaste la pregunta, ¡tu tiro sale desviado!">Because you missed the question, your shot goes wild!</p>
           <div class="go-row"><button type="button" class="btn red" id="exp-go" data-es="VER EL FALLO">WATCH THE MISS</button></div>
         </div>
       </div>
@@ -368,6 +379,9 @@
     <li><strong>Five skills to choose from:</strong> square roots of perfect squares (&radic;81), squaring numbers (9&sup2;), finding the side of a square from its area, estimating square and cube roots between two whole numbers, and cube roots (&#8731;64).</li>
     <li><strong>Numbers:</strong> square roots, squares and sides of squares use 1 to 13, and cube roots use 1 to 6. About one question in four uses a power of ten instead (a 1 followed by zeros): &radic;100, &radic;10,000, 10&sup2;, 100&sup2; and &#8731;1,000.</li>
     <li><strong>Wrong answers:</strong> the game shows why. Squares and square roots are drawn as a square of unit squares, cube roots as a 3D cube built from little cubes, and estimates on a number line between two perfect squares or cubes. That kick then goes wild, so accuracy matters more than speed.</li>
+    <li><strong>Bonus question:</strong> after each right answer, students can take a slightly harder bonus question (or skip it). Getting it right earns a power shot with a smaller aiming circle; a wrong bonus answer is explained, then the student takes a normal shot.</li>
+    <li><strong>Word problems and "closer to":</strong> Side of a Square and Cube Roots sometimes become word problems (a square garden, rug or tiled floor; a cube-shaped box or tank), and Estimating Roots sometimes asks whether a root is closer to one whole number or the next.</li>
+    <li><strong>Mistake-aware feedback:</strong> when a wrong answer matches a classic mistake (halving for a square root, dividing by 3 for a cube root, doubling instead of squaring, dividing an area by 4, giving the square root for a cube root, or choosing two whole numbers that aren't next to each other), the explanation names that mistake first.</li>
     <li><strong>Adapts to each student:</strong> the keeper starts out easy to beat, gets a little sharper after each goal (more after a goal from a hard spot) and a little easier after each miss, so confident students soon need precise, well-timed corner shots while students who are struggling keep scoring. Students aren't shown this; the scoring chance on screen always reflects it.</li>
     <li><strong>The shot:</strong> the scoring chance is shown live as students aim and power up, and it is a real probability: the chance the shot is on target times the chance it beats the keeper. Corners are hardest to save; a shot right at the keeper, or a weak one, gets caught. The game decides each shot with that same chance, so the percentage is honest.</li>
     <li><strong>Review:</strong> the final screen shows goals, questions right, and every missed question beside its correct answer.</li>
@@ -380,7 +394,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="rooted-to-the-spot-game.js?v=2026-09-28k"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="rooted-to-the-spot-game.js?v=2026-09-28m"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script>
   function enterPseudoFullscreen() {

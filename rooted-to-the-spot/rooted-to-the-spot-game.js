@@ -54,7 +54,8 @@
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
   var goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // invisible wall on the goal line (z = 0)
 
-  function errorRadiusFor(p) { return 3.5 - p * 3.15; }   // big circle at 0 power, tiny at full
+  var powerShot = false;   // earned by the bonus question: this kick's aiming circle is 40% smaller
+  function errorRadiusFor(p) { return (3.5 - p * 3.15) * (powerShot ? 0.6 : 1); }   // big circle at 0 power, tiny at full
 
   function initEngine() {
     scene = new THREE.Scene();
@@ -463,7 +464,7 @@
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry);
       return new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.DoubleSide, depthWrite: false, opacity: 0.85 });
     };
-    var back = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_WIDTH, GOAL_HEIGHT), netMat(10, 5));
+    var back = backNet = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_WIDTH, GOAL_HEIGHT, 36, 12), netMat(10, 5));   // finely divided so it can ripple
     back.position.set(0, GOAL_HEIGHT / 2, -2.4); scene.add(back);
     var top = new THREE.Mesh(new THREE.PlaneGeometry(GOAL_WIDTH, 2.4), netMat(10, 3));
     top.rotation.x = Math.PI / 2; top.position.set(0, GOAL_HEIGHT, -1.2); scene.add(top);
@@ -722,46 +723,93 @@
       .replace(/(\d)²/g, '$1<sup>2</sup>').replace(/(\d)³/g, '$1<sup>3</sup>');
   }
 
-  function makeQuestion() {
+  // Real-world versions of "side of a square" and "cube root" questions ({A} is the area or amount)
+  var AREA_WORDS = [
+    [T('A square garden has an area of <b>{A}</b> square feet.<br>How long is each side?', 'Un jardín cuadrado tiene un área de <b>{A}</b> pies cuadrados.<br>¿Cuánto mide cada lado?'),
+      T('A square garden of {A} sq ft has sides of ? ft', 'Un jardín cuadrado de {A} pies² tiene lados de ? pies')],
+    [T('A square rug covers <b>{A}</b> square feet of floor.<br>How long is each side?', 'Una alfombra cuadrada cubre <b>{A}</b> pies cuadrados.<br>¿Cuánto mide cada lado?'),
+      T('A square rug of {A} sq ft has sides of ? ft', 'Una alfombra cuadrada de {A} pies² tiene lados de ? pies')],
+    [T('<b>{A}</b> square tiles cover a square floor in equal rows.<br>How many tiles are in each row?', '<b>{A}</b> baldosas cuadradas cubren un piso cuadrado en filas iguales.<br>¿Cuántas baldosas hay en cada fila?'),
+      T('{A} tiles in a square: ? tiles per row', '{A} baldosas en un cuadrado: ? por fila')],
+    [T('A square photo has an area of <b>{A}</b> square inches.<br>How wide is it?', 'Una foto cuadrada tiene un área de <b>{A}</b> pulgadas cuadradas.<br>¿Cuánto mide de ancho?'),
+      T('A square photo of {A} sq in is ? in wide', 'Una foto cuadrada de {A} pulg² mide ? pulg de ancho')]
+  ];
+  var CUBE_WORDS = [
+    [T('A cube-shaped box is packed with <b>{A}</b> small cubes, no gaps.<br>How many cubes long is each edge?', 'Una caja cúbica está llena con <b>{A}</b> cubitos, sin huecos.<br>¿Cuántos cubitos mide cada arista?'),
+      T('A cube box of {A} small cubes: ? cubes per edge', 'Una caja cúbica de {A} cubitos: ? por arista')],
+    [T('A cube-shaped fish tank holds <b>{A}</b> cubic feet of water.<br>How long is each edge?', 'Una pecera cúbica contiene <b>{A}</b> pies cúbicos de agua.<br>¿Cuánto mide cada arista?'),
+      T('A cube tank of {A} cu ft has edges of ? ft', 'Una pecera cúbica de {A} pies³ tiene aristas de ? pies')],
+    [T('<b>{A}</b> sugar cubes are stacked into one big cube.<br>How many cubes tall is it?', '<b>{A}</b> terrones de azúcar se apilan en un cubo grande.<br>¿Cuántos terrones de alto mide?'),
+      T('{A} sugar cubes in a big cube: ? cubes tall', '{A} terrones en un cubo grande: ? de alto')]
+  ];
+  function wordQ(q, list, amount) {
+    var w = pick(list);
+    q.word = true;
+    q.html = '<span class="qsm">' + w[0].replace('{A}', fmt(amount)) + '</span>';
+    q.plain = w[1].replace('{A}', fmt(amount));
+  }
+
+  // hard = the bonus question for a power shot: bigger numbers, more word problems and "closer to" estimates
+  function makeQuestion(hard) {
     var active = [];
     for (var i = 0; i < SKILLS.length; i++) if (skillOn[i]) active.push(SKILLS[i].id);
     var MAX_SQ = 13, MAX_CUBE = 6;   // one level for everyone: squares and square roots to 13, cube roots to 6
+    var LOW_SQ = hard ? 7 : 1, LOW_CUBE = hard ? 4 : 1;
     // now and then, a simple power of ten: √100, √10,000, 10², 100², ∛1,000 (no giant numbers)
     var bigSq = function () { return pick([10, 100]); };
     var bigCube = function () { return 10; };
     var big = function () { return Math.random() < 0.25; };
+    var wordy = function () { return Math.random() < (hard ? 0.6 : 0.35); };
     for (var tries = 0; tries < 40; tries++) {
-      var skill = active[Math.floor(Math.random() * active.length)], q = { skill: skill }, r, a, n;
+      var skill = active[Math.floor(Math.random() * active.length)], q = { skill: skill, bonus: !!hard }, r, a, n;
       if (skill === 'sqrt') {
-        r = big() ? bigSq() : rnd(1, MAX_SQ); q.r = r; q.answer = r;
+        r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r;
         q.html = T('What is ', '¿Cuánto es ') + rad(fmt(r * r)) + T('?', '?');
         q.plain = '√' + fmt(r * r) + ' = ?';
       } else if (skill === 'square') {
-        r = big() ? bigSq() : rnd(1, MAX_SQ); q.r = r; q.answer = r * r;
+        r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r * r;
         q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>2</sup>?';
         q.plain = fmt(r) + '² = ?';
       } else if (skill === 'area') {
-        r = big() ? 10 : rnd(1, MAX_SQ); q.r = r; q.answer = r;
-        q.html = '<span class="qsm">' + T('A square has an area of <b>' + fmt(r * r) + '</b> square units.<br>How long is each side?',
-          'Un cuadrado tiene un área de <b>' + fmt(r * r) + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
-        q.plain = T('A square with area ' + fmt(r * r) + ' has sides of ?', 'Un cuadrado de área ' + fmt(r * r) + ' tiene lados de ?');
+        r = big() ? 10 : rnd(Math.max(2, LOW_SQ), MAX_SQ); q.r = r; q.answer = r;
+        if (wordy()) wordQ(q, AREA_WORDS, r * r);
+        else {
+          q.html = '<span class="qsm">' + T('A square has an area of <b>' + fmt(r * r) + '</b> square units.<br>How long is each side?',
+            'Un cuadrado tiene un área de <b>' + fmt(r * r) + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
+          q.plain = T('A square with area ' + fmt(r * r) + ' has sides of ?', 'Un cuadrado de área ' + fmt(r * r) + ' tiene lados de ?');
+        }
       } else if (skill === 'estimate') {
-        // a square root (or, about a third of the time, a cube root) that isn't a whole number:
-        // the student finds BOTH whole numbers it's between
-        q.cube = Math.random() < 0.35;
-        var pw = q.cube ? 3 : 2;
-        a = q.cube ? rnd(1, MAX_CUBE - 1) : rnd(1, MAX_SQ - 1);   // so the larger whole number is at most 6 or 13
-        q.lo = Math.pow(a, pw); q.hi = Math.pow(a + 1, pw);
-        n = rnd(q.lo + 1, q.hi - 1);
-        q.a = a; q.n = n; q.two = true; q.answer = [a, a + 1];
-        var blank = '<b class="blank">?</b>';
-        q.html = (q.cube ? crad(n) : rad(n)) + T(' is between ', ' está entre ') + blank + T(' and ', ' y ') + blank;
-        q.plain = (q.cube ? '∛' : '√') + n + T(' is between ', ' está entre ') + '?' + T(' and ', ' y ') + '?';
-        q.sub = T('Type the two whole numbers it is between.', 'Escribe los dos números enteros entre los que está.');
+        if (Math.random() < (hard ? 0.5 : 0.3)) {
+          // "Is √50 closer to 7 or to 8?" (never a near-tie)
+          a = rnd(hard ? 5 : 1, MAX_SQ - 1); q.lo = a * a; q.hi = (a + 1) * (a + 1);
+          var opts = []; for (var m = q.lo + 1; m < q.hi; m++) if (Math.abs(Math.sqrt(m) - (a + 0.5)) > 0.12) opts.push(m);
+          n = pick(opts);
+          q.a = a; q.n = n; q.closer = true; q.answer = Math.round(Math.sqrt(n));
+          q.html = '<span class="qsm">' + T('Is ' + rad(n) + ' closer to <b>' + a + '</b> or to <b>' + (a + 1) + '</b>?',
+            '¿' + rad(n) + ' está más cerca de <b>' + a + '</b> o de <b>' + (a + 1) + '</b>?') + '</span>';
+          q.plain = T('√' + n + ' is closer to ?', '√' + n + ' está más cerca de ?');
+          q.sub = T('Type the whole number it is closer to.', 'Escribe el número entero más cercano.');
+        } else {
+          // a square root (or, about a third of the time, a cube root) that isn't a whole number:
+          // the student finds BOTH whole numbers it's between
+          q.cube = Math.random() < (hard ? 0.5 : 0.35);
+          var pw = q.cube ? 3 : 2;
+          a = q.cube ? rnd(hard ? 2 : 1, MAX_CUBE - 1) : rnd(hard ? 5 : 1, MAX_SQ - 1);   // the larger whole number is at most 6 or 13
+          q.lo = Math.pow(a, pw); q.hi = Math.pow(a + 1, pw);
+          n = rnd(q.lo + 1, q.hi - 1);
+          q.a = a; q.n = n; q.two = true; q.answer = [a, a + 1];
+          var blank = '<b class="blank">?</b>';
+          q.html = (q.cube ? crad(n) : rad(n)) + T(' is between ', ' está entre ') + blank + T(' and ', ' y ') + blank;
+          q.plain = (q.cube ? '∛' : '√') + n + T(' is between ', ' está entre ') + '?' + T(' and ', ' y ') + '?';
+          q.sub = T('Type the two whole numbers it is between.', 'Escribe los dos números enteros entre los que está.');
+        }
       } else {
-        r = big() ? bigCube() : rnd(1, MAX_CUBE); q.r = r; q.answer = r;
-        q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
-        q.plain = '∛' + fmt(r * r * r) + ' = ?';
+        r = big() ? bigCube() : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r;
+        if (r < 10 && r > 1 && wordy()) wordQ(q, CUBE_WORDS, r * r * r);
+        else {
+          q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
+          q.plain = '∛' + fmt(r * r * r) + ' = ?';
+        }
       }
       q.key = q.plain;
       if (!usedQ[q.key] && q.key !== lastKey) { usedQ[q.key] = true; lastKey = q.key; return q; }
@@ -772,9 +820,13 @@
 
   function skillName(id) { for (var i = 0; i < SKILLS.length; i++) if (SKILLS[i].id === id) return SKILLS[i].name; return ''; }
 
-  function askQuestion() {
-    question = makeQuestion();
-    $('q-kick').textContent = T('KICK ', 'TIRO ') + (kickNum + 1) + T(' OF ', ' DE ') + KICKS + ' · ' + skillName(question.skill).toUpperCase();
+  function askQuestion(bonus) {
+    question = makeQuestion(!!bonus);
+    $('q-kick').textContent = bonus ? T('⚡ BONUS QUESTION · POWER SHOT', '⚡ PREGUNTA EXTRA · TIRO POTENTE')
+      : T('KICK ', 'TIRO ') + (kickNum + 1) + T(' OF ', ' DE ') + KICKS + ' · ' + skillName(question.skill).toUpperCase();
+    $('q-kick').classList.toggle('bonus', !!bonus);
+    $('q-bonus').hidden = !bonus;
+    $('q-skip').hidden = !bonus;
     $('q-text').innerHTML = question.html;
     $('q-text').classList.toggle('long', !!question.two);
     $('q-sub').textContent = question.sub || T('Type a whole number.', 'Escribe un número entero.');
@@ -814,15 +866,27 @@
       given = v1;
     }
     hide(scrQ);
+    if (question.bonus) {   // the bonus question: right earns a power shot; wrong just shows why, then a normal shot
+      if (ok) { powerShot = true; playSound('blip'); goShoot(); }
+      else { missed.push({ q: question.plain, you: answerText(given), ans: question.answer }); showExplanation(answerText(given), given); }
+      return;
+    }
     if (ok) {
       rightCount++;
-      startAiming();   // aim right away, while the referee blows the whistle
-      refWhistle();
+      askQuestion(true);   // offer the bonus question (it can be skipped)
     } else {
       missed.push({ q: question.plain, you: answerText(given), ans: question.answer });
-      showExplanation(answerText(given));
+      showExplanation(answerText(given), given);
     }
   }
+
+  // to the penalty spot: aim right away, while the referee blows the whistle
+  function goShoot() {
+    hide(scrQ);
+    startAiming();
+    refWhistle();
+  }
+  function skipBonus() { if (state === STATE.MATH && question && question.bonus) goShoot(); }
 
   // ---------- Wrong answer: show why ----------
   // Big sides are drawn in blocks: a side of 30 is 3 blocks of 10, a side of 1000 is 10 blocks of 100
@@ -865,11 +929,51 @@
       (k.b > 1 ? T('<br>each block is ', '<br>cada bloque es ') + k.b + ' × ' + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b * k.b) : '') + '</div>';
   }
 
-  function showExplanation(given) {
+  // When a wrong answer matches a classic mistake, say so first, so the student sees what went wrong.
+  function mistakeTip(q, v) {
+    var r = q.r, A, tip = '';
+    if (q.two) {
+      var lo2 = Math.min(v[0], v[1]), hi2 = Math.max(v[0], v[1]);
+      if (hi2 - lo2 !== 1) tip = T('The two whole numbers are always next to each other, like 7 and 8.', 'Los dos números enteros siempre van seguidos, como 7 y 8.');
+      else tip = T('Check: ', 'Comprueba: ') + lo2 + (q.cube ? '³' : '²') + ' = ' + Math.pow(lo2, q.cube ? 3 : 2) + T(' and ', ' y ') + hi2 + (q.cube ? '³' : '²') + ' = ' + Math.pow(hi2, q.cube ? 3 : 2) +
+        T(', so ', ', así que ') + q.n + T(' is not between them.', ' no está entre ellos.');
+      return tip;
+    }
+    if (q.closer) {
+      var near = q.answer === q.a ? q.lo : q.hi, far = q.answer === q.a ? q.hi : q.lo;
+      return q.n + T(' is only ', ' está a solo ') + Math.abs(q.n - near) + T(' away from ', ' de ') + near + T(', but ', ', pero a ') + Math.abs(far - q.n) +
+        T(' away from ', ' de ') + far + '.';
+    }
+    if (q.skill === 'sqrt' || q.skill === 'area') {
+      A = r * r;
+      if (v * 2 === A) tip = T('Halving isn\'t the square root: ', 'Dividir entre 2 no es la raíz cuadrada: ') + fmt(A) + ' ÷ 2 = ' + fmt(v) + T(', but ', ', pero ') + fmt(v) + ' × ' + fmt(v) + ' = ' + fmt(v * v) + '.';
+      else if (q.skill === 'area' && v * 4 === A) tip = T('Dividing by 4 finds a side from the perimeter (the distance around), not from the area.', 'Dividir entre 4 da el lado a partir del perímetro (la distancia alrededor), no del área.');
+      else if (v === A) tip = T('That\'s the area itself. The side is the number that times itself makes ', 'Ese es el área. El lado es el número que por sí mismo da ') + fmt(A) + '.';
+      else tip = T('Check by squaring your answer: ', 'Comprueba elevando tu respuesta al cuadrado: ') + fmt(v) + ' × ' + fmt(v) + ' = ' + fmt(v * v) + T(', not ', ', no ') + fmt(A) + '.';
+    } else if (q.skill === 'square') {
+      if (v === r * 2) tip = r + '² ' + T('means ', 'significa ') + r + ' × ' + r + T(', not ', ', no ') + r + ' × 2.';
+      else if (v === r + 2) tip = r + '² ' + T('means ', 'significa ') + r + ' × ' + r + T(', not ', ', no ') + r + ' + 2.';
+    } else if (q.skill === 'cube') {
+      A = r * r * r;
+      if (v * 3 === A) tip = T('A cube root isn\'t dividing by 3: ', 'La raíz cúbica no es dividir entre 3: ') + fmt(v) + ' × ' + fmt(v) + ' × ' + fmt(v) + ' = ' + fmt(v * v * v) + '.';
+      else if (v * v === A) tip = T('That\'s the square root. A cube root uses 3 equal factors: ', 'Esa es la raíz cuadrada. La raíz cúbica usa 3 factores iguales: ') + r + ' × ' + r + ' × ' + r + ' = ' + fmt(A) + '.';
+      else if (v === A) tip = T('That\'s the number itself. Which number, used 3 times, multiplies to ', 'Ese es el número. ¿Qué número, multiplicado 3 veces, da ') + fmt(A) + '?';
+      else tip = T('Check: ', 'Comprueba: ') + fmt(v) + ' × ' + fmt(v) + ' × ' + fmt(v) + ' = ' + fmt(v * v * v) + T(', not ', ', no ') + fmt(A) + '.';
+    }
+    return tip;
+  }
+
+  function showExplanation(given, raw) {
     state = STATE.EXPLANATION;
     var q = question, r = q.r, body = '', lines = [];
     $('exp-you').innerHTML = T('You answered <b>' + given + '</b>. The answer is <b class="ok">' + answerText(q.answer) + '</b>.',
       'Respondiste <b>' + given + '</b>. La respuesta es <b class="ok">' + answerText(q.answer) + '</b>.');
+    var tip = raw === undefined ? '' : mistakeTip(q, raw);
+    $('exp-tip').innerHTML = tip ? '💡 ' + roots(tip) : '';
+    $('exp-tip').hidden = !tip;
+    // a missed bonus question just leads to a normal shot, not a wild one
+    $('exp-go').textContent = q.bonus ? T('TAKE THE SHOT', 'A TIRAR') : T('WATCH THE MISS', 'VER EL FALLO');
+    $('exp-wild').hidden = !!q.bonus;
 
     if (q.skill === 'sqrt' || q.skill === 'square' || q.skill === 'area') {
       body = gridHTML(r, Math.min(200, app.clientHeight * 0.3));
@@ -887,6 +991,15 @@
       body = cubeHTML(r, Math.min(220, app.clientHeight * 0.34));
       lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + '?');
       lines.push(r + ' × ' + r + ' × ' + r + ' = ' + fmt(r * r * r) + T(', so ', ', entonces ') + '∛' + fmt(r * r * r) + ' = <b class="ok">' + r + '</b>');
+    } else if (q.closer) {
+      var ca = q.a, cb = ca + 1, clo = q.lo, chi = q.hi, cpct = Math.round((q.n - clo) / (chi - clo) * 100);
+      body = '<div class="nl"><div class="nl-bar"></div>' +
+        '<div class="nl-tick" style="left:0"><b>' + clo + '</b><span>' + ca + '²</span></div>' +
+        '<div class="nl-tick" style="left:100%"><b>' + chi + '</b><span>' + cb + '²</span></div>' +
+        '<div class="nl-pt" style="left:' + cpct + '%"><b>' + q.n + '</b></div></div>';
+      lines.push(ca + ' × ' + ca + ' = ' + clo + T(' and ', ' y ') + cb + ' × ' + cb + ' = ' + chi + T(', so ', ', así que ') + '√' + q.n + T(' is between ', ' está entre ') + ca + T(' and ', ' y ') + cb + '.');
+      lines.push(q.n + T(' is closer to ', ' está más cerca de ') + (q.answer === ca ? clo : chi) + T(', so ', ', así que ') + '√' + q.n + T(' is closer to ', ' está más cerca de ') +
+        '<b class="ok">' + q.answer + '</b> (√' + q.n + ' ≈ ' + Math.sqrt(q.n).toFixed(2) + ').');
     } else {
       var a = q.a, b = a + 1, lo = q.lo, hi = q.hi, pct = Math.round((q.n - lo) / (hi - lo) * 100);
       var pw = q.cube ? '³' : '²', times = function (x) { return x + ' × ' + x + (q.cube ? ' × ' + x : ''); };
@@ -909,6 +1022,7 @@
   function closeExplanation() {
     if (state !== STATE.EXPLANATION) return;
     hide(scrExp);
+    if (question.bonus) { goShoot(); return; }         // missed the bonus: a normal shot
     refWhistle(function () { executeKick(true); });   // missed the math: after the whistle, the shot goes wild
   }
 
@@ -917,13 +1031,14 @@
     state = STATE.AIMING;
     aimPower = 0;
     show(aimHint);
+    $('power-badge').hidden = !powerShot;
     chance.hidden = true;
     targetCrosshair.visible = true;
     setAim(0, 1.2);
     focusGame();
   }
 
-  function hideAimHud() { aimHint.hidden = true; chance.hidden = true; }
+  function hideAimHud() { aimHint.hidden = true; chance.hidden = true; $('power-badge').hidden = true; }
 
   function setAim(tx, ty) {
     tx = Math.max(-6, Math.min(6, tx));
@@ -974,6 +1089,7 @@
 
     var aimX = targetCrosshair.position.x, aimY = targetCrosshair.position.y;
     var x = aimX, y = aimY, speed = 18 + aimPower * 14;
+    shotPower = aimPower;
     if (isAutoMiss) {
       x = (Math.random() > 0.5 ? 1 : -1) * (4 + Math.random() * 2);
       y = 3.5 + Math.random() * 2;
@@ -1139,8 +1255,91 @@
     keeperDiveDuration = p.t * 0.9;   // the gloves arrive just as the ball does
   }
 
+  // ---------- Goal celebrations: the net ripples, confetti flies ----------
+  var backNet = null, netBase = null, rippleT = -1, rippleX = 0, rippleY = 1, rippleDone = false;
+  function startRipple(x, y) {
+    rippleDone = true;
+    if (!backNet) return;
+    if (!netBase) netBase = Float32Array.from(backNet.geometry.attributes.position.array);
+    rippleT = 0; rippleX = x; rippleY = y;
+  }
+  function animateRipple(delta) {
+    if (rippleT < 0) return;
+    rippleT += delta;
+    var pos = backNet.geometry.attributes.position, arr = pos.array, fade = Math.exp(-rippleT * 2.2);
+    for (var i = 0; i < arr.length; i += 3) {
+      var vx = netBase[i], vy = netBase[i + 1] + GOAL_HEIGHT / 2;       // this point of the net, in goal coordinates
+      var d = Math.sqrt((vx - rippleX) * (vx - rippleX) + (vy - rippleY) * (vy - rippleY));
+      arr[i + 2] = rippleT > 1.6 ? 0 : -0.6 * Math.exp(-d * 1.2) * Math.sin(rippleT * 16 - d * 5) * fade;   // bulges back and wobbles out
+    }
+    pos.needsUpdate = true;
+    if (rippleT > 1.6) rippleT = -1;
+  }
+
+  var confetti = null, confettiVel = null, confettiT = -1, CONFETTI_N = 420;
+  function celebrate() {
+    if (!confetti) {
+      var geo = new THREE.BufferGeometry(), cols = new Float32Array(CONFETTI_N * 3);
+      var palette = [0xfacc15, 0x22c55e, 0x3b82f6, 0xef4444, 0xffffff, 0xa855f7].map(function (h) { return new THREE.Color(h); });
+      for (var i = 0; i < CONFETTI_N; i++) { var c = palette[i % palette.length]; cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b; }
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CONFETTI_N * 3), 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+      confetti = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.38, vertexColors: true, transparent: true }));
+      confetti.frustumCulled = false;
+      scene.add(confetti);
+      confettiVel = new Float32Array(CONFETTI_N * 3);
+    }
+    var p = confetti.geometry.attributes.position.array;
+    for (var j = 0; j < CONFETTI_N; j++) {   // bursts up from above the goal
+      p[j * 3] = (Math.random() - 0.5) * 6; p[j * 3 + 1] = GOAL_HEIGHT + 0.3 + Math.random() * 0.5; p[j * 3 + 2] = -0.5 + Math.random();
+      confettiVel[j * 3] = (Math.random() - 0.5) * 5; confettiVel[j * 3 + 1] = 3 + Math.random() * 5; confettiVel[j * 3 + 2] = (Math.random() - 0.2) * 4;
+    }
+    confetti.geometry.attributes.position.needsUpdate = true;
+    confetti.material.opacity = 1; confetti.visible = true; confettiT = 0;
+  }
+  function animateConfetti(delta) {
+    if (confettiT < 0) return;
+    confettiT += delta;
+    var p = confetti.geometry.attributes.position.array;
+    for (var j = 0; j < CONFETTI_N; j++) {
+      confettiVel[j * 3 + 1] -= 6 * delta;                                   // falls...
+      confettiVel[j * 3] *= 0.99; confettiVel[j * 3 + 2] *= 0.99;           // ...and drifts
+      p[j * 3] += (confettiVel[j * 3] + Math.sin(confettiT * 6 + j) * 0.6) * delta;
+      p[j * 3 + 1] = Math.max(0.02, p[j * 3 + 1] + confettiVel[j * 3 + 1] * delta);
+      p[j * 3 + 2] += confettiVel[j * 3 + 2] * delta;
+    }
+    confetti.geometry.attributes.position.needsUpdate = true;
+    confetti.material.opacity = Math.max(0, Math.min(1, (3 - confettiT) / 0.8));
+    if (confettiT > 3) { confetti.visible = false; confettiT = -1; }
+  }
+
+  // ---------- Announcer captions ----------
+  // A short line under each result that says what happened and quietly teaches where to aim.
+  var lastLandX = 0, lastLandY = 1, shotPower = 1;
+  function announcerLine(kind) {
+    var ax = Math.abs(lastLandX), corner = ax > 2.5, top = lastLandY > 1.5, middle = ax < 1.1;
+    var say = function (list) { return pick(list); };
+    if (isAutoMiss) return T('A wrong answer sends the shot wild.', 'Una respuesta incorrecta desvía el tiro.');
+    if (kind === 'goal') {
+      if (corner && top) return say([T('Top corner! The keeper had no chance!', '¡Por la escuadra! ¡El portero no tuvo opción!'), T('Right into the top corner!', '¡Justo en la escuadra!')]);
+      if (corner) return say([T('Low and into the corner!', '¡Bajo y al rincón!'), T('Tucked in by the post!', '¡Pegado al palo!')]);
+      if (middle) return T('Straight down the middle... and it\'s in!', 'Por el centro... ¡y entra!');
+      return T('Placed past the keeper!', '¡Colocado lejos del portero!');
+    }
+    if (kind === 'saved' || kind === 'caught') {
+      if (middle) return T('Straight at the keeper. Aim for the corners!', 'Directo al portero. ¡Apunta a las esquinas!');
+      if (shotPower < 0.45) return T('A little soft. More power next time!', 'Un poco suave. ¡Más potencia la próxima vez!');
+      return T('Great save! Try tighter to the post.', '¡Gran atajada! Prueba más pegado al palo.');
+    }
+    if (kind === 'post') return T('Off the post! So close.', '¡Al palo! Por muy poco.');
+    if (kind === 'over') return T('Over the bar. Aim a little lower.', 'Por encima del larguero. Apunta un poco más abajo.');
+    if (kind === 'wide') return T('Just wide! Aim a little inside the post.', '¡Desviado! Apunta un poco por dentro del palo.');
+    return '';
+  }
+
   var keeperStay = false;
   function keeperDecision(targetX, targetY, flight) {
+    lastLandX = targetX; lastLandY = targetY;
     keeperStartX = keeperGroup.position.x;   // wherever his side-to-side lean left him
     keeperStartY = keeperBody.position.y;
     catching = standingCatch = caught = keeperStay = false;
@@ -1341,7 +1540,7 @@
       if (p.z < -r && p.z > -2.6 - r && Math.abs(p.x) < GOAL_WIDTH / 2 && p.y < GOAL_HEIGHT) ballInNet = true;
       else return;
     }
-    if (p.z < back) { p.z = back; if (v.z < 0) v.z = -v.z * 0.08; v.x *= 0.5; }   // the back of the net takes the pace off
+    if (p.z < back) { if (!rippleDone) startRipple(p.x, p.y); p.z = back; if (v.z < 0) v.z = -v.z * 0.08; v.x *= 0.5; }   // the back of the net takes the pace off
     if (p.x > side) { p.x = side; if (v.x > 0) v.x = -v.x * 0.08; }
     if (p.x < -side) { p.x = -side; if (v.x < 0) v.x = -v.x * 0.08; }
     if (p.y > roof) { p.y = roof; if (v.y > 0) v.y = -v.y * 0.08; }
@@ -1382,6 +1581,9 @@
     }[kind] || T('MISS', 'FUERA');
     msg.className = kind === 'goal' ? 'goal' : kind === 'saved' || kind === 'caught' ? 'saved' : 'miss';
     msg.hidden = false;
+    var line = announcerLine(kind);
+    $('caption').textContent = line; $('caption').hidden = !line;
+    if (kind === 'goal') { celebrate(); if (!rippleDone) startRipple(lastLandX, lastLandY); }
     kickNum++;
     drawHud();
     var next = function () {
@@ -1394,6 +1596,7 @@
   function skipResult() {
     clearTimeout(resultTimeout);
     msg.hidden = true;
+    $('caption').hidden = true;
     chance.hidden = true;
     nextKick();
   }
@@ -1440,6 +1643,8 @@
 
   function nextKick() {
     enforceSave = false;
+    powerShot = false;
+    $('caption').hidden = true;
     catching = standingCatch = caught = false;
     resultDecided = false;
     legGroup.visible = false;
@@ -1592,7 +1797,7 @@
 
   // ---------- Physics reset ----------
   function resetBall() {
-    ballInNet = false;
+    ballInNet = false; rippleDone = false;
     ballBody.position.set(0, BALL_RADIUS, PENALTY_DIST);
     ballBody.velocity.set(0, 0, 0);
     ballBody.angularVelocity.set(0, 0, 0);
@@ -1675,6 +1880,8 @@
     animateCrowd(delta);
     animateReferee(delta);
     animateCity();
+    animateRipple(delta);
+    animateConfetti(delta);
     updateTitleCamera(delta);
     renderer.render(scene, camera);
   }
@@ -1761,6 +1968,7 @@
     el.addEventListener('click', function () { setActiveBox(el); });   // on a phone, tap a box to fill it with the pad
   });
   $('q-go').addEventListener('click', submitAnswer);
+  $('q-skip').addEventListener('click', skipBonus);
   Array.prototype.forEach.call(document.querySelectorAll('#q-pad button'), function (b) {
     b.addEventListener('click', function () {
       var k = b.getAttribute('data-k');
