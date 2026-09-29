@@ -5,21 +5,21 @@
   var T = window.tl || function (en) { return en; };
 
   // ---------- Settings and saved stats (localStorage, keys start with penaltyshootout_) ----------
-  var KICKS = 5, MAX_DIGITS = 5;   // answers go up to 10,000 (100²)
+  var KICKS = 5, MAX_DIGITS = 9;   // answers go up to 1,000,000 (1,000² and 100³)
+  // Squares and square roots are one skill (√81 = ? and 9² = ?), and so are cubes and cube roots (∛64 = ? and 4³ = ?).
   var SKILLS = [
-    { id: 'sqrt', name: T('Square Roots', 'Raíces cuadradas'), ex: '√81 = ?' },
-    { id: 'square', name: T('Squaring Numbers', 'Elevar al cuadrado'), ex: '9² = ?' },
+    { id: 'sqrt', name: T('Squares and Square Roots', 'Cuadrados y raíces cuadradas'), ex: '√81 · 9²' },
     { id: 'area', name: T('Side of a Square', 'Lado de un cuadrado'), ex: T('Area 81 → side?', 'Área 81 → ¿lado?') },
     { id: 'estimate', name: T('Estimating Roots', 'Estimar raíces'), ex: T('√50 is between ? and ?', '√50 está entre ? y ?') },
-    { id: 'cube', name: T('Cube Roots', 'Raíces cúbicas'), ex: '∛64 = ?' }
+    { id: 'cube', name: T('Cubes and Cube Roots', 'Cubos y raíces cúbicas'), ex: '∛64 · 4³' }
   ];
   function load(key, fallback) {
     try { var v = localStorage.getItem('penaltyshootout_' + key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
   }
   function save(key, val) { try { localStorage.setItem('penaltyshootout_' + key, JSON.stringify(val)); } catch (e) {} }
 
-  var skillOn = load('skills', [false, false, false, false, false]);   // nothing picked until the student chooses
-  if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [false, false, false, false, false];
+  var skillOn = load('skills', [false, false, false, false]);   // nothing picked until the student chooses
+  if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [false, false, false, false];   // (an older 5-skill list resets)
 
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };
@@ -48,7 +48,7 @@
   // ---------- Engine ----------
   var scene, camera, renderer, world, clock;
   var ballMesh, ballBody, keeperGroup, keeperBody, legGroup, rainParticles, flashParticles, targetCrosshair, errorCircle;
-  var kTorso, kLArm, kRArm, kLLeg, kRLeg, keeperStartX = 0, keeperStartY = 0;
+  var kTorso, kHead, kLArm, kRArm, kLLeg, kRLeg, keeperStartX = 0, keeperStartY = 0;
 
   var GOAL_WIDTH = 7.32, GOAL_HEIGHT = 2.44, POST_RADIUS = 0.06, PENALTY_DIST = 11, BALL_RADIUS = 0.11, BALL_MASS = 0.43;
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
@@ -617,7 +617,7 @@
     keeperGroup = new THREE.Group();
     var k = buildPerson({ shirt: 0xeab308, trim: 0x111827, shorts: 0x111827, socks: 0xeab308, skin: 0xe0ac69, hair: 0x2b1a10,
       longSleeves: true, gloves: 0xf8fafc, number: '1' });
-    kTorso = k.hips; kLArm = k.lArm; kRArm = k.rArm; kLLeg = k.lLeg; kRLeg = k.rLeg;
+    kTorso = k.hips; kHead = k.head; kLArm = k.lArm; kRArm = k.rArm; kLLeg = k.lLeg; kRLeg = k.rLeg;
     keeperGroup.add(k.root);
     scene.add(keeperGroup);
 
@@ -755,24 +755,28 @@
     for (var i = 0; i < SKILLS.length; i++) if (skillOn[i]) active.push(SKILLS[i].id);
     // Regular questions: squares and square roots 0-10, cube roots 0-5.
     // Power-shot (challenge) questions: squares and square roots 11-16, cube roots 6-10, and now and then a 1 followed by
-    // zeros: √100, √10,000, 100², a square of area 10,000, ∛1,000, ∛1,000,000.
+    // zeros: √100 up to √100,000,000, 10² to 1,000², areas of 10,000 and 1,000,000, ∛1,000 up to ∛1,000,000,000, 10³ and 100³.
     var LOW_SQ = hard ? 11 : 0, MAX_SQ = hard ? 16 : 10, LOW_CUBE = hard ? 6 : 0, MAX_CUBE = hard ? 10 : 5;
-    var bigSq = function () { return pick([10, 100]); };
-    var bigCube = function () { return pick([10, 100]); };
-    var big = function () { return hard && Math.random() < 0.25; };
+    var bigSq = function () { return pick([10, 100, 1000, 10000]); };   // √100 ... √100,000,000
+    var bigCube = function () { return pick([10, 100, 1000]); };      // ∛1,000 ... ∛1,000,000,000
+    var big = function () { return hard && Math.random() < 0.3; };
     var wordy = function () { return Math.random() < (hard ? 0.6 : 0.35); };
     for (var tries = 0; tries < 40; tries++) {
-      var skill = active[Math.floor(Math.random() * active.length)], q = { skill: skill, bonus: !!hard }, r, a, n;
+      var skill = active[Math.floor(Math.random() * active.length)], q = { cat: skill, bonus: !!hard }, r, a, n;
+      // each combined skill asks both ways: a root (√81, ∛64) or a power (9², 4³)
+      if (skill === 'sqrt' && Math.random() < 0.5) skill = 'square';
+      if (skill === 'cube' && Math.random() < 0.5) skill = 'cubed';
+      q.skill = skill;
       if (skill === 'sqrt') {
         r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r;
         q.html = T('What is ', '¿Cuánto es ') + rad(fmt(r * r)) + T('?', '?');
         q.plain = '√' + fmt(r * r) + ' = ?';
       } else if (skill === 'square') {
-        r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r * r;
+        r = big() ? pick([10, 100, 1000]) : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r * r;   // up to 1,000² = 1,000,000
         q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>2</sup>?';
         q.plain = fmt(r) + '² = ?';
       } else if (skill === 'area') {
-        r = big() ? 100 : rnd(Math.max(1, LOW_SQ), MAX_SQ); q.r = r; q.answer = r;
+        r = big() ? pick([100, 1000]) : rnd(Math.max(1, LOW_SQ), MAX_SQ); q.r = r; q.answer = r;   // areas of 10,000 or 1,000,000
         if (wordy()) wordQ(q, AREA_WORDS, r * r);
         else {
           q.html = '<span class="qsm">' + T('A square has an area of <b>' + fmt(r * r) + '</b> square units.<br>How long is each side?',
@@ -804,6 +808,10 @@
           q.plain = (q.cube ? '∛' : '√') + n + T(' is between ', ' está entre ') + '?' + T(' and ', ' y ') + '?';
           q.sub = T('Type the two whole numbers it is between.', 'Escribe los dos números enteros entre los que está.');
         }
+      } else if (skill === 'cubed') {   // 4³ = ? (challenge: 6³ to 10³; 10³ = 1,000 is the power of ten)
+        r = big() ? pick([10, 100]) : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r * r * r;   // up to 100³ = 1,000,000
+        q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>3</sup>?';
+        q.plain = fmt(r) + '³ = ?';
       } else {
         r = big() ? bigCube() : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r;
         if (r > 1 && r < 100 && wordy()) wordQ(q, CUBE_WORDS, r * r * r);
@@ -824,7 +832,7 @@
   function askQuestion(bonus) {
     question = makeQuestion(!!bonus);
     $('q-kick').textContent = bonus ? T('⚡ BONUS QUESTION · POWER SHOT', '⚡ PREGUNTA EXTRA · TIRO POTENTE')
-      : T('KICK ', 'TIRO ') + (kickNum + 1) + T(' OF ', ' DE ') + KICKS + ' · ' + skillName(question.skill).toUpperCase();
+      : T('KICK ', 'TIRO ') + (kickNum + 1) + T(' OF ', ' DE ') + KICKS + ' · ' + skillName(question.cat).toUpperCase();
     $('q-kick').classList.toggle('bonus', !!bonus);
     $('q-bonus').hidden = !bonus;
     $('q-skip').hidden = !bonus;
@@ -925,8 +933,8 @@
     var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
     var minX = Math.min.apply(null, xs), minY = Math.min.apply(null, ys), w = Math.max.apply(null, xs) - minX, h = Math.max.apply(null, ys) - minY;
     return '<svg class="cube" width="' + Math.round(w + 4) + '" height="' + Math.round(h + 4) + '" viewBox="' + (minX - 2) + ' ' + (minY - 2) + ' ' + (w + 4) + ' ' + (h + 4) + '" role="img" aria-label="' +
-      T('A cube made of ', 'Un cubo hecho de ') + fmt(rTrue * rTrue * rTrue) + T(' little cubes', ' cubitos') + '">' + svg + '</svg>' +
-      '<div class="gcap">' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' = ' + fmt(rTrue * rTrue * rTrue) + T(' little cubes', ' cubitos') +
+      T('A cube made of ', 'Un cubo hecho de ') + fmt(rTrue * rTrue * rTrue) + (rTrue * rTrue * rTrue === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')) + '">' + svg + '</svg>' +
+      '<div class="gcap">' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' = ' + fmt(rTrue * rTrue * rTrue) + (rTrue * rTrue * rTrue === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')) +
       (k.b > 1 ? T('<br>each block is ', '<br>cada bloque es ') + k.b + ' × ' + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b * k.b) : '') + '</div>';
   }
 
@@ -960,6 +968,10 @@
       else if (v * v === A) tip = T('That\'s the square root. A cube root uses 3 equal factors: ', 'Esa es la raíz cuadrada. La raíz cúbica usa 3 factores iguales: ') + r + ' × ' + r + ' × ' + r + ' = ' + fmt(A) + '.';
       else if (v === A) tip = T('That\'s the number itself. Which number, used 3 times, multiplies to ', 'Ese es el número. ¿Qué número, multiplicado 3 veces, da ') + fmt(A) + '?';
       else tip = T('Check: ', 'Comprueba: ') + fmt(v) + ' × ' + fmt(v) + ' × ' + fmt(v) + ' = ' + fmt(v * v * v) + T(', not ', ', no ') + fmt(A) + '.';
+    } else if (q.skill === 'cubed') {
+      if (v === r * 3) tip = r + '³ ' + T('means ', 'significa ') + r + ' × ' + r + ' × ' + r + T(', not ', ', no ') + r + ' × 3.';
+      else if (v === r * r) tip = T('That\'s ', 'Eso es ') + r + '². ' + r + '³ ' + T('needs one more ', 'necesita otro ') + r + ': ' + r + ' × ' + r + ' × ' + r + '.';
+      else if (v === r + 3) tip = r + '³ ' + T('means ', 'significa ') + r + ' × ' + r + ' × ' + r + T(', not ', ', no ') + r + ' + 3.';
     }
     return tip;
   }
@@ -977,7 +989,7 @@
     $('exp-wild').hidden = !!q.bonus;
 
     if (q.skill === 'sqrt' || q.skill === 'square' || q.skill === 'area') {
-      body = gridHTML(r, Math.min(200, app.clientHeight * 0.3));
+      body = gridHTML(r, Math.min(200, Math.max(120, app.clientHeight * 0.3)));
       if (q.skill === 'sqrt') {
         lines.push(T('A square root is the side length of a square with that area.', 'La raíz cuadrada es el lado de un cuadrado con esa área.'));
         lines.push(r + ' × ' + r + ' = ' + fmt(r * r) + T(', so ', ', entonces ') + '√' + fmt(r * r) + ' = <b class="ok">' + r + '</b>');
@@ -988,10 +1000,15 @@
         lines.push(T('Side × side = area. Which number times itself makes ', 'Lado × lado = área. ¿Qué número por sí mismo da ') + fmt(r * r) + '?');
         lines.push(r + ' × ' + r + ' = ' + fmt(r * r) + T(', so each side is ', ', así que cada lado mide ') + '<b class="ok">' + r + '</b>');
       }
-    } else if (q.skill === 'cube') {
-      body = cubeHTML(r, Math.min(220, app.clientHeight * 0.34));
-      lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + '?');
-      lines.push(r + ' × ' + r + ' × ' + r + ' = ' + fmt(r * r * r) + T(', so ', ', entonces ') + '∛' + fmt(r * r * r) + ' = <b class="ok">' + r + '</b>');
+    } else if (q.skill === 'cube' || q.skill === 'cubed') {
+      body = cubeHTML(r, Math.min(220, Math.max(130, app.clientHeight * 0.34)));
+      if (q.skill === 'cubed') {
+        lines.push(r + '<sup>3</sup>' + T(' means ', ' significa ') + r + ' × ' + r + ' × ' + r + T(': a cube with edges of ', ': un cubo con aristas de ') + r + '.');
+        lines.push(r + ' × ' + r + ' × ' + r + ' = <b class="ok">' + fmt(r * r * r) + '</b>' + (r * r * r === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')));
+      } else {
+        lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + '?');
+        lines.push(r + ' × ' + r + ' × ' + r + ' = ' + fmt(r * r * r) + T(', so ', ', entonces ') + '∛' + fmt(r * r * r) + ' = <b class="ok">' + r + '</b>');
+      }
     } else if (q.closer) {
       var ca = q.a, cb = ca + 1, clo = q.lo, chi = q.hi, cpct = Math.round((q.n - clo) / (chi - clo) * 100);
       body = '<div class="nl"><div class="nl-bar"></div>' +
@@ -1014,6 +1031,7 @@
       lines.push(lo + ' < ' + q.n + ' < ' + hi + T(', so ', ', entonces ') + (q.cube ? '∛' : '√') + q.n + T(' is between ', ' está entre ') +
         '<b class="ok">' + a + '</b>' + T(' and ', ' y ') + '<b class="ok">' + b + '</b>');
     }
+    if (r === 0) body = '';   // nothing to draw for 0
     $('exp-visual').innerHTML = body;
     $('exp-lines').innerHTML = lines.map(function (l) { return '<p>' + roots(l) + '</p>'; }).join('');
     show(scrExp);
@@ -1183,6 +1201,7 @@
     var fl = kLArm.userData.fore, fr = kRArm.userData.fore;
     kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
     kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0;   // straight knees for dives and catches
+    if (kHead) kHead.rotation.set(0, 0, 0);
     if (kind === 'dive') {
       fl.rotation.x = fr.rotation.x = -0.25;
       if (dir < 0) { kLArm.rotation.set(-0.3, 0, -(Math.PI - 0.35)); kRArm.rotation.set(-0.3, 0, -(Math.PI - 0.75)); kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3); }
@@ -1404,6 +1423,7 @@
     keeperGroup.quaternion.copy(keeperBody.quaternion);
     kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
     kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0;   // straight knees for dives and catches
+    if (kHead) kHead.rotation.set(0, 0, 0);
     if (catching) {
       applyCatchPose(catchKind, catchDir);   // gloves where the ball is going
     } else if (keeperTarget.x < 0) {
@@ -1487,12 +1507,23 @@
       keeperSway = x;
     }
 
+    // Loose, natural small movements on top of whatever he's doing (like the referee): breathing, shifting his weight,
+    // a slight body sway, looking around, and loose arms with the gloves flexing. Small, and only for show.
+    var w = Math.sin(time * 0.6), w2 = Math.sin(time * 1.3 + 0.7);
+    bodyY += Math.sin(time * 1.9) * 0.008;                         // breathing
+    lean += w * 0.03;                                              // weight moves from foot to foot...
+    lz += w * 0.025; rz += w * 0.025; lk += Math.max(0, w) * 0.08; rk += Math.max(0, -w) * 0.08;   // ...one knee softens
+    ax += w2 * 0.06;                                               // loose arms
+    alz += Math.sin(time * 0.9) * 0.07; arz -= Math.sin(time * 0.9 + 1.4) * 0.07;
+    var flex = Math.sin(time * 1.7) * 0.1;                         // gloves flexing
+    kHead.rotation.set(0.04 + Math.sin(time * 0.8) * 0.03, Math.sin(time * 0.45 + 1) * 0.3, 0);   // looking around
+
     kTorso.position.y = bodyY;
     kTorso.rotation.set(0, 0, lean);
     kLLeg.rotation.set(lx, 0, lz); kRLeg.rotation.set(rx, 0, rz);
     shinL.rotation.x = lk; shinR.rotation.x = rk;
     kLArm.rotation.set(ax, 0, alz); kRArm.rotation.set(ax, 0, arz);
-    fl.rotation.x = fr.rotation.x = af;
+    fl.rotation.x = af + flex; fr.rotation.x = af - flex;
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.position.x += x;
     keeperGroup.position.y += lift;
