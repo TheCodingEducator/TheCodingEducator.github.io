@@ -753,12 +753,13 @@
   function makeQuestion(hard) {
     var active = [];
     for (var i = 0; i < SKILLS.length; i++) if (skillOn[i]) active.push(SKILLS[i].id);
-    var MAX_SQ = 13, MAX_CUBE = 6;   // one level for everyone: squares and square roots to 13, cube roots to 6
-    var LOW_SQ = hard ? 7 : 1, LOW_CUBE = hard ? 4 : 1;
-    // now and then, a simple power of ten: √100, √10,000, 10², 100², ∛1,000 (no giant numbers)
+    // Regular questions: squares and square roots 0-10, cube roots 0-5.
+    // Power-shot (challenge) questions: squares and square roots 11-16, cube roots 6-10, and now and then a 1 followed by
+    // zeros: √100, √10,000, 100², a square of area 10,000, ∛1,000, ∛1,000,000.
+    var LOW_SQ = hard ? 11 : 0, MAX_SQ = hard ? 16 : 10, LOW_CUBE = hard ? 6 : 0, MAX_CUBE = hard ? 10 : 5;
     var bigSq = function () { return pick([10, 100]); };
-    var bigCube = function () { return 10; };
-    var big = function () { return Math.random() < 0.25; };
+    var bigCube = function () { return pick([10, 100]); };
+    var big = function () { return hard && Math.random() < 0.25; };
     var wordy = function () { return Math.random() < (hard ? 0.6 : 0.35); };
     for (var tries = 0; tries < 40; tries++) {
       var skill = active[Math.floor(Math.random() * active.length)], q = { skill: skill, bonus: !!hard }, r, a, n;
@@ -771,7 +772,7 @@
         q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>2</sup>?';
         q.plain = fmt(r) + '² = ?';
       } else if (skill === 'area') {
-        r = big() ? 10 : rnd(Math.max(2, LOW_SQ), MAX_SQ); q.r = r; q.answer = r;
+        r = big() ? 100 : rnd(Math.max(1, LOW_SQ), MAX_SQ); q.r = r; q.answer = r;
         if (wordy()) wordQ(q, AREA_WORDS, r * r);
         else {
           q.html = '<span class="qsm">' + T('A square has an area of <b>' + fmt(r * r) + '</b> square units.<br>How long is each side?',
@@ -781,7 +782,7 @@
       } else if (skill === 'estimate') {
         if (Math.random() < (hard ? 0.5 : 0.3)) {
           // "Is √50 closer to 7 or to 8?" (never a near-tie)
-          a = rnd(hard ? 5 : 1, MAX_SQ - 1); q.lo = a * a; q.hi = (a + 1) * (a + 1);
+          a = rnd(hard ? 11 : 1, MAX_SQ - 1); q.lo = a * a; q.hi = (a + 1) * (a + 1);   // regular: between 1 and 10; challenge: 11 and 16
           var opts = []; for (var m = q.lo + 1; m < q.hi; m++) if (Math.abs(Math.sqrt(m) - (a + 0.5)) > 0.12) opts.push(m);
           n = pick(opts);
           q.a = a; q.n = n; q.closer = true; q.answer = Math.round(Math.sqrt(n));
@@ -794,7 +795,7 @@
           // the student finds BOTH whole numbers it's between
           q.cube = Math.random() < (hard ? 0.5 : 0.35);
           var pw = q.cube ? 3 : 2;
-          a = q.cube ? rnd(hard ? 2 : 1, MAX_CUBE - 1) : rnd(hard ? 5 : 1, MAX_SQ - 1);   // the larger whole number is at most 6 or 13
+          a = q.cube ? rnd(hard ? 6 : 1, MAX_CUBE - 1) : rnd(hard ? 11 : 1, MAX_SQ - 1);   // regular: up to 10 (cube 5); challenge: 11-16 (cube 6-10)
           q.lo = Math.pow(a, pw); q.hi = Math.pow(a + 1, pw);
           n = rnd(q.lo + 1, q.hi - 1);
           q.a = a; q.n = n; q.two = true; q.answer = [a, a + 1];
@@ -805,7 +806,7 @@
         }
       } else {
         r = big() ? bigCube() : rnd(LOW_CUBE, MAX_CUBE); q.r = r; q.answer = r;
-        if (r < 10 && r > 1 && wordy()) wordQ(q, CUBE_WORDS, r * r * r);
+        if (r > 1 && r < 100 && wordy()) wordQ(q, CUBE_WORDS, r * r * r);
         else {
           q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
           q.plain = '∛' + fmt(r * r * r) + ' = ?';
@@ -889,8 +890,8 @@
   function skipBonus() { if (state === STATE.MATH && question && question.bonus) goShoot(); }
 
   // ---------- Wrong answer: show why ----------
-  // Big sides are drawn in blocks: a side of 30 is 3 blocks of 10, a side of 1000 is 10 blocks of 100
-  function blocks(r) { if (r <= 13) return { n: r, b: 1 }; var b = r >= 100 ? r / 10 : 10; return { n: r / b, b: b }; }
+  // Sides up to 16 are drawn square by square; a side of 100 is drawn as 10 blocks of 10
+  function blocks(r) { if (r <= 16 || r % 10) return { n: r, b: 1 }; var b = r >= 100 ? r / 10 : 10; return { n: r / b, b: b }; }
 
   function gridHTML(r, sizePx) {
     var k = blocks(r), n = k.n, px = Math.max(6, Math.floor(sizePx / n)), cells = '';
