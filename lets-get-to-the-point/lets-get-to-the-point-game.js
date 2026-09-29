@@ -2878,7 +2878,7 @@ function drawStart(){
       if(locked){ lockNoticeFrame=frameCount; playSound('wrong'); continue; }
       gameMode=m.id; modeIndex=mi;
       if(gameMode==="PRACTICE"){
-        skillTranslations=true; skillRotations=true; skillReflections=true;
+        skillTranslations=false; skillRotations=false; skillReflections=false;   // students pick their skills
         skillFocusIdx=0; STATE="SKILL_SELECT";
       } else { beginModeFromMenu(); }
     }
@@ -3208,7 +3208,7 @@ function draw(){
   if(keyWentDown("space")){
     if(STATE==="START"){
       if(startFocusIsShop){ STATE="SHOP"; return; }
-      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{beginModeFromMenu();}
+      if(gameMode==="PRACTICE"){skillTranslations=false;skillRotations=false;skillReflections=false;skillFocusIdx=0;STATE="SKILL_SELECT";}else{beginModeFromMenu();}
       return;
     }
     if(STATE==="SKILL_SELECT"){
@@ -3307,7 +3307,7 @@ function draw(){
       // Non-H2H: Enter acts like Space
       if(STATE==="START"){
       if(startFocusIsShop){ STATE="SHOP"; return; }
-      if(gameMode==="PRACTICE"){skillTranslations=true;skillRotations=true;skillReflections=true;skillFocusIdx=0;STATE="SKILL_SELECT";}else{beginModeFromMenu();}
+      if(gameMode==="PRACTICE"){skillTranslations=false;skillRotations=false;skillReflections=false;skillFocusIdx=0;STATE="SKILL_SELECT";}else{beginModeFromMenu();}
       return;
     }
       if(STATE==="SKILL_SELECT"){

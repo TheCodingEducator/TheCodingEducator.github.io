@@ -150,7 +150,7 @@ var roadDecorations = [], spawnSignNext = false;
 var signMessages = [tl("KEEP\nIT UP!", "¡SIGUE\nASÍ!"), tl("MATH\nRULES!", "¡VIVAN LAS\nMATES!"), tl("GREAT\nJOB!", "¡BUEN\nTRABAJO!"), tl("YOU GOT\nTHIS!", "¡TÚ\nPUEDES!"), tl("KEEP\nGOING", "¡NO TE\nDETENGAS!"), tl("AMAZING", "¡INCREÍBLE!"), tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!"), tl("YOU LOVE\nMATH!", "¡AMAS LAS\nMATES!"), "Mr. Hardy\n= GOAT!", tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")];
 var lastSignMessage = "", lastPickedAnswer = "", lastQuestionString = "", pauseTimer = 0;
 
-var skillStates = [true, true, true, true, true, true], showSkillError = false;
+var skillStates = [false, false, false, false, false, false], showSkillError = false;   // students pick the skills they want to practice
 
 loadExponentProgress();
 
@@ -428,8 +428,8 @@ function drawStartScreen() {
   }
 
   if (mouseWentDown("leftButton")) {
-    if (mouseX > 40 && mouseX < 180 && mouseY > 200 && mouseY < 260) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "easy"; skillStates = [true, true, true, true, true, true]; gameState = "skillSelect"; }
-    if (!hardLocked && mouseX > 220 && mouseX < 360 && mouseY > 200 && mouseY < 260) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "hard"; for (var s = 0; s < 6; s++) skillStates[s] = unlockedHardSkills[s]; gameState = "skillSelect"; }
+    if (mouseX > 40 && mouseX < 180 && mouseY > 200 && mouseY < 260) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "easy"; skillStates = [false, false, false, false, false, false]; gameState = "skillSelect"; }
+    if (!hardLocked && mouseX > 220 && mouseX < 360 && mouseY > 200 && mouseY < 260) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "hard"; skillStates = [false, false, false, false, false, false]; gameState = "skillSelect"; }
     if (mouseX > 130 && mouseX < 270 && mouseY > 280 && mouseY < 325) { gameState = "shop"; shopScrollY = 0; }
   }
 }

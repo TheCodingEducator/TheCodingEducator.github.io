@@ -18,8 +18,8 @@
   }
   function save(key, val) { try { localStorage.setItem('penaltyshootout_' + key, JSON.stringify(val)); } catch (e) {} }
 
-  var skillOn = load('skills', [true, false, false, false, false]);
-  if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [true, false, false, false, false];
+  var skillOn = load('skills', [false, false, false, false, false]);   // nothing picked until the student chooses
+  if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [false, false, false, false, false];
 
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };

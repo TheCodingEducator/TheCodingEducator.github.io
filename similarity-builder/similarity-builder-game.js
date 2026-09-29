@@ -1119,7 +1119,7 @@ function buildMenu() {
 
 /* ===================== PRACTICE SETUP ===================== */
 // which question types are ticked is remembered between visits
-let practicePicked = (() => { const s = store.get(KEY.practice, null); return Array.isArray(s) ? s.filter(id => PRACTICE_TYPES.some(t => t.id === id)) : ['scale']; })();
+let practicePicked = (() => { const s = store.get(KEY.practice, null); return Array.isArray(s) ? s.filter(id => PRACTICE_TYPES.some(t => t.id === id)) : []; })();   // nothing picked until the student chooses
 function renderPractice() {
   const grid = $('ptypes'); grid.innerHTML = '';
   PRACTICE_TYPES.forEach(t => {                                            // (listed in level order; each level has its own color)

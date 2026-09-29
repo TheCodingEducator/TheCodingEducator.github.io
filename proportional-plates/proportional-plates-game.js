@@ -778,7 +778,7 @@ function hideOverlays(keep) { ['over', 'explain', 'pause', 'exitConfirm'].forEac
 
 
 /* ---- practice picker ---- */
-let practicePicked = (() => { const s = store.get('practice_types', null); return Array.isArray(s) ? s.filter(id => PRACTICE_TYPES.some(t => t.id === id)) : ['up']; })();
+let practicePicked = (() => { const s = store.get('practice_types', null); return Array.isArray(s) ? s.filter(id => PRACTICE_TYPES.some(t => t.id === id)) : []; })();   // nothing picked until the student chooses
 function sampleText(kind) {
   const P = genProblem(kind);
   if (P.money) return `${P.baseN} ${P.item.short} = $${fstr(P.baseQ)} &rarr; ${P.tgtN} = ?`;

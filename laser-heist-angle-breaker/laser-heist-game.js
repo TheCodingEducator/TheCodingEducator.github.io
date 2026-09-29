@@ -295,7 +295,7 @@ var feedbackTimer   = 0;
 // Practice mode: no timer, no score, no lives -- just questions from
 // whichever angle skills the player checked off, with immediate
 // right/wrong feedback and an automatic advance to the next one.
-var practiceSkills = { supplementary: true, complementary: true, vertical: true, parallel: true };
+var practiceSkills = { supplementary: false, complementary: false, vertical: false, parallel: false };   // students pick their skills
 var practiceAttempted = 0;
 var practiceCorrect = 0;
 var practiceFeedbackShown = false;
