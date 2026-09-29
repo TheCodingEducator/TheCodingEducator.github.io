@@ -1216,7 +1216,7 @@
 
   function pickKeeperAct() {
     var acts = ['sway', 'shuffle', 'hops', 'clap', 'shuffle', 'hops'];
-    if (kLastAct !== 'ready') { kAct = 'ready'; kActDur = 0.6 + Math.random() * 1.2; }   // a pause between moves
+    if (kLastAct !== 'ready') { kAct = 'ready'; kActDur = 1.4 + Math.random() * 1.4; }   // a pause between moves (1.4 to 2.8 s)
     else {
       do { kAct = acts[Math.floor(Math.random() * acts.length)]; } while (kAct === kLastMove);
       kLastMove = kAct;
