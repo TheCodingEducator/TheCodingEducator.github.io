@@ -87,9 +87,16 @@
     targetCrosshair.renderOrder = 999; targetCrosshair.visible = false;
     scene.add(targetCrosshair);
 
-    errorCircle = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.12, 64),   // radius 0.1, scaled while charging
-      new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthTest: false }));
-    errorCircle.renderOrder = 998; errorCircle.visible = false;
+    // The power circle: a green ring filled with see-through green, covering everywhere the ball could land.
+    // Radius 0.1, scaled while powering up.
+    errorCircle = new THREE.Group();
+    var ring = new THREE.Mesh(new THREE.RingGeometry(0.092, 0.1, 64),
+      new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthTest: false }));
+    var fill = new THREE.Mesh(new THREE.CircleGeometry(0.092, 64),
+      new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthTest: false, depthWrite: false }));
+    ring.renderOrder = 998; fill.renderOrder = 997;
+    errorCircle.add(fill, ring);
+    errorCircle.visible = false;
     scene.add(errorCircle);
 
     world.addEventListener('beginContact', onContact);
@@ -846,8 +853,6 @@
     ty = Math.max(0.1, Math.min(4, ty));
     targetCrosshair.position.set(tx, ty, 0);
     errorCircle.position.set(tx, ty, 0);
-    var off = ty > GOAL_HEIGHT - 0.1 || Math.abs(tx) > GOAL_WIDTH / 2 - 0.1;
-    targetCrosshair.material.color.setHex(off ? 0xff3333 : 0x33ff33);   // red when the aim point itself is off target
   }
 
   function aimAt(clientX, clientY) {
@@ -1301,7 +1306,6 @@
       if (aimPower > 1) aimPower = 0;   // big → tiny, then starts over
       var er = errorRadiusFor(aimPower);
       errorCircle.scale.set(er / 0.1, er / 0.1, 1);
-      errorCircle.material.color.setHex(aimPower < 0.4 ? 0xff3333 : aimPower < 0.75 ? 0xffff33 : 0x33ff33);
     }
     // the scoring chance, live: the best it could be while aiming, the real one while powering up
     if (state === STATE.AIMING) showOdds(shotOdds(targetCrosshair.position.x, targetCrosshair.position.y, 1), true);
