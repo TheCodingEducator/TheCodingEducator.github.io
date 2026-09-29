@@ -147,7 +147,7 @@ var biomeTransitionY = 500, currentScoreMilestone = 0;
 
 // Road details and signs
 var roadDecorations = [], spawnSignNext = false;
-var signMessages = [tl("KEEP\nIT UP!", "¡SIGUE\nASÍ!"), tl("MATH\nRULES!", "¡VIVAN LAS\nMATES!"), tl("GREAT\nJOB!", "¡BUEN\nTRABAJO!"), tl("YOU GOT\nTHIS!", "¡TÚ\nPUEDES!"), tl("KEEP\nGOING", "¡NO TE\nDETENGAS!"), tl("AMAZING", "¡INCREÍBLE!"), tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!"), tl("YOU LOVE\nMATH!", "¡AMAS LAS\nMATES!"), "Mr. Hardy\n= GOAT!", tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")];
+var signMessages = [tl("KEEP\nIT UP!", "¡SIGUE\nASÍ!"), tl("MATH\nRULES!", "¡VIVAN LAS\nMATES!"), tl("GREAT\nJOB!", "¡BUEN\nTRABAJO!"), tl("YOU GOT\nTHIS!", "¡TÚ\nPUEDES!"), tl("KEEP\nGOING", "¡NO TE\nDETENGAS!"), tl("AMAZING", "¡INCREÍBLE!"), tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!"), tl("YOU LOVE\nMATH!", "¡AMAS LAS\nMATES!"), "Mr. H\n= GOAT!", tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")];
 var lastSignMessage = "", lastPickedAnswer = "", lastQuestionString = "", pauseTimer = 0;
 
 var skillStates = [false, false, false, false, false, false], showSkillError = false;   // students pick the skills they want to practice
@@ -753,9 +753,10 @@ function getMathVal(val) {
 // combinations (e.g. 9^5). Hard mode still applies its usual negative-base
 // (in parens) / negative-result (no parens) treatment on top of whichever
 // pair gets picked, same as before.
+// (0^0, 1^0 and 0^1 are left out: they don't have three different wrong answers that are real mistakes.)
 var EVAL_POWER_PAIRS = [
-  [0,0],[1,0],[2,0],[3,0],[4,0],
-  [0,1],[0,2],[0,3],[0,4],
+  [2,0],[3,0],[4,0],
+  [0,2],[0,3],[0,4],
   [1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],
   [10,3],[10,4],
   [1,3],[2,3],[3,3],[4,3],[5,3]
@@ -856,19 +857,37 @@ function resetQuestion() {
   if (answerFormat === "normal") { answer = Math.round(answer * 100) / 100; }
   var correctNumericValue = (answerFormat === "normal") ? answer : Math.pow(currentBase, currentExp);
 
-  if (gameMode === "hard") {
-    if (answerFormat === "normal") {
-      trickPool.push(answer * -1); trickPool.push(currentBase * currentExp); trickPool.push((currentBase * currentExp) * -1);
-      // Powers of ten specifically invite an "off by one zero" mistake -
-      // add both directions (100 -> 10 or 1000) as extra common-mistake
-      // candidates. They join the pool above rather than replacing it, so
-      // which 2 of these ~5 candidates actually get used as wrong answers
-      // still varies question to question instead of being the same pair
-      // every time.
-      if (currentBase === 10) { trickPool.push(Math.pow(10, currentExp - 1)); trickPool.push(Math.pow(10, currentExp + 1)); }
-    }
-    else if (answerFormat === "exp_fraction") { trickPool.push("-" + currentBase + formatExponent(currentExp)); trickPool.push("-1\n—\n" + currentBase + formatExponent(currentExp));
-      var fakeDenom = currentBase * currentExp; if (fakeDenom === correctNumericValue) fakeDenom += (currentBase > 2 ? -1 : 1); trickPool.push("1\n—\n" + fakeDenom); }
+  // Every wrong answer is a real student mistake, never a random number. Each question type lists its classic mistakes
+  // here, and the wrong answer choices below are picked only from this list.
+  if (answerFormat === "normal") {
+    var mb = currentBase, me = currentExp, negAns = answer < 0;
+    var mistakes = [
+      mb * me,                              // multiplied the base by the exponent (3^4 -> 12)
+      mb + me,                              // added them (3^4 -> 7)
+      Math.pow(me, mb),                     // swapped base and exponent (3^4 -> 4^3 = 64)
+      Math.pow(mb, me + 1),                 // one factor too many (3^4 -> 3^5)
+      me >= 1 ? Math.pow(mb, me - 1) : NaN, // one factor too few (3^4 -> 3^3)
+      mb,                                   // ignored the exponent (3^4 -> 3; 5^0 -> 5)
+      me                                    // wrote the exponent (0^3 -> 3)
+    ];
+    if (negAns) mistakes = mistakes.map(function (v) { return -v; });   // negative results: the same mistakes, sign kept
+    if (gameMode === "hard" && answer !== 0) mistakes.push(-answer);     // got the sign wrong
+    mistakes.forEach(function (v) {
+      if (isFinite(v) && Math.round(v) === v && v !== answer && Math.abs(v) <= 100000 && trickPool.indexOf(v) < 0) trickPool.push(v);
+    });
+  }
+  else if (answerFormat === "exp_fraction") {
+    var fb = currentBase, fe = currentExp;
+    trickPool.push("-" + fb + formatExponent(fe));                // made it negative instead of a fraction (2^-3 -> -2^3)
+    trickPool.push(fb + formatExponent(fe));                      // ignored the negative sign (2^-3 -> 2^3)
+    trickPool.push("-1\n—\n" + fb + formatExponent(fe));          // a fraction, but negative
+    if (fb * fe !== Math.pow(fb, fe)) trickPool.push("1\n—\n" + (fb * fe));   // multiplied base by exponent (2^-3 -> 1/6)
+  }
+  else if (answerFormat === "string_power" && currentOp === 0) {
+    trickPool.push((currentBase * currentBase) + formatExponent(trueExp));     // multiplied the bases too (2^3 · 2^4 -> 4^7)
+  }
+  else if (answerFormat === "string_power" && currentOp === 1) {
+    trickPool.push(1 + formatExponent(trueExp));                             // divided the bases too (2^6 ÷ 2^2 -> 1^4)
   }
 
   var cLane = randomNumber(0, 2);
@@ -907,7 +926,7 @@ function resetQuestion() {
 
         while (!isUnique && attempts < 100) {
           attempts++;
-          if ((gameMode === "hard" || answerFormat === "string_power") && trickPool.length > 0 && attempts < 30) { wrongVal = trickPool[randomNumber(0, trickPool.length - 1)]; }
+          if (trickPool.length > 0 && attempts < 60) { wrongVal = trickPool[randomNumber(0, trickPool.length - 1)]; }   // a real mistake
           else {
             if (answerFormat === "exp_fraction") { var wBase = currentBase + randomNumber(-2, 2); if (wBase < 2) wBase = 2; var wExp = currentExp + randomNumber(-1, 2); if (wExp < 1) wExp = 1; wrongVal = "1\n—\n" + wBase + formatExponent(wExp); }
             else if (answerFormat === "string_power") { var rExp = trueExp + randomNumber(-6, 6); if (rExp === trueExp) rExp += 2; wrongVal = currentBase + formatExponent(rExp); }
@@ -1425,7 +1444,7 @@ function playGame(isFrozen) {
         fill(signPostColor); noStroke(); rect(finalTreeX - 3, tree.y, 6, 40);
         fill(signBoardColor); stroke(signStrokeColor); strokeWeight(2);
         rect(finalTreeX - 35, tree.y - 30, 70, 40); noStroke(); fill(signTextColor); textAlign(CENTER, CENTER);
-        if (tree.signText === tl("BRILLIANT", "BRILLANTE") || tree.signText === tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!") || tree.signText === tl("AMAZING", "¡INCREÍBLE!") || tree.signText === "Mr. Hardy\n= GOAT!" || tree.signText === tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")) textSize(11);
+        if (tree.signText === tl("BRILLIANT", "BRILLANTE") || tree.signText === tl("YOU'RE\nAWESOME", "¡ERES\nGENIAL!") || tree.signText === tl("AMAZING", "¡INCREÍBLE!") || tree.signText === "Mr. H\n= GOAT!" || tree.signText === tl("EXPONENT\nEXPERT!", "¡GENIO DE\nEXPONENTES!")) textSize(11);
         else if (tree.signText === tl("YOU GOT\nTHIS!", "¡TÚ\nPUEDES!") || tree.signText === tl("YOU LOVE\nMATH!", "¡AMAS LAS\nMATES!")) textSize(12); else textSize(14);
         textLeading(15); textStyle(BOLD);
         var signLines = tree.signText.split('\n');
