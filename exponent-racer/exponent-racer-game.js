@@ -1059,6 +1059,26 @@ function drawRewindEffect() {
   if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
 }
 
+// Two cars touch when they are side by side within a car's width and closer than a truck's length plus a small gap.
+// The one further up the road (smaller y) is moved back behind the other; repeated until no two cars touch.
+function separateObstacles() {
+  var GAP_X = 34, GAP_Y = 72;
+  for (var pass = 0; pass < 4; pass++) {
+    var moved = false;
+    for (var i = 0; i < obstacles.length; i++) {
+      for (var j = i + 1; j < obstacles.length; j++) {
+        var a = obstacles.get(i), b = obstacles.get(j);
+        if (Math.abs(a.x - b.x) < GAP_X && Math.abs(a.y - b.y) < GAP_Y) {
+          var upper = a.y < b.y ? a : b, lower = upper === a ? b : a;
+          upper.y = lower.y - GAP_Y;
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+}
+
 function spawnObstacle(x, y, isMerging) {
   var startX = x;
   if (isMerging) { if (x === 128) startX = 40; else if (x === 272) startX = 360; else startX = randomNumber(0, 1) === 0 ? 40 : 360; }
@@ -1558,6 +1578,10 @@ if (startSequencePhase > 0) {
   }
 
   var globalBlinkState = (Math.floor(frameCounter / 10) % 2 === 0);
+
+  // Cars never overlap: new question cars, cars merging in from the edge and cars changing lanes can all end up on top
+  // of another one, so any two cars that touch are separated by moving the one further up the road back.
+  if (!isFrozen) separateObstacles();
 
   for (var m = obstacles.length - 1; m >= 0; m--) {
     var obs = obstacles.get(m);
