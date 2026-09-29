@@ -1503,18 +1503,20 @@
   var kAct = 'ready', kLastAct = 'ready', kActT = 0, kActDur = 1.5, kFrom = 0, kTo = 0;
 
   function pickKeeperAct() {
-    var acts = ['sway', 'shuffle', 'hops', 'clap', 'shuffle', 'hops'];
+    var acts = ['sway', 'shuffle', 'hops', 'clap', 'squat', 'hang', 'shuffle', 'hops', 'squat'];
     if (kLastAct !== 'ready') { kAct = 'ready'; kActDur = 2.5 + Math.random() * 2; }   // a pause between moves (2.5 to 4.5 s)
     else {
       do { kAct = acts[Math.floor(Math.random() * acts.length)]; } while (kAct === kLastMove);
       kLastMove = kAct;
-      kActDur = { sway: 2.2, shuffle: 0.8, hops: 0.95, clap: 0.9 }[kAct];
+      kActDur = { sway: 2.2, shuffle: 0.8, hops: 0.95, clap: 0.9, squat: 2.0, hang: 2.8 }[kAct];
       kFrom = 0;   // every move starts and ends in the center of the goal line
       kTo = kAct === 'shuffle' ? (Math.random() < 0.5 ? -1 : 1) * 0.45 : 0;   // how far out a shuffle goes
     }
     kLastAct = kAct; kActT = 0;
   }
   var kLastMove = '';
+  var HANG_LIFT = 0.23;   // how high he jumps so both gloves reach the crossbar
+  function smooth01(t) { return t * t * (3 - 2 * t); }
 
   function keeperIdle(delta) {
     var time = clock.elapsedTime, fl = kLArm.userData.fore, fr = kRArm.userData.fore;
@@ -1523,6 +1525,13 @@
     var x = keeperSway, lift = 0, lean = 0, bodyY = 1.0 + Math.sin(time * 2.2) * 0.006;
     var lx = -0.12, lz = -0.1, rx = -0.12, rz = 0.1, lk = 0.18, rk = 0.18;       // legs: hip swing / splay, and knee bend
     var ax = 0.35, alz = -1.2, arz = 1.2, af = -0.25;                              // arms
+    var hangZ = 0, loose = 1;
+    // bend both knees, dropping the hips just enough that the boots stay on the grass; the chest stays upright
+    function bendKnees(bend) {
+      lx = rx = -0.12 - bend;                             // thighs swing forward...
+      lk = rk = 0.18 + bend * 2;                          // ...and the shins angle back, so the boots stay under him
+      bodyY -= 0.45 * (Math.cos(0.12) - Math.cos(0.12 + bend)) + 0.475 * (Math.cos(0.06) - Math.cos(0.06 + bend));
+    }
 
     if (!keeperDiving) {
       kActT += (delta || 0);
@@ -1556,6 +1565,29 @@
         k = Math.sin(u * Math.PI);                        // arms come in, two claps, back out
         var clap = Math.abs(Math.sin(u * Math.PI * 2));
         ax = 0.35 - k * 1.25; alz = -1.2 + k * (0.95 + clap * 0.15); arz = -alz; af = -0.25 - k * 0.35;
+      } else if (kAct === 'squat') {
+        // two slow knee bends: the hips sink straight down while the chest stays upright (the torso never tips forward)
+        k = Math.sin(u * Math.PI * 2); k = k * k;         // down and up, twice
+        bendKnees(k * 0.6);
+        ax = 0.35 + k * 0.35; af = -0.25 - k * 0.3;       // gloves come forward for balance
+      } else if (kAct === 'hang') {
+        // a little dip, a jump back onto the line, both gloves on the crossbar for a moment, then drop and land softly
+        var reach = 0;                                    // 0 = standing, 1 = hanging from the bar
+        if (u < 0.12) bendKnees(Math.sin(u / 0.12 * Math.PI) * 0.35);
+        else if (u < 0.24) reach = smooth01((u - 0.12) / 0.12);
+        else if (u < 0.76) reach = 1;
+        else if (u < 0.88) reach = 1 - smooth01((u - 0.76) / 0.12);
+        else bendKnees(Math.sin((u - 0.88) / 0.12 * Math.PI) * 0.4);
+        x = 0;
+        lift = reach * HANG_LIFT;
+        hangZ = -reach * 0.44;                            // from his spot 0.5 m out, back under the bar
+        alz = -1.2 - reach * 1.7; arz = -alz;             // arms straight up to the bar...
+        ax = 0.35 - reach * 0.43; af = -0.25 + reach * 0.25;   // ...elbows straight
+        if (u >= 0.24 && u < 0.76) {                      // legs swing gently while he hangs
+          var sw = Math.sin((u - 0.24) / 0.52 * Math.PI * 2) * 0.2;
+          lx = rx = -0.12 + sw; lk = rk = 0.35; lz = -0.04; rz = 0.04;
+        }
+        loose = 1 - reach;                                // hold still on the bar (no wandering hands)
       }
       keeperSway = x;
     }
@@ -1563,12 +1595,12 @@
     // Loose, natural small movements on top of whatever he's doing (like the referee): breathing, shifting his weight,
     // a slight body sway, looking around, and loose arms with the gloves flexing. Small, and only for show.
     var w = Math.sin(time * 0.6), w2 = Math.sin(time * 1.3 + 0.7);
-    bodyY += Math.sin(time * 1.9) * 0.008;                         // breathing
-    lean += w * 0.03;                                              // weight moves from foot to foot...
-    lz += w * 0.025; rz += w * 0.025; lk += Math.max(0, w) * 0.08; rk += Math.max(0, -w) * 0.08;   // ...one knee softens
-    ax += w2 * 0.06;                                               // loose arms
-    alz += Math.sin(time * 0.9) * 0.07; arz -= Math.sin(time * 0.9 + 1.4) * 0.07;
-    var flex = Math.sin(time * 1.7) * 0.1;                         // gloves flexing
+    bodyY += Math.sin(time * 1.9) * 0.008 * loose;                      // breathing
+    lean += w * 0.03 * loose;                                        // weight moves from foot to foot...
+    lz += w * 0.025 * loose; rz += w * 0.025 * loose; lk += Math.max(0, w) * 0.08 * loose; rk += Math.max(0, -w) * 0.08 * loose;   // ...one knee softens
+    ax += w2 * 0.06 * loose;                                         // loose arms
+    alz += Math.sin(time * 0.9) * 0.07 * loose; arz -= Math.sin(time * 0.9 + 1.4) * 0.07 * loose;
+    var flex = Math.sin(time * 1.7) * 0.1 * loose;                         // gloves flexing
     kHead.rotation.set(0.04 + Math.sin(time * 0.8) * 0.03, Math.sin(time * 0.45 + 1) * 0.3, 0);   // looking around
 
     kTorso.position.y = bodyY;
@@ -1580,6 +1612,7 @@
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.position.x += x;
     keeperGroup.position.y += lift;
+    keeperGroup.position.z += hangZ;
     keeperGroup.quaternion.copy(keeperBody.quaternion);
   }
 
