@@ -5,7 +5,7 @@
   var T = window.tl || function (en) { return en; };
 
   // ---------- Settings and saved stats (localStorage, keys start with penaltyshootout_) ----------
-  var KICKS = 5;
+  var KICKS = 5, MAX_DIGITS = 7;   // answers go up to 1,000,000 (1000²)
   var SKILLS = [
     { id: 'sqrt', name: T('Square Roots', 'Raíces cuadradas'), ex: '√81 = ?' },
     { id: 'square', name: T('Squaring Numbers', 'Elevar al cuadrado'), ex: '9² = ?' },
@@ -20,7 +20,6 @@
 
   var skillOn = load('skills', [true, false, false, false, false]);
   if (!Array.isArray(skillOn) || skillOn.length !== SKILLS.length) skillOn = [true, false, false, false, false];
-  var level = load('level', 'rookie') === 'pro' ? 'pro' : 'rookie';
 
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };
@@ -496,6 +495,8 @@
 
   // ---------- Questions ----------
   function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }   // 1000000 → 1,000,000
   // A textbook radical: the sign is drawn as a vector shape and its bar runs over the whole number. A hidden √ or ∛ keeps
   // the text readable for screen readers.
   function rootHTML(n, index) {
@@ -508,35 +509,39 @@
   var crad = function (n) { return rootHTML(n, 3); };
   // turns √81 and ∛64 in a line of text into drawn radicals, and 9² into 9<sup>2</sup>
   function roots(s) {
-    return String(s).replace(/√(\d+)/g, function (m, n) { return rad(n); }).replace(/∛(\d+)/g, function (m, n) { return crad(n); })
+    return String(s).replace(/√([\d,]+\d|\d)/g, function (m, n) { return rad(n); }).replace(/∛([\d,]+\d|\d)/g, function (m, n) { return crad(n); })
       .replace(/(\d)²/g, '$1<sup>2</sup>').replace(/(\d)³/g, '$1<sup>3</sup>');
   }
 
   function makeQuestion() {
     var active = [];
     for (var i = 0; i < SKILLS.length; i++) if (skillOn[i]) active.push(SKILLS[i].id);
-    var pro = level === 'pro', maxRoot = pro ? 15 : 10;
+    var MAX_SQ = 13, MAX_CUBE = 6;   // one level for everyone: squares and square roots to 13, cube roots to 6
+    // now and then, tens and powers of ten: √100, √10,000, √1,000,000, 20², ∛1,000, ∛8,000, ∛1,000,000...
+    var bigSq = function () { return pick([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 1000]); };
+    var bigCube = function () { return pick([10, 20, 30, 100]); };
+    var big = function () { return Math.random() < 0.25; };
     for (var tries = 0; tries < 40; tries++) {
       var skill = active[Math.floor(Math.random() * active.length)], q = { skill: skill }, r, a, n;
       if (skill === 'sqrt') {
-        r = rnd(pro ? 4 : 2, maxRoot); q.r = r; q.answer = r;
-        q.html = T('What is ', '¿Cuánto es ') + rad(r * r) + T('?', '?');
-        q.plain = '√' + (r * r) + ' = ?';
+        r = big() ? bigSq() : rnd(1, MAX_SQ); q.r = r; q.answer = r;
+        q.html = T('What is ', '¿Cuánto es ') + rad(fmt(r * r)) + T('?', '?');
+        q.plain = '√' + fmt(r * r) + ' = ?';
       } else if (skill === 'square') {
-        r = rnd(pro ? 4 : 2, maxRoot); q.r = r; q.answer = r * r;
-        q.html = T('What is ', '¿Cuánto es ') + r + '<sup>2</sup>?';
-        q.plain = r + '² = ?';
+        r = big() ? bigSq() : rnd(1, MAX_SQ); q.r = r; q.answer = r * r;
+        q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>2</sup>?';
+        q.plain = fmt(r) + '² = ?';
       } else if (skill === 'area') {
-        r = rnd(pro ? 4 : 2, maxRoot); q.r = r; q.answer = r;
-        q.html = '<span class="qsm">' + T('A square has an area of <b>' + r * r + '</b> square units.<br>How long is each side?',
-          'Un cuadrado tiene un área de <b>' + r * r + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
-        q.plain = T('A square with area ' + r * r + ' has sides of ?', 'Un cuadrado de área ' + r * r + ' tiene lados de ?');
+        r = big() ? pick([10, 20, 30, 50, 100]) : rnd(1, MAX_SQ); q.r = r; q.answer = r;
+        q.html = '<span class="qsm">' + T('A square has an area of <b>' + fmt(r * r) + '</b> square units.<br>How long is each side?',
+          'Un cuadrado tiene un área de <b>' + fmt(r * r) + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
+        q.plain = T('A square with area ' + fmt(r * r) + ' has sides of ?', 'Un cuadrado de área ' + fmt(r * r) + ' tiene lados de ?');
       } else if (skill === 'estimate') {
         // a square root (or, about a third of the time, a cube root) that isn't a whole number:
         // the student finds BOTH whole numbers it's between
         q.cube = Math.random() < 0.35;
         var pw = q.cube ? 3 : 2;
-        a = q.cube ? rnd(pro ? 2 : 1, pro ? 9 : 4) : rnd(pro ? 3 : 1, maxRoot - 1);
+        a = q.cube ? rnd(1, MAX_CUBE - 1) : rnd(1, MAX_SQ - 1);   // so the larger whole number is at most 6 or 13
         q.lo = Math.pow(a, pw); q.hi = Math.pow(a + 1, pw);
         n = rnd(q.lo + 1, q.hi - 1);
         q.a = a; q.n = n; q.two = true; q.answer = [a, a + 1];
@@ -545,9 +550,9 @@
         q.plain = (q.cube ? '∛' : '√') + n + T(' is between ', ' está entre ') + '?' + T(' and ', ' y ') + '?';
         q.sub = T('Type the two whole numbers it is between.', 'Escribe los dos números enteros entre los que está.');
       } else {
-        r = rnd(pro ? 3 : 2, pro ? 10 : 5); q.r = r; q.answer = r;
-        q.html = T('What is ', '¿Cuánto es ') + crad(r * r * r) + '?';
-        q.plain = '∛' + (r * r * r) + ' = ?';
+        r = big() ? bigCube() : rnd(1, MAX_CUBE); q.r = r; q.answer = r;
+        q.html = T('What is ', '¿Cuánto es ') + crad(fmt(r * r * r)) + '?';
+        q.plain = '∛' + fmt(r * r * r) + ' = ?';
       }
       q.key = q.plain;
       if (!usedQ[q.key] && q.key !== lastKey) { usedQ[q.key] = true; lastKey = q.key; return q; }
@@ -581,7 +586,7 @@
     qIn2.classList.toggle('active', el === qIn2);
   }
   function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
-  function answerText(ans) { return Array.isArray(ans) ? ans[0] + T(' and ', ' y ') + ans[1] : String(ans); }
+  function answerText(ans) { return Array.isArray(ans) ? ans[0] + T(' and ', ' y ') + ans[1] : fmt(ans); }
 
   function submitAnswer() {
     if (state !== STATE.MATH) return;
@@ -610,15 +615,20 @@
   }
 
   // ---------- Wrong answer: show why ----------
-  function gridHTML(r, px, layers) {
-    var cells = '';
-    for (var i = 0; i < r * r; i++) cells += '<i style="animation-delay:' + Math.round(i * 1000 / (r * r)) + 'ms"></i>';
-    return '<div class="grid" style="grid-template-columns:repeat(' + r + ',' + px + 'px);grid-template-rows:repeat(' + r + ',' + px + 'px)">' + cells + '</div>' +
-      '<div class="gcap">' + r + ' × ' + r + (layers ? T(' squares in each layer, ', ' cuadrados en cada capa, ') + r + T(' layers', ' capas') : '') + '</div>';
+  // Big sides are drawn in blocks: a side of 30 is 3 blocks of 10, a side of 1000 is 10 blocks of 100
+  function blocks(r) { if (r <= 13) return { n: r, b: 1 }; var b = r >= 100 ? r / 10 : 10; return { n: r / b, b: b }; }
+
+  function gridHTML(r, sizePx) {
+    var k = blocks(r), n = k.n, px = Math.max(6, Math.floor(sizePx / n)), cells = '';
+    for (var i = 0; i < n * n; i++) cells += '<i style="animation-delay:' + Math.round(i * 1000 / (n * n)) + 'ms"></i>';
+    return '<div class="grid" style="grid-template-columns:repeat(' + n + ',' + px + 'px);grid-template-rows:repeat(' + n + ',' + px + 'px)">' + cells + '</div>' +
+      '<div class="gcap">' + fmt(r) + ' × ' + fmt(r) +
+      (k.b > 1 ? T('<br>each square is ', '<br>cada cuadrado es ') + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b) : '') + '</div>';
   }
 
   // A cube of r × r × r little cubes, drawn at an angle so its top and two sides show
-  function cubeHTML(r, sizePx) {
+  function cubeHTML(rTrue, sizePx) {
+    var k = blocks(rTrue), r = k.n;
     var s = sizePx / (r * 1.8), c30 = Math.cos(Math.PI / 6), s30 = 0.5;
     var P = function (x, y, z) { return [(x - z) * c30 * s, (x + z) * s30 * s - y * s]; };
     var pts = [], faces = [
@@ -640,8 +650,9 @@
     var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
     var minX = Math.min.apply(null, xs), minY = Math.min.apply(null, ys), w = Math.max.apply(null, xs) - minX, h = Math.max.apply(null, ys) - minY;
     return '<svg class="cube" width="' + Math.round(w + 4) + '" height="' + Math.round(h + 4) + '" viewBox="' + (minX - 2) + ' ' + (minY - 2) + ' ' + (w + 4) + ' ' + (h + 4) + '" role="img" aria-label="' +
-      T('A cube made of ', 'Un cubo hecho de ') + r * r * r + T(' little cubes', ' cubitos') + '">' + svg + '</svg>' +
-      '<div class="gcap">' + r + ' × ' + r + ' × ' + r + ' = ' + r * r * r + T(' little cubes', ' cubitos') + '</div>';
+      T('A cube made of ', 'Un cubo hecho de ') + fmt(rTrue * rTrue * rTrue) + T(' little cubes', ' cubitos') + '">' + svg + '</svg>' +
+      '<div class="gcap">' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' = ' + fmt(rTrue * rTrue * rTrue) + T(' little cubes', ' cubitos') +
+      (k.b > 1 ? T('<br>each block is ', '<br>cada bloque es ') + k.b + ' × ' + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b * k.b) : '') + '</div>';
   }
 
   function showExplanation(given) {
@@ -649,24 +660,23 @@
     var q = question, r = q.r, body = '', lines = [];
     $('exp-you').innerHTML = T('You answered <b>' + given + '</b>. The answer is <b class="ok">' + answerText(q.answer) + '</b>.',
       'Respondiste <b>' + given + '</b>. La respuesta es <b class="ok">' + answerText(q.answer) + '</b>.');
-    var px = Math.max(6, Math.floor(Math.min(200, app.clientHeight * 0.3) / (r || 1)));
 
     if (q.skill === 'sqrt' || q.skill === 'square' || q.skill === 'area') {
-      body = gridHTML(r, px, false);
+      body = gridHTML(r, Math.min(200, app.clientHeight * 0.3));
       if (q.skill === 'sqrt') {
         lines.push(T('A square root is the side length of a square with that area.', 'La raíz cuadrada es el lado de un cuadrado con esa área.'));
-        lines.push(r + ' × ' + r + ' = ' + r * r + T(', so ', ', entonces ') + '√' + r * r + ' = <b class="ok">' + r + '</b>');
+        lines.push(r + ' × ' + r + ' = ' + fmt(r * r) + T(', so ', ', entonces ') + '√' + fmt(r * r) + ' = <b class="ok">' + r + '</b>');
       } else if (q.skill === 'square') {
         lines.push(r + '<sup>2</sup>' + T(' means ', ' significa ') + r + ' × ' + r + T(': a square with sides of ', ': un cuadrado con lados de ') + r + '.');
-        lines.push(r + ' × ' + r + ' = <b class="ok">' + r * r + '</b>' + T(' squares', ' cuadrados'));
+        lines.push(r + ' × ' + r + ' = <b class="ok">' + fmt(r * r) + '</b>' + T(' squares', ' cuadrados'));
       } else {
-        lines.push(T('Side × side = area. Which number times itself makes ', 'Lado × lado = área. ¿Qué número por sí mismo da ') + r * r + '?');
-        lines.push(r + ' × ' + r + ' = ' + r * r + T(', so each side is ', ', así que cada lado mide ') + '<b class="ok">' + r + '</b>');
+        lines.push(T('Side × side = area. Which number times itself makes ', 'Lado × lado = área. ¿Qué número por sí mismo da ') + fmt(r * r) + '?');
+        lines.push(r + ' × ' + r + ' = ' + fmt(r * r) + T(', so each side is ', ', así que cada lado mide ') + '<b class="ok">' + r + '</b>');
       }
     } else if (q.skill === 'cube') {
       body = cubeHTML(r, Math.min(220, app.clientHeight * 0.34));
-      lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + r * r * r + '?');
-      lines.push(r + ' × ' + r + ' × ' + r + ' = ' + r * r * r + T(', so ', ', entonces ') + '∛' + r * r * r + ' = <b class="ok">' + r + '</b>');
+      lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + '?');
+      lines.push(r + ' × ' + r + ' × ' + r + ' = ' + fmt(r * r * r) + T(', so ', ', entonces ') + '∛' + fmt(r * r * r) + ' = <b class="ok">' + r + '</b>');
     } else {
       var a = q.a, b = a + 1, lo = q.lo, hi = q.hi, pct = Math.round((q.n - lo) / (hi - lo) * 100);
       var pw = q.cube ? '³' : '²', times = function (x) { return x + ' × ' + x + (q.cube ? ' × ' + x : ''); };
@@ -795,7 +805,7 @@
     var dx = Math.min(1, Math.abs(x) / (GOAL_WIDTH / 2)), dy = Math.min(1, y / GOAL_HEIGHT);
     var place = 0.12 + 0.62 * Math.pow(dx, 1.3) + 0.12 * dy + 0.12 * dx * dy;
     var strike = 0.5 + 0.5 * power;
-    var p = place * strike * (level === 'pro' ? 0.92 : 1);   // Pro keepers are a little sharper
+    var p = place * strike;
     return Math.max(0.02, Math.min(0.97, p));
   }
 
@@ -812,14 +822,11 @@
   function showOdds(o, best) {
     var pct = function (v) { return Math.round(v * 100) + '%'; };
     var total = Math.round(o.total * 100);
-    var key = (best ? 'b' : 'c') + total + pct(o.on) + pct(o.beat);
+    var key = (best ? 'b' : 'c') + total;
     if (key === lastOdds && !chance.hidden) return;   // only touch the page when something changed
     lastOdds = key;
     $('chance-lbl').textContent = best ? T('BEST CHANCE HERE', 'MEJOR PROBABILIDAD AQUÍ') : T('SCORING CHANCE', 'PROBABILIDAD DE GOL');
     $('chance-n').textContent = total;
-    $('chance-sub').innerHTML = best
-      ? T('if you let go when the circle is smallest', 'si sueltas cuando el círculo sea más pequeño')
-      : T('on target ', 'a puerta ') + '<b>' + pct(o.on) + '</b> × ' + T('beats the keeper ', 'supera al portero ') + '<b>' + pct(o.beat) + '</b> = <b>' + total + '%</b>';
     chance.className = total > 65 ? 'good' : total > 35 ? 'mid' : 'bad';
     chance.hidden = false;
   }
@@ -834,6 +841,7 @@
     catching = standingCatch = caught = false;
     var inGoal = !isAutoMiss && onTarget(targetX, targetY);
     var goesIn = inGoal && Math.random() < beatChance(targetX, targetY, aimPower);
+    hitPost = false;
 
     if (inGoal && !goesIn) {
       // a save: the keeper gets there just as the ball does. A shot right at the keeper, or a weak one, is caught.
@@ -932,6 +940,7 @@
       if (ballBody.velocity.z < 0) ballBody.velocity.set(ballBody.velocity.x * 0.2, -1, 2);   // a save can't deflect into the net
     }
     if (state !== STATE.RESULT) return;
+    if (other.shapes[0] instanceof CANNON.Cylinder) hitPost = true;
     var now = performance.now();
     if (now - lastHitTime > 500 && other.shapes[0] instanceof CANNON.Cylinder) { playSound('woodwork'); lastHitTime = now; }
   }
@@ -948,17 +957,26 @@
     var stopped = v.lengthSquared() < 2 && Math.abs(v.z) < 1;
     var away = v.z > 0.5 && p.z > -0.5 && p.z < 8;
     var gone = Math.abs(p.x) > 30 || p.z < -15 || p.y < -1;
-    if (wide || stopped || away || gone) kickResult(hitKeeper ? 'saved' : 'miss');
+    if (!(wide || stopped || away || gone)) return;
+    // say exactly what happened, so a ball that hits the outside of the side netting isn't mistaken for a goal
+    if (hitKeeper) kickResult('saved');
+    else if (hitPost) kickResult('post');
+    else if (wide && !underBar && inPosts) kickResult('over');
+    else if (wide) kickResult(p.y > GOAL_HEIGHT && Math.abs(p.x) < GOAL_WIDTH / 2 + 0.5 ? 'over' : 'wide');
+    else kickResult(Math.abs(p.x) > GOAL_WIDTH / 2 ? 'wide' : 'miss');   // e.g. stopped against the outside of the netting
   }
+  var hitPost = false;
 
   function kickResult(kind) {
     resultDecided = true;
     state = STATE.RESULT;
     results[kickNum] = kind;
     if (kind === 'goal') { goals++; playSound('cheer'); } else playSound('groan');
-    msg.textContent = kind === 'goal' ? T('GOAL!', '¡GOL!') : kind === 'saved' ? T('SAVED', '¡ATAJADA!') :
-      kind === 'caught' ? T('CAUGHT!', '¡ATRAPADA!') : T('MISS', 'FUERA');
-    msg.className = kind === 'caught' ? 'saved' : kind;
+    msg.textContent = {
+      goal: T('GOAL!', '¡GOL!'), saved: T('SAVED', '¡ATAJADA!'), caught: T('CAUGHT!', '¡ATRAPADA!'),
+      post: T('OFF THE POST', '¡AL PALO!'), wide: T('WIDE', 'DESVIADO'), over: T('OVER THE BAR', 'POR ENCIMA')
+    }[kind] || T('MISS', 'FUERA');
+    msg.className = kind === 'goal' ? 'goal' : kind === 'saved' || kind === 'caught' ? 'saved' : 'miss';
     msg.hidden = false;
     kickNum++;
     drawHud();
@@ -1033,7 +1051,6 @@
     if (newBest) save('best', goals);
     if (goals === KICKS) save('perfect', load('perfect', 0) + 1);
     if (rightCount === KICKS) save('allright', load('allright', 0) + 1);
-    if (level === 'pro' && goals > load('pro_best', 0)) save('pro_best', goals);
 
     $('over-title').textContent = goals >= 4 ? T('CHAMPION!', '¡CAMPEÓN!') : goals >= 2 ? T('FULL TIME', 'FINAL DEL PARTIDO') : T('KEEP PRACTICING', 'SIGUE PRACTICANDO');
     $('over-goals').textContent = goals + ' / ' + KICKS;
@@ -1044,7 +1061,7 @@
     if (missed.length) {
       list.innerHTML = '<h3>' + T('Questions to review', 'Preguntas para repasar') + '</h3>' + missed.map(function (m) {
         var line = m.q;
-        [].concat(m.ans).forEach(function (x) { line = line.replace('?', '<b class="ok">' + x + '</b>'); });   // fill in each blank
+        [].concat(m.ans).forEach(function (x) { line = line.replace('?', '<b class="ok">' + fmt(x) + '</b>'); });   // fill in each blank
         return '<li><span class="mq">' + roots(line) + '</span><span class="you">' + T('you said ', 'dijiste ') + m.you + '</span></li>';
       }).join('');
       list.hidden = false;
@@ -1082,16 +1099,6 @@
         playSound('blip');
       });
       list.appendChild(b);
-    });
-    var lv = document.querySelectorAll('#ps .seg button');
-    Array.prototype.forEach.call(lv, function (b) {
-      b.setAttribute('aria-pressed', String(b.getAttribute('data-level') === level));
-      b.addEventListener('click', function () {
-        level = b.getAttribute('data-level');
-        save('level', level);
-        Array.prototype.forEach.call(lv, function (o) { o.setAttribute('aria-pressed', String(o === b)); });
-        playSound('blip');
-      });
     });
   }
 
@@ -1205,7 +1212,7 @@
     if (state === STATE.MATH) {
       if (go && tag !== 'BUTTON') { e.preventDefault(); submitAnswer(); return; }
       if (tag !== 'INPUT') {   // typing works even when the answer box isn't focused
-        if (/^[0-9]$/.test(e.key) && activeIn.value.length < 3) { activeIn.value += e.key; e.preventDefault(); }
+        if (/^[0-9]$/.test(e.key) && activeIn.value.length < MAX_DIGITS) { activeIn.value += e.key; e.preventDefault(); }
         else if (e.key === 'Backspace') { activeIn.value = activeIn.value.slice(0, -1); e.preventDefault(); }
       }
       return;
@@ -1218,16 +1225,14 @@
     if (state === STATE.MENU) tryStart();
     else if (state === STATE.EXPLANATION) closeExplanation();
     else if (state === STATE.OVER) startShootout();
+    else if (state === STATE.CHARGING) endCharge();   // keyboard: one press starts the power, the next press shoots
     else startCharge();
   });
-  window.addEventListener('keyup', function (e) {
-    keysDown[e.code] = false;
-    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') endCharge();
-  });
-  window.addEventListener('blur', function () { keysDown = {}; endCharge(); });
+  window.addEventListener('keyup', function (e) { keysDown[e.code] = false; });
+  window.addEventListener('blur', function () { keysDown = {}; });
 
   [qIn, qIn2].forEach(function (el) {
-    el.addEventListener('input', function () { el.value = el.value.replace(/[^0-9]/g, '').slice(0, 3); });
+    el.addEventListener('input', function () { el.value = el.value.replace(/[^0-9]/g, '').slice(0, MAX_DIGITS); });
     el.addEventListener('focus', function () { setActiveBox(el); });
     el.addEventListener('click', function () { setActiveBox(el); });   // on a phone, tap a box to fill it with the pad
   });
@@ -1237,7 +1242,7 @@
       var k = b.getAttribute('data-k');
       if (k === 'back') activeIn.value = activeIn.value.slice(0, -1);
       else if (k === 'go') submitAnswer();
-      else if (activeIn.value.length < 3) activeIn.value += k;
+      else if (activeIn.value.length < MAX_DIGITS) activeIn.value += k;
     });
   });
   $('exp-go').addEventListener('click', closeExplanation);

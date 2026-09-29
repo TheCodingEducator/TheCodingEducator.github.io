@@ -67,7 +67,7 @@
     var ps = {
       played: has('penaltyshootout_games'), games: readNum('penaltyshootout_games', 0), best: readNum('penaltyshootout_best', 0),
       goals: readNum('penaltyshootout_goals_total', 0), perfect: readNum('penaltyshootout_perfect', 0),
-      allRight: readNum('penaltyshootout_allright', 0), proBest: readNum('penaltyshootout_pro_best', 0)
+      allRight: readNum('penaltyshootout_allright', 0)
     };
     var games = [
       { key: 'lgttp', folder: 'lets-get-to-the-point', icon: '🎯', name: "Let's Get to the Point", played: lg.played,
@@ -102,7 +102,7 @@
       { key: 'penalty', folder: 'penalty-shootout', icon: '⚽', name: 'Pro Penalty Shootout', played: ps.played,
         best: ps.best > 0, coins: 0, rows: [
           ['Shootouts played', ps.games], ['Best shootout', ps.best + ' / 5 goals'], ['Total goals', ps.goals],
-          ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')], ['Best on Pro', ps.proBest + ' / 5 goals']] }
+          ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] }
     ];
     var played = games.filter(function (g) { return g.played; }).length;
     var coinsAll = lg.coins + er.coins + sb.coins;
@@ -140,7 +140,7 @@
       { game: 'penalty', icon: '🎩', name: 'Hat Trick', desc: 'Score 3+ goals in one shootout', earned: ps.best >= 3 },
       { game: 'penalty', icon: '🧠', name: 'Sharp Shooter', desc: 'Answer every question right in a shootout', earned: ps.allRight >= 1 },
       { game: 'penalty', icon: '🏆', name: 'Perfect Shootout', desc: 'Score all 5 goals', earned: ps.perfect >= 1 },
-      { game: 'penalty', icon: '⭐', name: 'Pro Striker', desc: 'Score 4+ goals on Pro', earned: ps.proBest >= 4 }
+      { game: 'penalty', icon: '⭐', name: 'Goal Machine', desc: 'Score 25 goals in total', earned: ps.goals >= 25 }
     ];
     var totals = {
       played: played, games: games.length,

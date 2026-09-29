@@ -99,10 +99,6 @@
   #ps h1 { margin: 0; font-size: clamp(46px, 11cqmin, 88px); line-height: 0.9; font-weight: 700; }
   #ps .subtitle { color: #60a5fa; font: 500 clamp(22px, 5cqmin, 38px) 'Teko', sans-serif; letter-spacing: 0.2em; margin-bottom: 6px; }
   #ps .lbl { color: var(--yellow); font-size: clamp(20px, 3.6cqmin, 26px); margin: 10px 0 4px; }
-  #ps .seg { display: inline-flex; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 4px; }
-  #ps .seg button { background: transparent; color: var(--soft); border: 0; border-radius: 999px; padding: 6px 18px; font: 700 15px 'Inter', sans-serif; cursor: pointer; }
-  #ps .seg button small { font-weight: 600; opacity: 0.75; }
-  #ps .seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
   #ps .skills { display: grid; gap: 6px; text-align: left; }
   #ps .skill { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; width: 100%; background: rgba(255,255,255,0.05); border: 2px solid transparent; border-radius: 12px; padding: 7px 12px; color: var(--ink); font: 600 clamp(14px, 2.6cqmin, 17px) 'Inter', sans-serif; cursor: pointer; text-align: left; }
   #ps .skill:hover { background: rgba(255,255,255,0.1); }
@@ -119,7 +115,7 @@
   #ps .btn.green { background: linear-gradient(90deg, var(--green-d), var(--green)); box-shadow: 0 0 24px rgba(34,197,94,0.4); }
   #ps .btn.red { background: linear-gradient(90deg, #b91c1c, var(--red)); box-shadow: 0 0 24px rgba(239,68,68,0.45); }
   #ps .btn.ghost { background: rgba(255,255,255,0.08); box-shadow: none; border: 1px solid var(--line); }
-  #ps .btn:focus-visible, #ps .skill:focus-visible, #ps .seg button:focus-visible, #ps .pad button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+  #ps .btn:focus-visible, #ps .skill:focus-visible, #ps .pad button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
   #ps .go-row { margin-top: 14px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
   /* Question */
@@ -141,7 +137,7 @@
   #ps .rt .idx::before { content: attr(data-i); }
   #ps .qsub { color: var(--soft); font-size: clamp(13px, 2.4cqmin, 16px); margin: 0 0 12px; }
   #ps .ansrow { display: flex; justify-content: center; align-items: center; gap: 12px; }
-  #ps #q-in, #ps #q-in2 { width: clamp(90px, 20cqmin, 140px); background: #1e293b; color: #fff; font: 800 clamp(30px, 7cqmin, 48px) 'Inter', sans-serif; text-align: center; padding: 4px; border: 4px solid #475569; border-radius: 16px; outline: none; }
+  #ps #q-in, #ps #q-in2 { width: clamp(110px, 30cqmin, 230px); background: #1e293b; color: #fff; font: 800 clamp(30px, 7cqmin, 48px) 'Inter', sans-serif; text-align: center; padding: 4px; border: 4px solid #475569; border-radius: 16px; outline: none; }
   #ps .ansrow.two #q-in, #ps .ansrow.two #q-in2 { width: clamp(72px, 16cqmin, 120px); }
   #ps .ansrow .and { font-weight: 800; font-size: clamp(18px, 3.6cqmin, 26px); color: var(--soft); }
   #ps #q-in:focus, #ps #q-in2:focus, #ps #q-in.active, #ps #q-in2.active { border-color: var(--yellow); }
@@ -207,7 +203,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Pro Penalty Shootout</h1>
-<p class="sr-only">A penalty shootout math game. Each shootout is 5 kicks. Answer a square root question to earn each kick; a wrong answer shows why, and that shot goes wild. Then aim at the goal with the mouse, a finger or the arrow keys, hold the mouse button, your finger or the space bar to build power, and let go when the circle is smallest. Corner shots have the best chance to score.</p>
+<p class="sr-only">A penalty shootout math game. Each shootout is 5 kicks. Answer a square root question to earn each kick; a wrong answer shows why, and that shot goes wild. Then aim at the goal with the mouse, a finger or the arrow keys, hold the mouse button or your finger to build power and let go to shoot, or press the space bar once to start the power and again to shoot, when the circle is smallest. Corner shots have the best chance to score.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -218,20 +214,15 @@
         <div class="hudbox"><span data-es="GOLES">GOALS</span> <span class="gl" id="hud-goals">0</span><span id="hud-dots" role="img"></span></div>
         <div class="hudbox" id="weather">DAY</div>
       </div>
-      <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div><div class="sub" id="chance-sub"></div></div>
+      <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div></div>
       <div id="msg" hidden aria-live="assertive"></div>
-      <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Mantén presionado (o la barra espaciadora) para cargar &middot; Suelta cuando el círculo sea más pequeño">Aim with the mouse, a finger or the arrow keys &middot; Hold down (or hold Space) to power up &middot; Let go when the circle is smallest</div>
+      <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Mantén presionado para cargar y suelta para tirar (o pulsa Espacio para cargar y otra vez para tirar) &middot; Tira cuando el círculo sea más pequeño">Aim with the mouse, a finger or the arrow keys &middot; Hold down to power up and let go to shoot (or press Space to power up, and Space again to shoot) &middot; Shoot when the circle is smallest</div>
 
       <!-- Menu: level and skills -->
       <div class="scr" id="scr-menu">
         <div class="card menu">
           <h1>PRO PENALTY</h1>
           <div class="subtitle" data-es="EDICIÓN MATEMÁTICA">MATH EDITION</div>
-          <div class="lbl" data-es="NIVEL">LEVEL</div>
-          <div class="seg" role="group" aria-label="Level" data-es-aria="Nivel">
-            <button type="button" data-level="rookie" data-es="Novato <small>1&ndash;10</small>">Rookie <small>1&ndash;10</small></button>
-            <button type="button" data-level="pro" data-es="Pro <small>1&ndash;15</small>">Pro <small>1&ndash;15</small></button>
-          </div>
           <div class="lbl" data-es="ELIGE DESTREZAS">SELECT SKILLS</div>
           <div class="skills" id="skill-list"></div>
           <p class="err" id="skill-err" hidden data-es="¡Elige al menos 1 destreza para empezar!">Select at least 1 skill to begin!</p>
@@ -247,9 +238,9 @@
           <div class="qtext" id="q-text" aria-live="polite"></div>
           <p class="qsub" id="q-sub"></p>
           <div class="ansrow" id="q-ans">
-            <input type="text" id="q-in" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="?" aria-label="Your answer" data-es-aria="Tu respuesta">
+            <input type="text" id="q-in" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="?" aria-label="Your answer" data-es-aria="Tu respuesta">
             <span class="and" id="q-and" hidden data-es="y">and</span>
-            <input type="text" id="q-in2" hidden inputmode="numeric" maxlength="3" autocomplete="off" placeholder="?" aria-label="The second number" data-es-aria="El segundo número">
+            <input type="text" id="q-in2" hidden inputmode="numeric" maxlength="7" autocomplete="off" placeholder="?" aria-label="The second number" data-es-aria="El segundo número">
             <button type="button" class="btn green" id="q-go" data-es="TIRAR">KICK</button>
           </div>
           <div class="pad" id="q-pad">
@@ -320,9 +311,9 @@
   <p>Students earn each penalty kick by answering a question about squares and roots, then aim and time their shot in a 3D stadium. A shootout is five kicks.</p>
   <ul>
     <li><strong>Five skills to choose from:</strong> square roots of perfect squares (&radic;81), squaring numbers (9&sup2;), finding the side of a square from its area, estimating square and cube roots between two whole numbers, and cube roots (&#8731;64).</li>
-    <li><strong>Two levels:</strong> Rookie uses numbers from 1 to 10 (cube roots to 5); Pro goes up to 15 (cube roots to 10), and its keeper is a little sharper.</li>
+    <li><strong>Numbers:</strong> square roots, squares and sides of squares use 1 to 13, and cube roots use 1 to 6. About one question in four uses tens and powers of ten instead: &radic;100, &radic;2,500, &radic;10,000, &radic;1,000,000, 20&sup2;, &#8731;1,000, &#8731;8,000 and &#8731;1,000,000.</li>
     <li><strong>Wrong answers:</strong> the game shows why. Squares and square roots are drawn as a square of unit squares, cube roots as a 3D cube built from little cubes, and estimates on a number line between two perfect squares or cubes. That kick then goes wild, so accuracy matters more than speed.</li>
-    <li><strong>The shot:</strong> the scoring chance is shown live as students aim and power up, and it is worked out as a probability: the chance the shot is on target times the chance it beats the keeper (on target 90% &times; beats the keeper 70% = 63%). Corners are hardest to save; a shot right at the keeper, or a weak one, gets caught. The game decides each shot with that same chance, so the percentage is honest.</li>
+    <li><strong>The shot:</strong> the scoring chance is shown live as students aim and power up, and it is a real probability: the chance the shot is on target times the chance it beats the keeper. Corners are hardest to save; a shot right at the keeper, or a weak one, gets caught. The game decides each shot with that same chance, so the percentage is honest.</li>
     <li><strong>Review:</strong> the final screen shows goals, questions right, and every missed question beside its correct answer.</li>
   </ul>
 </section>
