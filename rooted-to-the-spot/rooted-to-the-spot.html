@@ -150,6 +150,9 @@
   #ps .kicker { color: var(--yellow); font-size: clamp(20px, 3.8cqmin, 28px); }
   #ps .kicker.bonus { color: #fde047; text-shadow: 0 0 12px rgba(250,204,21,0.7); }
   #ps .qbonus { color: #fde68a; font-size: clamp(13px, 2.4cqmin, 16px); margin: 2px 0 0; }
+  #ps .choices { display: flex; justify-content: center; gap: 14px; margin-top: 6px; }
+  #ps .choices .btn { min-width: clamp(110px, 24cqmin, 170px); font-size: clamp(34px, 7cqmin, 54px); background: linear-gradient(90deg, #1d4ed8, #3b82f6); }
+  #ps .card.q.choice .ansrow, #ps .card.q.choice .pad { display: none !important; }
   #ps #q-skip { font-size: clamp(22px, 4.2cqmin, 32px); padding: 4px 22px 0; }
   #ps .qtext { font-size: clamp(30px, 7.5cqmin, 58px); font-weight: 800; margin: 6px 0 4px; line-height: 1.2; }
   #ps .qtext.long { font-size: clamp(24px, 5.6cqmin, 44px); }
@@ -289,12 +292,13 @@
           <div class="qtext" id="q-text" aria-live="polite"></div>
           <p class="qsub" id="q-sub"></p>
           <div class="ansrow" id="q-ans">
+            <button type="button" class="btn ghost" id="q-skip" hidden data-es="SALTAR">SKIP</button>
             <input type="text" id="q-in" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="?" aria-label="Your answer" data-es-aria="Tu respuesta">
             <span class="and" id="q-and" hidden data-es="y">and</span>
             <input type="text" id="q-in2" hidden inputmode="numeric" maxlength="9" autocomplete="off" placeholder="?" aria-label="The second number" data-es-aria="El segundo número">
             <button type="button" class="btn green" id="q-go" data-es="TIRAR">KICK</button>
-            <button type="button" class="btn ghost" id="q-skip" hidden data-es="SALTAR">SKIP</button>
           </div>
+          <div class="choices" id="q-choices" hidden role="group" aria-label="Choose an answer" data-es-aria="Elige una respuesta"></div>
           <div class="pad" id="q-pad">
             <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
             <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
@@ -394,7 +398,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="rooted-to-the-spot-game.js?v=2026-09-29b"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="rooted-to-the-spot-game.js?v=2026-09-29c"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script>
   function enterPseudoFullscreen() {

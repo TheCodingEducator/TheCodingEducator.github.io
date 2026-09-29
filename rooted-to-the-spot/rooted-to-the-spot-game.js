@@ -870,10 +870,25 @@
     $('q-and').hidden = qIn2.hidden = !question.two;
     $('q-ans').classList.toggle('two', !!question.two);
     setActiveBox(qIn);
+    // "Is √150 closer to 12 or 13?" is answered by picking one of two buttons (click, tap, or arrow keys and Enter)
+    var choice = !!(question.closer && !question.closest);
+    scrQ.querySelector('.card').classList.toggle('choice', choice);
+    var box = $('q-choices');
+    box.innerHTML = ''; box.hidden = !choice;
+    if (choice) {
+      $('q-sub').textContent = T('Pick the whole number it is closer to.', 'Elige el número entero más cercano.');
+      [question.a, question.a + 1].forEach(function (v) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn choice'; b.textContent = v;
+        b.addEventListener('click', function () { if (state !== STATE.MATH) return; qIn.value = String(v); submitAnswer(); });
+        box.appendChild(b);
+      });
+    }
     hideAimHud();
     show(scrQ);
     state = STATE.MATH;
-    if (!isTouch) qIn.focus({ preventScroll: true });
+    if (choice) { if (!isTouch) box.firstChild.focus({ preventScroll: true }); }
+    else if (!isTouch) qIn.focus({ preventScroll: true });
   }
 
   // the answer box the number pad (and typing outside the boxes) fills
