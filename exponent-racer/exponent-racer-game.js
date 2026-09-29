@@ -1078,10 +1078,10 @@ function drawRewindEffect() {
   if (rewindAnim.t >= rewindAnim.total) { rewindAnim = null; gameState = "play"; }
 }
 
-// Two cars touch when they are side by side within a car's width and closer than a truck's length plus a small gap.
+// Two cars touch when they are side by side within a car's drawn width and closer than a drawn truck's length plus a small gap.
 // The one further up the road (smaller y) is moved back behind the other; repeated until no two cars touch.
 function separateObstacles() {
-  var GAP_X = 34, GAP_Y = 72;
+  var GAP_X = 40, GAP_Y = 78;   // from the drawings: wheels reach 18 px to each side; a truck plus the glow of the headlights behind it is about 71 px long
   for (var pass = 0; pass < 4; pass++) {
     var moved = false;
     for (var i = 0; i < obstacles.length; i++) {
@@ -1728,6 +1728,7 @@ if (startSequencePhase > 0) {
 
       // Use the safe lane and safe Y position
       spawnObstacle(pickLane, spawnY, willMerge);
+      separateObstacles();   // the new car never starts on top of another
 
 
     }
@@ -2827,6 +2828,7 @@ function triggerSecondChanceRewind() {
 function drawRewindEffect() {
   if (gameState === "rewindingLegacy") { drawLegacyRewind(); return; }
   for (var n = 0; n < 2 && rwIdx >= 0; n++) rwApply(rwFrames[rwIdx--]);       // two recorded frames per screen frame = 2x rewind
+  separateObstacles();   // no overlapping cars in the replay either
   playGame(true);                                                             // draw the restored moment (no game logic runs)
 
   // VHS-rewind look on top of the scene
