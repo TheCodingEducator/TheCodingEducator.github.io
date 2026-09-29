@@ -5,7 +5,7 @@
   var T = window.tl || function (en) { return en; };
 
   // ---------- Settings and saved stats (localStorage, keys start with penaltyshootout_) ----------
-  var KICKS = 5, MAX_DIGITS = 7;   // answers go up to 1,000,000 (1000²)
+  var KICKS = 5, MAX_DIGITS = 5;   // answers go up to 10,000 (100²)
   var SKILLS = [
     { id: 'sqrt', name: T('Square Roots', 'Raíces cuadradas'), ex: '√81 = ?' },
     { id: 'square', name: T('Squaring Numbers', 'Elevar al cuadrado'), ex: '9² = ?' },
@@ -54,7 +54,7 @@
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
   var goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // invisible wall on the goal line (z = 0)
 
-  function errorRadiusFor(p) { return 2.5 - p * 2.35; }   // big circle at 0 power, tiny at full
+  function errorRadiusFor(p) { return 1.9 - p * 1.78; }   // big circle at 0 power, tiny at full
 
   function initEngine() {
     scene = new THREE.Scene();
@@ -517,9 +517,9 @@
     var active = [];
     for (var i = 0; i < SKILLS.length; i++) if (skillOn[i]) active.push(SKILLS[i].id);
     var MAX_SQ = 13, MAX_CUBE = 6;   // one level for everyone: squares and square roots to 13, cube roots to 6
-    // now and then, tens and powers of ten: √100, √10,000, √1,000,000, 20², ∛1,000, ∛8,000, ∛1,000,000...
-    var bigSq = function () { return pick([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 1000]); };
-    var bigCube = function () { return pick([10, 20, 30, 100]); };
+    // now and then, a simple power of ten: √100, √10,000, 10², 100², ∛1,000 (no giant numbers)
+    var bigSq = function () { return pick([10, 100]); };
+    var bigCube = function () { return 10; };
     var big = function () { return Math.random() < 0.25; };
     for (var tries = 0; tries < 40; tries++) {
       var skill = active[Math.floor(Math.random() * active.length)], q = { skill: skill }, r, a, n;
@@ -532,7 +532,7 @@
         q.html = T('What is ', '¿Cuánto es ') + fmt(r) + '<sup>2</sup>?';
         q.plain = fmt(r) + '² = ?';
       } else if (skill === 'area') {
-        r = big() ? pick([10, 20, 30, 50, 100]) : rnd(1, MAX_SQ); q.r = r; q.answer = r;
+        r = big() ? 10 : rnd(1, MAX_SQ); q.r = r; q.answer = r;
         q.html = '<span class="qsm">' + T('A square has an area of <b>' + fmt(r * r) + '</b> square units.<br>How long is each side?',
           'Un cuadrado tiene un área de <b>' + fmt(r * r) + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
         q.plain = T('A square with area ' + fmt(r * r) + ' has sides of ?', 'Un cuadrado de área ' + fmt(r * r) + ' tiene lados de ?');
@@ -803,10 +803,10 @@
   // toward a corner the better, top corners best. A weak (badly timed) shot is easier to stop.
   function beatChance(x, y, power) {
     var dx = Math.min(1, Math.abs(x) / (GOAL_WIDTH / 2)), dy = Math.min(1, y / GOAL_HEIGHT);
-    var place = 0.12 + 0.62 * Math.pow(dx, 1.3) + 0.12 * dy + 0.12 * dx * dy;
-    var strike = 0.5 + 0.5 * power;
+    var place = 0.4 + 0.46 * Math.pow(dx, 1.2) + 0.1 * dy + 0.1 * dx * dy;
+    var strike = 0.7 + 0.3 * power;
     var p = place * strike;
-    return Math.max(0.02, Math.min(0.97, p));
+    return Math.max(0.05, Math.min(0.98, p));
   }
 
   function shotOdds(ax, ay, power) {
