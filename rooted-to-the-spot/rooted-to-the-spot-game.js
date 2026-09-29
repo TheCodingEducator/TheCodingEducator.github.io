@@ -134,7 +134,7 @@
 
     if (env === ENV.DAY) {
       scene.background = new THREE.Color(0x5ca8df);
-      scene.fog = new THREE.Fog(0x5ca8df, 60, 250);
+      scene.fog = new THREE.Fog(0x5ca8df, 90, 430);   // far enough to see the city, hazy with distance
       var sun = new THREE.DirectionalLight(0xffffff, 1.2);
       sun.position.set(100, 150, 50);
       sun.castShadow = true;
@@ -144,7 +144,7 @@
       scene.add(sun);
     } else {
       scene.background = new THREE.Color(0x050510);
-      scene.fog = new THREE.Fog(0x050510, 40, 200);
+      scene.fog = new THREE.Fog(0x050510, 70, 400);
       var addSpot = function (x, z, shadows) {   // stadium floodlights; only two cast shadows
         var spot = new THREE.SpotLight(0xffffff, 2.5);
         spot.position.set(x, 60, z);
@@ -250,6 +250,82 @@
       var post = new THREE.Mesh(new THREE.BoxGeometry(0.8, 14, 0.8), frame); post.position.set(x, 7, -40.2); scene.add(post);
     });
     updateBoard();
+    buildCity();
+  }
+
+  // ---------- The city skyline behind the stands ----------
+  // High-rise towers all around the stadium. Their windows are drawn on a canvas: blue-grey glass by day, and dark
+  // with scattered lit windows at night (glowing through the dark). The tallest have red lights on the roof.
+  var beacons = [];
+  function windowTexture(night, seed) {
+    var c = document.createElement('canvas'); c.width = 64; c.height = 128;
+    var ctx = c.getContext('2d'), rnd = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    ctx.fillStyle = night ? '#0b1220' : '#5b6b82'; ctx.fillRect(0, 0, 64, 128);
+    for (var y = 4; y < 128; y += 8) for (var x = 3; x < 64; x += 8) {
+      if (night) ctx.fillStyle = rnd() < 0.38 ? (rnd() < 0.8 ? '#fde68a' : '#bae6fd') : '#111827';
+      else ctx.fillStyle = rnd() < 0.15 ? '#cbd5e1' : '#94a3b8';
+      ctx.fillRect(x, y, 5, 5);
+    }
+    return c;
+  }
+
+  function buildCity() {
+    var night = env !== ENV.DAY;
+    var canvases = [windowTexture(night, 7), windowTexture(night, 91), windowTexture(night, 333)];
+    var mats = {};   // one material per window pattern and building size, so the windows keep their shape
+    var matFor = function (k, w, h) {
+      var key = k + '-' + w + '-' + h;
+      if (!mats[key]) {
+        var tex = new THREE.CanvasTexture(canvases[k]);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(w / 6, h / 12);
+        mats[key] = night
+          ? new THREE.MeshLambertMaterial({ color: 0x111827, emissive: 0xffffff, emissiveMap: tex, map: tex })
+          : new THREE.MeshLambertMaterial({ map: tex });
+      }
+      return mats[key];
+    };
+    var widths = [10, 14, 18, 24], heights = [26, 36, 48, 62, 80];
+    var roofMat = new THREE.MeshLambertMaterial({ color: night ? 0x1f2937 : 0x64748b });
+    var beaconMat = new THREE.MeshBasicMaterial({ color: 0xff2020 });
+    var seed = 11, rnd = function () { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    var place = function (x, z, faceY) {
+      var w = widths[Math.floor(rnd() * widths.length)], d = widths[Math.floor(rnd() * widths.length)];
+      var h = heights[Math.floor(rnd() * heights.length)];
+      var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matFor(Math.floor(rnd() * 3), w, h));
+      b.position.set(x, h / 2 - 2, z); b.rotation.y = faceY;
+      scene.add(b);
+      var roof = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6, 2, d * 0.6), roofMat);   // a rooftop block
+      roof.position.set(x, h - 1, z); roof.rotation.y = faceY; scene.add(roof);
+      if (h >= 62) {   // tall ones get an antenna with a red light
+        var mast = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 10, 6), roofMat);
+        mast.position.set(x, h + 5, z); scene.add(mast);
+        var lamp = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), beaconMat);
+        lamp.position.set(x, h + 10.3, z); scene.add(lamp); beacons.push(lamp);
+      }
+    };
+    // behind the goal, in two staggered rows
+    for (var x = -150; x <= 150; x += 19) { place(x + rnd() * 6, -95 - rnd() * 20, 0); place(x + 9 + rnd() * 6, -135 - rnd() * 25, 0); }
+    // down both sides
+    for (var z = -80; z <= 60; z += 20) {
+      place(-100 - rnd() * 15, z + rnd() * 6, 0); place(-140 - rnd() * 20, z + 10, 0);
+      place(100 + rnd() * 15, z + rnd() * 6, 0); place(140 + rnd() * 20, z + 10, 0);
+    }
+    // a few landmark towers
+    [[-60, -170, 110], [45, -185, 130], [150, -120, 100]].forEach(function (t) {
+      var w = 16, h = t[2];
+      var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), matFor(1, w, 80));
+      b.position.set(t[0], h / 2 - 2, t[1]); scene.add(b);
+      var spire = new THREE.Mesh(new THREE.ConeGeometry(4, 18, 4), roofMat);
+      spire.position.set(t[0], h + 7, t[1]); spire.rotation.y = Math.PI / 4; scene.add(spire);
+      var lamp = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), beaconMat);
+      lamp.position.set(t[0], h + 16.5, t[1]); scene.add(lamp); beacons.push(lamp);
+    });
+  }
+
+  function animateCity() {   // the red roof lights blink
+    var on = Math.sin(clock.elapsedTime * 3) > 0.2;
+    for (var i = 0; i < beacons.length; i++) beacons[i].visible = on;
   }
 
   // ---------- The crowd ----------
@@ -1123,17 +1199,27 @@
     }
   }
 
-  // Ready stance, leaning from side to side (no bouncing). The lean is only for show: it never changes
-  // the scoring chance or whether a shot is saved.
-  var keeperSway = 0;
+  // Ready stance. Every few seconds he takes a slow, small side-step to the left, then back to the right, lifting the
+  // leading foot and keeping his body upright. It's only for show: it never changes the chance or whether a shot is saved.
+  var keeperSway = 0, keeperLift = 0, keeperStepLeft = true;
   function keeperIdle() {
     kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
     var time = clock.elapsedTime;
-    if (!keeperDiving) keeperSway = Math.sin(time * 1.3) * 0.28 + Math.sin(time * 0.47) * 0.1;   // holds still once the shot is struck
+    if (!keeperDiving) {   // holds still once the shot is struck
+      var c = time % 5, from, to, prog;   // 5-second cycle: step left (1 s), wait, step right (1 s), wait
+      if (c < 1) { from = 0.3; to = -0.3; prog = c; }
+      else if (c < 2.5) { from = to = -0.3; prog = 1; }
+      else if (c < 3.5) { from = -0.3; to = 0.3; prog = c - 2.5; }
+      else { from = to = 0.3; prog = 1; }
+      keeperSway = from + (to - from) * prog * prog * (3 - 2 * prog);
+      keeperLift = from !== to ? Math.sin(prog * Math.PI) : 0;
+      keeperStepLeft = to < from;
+    }
     kTorso.position.y = 1.0;   // steady: no bouncing
-    kTorso.rotation.set(0, 0, -keeperSway * 0.45);   // leans the way he's shuffling
-    kLLeg.rotation.set(-0.1, 0, -0.1 + keeperSway * 0.2);
-    kRLeg.rotation.set(-0.1, 0, 0.1 + keeperSway * 0.2);
+    kTorso.rotation.set(0, 0, 0);   // upright
+    var lead = keeperLift * 0.22, trail = keeperLift * 0.06;   // the leading foot lifts out to the side
+    kLLeg.rotation.set(-0.1, 0, -0.1 - (keeperStepLeft ? lead : -trail));
+    kRLeg.rotation.set(-0.1, 0, 0.1 + (keeperStepLeft ? -trail : lead));
     kLArm.rotation.set(0.35, 0, -1.2);   // ready stance: arms spread wide, gloves out
     kRArm.rotation.set(0.35, 0, 1.2);
     keeperGroup.position.copy(keeperBody.position);
@@ -1500,6 +1586,7 @@
     flashParticles.material.uniforms.time.value = clock.elapsedTime;
     animateCrowd(delta);
     animateReferee(delta);
+    animateCity();
     updateTitleCamera(delta);
     renderer.render(scene, camera);
   }
