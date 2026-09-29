@@ -1205,10 +1205,11 @@
   // While the student aims, the keeper does what real keepers do on the line, picking a move at random (never the same one
   // twice in a row) with a moment in his ready stance between moves:
   //   sway    - rocks gently left and right
-  //   shuffle - two quick side-steps one way (lead foot out, the other foot follows)
+  //   shuffle - two quick side-steps out to one side and two straight back (lead foot out, the other foot follows)
   //   hops    - two quick, small jumps bringing his knees up high
   //   clap    - claps his gloves together in front of him
   //   ready   - still, just breathing
+  // Every move happens around the center of the goal line and ends back in the center.
   // It's only for show: it never changes the chance or whether a shot is saved. Once the shot is struck he holds still.
   var keeperSway = 0;                          // how far he has shuffled from the middle (visual only)
   var kAct = 'ready', kLastAct = 'ready', kActT = 0, kActDur = 1.5, kFrom = 0, kTo = 0;
@@ -1219,12 +1220,9 @@
     else {
       do { kAct = acts[Math.floor(Math.random() * acts.length)]; } while (kAct === kLastMove);
       kLastMove = kAct;
-      kActDur = { sway: 2.2, shuffle: 0.9, hops: 0.95, clap: 0.9 }[kAct];
-      kFrom = keeperSway;
-      if (kAct === 'shuffle') {   // two steps toward the other side (or back toward the middle)
-        var dir = keeperSway > 0.15 ? -1 : keeperSway < -0.15 ? 1 : (Math.random() < 0.5 ? -1 : 1);
-        kTo = Math.max(-0.6, Math.min(0.6, keeperSway + dir * 0.55));
-      } else kTo = kFrom;
+      kActDur = { sway: 2.2, shuffle: 0.8, hops: 0.95, clap: 0.9 }[kAct];
+      kFrom = 0;   // every move starts and ends in the center of the goal line
+      kTo = kAct === 'shuffle' ? (Math.random() < 0.5 ? -1 : 1) * 0.45 : 0;   // how far out a shuffle goes
     }
     kLastAct = kAct; kActT = 0;
   }
@@ -1247,17 +1245,18 @@
         x = kFrom + s * 0.16; lean = -s * 0.07;
         lz -= s * 0.05; rz -= s * 0.05;
       } else if (kAct === 'shuffle') {
-        var dirS = kTo < kFrom ? -1 : 1;
-        s = u * 2; ph = s - Math.floor(s); if (u >= 1) ph = 1;
-        var stepsDone = Math.min(2, Math.floor(s));
+        // four quick steps: two out to the side, then two straight back to the center
+        s = Math.min(3.999, u * 4); var step = Math.floor(s); ph = s - step;
         var e = ph * ph * (3 - 2 * ph);
-        x = kFrom + (kTo - kFrom) * ((stepsDone + (u >= 1 ? 0 : e)) / 2);
+        var stops = [0, 0.5, 1, 0.5, 0];                               // fraction of the way out after each step
+        x = kTo * (stops[step] + (stops[step + 1] - stops[step]) * e);
+        if (u >= 1) x = 0;
         lift = Math.sin(ph * Math.PI) * 0.03;
-        var leadOut = ph < 0.5 ? Math.sin(ph * 2 * Math.PI) : 0;   // lead foot steps out...
+        var goingLeft = (step < 2) === (kTo < 0);                      // which way this step moves
+        var leadOut = ph < 0.5 ? Math.sin(ph * 2 * Math.PI) : 0;       // lead foot steps out...
         var trailIn = ph >= 0.5 ? Math.sin((ph - 0.5) * 2 * Math.PI) : 0;   // ...then the other foot follows
-        if (dirS < 0) { lz -= leadOut * 0.35; lk += leadOut * 0.3; rz -= trailIn * 0.2; rk += trailIn * 0.3; }
+        if (goingLeft) { lz -= leadOut * 0.35; lk += leadOut * 0.3; rz -= trailIn * 0.2; rk += trailIn * 0.3; }
         else { rz += leadOut * 0.35; rk += leadOut * 0.3; lz += trailIn * 0.2; lk += trailIn * 0.3; }
-        if (u >= 1) keeperSway = kTo; else keeperSway = x;
       } else if (kAct === 'hops') {
         s = u * 2; ph = s - Math.floor(s); if (u >= 1) ph = 0;
         k = Math.sin(ph * Math.PI);
@@ -1270,7 +1269,7 @@
         var clap = Math.abs(Math.sin(u * Math.PI * 2));
         ax = 0.35 - k * 1.25; alz = -1.2 + k * (0.95 + clap * 0.15); arz = -alz; af = -0.25 - k * 0.35;
       }
-      if (kAct !== 'shuffle') keeperSway = x;
+      keeperSway = x;
     }
 
     kTorso.position.y = bodyY;
@@ -1340,7 +1339,7 @@
     var p = ballBody.position, v = ballBody.velocity;
     var crossed = p.z + BALL_RADIUS < -0.05;   // the whole ball over the line
     var inPosts = p.x > -GOAL_WIDTH / 2 && p.x < GOAL_WIDTH / 2, underBar = p.y < GOAL_HEIGHT;
-    if (crossed && p.z > -3 && inPosts && underBar) { kickResult('goal'); return; }
+    if (crossed && p.z > -3 && inPosts && underBar && !hitKeeper) { kickResult('goal'); return; }   // never a goal after a save
 
     var wide = p.z < -BALL_RADIUS && (!inPosts || !underBar);
     var stopped = v.lengthSquared() < 2 && Math.abs(v.z) < 1;
@@ -1564,6 +1563,17 @@
     startShootout();
   }
 
+  // A save is a save: once the keeper has touched the ball it can never cross the goal line (a rebound off the post or a
+  // bounce back toward the net is turned away), so "SAVED" can never become a goal.
+  function keepSavedBallOut() {
+    if (!hitKeeper || caught) return;
+    var p = ballBody.position, v = ballBody.velocity, line = BALL_RADIUS + 0.25;
+    if (p.z < line) {
+      p.z = line;
+      if (v.z < 1.5) v.z = 1.5 + Math.random();   // rolls back out toward the pitch
+    }
+  }
+
   // ---------- Physics reset ----------
   function resetBall() {
     ballInNet = false;
@@ -1624,10 +1634,14 @@
         enforceSave = false;
         if (catching) { caught = true; caughtTime = 0; playSound('catch'); }   // into the gloves (see holdCaughtBall)
         else {
-          ballBody.position.z = 0.8;
-          ballBody.velocity.set((Math.random() - 0.5) * 4, -1, 2 + Math.random() * 3);
+          // pushed away: back out toward the pitch with a bounce, and off to the side away from the middle of the goal
+          var awayX = ballBody.position.x >= 0 ? 1 : -1;
+          ballBody.position.z = 0.9;
+          ballBody.velocity.set(awayX * (1 + Math.random() * 2.5), 1.5 + Math.random() * 2, 4.5 + Math.random() * 3);
+          keeperBody.collisionResponse = false;   // the ball can't bump off him again and back toward the goal
         }
       }
+      keepSavedBallOut();
       ballMesh.position.copy(ballBody.position);
       ballMesh.quaternion.copy(ballBody.quaternion);
       checkResult();
