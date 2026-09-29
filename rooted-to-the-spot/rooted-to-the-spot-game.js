@@ -1,4 +1,4 @@
-// Pro Penalty Shootout: answer a square-root question to earn each penalty kick, then aim and time the shot.
+// Rooted to the Spot: answer a square-root question to earn each penalty kick, then aim and time the shot.
 // A shootout is 5 kicks. The 3D stadium uses three.js (drawing) and cannon.js (ball physics).
 (function () {
   'use strict';
@@ -54,7 +54,7 @@
   var raycaster = new THREE.Raycaster(), mouseVector = new THREE.Vector2();
   var goalPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);   // invisible wall on the goal line (z = 0)
 
-  function errorRadiusFor(p) { return 1.9 - p * 1.55; }   // big circle at 0 power, tiny at full
+  function errorRadiusFor(p) { return 2.6 - p * 2.25; }   // big circle at 0 power, tiny at full
 
   function initEngine() {
     scene = new THREE.Scene();
@@ -213,7 +213,7 @@
     var actx = ad.getContext('2d');
     actx.fillStyle = '#0f172a'; actx.fillRect(0, 0, 1024, 64);
     actx.fillStyle = '#3b82f6'; actx.font = 'bold 40px Arial';
-    var adText = T('PRO PENALTY MATH', 'PENALES MATEMÁTICOS');
+    var adText = 'ROOTED TO THE SPOT';
     for (i = 0; i < 2; i++) actx.fillText(adText, 40 + i * 512, 45);
     var adTex = new THREE.CanvasTexture(ad);
     adTex.wrapS = THREE.RepeatWrapping; adTex.repeat.set(4, 1);
@@ -966,27 +966,116 @@
   var keeperTarget = { x: 0, y: 0 }, keeperDiving = false, keeperReactionDelay = 0, keeperDiveTime = 0, keeperDiveDuration = 0.6;
   var catching = false, standingCatch = false, caught = false, caughtTime = 0;
 
+  // A catch: the keeper takes a pose that suits the ball's height, and is placed so his gloves are exactly where the
+  // ball will be when it reaches them. kind: 'high' (arms up), 'mid' (arms out in front), 'low' (crouch and scoop)
+  // or 'dive' (a weak shot to the side, caught at full stretch).
+  var catchKind = 'mid', catchDir = 1, catchZ = 1.2, catchTilt = 0;
+
+  function applyCatchPose(kind, dir) {
+    var fl = kLArm.userData.fore, fr = kRArm.userData.fore;
+    kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
+    if (kind === 'dive') {
+      fl.rotation.x = fr.rotation.x = -0.25;
+      if (dir < 0) { kLArm.rotation.set(-0.3, 0, -(Math.PI - 0.35)); kRArm.rotation.set(-0.3, 0, -(Math.PI - 0.75)); kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3); }
+      else { kRArm.rotation.set(-0.3, 0, Math.PI - 0.35); kLArm.rotation.set(-0.3, 0, Math.PI - 0.75); kRLeg.rotation.set(0, 0, 0.2); kLLeg.rotation.set(-0.3, 0, -0.3); }
+    } else if (kind === 'high') {
+      kLArm.rotation.set(-2.55, 0, 0.16); kRArm.rotation.set(-2.55, 0, -0.16);
+      fl.rotation.x = fr.rotation.x = -0.35;
+      kLLeg.rotation.set(0, 0, -0.06); kRLeg.rotation.set(0, 0, 0.06);
+    } else if (kind === 'mid') {
+      kTorso.position.y = 0.97;
+      kLArm.rotation.set(-1.1, 0, 0.24); kRArm.rotation.set(-1.1, 0, -0.24);
+      fl.rotation.x = fr.rotation.x = -0.8;
+      kLLeg.rotation.set(-0.12, 0, -0.08); kRLeg.rotation.set(-0.12, 0, 0.08);
+    } else if (kind === 'low') {   // knees bent, body forward, gloves low in front
+      kTorso.position.y = 0.72; kTorso.rotation.x = 0.4;
+      kLArm.rotation.set(-0.55, 0, 0.18); kRArm.rotation.set(-0.55, 0, -0.18);
+      fl.rotation.x = fr.rotation.x = -0.35;
+      kLLeg.rotation.set(-1.0, 0, -0.14); kRLeg.rotation.set(-1.0, 0, 0.14);
+    } else {   // ground: a deep squat, scooping the ball off the grass
+      kTorso.position.y = 0.46; kTorso.rotation.x = 0.9;
+      kLArm.rotation.set(-0.95, 0, 0.16); kRArm.rotation.set(-0.95, 0, -0.16);
+      fl.rotation.x = fr.rotation.x = -0.2;
+      kLLeg.rotation.set(-1.1, 0, -0.2); kRLeg.rotation.set(-1.1, 0, 0.2);
+    }
+  }
+
+  // where the middle of the keeper's gloves ends up, relative to his feet, in a catch pose (tilted for a dive)
+  function gloveOffset(kind, dir, tilt) {
+    keeperGroup.position.set(0, 0, 0);
+    keeperGroup.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), tilt);
+    applyCatchPose(kind, dir);
+    keeperGroup.updateMatrixWorld(true);
+    kLArm.userData.fore.localToWorld(handL.set(0, -0.36, 0.05));
+    kRArm.userData.fore.localToWorld(handR.set(0, -0.36, 0.05));
+    return { x: (handL.x + handR.x) / 2, y: (handL.y + handR.y) / 2, z: (handL.z + handR.z) / 2 };
+  }
+
+  function diveTilt(x) { return (x / (GOAL_WIDTH / 2)) * -(Math.PI / 2.3); }
+
+  function planCatch(targetX, targetY) {
+    var v = ballBody.velocity, g = 9.81;
+    var at = function (z) {   // where the ball is when it reaches the plane z, and when
+      var t = (PENALTY_DIST - z) / -v.z;
+      return { x: v.x * t, y: BALL_RADIUS + v.y * t - 0.5 * g * t * t, t: t };
+    };
+    catchDir = targetX < 0 ? -1 : 1;
+    var off, p, z, best = null;
+    if (Math.abs(targetX) >= 1.1) {
+      // a dive: lean over just far enough (nearly upright for a high ball, flat out for one along the grass) that
+      // the gloves are at the ball's height
+      catchKind = 'dive';
+      for (var a = 0.25; a <= 1.56; a += 0.06) {
+        var tl = -catchDir * a, o = gloveOffset('dive', catchDir, tl), zz = keeperBody.position.z + o.z, pp = at(zz);
+        var gap = pp.y - o.y, score = gap >= -0.02 ? gap : -gap * 4;
+        if (!best || score < best.score) best = { tilt: tl, off: o, p: pp, z: zz, score: score };
+      }
+      catchTilt = best.tilt; off = best.off; p = best.p; z = best.z;
+    } else {
+      // standing: the pose whose gloves come closest to the ball without his feet going below the grass
+      ['ground', 'low', 'mid', 'high'].forEach(function (kind) {
+        var o = gloveOffset(kind, catchDir, 0), zz = keeperBody.position.z + o.z, pp = at(zz);
+        var gap = pp.y - o.y;   // how far he'd have to jump (below 0: his gloves are above the ball)
+        var score = gap >= -0.02 ? gap * 0.3 : -gap;   // a small jump is fine; gloves above the ball are not
+        if (!best || score < best.score) best = { kind: kind, off: o, p: pp, z: zz, score: score };
+      });
+      catchKind = best.kind; off = best.off; p = best.p; z = best.z;
+    }
+    keeperTarget = { x: p.x - off.x, y: Math.max(0, p.y - off.y) };   // jumps if the ball is above his reach
+    catchZ = z;
+    keeperReactionDelay = p.t * 0.1;
+    keeperDiveDuration = p.t * 0.9;   // the gloves arrive just as the ball does
+  }
+
+  var keeperStay = false;
   function keeperDecision(targetX, targetY, flight) {
-    keeperStartX = keeperBody.position.x;
+    keeperStartX = keeperGroup.position.x;   // wherever his side-to-side lean left him
     keeperStartY = keeperBody.position.y;
-    catching = standingCatch = caught = false;
+    catching = standingCatch = caught = keeperStay = false;
     var inGoal = !isAutoMiss && onTarget(targetX, targetY);
     var goesIn = inGoal && Math.random() < beatChance(targetX, targetY, aimPower);
     hitPost = false;
 
     if (inGoal && !goesIn) {
       // a save: the keeper gets there just as the ball does. A shot right at the keeper, or a weak one, is caught.
-      standingCatch = Math.abs(targetX) < 1.1;
-      catching = standingCatch || aimPower < 0.45;
-      keeperTarget = standingCatch ? { x: targetX, y: Math.max(0, targetY - 1.45) } : { x: targetX, y: Math.min(targetY, GOAL_HEIGHT) };
-      var intercept = flight * ((PENALTY_DIST - 0.5) / PENALTY_DIST);
-      keeperReactionDelay = intercept * 0.1;
-      keeperDiveDuration = intercept * 0.9;
+      catching = Math.abs(targetX) < 1.1 || aimPower < 0.45;
+      standingCatch = catching && Math.abs(targetX) < 1.1;
+      if (catching) planCatch(targetX, targetY);
+      else {
+        keeperTarget = { x: targetX, y: Math.min(targetY, GOAL_HEIGHT) };
+        var intercept = flight * ((PENALTY_DIST - 0.5) / PENALTY_DIST);
+        keeperReactionDelay = intercept * 0.1;
+        keeperDiveDuration = intercept * 0.9;
+      }
       enforceSave = true;
       keeperBody.collisionResponse = !catching;
     } else {
-      // a goal (or a miss): the keeper guesses wrong, or dives too late
-      if (Math.random() > 0.5) {
+      // a goal (or a miss): the keeper guesses wrong, dives too late, or now and then stays rooted to the spot.
+      // (He only stays put when the ball isn't coming at him, so it never passes through him.)
+      var r = Math.random();
+      if (r < 0.2 && Math.abs(targetX - keeperStartX) > 1.0) {
+        keeperStay = true;
+      } else if (r < 0.6) {
         keeperTarget = { x: targetX > 0 ? -2 : 2, y: 0 };
         keeperReactionDelay = flight * 0.2; keeperDiveDuration = flight * 1.2;
       } else {
@@ -998,37 +1087,32 @@
     }
     keeperDiving = true;
     keeperDiveTime = 0;
-    catchY = targetY;
   }
-  var catchY = 1;
 
   function updateKeeper(delta) {
     if (!keeperDiving) { keeperIdle(); return; }
     keeperDiveTime += delta;
-    if (keeperDiveTime < keeperReactionDelay) { keeperIdle(); return; }
+    if (keeperStay || keeperDiveTime < keeperReactionDelay) { keeperIdle(); return; }   // rooted: watches it go by
 
     var diveT = (keeperDiveTime - keeperReactionDelay) / keeperDiveDuration, t = Math.min(1, diveT);
     var ease = 1 - Math.pow(1 - t, 3);
     var x = keeperStartX + (keeperTarget.x - keeperStartX) * ease;
-    x = Math.max(-GOAL_WIDTH / 2 + 0.4, Math.min(GOAL_WIDTH / 2 - 0.4, x));
+    if (!catching) x = Math.max(-GOAL_WIDTH / 2 + 0.4, Math.min(GOAL_WIDTH / 2 - 0.4, x));   // a catch goes exactly where planned
     var y = keeperStartY + (keeperTarget.y - keeperStartY) * Math.sin(t * Math.PI / 2);
     if (diveT > 1) {
       var fall = keeperDiveTime - keeperReactionDelay - keeperDiveDuration;
       y = Math.max(0, y - 0.5 * 15 * fall * fall);
     }
-    var tilt = !standingCatch && Math.abs(keeperTarget.x) > 0.5 ? (x / (GOAL_WIDTH / 2)) * -(Math.PI / 2.3) : 0;
+    var tilt = catching ? (catchKind === 'dive' ? catchTilt * ease : 0)
+      : Math.abs(keeperTarget.x) > 0.5 ? diveTilt(x) : 0;
     keeperBody.position.set(x, y, keeperBody.position.z);
     keeperBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), tilt);
 
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.quaternion.copy(keeperBody.quaternion);
-    kTorso.position.y = 1.0;
-    if (standingCatch) {
-      // both hands out in front, at the height of the ball, to gather it in
-      var reach = -(Math.PI / 2 + Math.atan2(catchY - keeperTarget.y - 1.57, 0.45));
-      kLArm.rotation.set(reach + 0.35, 0, 0.2); kRArm.rotation.set(reach + 0.35, 0, -0.2);
-      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.75;   // elbows bent to cradle the ball
-      kLLeg.rotation.set(-0.15, 0, -0.08); kRLeg.rotation.set(-0.15, 0, 0.08);
+    kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
+    if (catching) {
+      applyCatchPose(catchKind, catchDir);   // gloves where the ball is going
     } else if (keeperTarget.x < 0) {
       kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
       kLArm.rotation.set(0, 0, -(Math.PI - 0.3)); kRArm.rotation.set(0, 0, -(Math.PI - 0.95));   // both arms reach to the left
@@ -1040,15 +1124,21 @@
     }
   }
 
+  // Ready stance, bouncing on his toes and leaning from side to side. The lean is only for show: it never changes
+  // the scoring chance or whether a shot is saved.
+  var keeperSway = 0;
   function keeperIdle() {
     kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
-    var time = clock.elapsedTime, bob = Math.sin(time * 6);
+    var time = clock.elapsedTime, bob = keeperStay ? 0 : Math.sin(time * 6);   // rooted: perfectly still
+    if (!keeperDiving) keeperSway = Math.sin(time * 1.3) * 0.28 + Math.sin(time * 0.47) * 0.1;   // holds still once the shot is struck
     kTorso.position.y = 1.0 + Math.abs(bob) * 0.08;
-    kLLeg.rotation.set(-0.1 + bob * 0.05, 0, -0.1);
-    kRLeg.rotation.set(-0.1 + bob * 0.05, 0, 0.1);
+    kTorso.rotation.set(0, 0, -keeperSway * 0.45);   // leans the way he's shuffling
+    kLLeg.rotation.set(-0.1 + bob * 0.05, 0, -0.1 + keeperSway * 0.2);
+    kRLeg.rotation.set(-0.1 + bob * 0.05, 0, 0.1 + keeperSway * 0.2);
     kLArm.rotation.set(0.35, 0, -1.2 - bob * 0.05);   // ready stance: arms spread wide, gloves out
     kRArm.rotation.set(0.35, 0, 1.2 + bob * 0.05);
     keeperGroup.position.copy(keeperBody.position);
+    keeperGroup.position.x += keeperSway;
     keeperGroup.quaternion.copy(keeperBody.quaternion);
   }
 
@@ -1058,7 +1148,11 @@
     keeperGroup.updateMatrixWorld(true);
     kLArm.userData.fore.localToWorld(handL.set(0, -0.36, 0.05));   // the middle of each glove
     kRArm.userData.fore.localToWorld(handR.set(0, -0.36, 0.05));
-    ballBody.position.set((handL.x + handR.x) / 2, Math.max(BALL_RADIUS, (handL.y + handR.y) / 2), (handL.z + handR.z) / 2 + 0.06);
+    // settle into the gloves over a split second rather than jumping there
+    var k = Math.min(1, caughtTime / 0.12 + 0.35);
+    var gx = (handL.x + handR.x) / 2, gy = Math.max(BALL_RADIUS, (handL.y + handR.y) / 2), gz = (handL.z + handR.z) / 2 + 0.06;
+    var b = ballBody.position;
+    ballBody.position.set(b.x + (gx - b.x) * k, b.y + (gy - b.y) * k, b.z + (gz - b.z) * k);
     ballBody.velocity.set(0, 0, 0);
     ballBody.angularVelocity.set(0, 0, 0);
     ballMesh.position.copy(ballBody.position);
@@ -1136,12 +1230,12 @@
     c.fillStyle = '#05070d'; c.fillRect(0, 0, 512, 256);
     c.strokeStyle = '#3b82f6'; c.lineWidth = 8; c.strokeRect(8, 8, 496, 240);
     c.textAlign = 'center';
-    c.fillStyle = '#60a5fa'; c.font = 'bold 40px Arial';
-    c.fillText(T('PRO PENALTY', 'PRO PENALTY'), 256, 62);
+    c.fillStyle = '#60a5fa'; c.font = 'bold 34px Arial';
+    c.fillText('ROOTED TO THE SPOT', 256, 58);
     c.fillStyle = '#facc15'; c.font = 'bold 96px Arial';
     c.fillText(inGame ? goals + ' / ' + KICKS : '⚽', 256, 165);
     c.fillStyle = '#e2e8f0'; c.font = 'bold 30px Arial';
-    c.fillText(inGame ? T('GOALS', 'GOLES') + ' · ' + T('KICK ', 'TIRO ') + Math.min(kickNum + 1, KICKS) + '/' + KICKS : T('MATH EDITION', 'EDICIÓN MATEMÁTICA'), 256, 222);
+    c.fillText(inGame ? T('GOALS', 'GOLES') + ' · ' + T('KICK ', 'TIRO ') + Math.min(kickNum + 1, KICKS) + '/' + KICKS : T('A PENALTY SHOOTOUT', 'UNA TANDA DE PENALES'), 256, 222);
     boardTex.needsUpdate = true;
   }
 
@@ -1285,6 +1379,7 @@
   }
 
   function resetKeeper() {
+    keeperStay = false;
     keeperBody.position.set(0, 0, 0.5);
     keeperBody.quaternion.set(0, 0, 0, 1);
     keeperBody.collisionResponse = true;
@@ -1324,7 +1419,7 @@
     if (state === STATE.RESULT) {
       world.step(1 / 60, delta, 3);
       // a save is a save, however fast the shot: stop the ball in front of the line
-      if (enforceSave && ballBody.position.z < 1.2 && ballBody.velocity.z < 0) {
+      if (enforceSave && ballBody.position.z < (catching ? catchZ + BALL_RADIUS : 1.2) && ballBody.velocity.z < 0) {
         hitKeeper = true;
         enforceSave = false;
         if (catching) { caught = true; caughtTime = 0; playSound('catch'); }   // into the gloves (see holdCaughtBall)

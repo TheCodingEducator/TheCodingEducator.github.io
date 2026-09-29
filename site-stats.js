@@ -99,7 +99,7 @@
       { key: 'rope', folder: 'pythagorean-platforms', icon: '🧗', name: 'Pythagorean Platforms', played: rp.played,
         best: rp.bestScore > 0, coins: 0, rows: [
           ['Best score', rp.bestScore], ['Best combo', 'x' + rp.bestCombo], ['Worlds finished', rp.worlds + ' / 5']] },
-      { key: 'penalty', folder: 'penalty-shootout', icon: '⚽', name: 'Pro Penalty Shootout', played: ps.played,
+      { key: 'penalty', folder: 'rooted-to-the-spot', icon: '⚽', name: 'Rooted to the Spot', played: ps.played,
         best: ps.best > 0, coins: 0, rows: [
           ['Shootouts played', ps.games], ['Best shootout', ps.best + ' / 5 goals'], ['Total goals', ps.goals],
           ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] }
