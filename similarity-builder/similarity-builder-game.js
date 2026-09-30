@@ -850,12 +850,9 @@ function newWorld(menu, cp, mode) {
     level: lv, theme: cp ? themeFor(lv, cp.solved) : 0, dist: 0, missed: [],
     platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
       : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? themeFor(lv, cp.solved) : 0, lv)],
-    pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0,
-    pops: []                                  // the little cheers that float up
+    pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0
   };
 }
-// a short cheer that floats up above the runner ("Close call!") - just for fun, no stars
-function pop(text, color) { G.pops.push({ text, color, x: G.px, y: G.py - 110, life: 1.1 }); }
 
 // Obstacles: the real-world reasons a bridge doesn't get built (plus the terrain around it).
 //   solid    = something standing on the ground: jump it.           vx = it walks toward you (px/s), so it comes at you faster
@@ -892,7 +889,9 @@ const OBS = {
   // --- level 5 ---
   crate:     { kind: 'solid', w: 44, h: 84, label: tl('stack of crates', 'una pila de cajas') },
   truck:     { kind: 'solid', w: 100, h: 54, vx: -95, label: tl('dump truck', 'un camión de volteo') },
-  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') }
+  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') },
+  // --- skyways (any level): a striped road barrier standing on a platform or the ground ---
+  barrier:   { kind: 'solid', w: 40, h: 46, label: tl('road barrier', 'una barrera') }
 };
 // Every level has its OWN obstacles (none repeat on another level), and every one of them costs a heart if it touches you.
 // (A name listed twice shows up twice as often.)
@@ -915,10 +914,12 @@ const swoopT = c => {
 const flyYOf = c => OBS[c.type].still ? GROUND - 128                               // power lines don't bob
   : c.swoop ? flyY(c) + (SWOOP_LOW - flyY(c)) * swoopT(c) : flyY(c);
 // Which flyers can swoop, and how often, per level (level 1 has no flyers; on level 5 the news helicopter dives too)
-const SWOOP_TYPES = ['vulture', 'parrot', 'falcon', 'drone', 'helicopter'], SWOOP_CHANCE = [0, .3, .5, .45, .35];
+const SWOOP_TYPES = ['vulture', 'parrot', 'falcon', 'drone', 'helicopter'], SWOOP_CHANCE = [0, .45, .55, .55, .45];
 // Rolling obstacles: some boulders (level 1) hop along the ground toward you and some hazmat barrels (level 2) roll at
 // you - they're moving, so when to jump is different every time.   vx = speed toward you, hop = bounce height (px)
-const ROLLERS = { rock: { level: 1, chance: .3, vx: -45, hop: 20 }, barrel: { level: 2, chance: .35, vx: -70, hop: 0 } };
+const ROLLERS = { rock: { level: 1, chance: .5, vx: -55, hop: 24 }, log: { level: 1, chance: .35, vx: -60, hop: 0 },
+                  barrel: { level: 2, chance: .5, vx: -80, hop: 0 }, stump: { level: 2, chance: .3, vx: -40, hop: 18 },
+                  crate: { level: 5, chance: .3, vx: -50, hop: 16 } };
 const hopOf = c => c.hop ? Math.abs(Math.sin(G.t * 6 + (c.t0 || 0) * 3)) * c.hop : 0;
 // a loose pipe: sits low, wobbles as a warning, shoots up, then sinks again (a 2.4 s cycle, out of step with its neighbours)
 const PIPE_CYCLE = 2.4;
@@ -928,12 +929,12 @@ const pipeH = c => {
 };
 
 // each level: the runner is faster, and the spacing gets tighter and more surprising
-const SPEED_BY_LEVEL = [1, 1.1, 1.2, 1.3, 1.4];                 // × the base running speed (330 px/s)
+const SPEED_BY_LEVEL = [1.08, 1.18, 1.28, 1.38, 1.48];          // × the base running speed (330 px/s)
 // The tightest gap between two obstacles, in seconds of running (a jump lasts 0.69 s, a double jump longer, so even the tightest is possible).
-const MIN_GAP_SEC = [.85, .75, .66, .58, .52];
+const MIN_GAP_SEC = [.74, .66, .59, .53, .48];
 // How the gaps are shuffled: share of TIGHT clusters, share of MEDIUM gaps (the rest are long breathers). Later levels have more clusters.
-const GAP_MIX = [[.15, .55], [.25, .50], [.35, .45], [.45, .40], [.55, .35]];
-const COMBO_CHANCE = [0, .1, .25, .35, .45];                      // chance that a flyer is placed right behind a ground obstacle (jump, land, then run under it)
+const GAP_MIX = [[.35, .50], [.45, .40], [.52, .35], [.60, .30], [.66, .26]];
+const COMBO_CHANCE = [0, .25, .38, .48, .58];                     // chance that a flyer is placed right behind a ground obstacle (jump, land, then run under it)
 
 const PRACTICE_SECONDS = 3;                                  // Practice: about how long you run between two questions
 // Distance from the previous obstacle to the next one. Always random, never below what can be cleared:
@@ -957,11 +958,39 @@ function gapAfter(prev, type, level, swoop) {
 //   skyField  a long stretch of flooded land / unstable soil: only a HIGH platform (double jump) gets you across without touching it
 //   lowLine   a very long power line / storm cloud: you must stay down on the ground for the whole length
 //   pipeRow   three loose pipes in a row: run through when they are down, or take the high platform over them
-const PATTERNS = { 2: ['tapeWall'], 3: ['skyField', 'lowLine'], 4: ['lowLine', 'pipeRow'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow'] };
-const PATTERN_CHANCE = [0, .18, .28, .36, .44];
-function patternType(kind, level) { return kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
-function makePattern(kind, type, x) {
+//   skyway    three platforms stacked above the ground (100, 200 and 300 px up). Every so often a "wall" of obstacles
+//             stands across them with only one or two levels left clear, so you keep climbing (jump up through a
+//             platform) and dropping (Down) to line up with the gap. From level 3 the ground under it may be flooded.
+const PATTERNS = { 1: ['skyway'], 2: ['tapeWall', 'skyway'], 3: ['skyField', 'lowLine', 'skyway'], 4: ['lowLine', 'pipeRow', 'skyway'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow', 'skyway'] };
+const PATTERN_CHANCE = [.14, .26, .34, .42, .5];
+const SKY_H = [0, 100, 200, 300];                              // lane heights: the ground, then the three platforms
+function patternType(kind, level) { return kind === 'skyway' ? 'barrier' : kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
+function makePattern(kind, type, x, level) {
   const obs = [], floats = [], mk = (t, xx, extra) => Object.assign({ x: xx, type: t, fly: !!OBS[t].fly, hit: false, t0: Math.random() * PIPE_CYCLE }, extra || {});
+  if (kind === 'skyway') {
+    const spd = 330 * SPEED_BY_LEVEL[level - 1], len = Math.round(spd * rnd(38, 52) / 10);   // about 4-5 s of running
+    for (let i = 1; i <= 3; i++) floats.push({ x, w: len, h: SKY_H[i], sky: true });
+    const flooded = level >= 3 && Math.random() < .5;                       // no ground lane: get up there!
+    if (flooded) obs.push(mk(pick(['flood', 'soil']), x + 170, { w: len - 260 }));
+    // what can stand on a platform: this level's own standing obstacles, plus road barriers
+    const standing = LEVEL_OBS[level - 1].filter(t => OBS[t].kind === 'solid' && !OBS[t].vx && OBS[t].h <= 62).concat(['barrier', 'barrier']);
+    const lanes = flooded ? [1, 2, 3] : [0, 1, 2, 3];
+    const openN = level <= 1 ? 2 : level <= 3 ? pick([1, 2, 2]) : pick([1, 1, 2]);
+    // you come in from the ground (or hop straight up onto the lowest deck over a flood), so the first wall's gap is at
+    // most one level up from there; after that the clear lane is never more than 2 levels from the last one
+    let open = [flooded ? 1 : 0], gx = x + 460, maxStep = 1;
+    // walls: one or two lanes left clear
+    while (gx < x + len - 260) {
+      const anchor = pick(open), near = lanes.filter(l => Math.abs(l - anchor) <= maxStep && !(open.length === 1 && l === anchor && Math.random() < .7));
+      maxStep = 2;
+      const first = pick(near.length ? near : lanes), rest = lanes.filter(l => l !== first);
+      open = openN === 2 ? [first, pick(rest)] : [first];
+      for (const l of lanes) if (!open.includes(l)) obs.push(mk(pick(standing), gx + rnd(-12, 12), { lift: SKY_H[l] }));
+      gx += spd * (rnd(125, 165) / 100) + (level <= 2 ? 80 : 0);
+    }
+    const endX = x + len + 20;
+    return { obs, floats, last: { x: endX + spd * .5, type: 'barrier', fly: false }, endX };   // (room to drop down off the top deck before what's next)
+  }
   if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
   else if (kind === 'skyField') { const w = rnd(380, 500); obs.push(mk(type, x, { w })); floats.push({ x: x - 40, w: w + 80, h: pick([170, 185, 195]) }); }
   else if (kind === 'lowLine') { const w = rnd(360, 480); obs.push(mk(type, x + w / 2, { w })); }
@@ -985,7 +1014,7 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
     if (prev && !first && PATTERNS[level] && Math.random() < PATTERN_CHANCE[level - 1]) {          // a bigger move instead of a single obstacle
       const kind = pick(PATTERNS[level]), ptype = patternType(kind, level);
       if (!(prev.fly && OBS[ptype].fly)) {
-        const px0 = prev.x + gapAfter(prev, ptype, level), pat = makePattern(kind, ptype, px0);
+        const px0 = prev.x + gapAfter(prev, ptype, level) + (kind === 'skyway' ? 120 : 0), pat = makePattern(kind, ptype, px0, level);
         if (pat.endX < p.e - 300) { pat.obs.forEach(c => p.obs.push(c)); pat.floats.forEach(f => patFloats.push(f)); prev = pat.last; continue; }
       }
     }
@@ -1080,7 +1109,7 @@ function startGame(cp) {
   G.tipT = cp ? 0 : 4;
   hidePlayOverlays(); showScreen('play');
   audioInit();
-  toast(cp ? tl(`Level ${cp.level} · continuing from ${Math.floor(cp.px / 30)} m`, `Nivel ${cp.level} · sigues desde ${Math.floor(cp.px / 30)} m`) : tl('Run! Jump obstacles — a crash costs a ❤️', '¡Corre! Salta los obstáculos — chocar cuesta un ❤️'), '');
+  toast(cp ? tl(`Level ${cp.level} · continuing from ${Math.floor(cp.px / 30)} m`, `Nivel ${cp.level} · sigues desde ${Math.floor(cp.px / 30)} m`) : tl('Run!', '¡Corre!'), '');
 }
 // Practice: no obstacles, no hearts, no timer. `types` = the PRACTICE_TYPES entries the player picked.
 function startPractice(types) {
@@ -1088,7 +1117,7 @@ function startPractice(types) {
   G.tipT = 0;
   hidePlayOverlays(); showScreen('play');
   audioInit();
-  toast(tl('Practice: no obstacles, no hearts — take your time!', 'Práctica: sin obstáculos ni corazones — ¡tómate tu tiempo!'), '');
+  toast(tl('Practice: no hearts — take your time!', 'Práctica: sin corazones — ¡tómate tu tiempo!'), '');
 }
 
 /* ===================== AUDIO ===================== */
@@ -1281,7 +1310,7 @@ function advanceLevel(lv) {
   G.theme = themeFor(lv, G.solved);                                     // Night City locks in the moment level 4 starts (3000 m)
   for (let i = G.pi; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
   saveCheckpoint({ level: lv, px: (lv - 1) * METERS_PER_LEVEL * 30, solved: G.solved, wrong: G.wrong, bestStreak: G.bestStreak });
-  sfx.good(); toast(tl(`🎉 Level ${lv} at ${(lv - 1) * METERS_PER_LEVEL} m: faster + new obstacles!`, `🎉 ¡Nivel ${lv} a los ${(lv - 1) * METERS_PER_LEVEL} m: más rápido + obstáculos nuevos!`), 'good');
+  sfx.good(); toast(tl(`🎉 Level ${lv} at ${(lv - 1) * METERS_PER_LEVEL} m!`, `🎉 ¡Nivel ${lv} a los ${(lv - 1) * METERS_PER_LEVEL} m!`), 'good');
 }
 function onBridgeBuilt() {
   const p = G.platforms[G.pi], b = p.bridge;
@@ -1378,8 +1407,6 @@ function update(dt) {
   if (G.tipT > 0) G.tipT -= dt;
   for (const p of G.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.life -= dt; }
   G.particles = G.particles.filter(p => p.life > 0);
-  for (const q of G.pops) { q.y -= 40 * dt; q.life -= dt; }
-  G.pops = G.pops.filter(q => q.life > 0);
 
   if (G.state === 'menu') { G.px += 170 * dt; G.cam = G.px - 240; return; }
   { const cb = G.platforms[G.pi] && G.platforms[G.pi].bridge; if (cb && cb.collapsed) cb.cAnim += dt; }   // debris keeps falling
@@ -1413,24 +1440,19 @@ function update(dt) {
       const d = OBS[c.type], dw = c.w || d.w;
       if (c.hit && d.kind !== 'zone') continue;
       let hurt = false, ex = c.x + (dw || 0) / 2, ey = GROUND - 20;
-      if (c.swoop && !G.swoopTold && c.x - G.px < 560) {                  // the first swooper of a run gets a heads-up (the one flyer you jump)
-        G.swoopTold = true; toast(tl('Look out - it\'s diving! Jump over this one!', '¡Cuidado, está bajando en picada! ¡Salta sobre este!'), '');
-      }
-      let clr = null;                                                     // how close you came (px) while level with it - for "Close call!"
       if (d.fly) {
         const y = flyYOf(c), half = dw ? dw / 2 + 12 : 28, over = Math.abs(G.px - c.x) < half;
         hurt = over && (G.py - 92) < y + 14 && G.py > y - 14; ex = c.x; ey = y;
-        if (over) clr = Math.max((G.py - 92) - (y + 14), (y - 14) - G.py);   // ran under it, or (a swooper) jumped over it
       } else if (d.kind === 'zone') {
         const inside = grounded && G.px + 6 > c.x && G.px - 6 < c.x + dw;
         if (inside && !c.hit) {
           if (d.effect === 'slow') {                                    // puddle: you slip and lose speed
             G.stumble = Math.max(G.stumble, .3);
-            if (!c.warned) { c.warned = true; toast(d.msg, 'bad'); }
+            c.warned = true;
             if (Math.random() < .6) G.particles.push({ x: G.px, y: GROUND, vx: (Math.random() - .5) * 160, vy: -120 - Math.random() * 120, life: .4, color: '#7fc8ff' });
           } else if (d.effect === 'collapse') {                         // unstable soil: keep running slowly on it and it gives way
             G.stumble = Math.max(G.stumble, .3); c.sink = (c.sink || 0) + dt; G.shake = Math.max(G.shake, .05);
-            if (!c.warned) { c.warned = true; toast(tl('Unstable soil! Jump off it!', '¡Suelo inestable! ¡Salta fuera!'), 'bad'); }
+            c.warned = true;
             if (c.sink > 0.55) { hurt = true; c.collapsed = true; }
           } else if (d.effect === 'hurt') hurt = true;                  // a hole in the ground
         } else if (d.effect === 'collapse' && !c.collapsed) c.sink = 0;
@@ -1438,23 +1460,16 @@ function update(dt) {
       } else if (d.kind === 'pipe') {
         const h = pipeH(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
         hurt = h > 16 && over && G.py > GROUND - h + 4; ey = GROUND - h / 2;
-        if (over && h > 16) clr = (GROUND - h) - G.py;
       } else {
-        const top = GROUND - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;   // (a hopping boulder's top is higher mid-bounce)
-        hurt = over && G.py > top + 4; ey = top + d.h / 2;
-        if (over) clr = top - G.py;
-      }
-      if (clr !== null && !c.hit) c.minClr = Math.min(c.minClr === undefined ? 999 : c.minClr, clr);
-      // cleared it by a hair: a "Close call!" cheer
-      const farEdge = d.fly ? c.x + (dw ? dw / 2 : 28) : c.x + (dw || 0);
-      if (!c.hit && !c.passed && G.px - 10 > farEdge) {
-        c.passed = true;
-        if (c.minClr !== undefined && c.minClr < 16) pop(tl('Close call!', '¡Por poco!'), '#ffd166');
+        // (a hopping boulder's top is higher mid-bounce; on a skyway the obstacle stands on a platform c.lift px up, so it only
+        // touches you if you're at that level: feet below its top, head above the platform it stands on)
+        const base = GROUND - (c.lift || 0), top = base - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
+        hurt = over && G.py > top + 4 && G.py - 80 < base; ey = top + d.h / 2;
       }
       if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
-        toast(G.lives > 0 ? `${d.msg || tl('You ran into the ' + d.label + '!', '¡Chocaste con ' + d.label + '!')} −1 ❤️` : tl('Crashed out!', '¡Chocaste demasiado!'), 'bad');
+
         if (G.lives <= 0) { G.crashed = true; gameOver(); return; }
         if (c.type === 'hole') {                                           // you really fall into a hole in the ground...
           G.state = 'hfall'; G.holeC = c; G.vy = 0; G.px = c.x + dw / 2; G.onGround = false; G.airJumps = 0;
@@ -1514,7 +1529,7 @@ function update(dt) {
     if (G.py >= GROUND + 105) {
       G.py = GROUND + 105; G.state = 'rise'; G.vy = 0;
       G.rise = { t: 0, x0: G.px, y0: G.py, x1: G.holeC.x + OBS.hole.w + 45, hole: true };
-      toast(tl('Whoosh! Balloons to the rescue…', '¡Fiuuu! Globos al rescate…'), ''); beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
+      beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
     }
   } else if (G.state !== 'fall') {
     const prevPy = G.py;
@@ -1735,6 +1750,7 @@ function drawBridge(p, T) {
 function drawObstacle(c, x) {
   const G0 = GROUND, ol = '#3b2a1a', T = G.t, d = OBS[c.type], dw = c.w || d.w;
   ctx.save(); if (c.hit && d.kind !== 'zone' && d.kind !== 'pipe') ctx.globalAlpha = .4;
+  if (c.lift) ctx.translate(0, -c.lift);                                 // standing on a skyway platform
   if (c.swoop && !c.hit) {                                               // a swooper's shadow grows on the ground as it dives, with a warning arrow
     const s = swoopT(c);
     ctx.fillStyle = `rgba(0,0,0,${.12 + .28 * s})`; ctx.beginPath(); ctx.ellipse(x, G0 - 2, 8 + 18 * s, 3 + 3 * s, 0, 0, 7); ctx.fill();
@@ -1769,6 +1785,13 @@ function drawObstacle(c, x) {
       rr(x, G0 - 30, 64, 30, 10, '#8a5a2b'); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x + 14, G0 - 20); ctx.lineTo(x + 50, G0 - 20); ctx.moveTo(x + 10, G0 - 10); ctx.lineTo(x + 40, G0 - 10); ctx.stroke();
       ctx.strokeStyle = ol; ctx.lineWidth = 3; ctx.fillStyle = '#c99760'; ctx.beginPath(); ctx.ellipse(x + 56, G0 - 15, 7, 13, 0, 0, 7); ctx.fill(); ctx.stroke(); break;
+    case 'barrier':                                                    // a striped sawhorse road barrier
+      ctx.fillStyle = '#6b6f80'; ctx.fillRect(x + 5, G0 - 30, 5, 30); ctx.fillRect(x + 30, G0 - 30, 5, 30);
+      rr(x, G0 - 46, 40, 16, 4, '#fff');
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x, G0 - 46, 40, 16, 4); ctx.clip(); ctx.fillStyle = '#ff6a1a';
+      for (let sx = -16; sx < 44; sx += 14) { ctx.beginPath(); ctx.moveTo(x + sx, G0 - 30); ctx.lineTo(x + sx + 7, G0 - 30); ctx.lineTo(x + sx + 17, G0 - 46); ctx.lineTo(x + sx + 10, G0 - 46); ctx.closePath(); ctx.fill(); }
+      ctx.restore(); ctx.strokeStyle = ol; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, G0 - 46, 40, 16, 4); ctx.stroke();
+      ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(x + 20, G0 - 51, 4, 0, 7); ctx.fill(); ctx.stroke(); break;
     case 'stump':
       rr(x, G0 - 44, 36, 44, 5, '#7a4b22'); ctx.fillStyle = '#c99760'; ctx.beginPath(); ctx.ellipse(x + 18, G0 - 44, 18, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#7a4b22'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x + 18, G0 - 44, 9, 3, 0, 0, 7); ctx.stroke(); break;
@@ -2161,12 +2184,6 @@ function draw() {
   drawWorld(T);
   drawRunner();
   for (const p of G.particles) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - G.cam, p.y, 5, 5); }
-  ctx.font = '900 20px Trebuchet MS, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-  for (const q of G.pops) {                                               // "Close call!" cheers
-    ctx.globalAlpha = clamp(q.life * 2.5, 0, 1);
-    ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(20,24,50,.85)'; ctx.strokeText(q.text, q.x - G.cam, q.y);
-    ctx.fillStyle = q.color; ctx.fillText(q.text, q.x - G.cam, q.y);
-  }
   ctx.globalAlpha = 1;
   ctx.restore();
   if (G.state === 'menu') { /* keep clean behind the menu card */ }
@@ -2377,6 +2394,12 @@ addEventListener('keydown', e => {
   if (screen === 'menu') buildMenu();
 });
 function jump() { if (G && G.state === 'run' && !paused) G.jumpBuf = .12; }
+// Down: drop through the platform you're standing on to the level below (platforms only catch you from above)
+function drop() {
+  if (!G || G.state !== 'run' || paused || !G.onGround || G.py >= GROUND - 4) return;
+  G.py += 8; G.vy = 60; G.onGround = false; G.airJumps = 0;
+  beep(330, .08, 'triangle', .04);
+}
 addEventListener('keydown', e => {
   if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
   if (screen === 'title') {                                          // Enter / Space on the title screen = Play
@@ -2433,6 +2456,7 @@ addEventListener('keydown', e => {
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
   const isJumpKey = ['Space', 'ArrowUp', 'KeyW', 'Enter', 'NumpadEnter'].includes(e.code) || e.key === 'Enter';
   if (isJumpKey && G && G.state === 'run') { e.preventDefault(); if (!e.repeat) jump(); }
+  if ((e.code === 'ArrowDown' || e.code === 'KeyS') && G && G.state === 'run') { e.preventDefault(); if (!e.repeat) drop(); }
   if (G && G.state === 'solve' && G.problem.type === 'sim') {              // "Similar or not?": arrow keys pick a button, Enter / Space presses it
     const yes = $('btnSimYes'), no = $('btnSimNo');
     if (e.code === 'ArrowLeft' || e.code === 'ArrowUp' || e.code === 'KeyS') { e.preventDefault(); yes.focus(); return; }
@@ -2443,6 +2467,7 @@ addEventListener('keydown', e => {
 });
 $('stage').addEventListener('pointerdown', e => { audioInit(); jump(); });
 $('jumpBtn').addEventListener('pointerdown', e => { e.stopPropagation(); audioInit(); jump(); });
+$('downBtn').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); audioInit(); drop(); });
 $('btnPlay').onclick = () => { audioInit(); buildMenu(); showScreen('menu'); };
 $('btnMenuBack').onclick = () => showScreen('title');
 $('btnPractice').onclick = openPractice;
