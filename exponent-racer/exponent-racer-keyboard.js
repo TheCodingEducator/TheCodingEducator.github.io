@@ -118,8 +118,9 @@
     else next = pick(rs, cur, dir[0], dir[1]);
     if (next) { focusId = next.id; ensureVisible(next); hover(next); }
   }, true);
-  window.addEventListener('mousemove', function (e) { if (e.isTrusted) active = false; }, true);
-  window.addEventListener('mousedown', function (e) { if (e.isTrusted) active = false; }, true);
+  // a real mouse takes over from the keyboard ring - but a finger doesn't (touches also fire made-up mouse events)
+  window.addEventListener('pointermove', function (e) { if (e.isTrusted && e.pointerType === 'mouse') active = false; }, true);
+  window.addEventListener('pointerdown', function (e) { if (e.isTrusted && e.pointerType === 'mouse') active = false; }, true);
 
   // drawn by the game's draw() wrapper (exponent-racer-hook.js) on top of everything else
   window._kbDraw = function () {

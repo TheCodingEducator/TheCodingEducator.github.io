@@ -60,6 +60,17 @@
     }
     wrap.innerHTML = html;
     document.body.appendChild(wrap);
+    // Touches on these controls belong to the controls only: the game never sees them as a mouse or touch on the page.
+    // (p5 games listen on the whole window, so a thumb on the joystick used to move the game's pointer - taking the
+    // hover and the keyboard highlight away from the menu button GO was about to press.) Cancelling touchstart also
+    // stops the browser from sending its made-up mouse events after the touch.
+    ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup', 'pointercancel',
+     'mousedown', 'mousemove', 'mouseup', 'click'].forEach(function (ev) {
+      wrap.addEventListener(ev, function (e) {
+        e.stopPropagation();
+        if (ev === 'touchstart' || ev === 'touchmove') e.preventDefault();
+      }, { passive: false });
+    });
     if (!document.getElementById('mc-style')) {
       var style = document.createElement('style'); style.id = 'mc-style'; style.textContent = CSS; document.head.appendChild(style);
     }
