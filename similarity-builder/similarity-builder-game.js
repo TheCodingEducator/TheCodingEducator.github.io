@@ -1139,11 +1139,6 @@ const sfx = {
   jump() { beep(420, .12, 'square', .03); beep(620, .1, 'square', .03, .05); },
   jump2() { [660, 880, 1175].forEach((f, i) => beep(f, .09, 'triangle', .045, i * .04)); beep(1480, .14, 'sine', .03, .12); },   // a bright little sparkle
   land() { beep(140, .07, 'triangle', .035); },
-  // the crowd cheers as you sprint across your bridge: a quick rise of whoops over a warm chord
-  cheer() {
-    [392, 494, 587].forEach(f => beep(f, .5, 'triangle', .025));
-    for (let i = 0; i < 9; i++) beep(700 + Math.random() * 700, .12, 'sine', .02, .05 + i * .06);
-  },
   perfect() { [784, 988, 1175, 1568].forEach((f, i) => beep(f, .22, 'sine', .05, i * .07)); },
   coin() { beep(880, .08, 'triangle', .05); beep(1320, .12, 'triangle', .05, .06); },
   good() { [523, 659, 784, 1047].forEach((f, i) => beep(f, .16, 'triangle', .06, i * .08)); },
@@ -1340,12 +1335,6 @@ function onBridgeBuilt() {
       : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? tl('Similar!', '¡Semejantes!') : tl('Not similar!', '¡No semejantes!')} ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
       : b.P.alg ? tl(`${SHAPES[b.P.shape].bridge} locked in with x = ${b.P.answer}!`, `¡${SHAPES[b.P.shape].bridge} listo con x = ${b.P.answer}!`)
       : tl(`${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`, `¡${SHAPES[b.P.shape].bridge} listo con tu pieza clave de ${fmt(b.P.answer)} pies!`)) + up, 'good'); sfx.good();
-    // THE BRIDGE SPRINT: the runner rushes across the new bridge and on past the next stretch - faster, glowing, and
-    // untouchable while it lasts - with the crowd cheering. Harder levels give a bigger rush; a perfect build a bit more.
-    G.rush = 1.5 + .15 * (G.level - 1) + (b.perfect ? .4 : 0);
-    G.rushMul = 1.3 + .05 * (G.level - 1) + (b.perfect ? .1 : 0);
-    sfx.cheer();
-    for (let i = 0; i < 40; i++) G.particles.push({ x: G.px + (Math.random() - .3) * 500, y: GROUND - 240 - Math.random() * 120, vx: (Math.random() - .5) * 240, vy: -80 - Math.random() * 160, life: .8 + Math.random() * .6, color: pick(['#ffd23f', '#ff5d73', '#4dd0e1', '#7ee2a8', '#fff']) });
     if (b.perfect) {                                                   // fireworks over the gold-trimmed bridge
       sfx.perfect();
       for (let k = 0; k < 3; k++) {
@@ -1444,11 +1433,9 @@ function update(dt) {
   G.jumpBuf = Math.max(0, G.jumpBuf - dt);
 
   if (G.state === 'run') {
-    if (G.rush > 0) G.rush -= dt;
-    const sp = speedNow() * (G.stumble > 0 ? 0.5 : 1) * (G.rush > 0 ? (G.rushMul || 1.3) : 1);
+    const sp = speedNow() * (G.stumble > 0 ? 0.5 : 1);
     G.stumble = Math.max(0, G.stumble - dt);
     G.px += sp * dt;
-    if (G.rush > 0 && Math.random() < .5) G.particles.push({ x: G.px - 14, y: G.py - 20 - Math.random() * 50, vx: -240, vy: -20, life: .3, color: pick(['#ffd23f', '#fff3a0']) });   // a golden trail
     if (!p.bridged && G.px >= p.e - 70) { G.px = p.e - 70; startSolve(); }
     if (G.jumpBuf > 0) {
       if (G.onGround) {
@@ -1500,7 +1487,6 @@ function update(dt) {
         const top = GROUND - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;   // (a hopping boulder's top is higher mid-bounce)
         hurt = over && G.py > top + 4; ey = top + d.h / 2;
       }
-      if (hurt && G.rush > 0) hurt = false;                            // the bridge sprint: nothing can touch you while the rush lasts
       if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
@@ -2201,12 +2187,6 @@ function drawRunner() {
   const ph = G.t * (G.state === 'cross' ? 12 : 16) * (G.stumble > 0 ? .5 : 1);
   ctx.save();
   if (G.inv > 0 && Math.floor(G.t * 14) % 2) ctx.globalAlpha = .35;      // blink while invincible
-  if (G.rush > 0) {                                                      // the bridge sprint: a warm golden glow around the runner
-    const a = Math.min(1, G.rush / .4);
-    const gl = ctx.createRadialGradient(x, fy - 45, 6, x, fy - 45, 70);
-    gl.addColorStop(0, `rgba(255,220,90,${.45 * a})`); gl.addColorStop(1, 'rgba(255,220,90,0)');
-    ctx.fillStyle = gl; ctx.fillRect(x - 70, fy - 115, 140, 140);
-  }
   // squash on landing (wider, shorter) and stretch on a jump (taller, thinner), from the feet
   const sq = (G.squash || 0) / .14 * .22, st = (G.stretch || 0) / .16 * .16;
   ctx.translate(x, fy); ctx.scale(1 + sq - st * .6, 1 - sq + st); ctx.translate(-x, -fy);
@@ -2261,11 +2241,11 @@ function draw() {
   for (const p of G.particles) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - G.cam, p.y, 5, 5); }
   ctx.globalAlpha = 1;
   ctx.restore();
-  // SPEED LINES: streaks rushing past once you're running fast (later levels) and during the bridge sprint
+  // SPEED LINES: streaks rushing past once you're running fast (later levels)
   if (G.state === 'run') {
-    const fast = clamp((speedNow() / 330 - 1.25) / .35, 0, 1) * .6 + (G.rush > 0 ? 1 : 0);
+    const fast = clamp((speedNow() / 330 - 1.25) / .35, 0, 1) * .6;
     if (fast > 0) {
-      ctx.strokeStyle = G.rush > 0 ? 'rgba(255,236,150,.55)' : 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
       for (let i = 0; i < 14; i++) {
         if (hash(i + 7) > fast) continue;
         const y = 40 + hash(i + 3) * (GROUND - 60), len = 60 + hash(i + 11) * 90, x = W - ((G.t * (900 + hash(i) * 500) + hash(i + 5) * W) % (W + len));
