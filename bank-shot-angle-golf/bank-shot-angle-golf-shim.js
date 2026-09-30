@@ -21,20 +21,9 @@ function draw() {
 }
 
 // ---- Sound ----
-var _glSoundCache = {};
+// Played through the site's shared sound player (../site-sound.js): preloaded, instant, and reliable on phones.
+SiteSound.preload(['bounce', 'chaos', 'click', 'correct', 'course_complete', 'hit', 'hole_complete', 'sink', 'tick', 'wrong']
+  .map(function (n) { return 'sounds/' + n + '.mp3'; }));
 
-function playSound(name, loop) {
-  try {
-    var audio = _glSoundCache[name];
-    if (!audio) { audio = new Audio('sounds/' + name + '.mp3'); _glSoundCache[name] = audio; }
-    audio.loop = !!loop;
-    audio.currentTime = 0;
-    var p = audio.play();
-    if (p && p.catch) p.catch(function () {});
-  } catch (e) {}
-}
-
-function stopSound(name) {
-  var audio = _glSoundCache[name];
-  if (audio) { audio.pause(); audio.currentTime = 0; }
-}
+function playSound(name, loop) { SiteSound.play('sounds/' + name + '.mp3', loop); }
+function stopSound(name) { SiteSound.stop('sounds/' + name + '.mp3'); }

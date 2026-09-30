@@ -130,21 +130,9 @@ function mouseWentDown() { return _glMouseNow && !_glMousePrev; }
 // uses a plain relative path ("sounds/pop.mp3") rather than Code.org's
 // "sound://category/name.mp3" scheme, so no URL rewriting is needed here -
 // it just plays that path directly, relative to this HTML page, and fails
-// silently if the file is missing.
-var _glSoundCache = {};
+// silently if the file is missing. It plays through the site's shared sound player (../site-sound.js): preloaded,
+// instant, and reliable on phones.
+SiteSound.preload(['sounds/pop.mp3']);
 
-function playSound(url, loop) {
-  try {
-    var audio = _glSoundCache[url];
-    if (!audio) { audio = new Audio(url); _glSoundCache[url] = audio; }
-    audio.loop = !!loop;
-    audio.currentTime = 0;
-    var p = audio.play();
-    if (p && p.catch) p.catch(function () {});
-  } catch (e) {}
-}
-
-function stopSound(url) {
-  var audio = _glSoundCache[url];
-  if (audio) { audio.pause(); audio.currentTime = 0; }
-}
+function playSound(url, loop) { SiteSound.play(url, loop); }
+function stopSound(url) { SiteSound.stop(url); }

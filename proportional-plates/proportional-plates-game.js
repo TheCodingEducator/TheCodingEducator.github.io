@@ -20,15 +20,9 @@ const store = {
 };
 // LANGUAGE: English or Spanish, picked with the 🌐 button in the top bar (site-layout.js) and shared by every game.
 // Every word a student sees goes through L('English', 'Spanish'); the recipes carry their own Spanish words (DISHES_ES).
-const ES = (() => { try { return localStorage.getItem('site_lang') === 'es'; } catch (e) { return false; } })();
+// (../site-lang.js reads the choice and swaps in the page's own Spanish words from data-es / data-es-aria / data-es-title.)
+const ES = !!window.SITE_ES;
 const L = (en, es) => ES ? es : en;
-// the page's own words (buttons, cards, labels) carry their Spanish in data-es / data-es-aria / data-es-title
-if (ES) {
-  document.documentElement.lang = 'es';
-  document.querySelectorAll('[data-es]').forEach(el => { el.innerHTML = el.dataset.es; });
-  document.querySelectorAll('[data-es-aria]').forEach(el => el.setAttribute('aria-label', el.dataset.esAria));
-  document.querySelectorAll('[data-es-title]').forEach(el => el.setAttribute('title', el.dataset.esTitle));
-}
 
 /* ===================== FRACTIONS (every amount is kept exact) ===================== */
 const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };

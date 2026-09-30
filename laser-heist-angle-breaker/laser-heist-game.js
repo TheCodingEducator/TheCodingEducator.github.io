@@ -4754,7 +4754,10 @@ function drawPlayingScreen(dt) {
     }
   }
 
-  if (keyEdge("p") || keyEdge("escape")) {
+  // An on-screen MENU button does what Esc / P do (pause), so touch players can pause too
+  var menuW = 70, menuH = 22, menuX = 6, menuY = CANVAS_H - 28;
+  drawButton(menuX, menuY, menuW, menuH, tl("MENU", "MENÚ"), buttonHovered(menuX, menuY, menuW, menuH));
+  if (keyEdge("p") || keyEdge("escape") || buttonClicked(menuX, menuY, menuW, menuH)) {
     previousState = STATE_PLAYING;
     gameState = STATE_PAUSE;
   }

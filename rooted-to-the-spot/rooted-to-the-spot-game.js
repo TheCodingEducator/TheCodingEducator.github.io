@@ -2103,14 +2103,7 @@
   $('pause-resume').addEventListener('click', closePause);
   $('pause-restart').addEventListener('click', function () { stopPlay(); startShootout(); });
   $('pause-skills').addEventListener('click', function () { stopPlay(); showMenu(); });
-  // In fullscreen, Esc opens this menu instead of leaving fullscreen (students leave with the Exit Fullscreen button)
-  document.addEventListener('fullscreenchange', function () {
-    try {
-      if (!navigator.keyboard) return;
-      if (document.fullscreenElement) navigator.keyboard.lock(['Escape']).catch(function () {});
-      else navigator.keyboard.unlock();
-    } catch (e) {}
-  });
+  // (In fullscreen, Esc opens this menu instead of leaving fullscreen - ../site-fullscreen.js asks the browser for that.)
 
   // ---------- Sound (made on the fly, no files) ----------
   var audioCtx = null, master = null;

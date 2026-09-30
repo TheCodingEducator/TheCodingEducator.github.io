@@ -133,119 +133,18 @@ function mouseDown() { return _glMouseNow; }
 function mouseWentDown() { return _glMouseNow && !_glMousePrev; }
 
 // ---- Sound ----
-// Game Lab's playSound()/stopSound() point at Code.org's own hosted sound
-// library ("sound://category_x/name.mp3"), which isn't reachable outside
-// Code.org. This looks for a same-named file in a local
-// exponent-racer-sounds/ folder instead, and fails silently if it isn't
-// there - see exponent-racer-sounds/README.txt.
-// _glSoundCache maps each url to a small POOL of Audio elements rather than
-// a single shared one - two effects that overlap in time (a coin ding right
-// as a correct answer plays, or the same effect firing twice in quick
-// succession) used to fight over one <audio> element: restarting it via
-// currentTime=0 while it was still finishing its previous play could cut
-// the first play off or get silently dropped by the browser, which is
-// exactly what "sound doesn't always work" looks like from the outside.
-var _glSoundCache = {};
-var _glSoundPoolSize = 3;
-
+// Game Lab's playSound()/stopSound() point at Code.org's own hosted sound library ("sound://category_x/name.mp3"), which
+// isn't reachable outside Code.org. This plays the same-named file from the local exponent-racer-sounds/ folder instead,
+// through the site's shared sound player (../site-sound.js): preloaded, instant, and reliable on phones.
 function _glSoundFile(url) {
   var parts = url.split('/');
   return 'exponent-racer-sounds/' + parts[parts.length - 1];
 }
+SiteSound.preload(['app_tab_sound', 'bounce_1', 'coin_1', 'deep_pass_by_whoosh_1', 'deep_pass_by_whoosh_7_fast', 'energy_bar_recharge_4',
+  'f1_race', 'go_male', 'lighthearted_bonus_objective_1', 'peaceful_win_1', 'perfect_clean_app_button_click',
+  'puzzle_game_organic_wood_block_tone_tap_1', 'puzzle_game_secret_unlock_01', 'puzzle_game_ui_pop_01', 'puzzle_game_ui_pop_tiny_01',
+  'rain_thunderstorm_calm', 'retro_game_simple_impact_1', 'vibrant_game_life_lost_1', 'vibrant_game_start_with_tone_hum',
+  'vibrant_ui_mouse_click_1', 'vibrant_ui_tap_1'].map(function (n) { return 'exponent-racer-sounds/' + n + '.mp3'; }));
 
-function _glSoundInstance(url) {
-  var pool = _glSoundCache[url];
-  if (!pool) { pool = []; _glSoundCache[url] = pool; }
-  for (var i = 0; i < pool.length; i++) {
-    if (pool[i].paused || pool[i].ended) return pool[i];
-  }
-  if (pool.length < _glSoundPoolSize) {
-    var a = new Audio(_glSoundFile(url));
-    pool.push(a);
-    return a;
-  }
-  return pool[0]; // every instance is busy - reuse the oldest rather than not play at all
-}
-
-function playSound(url, loop) {
-  try {
-    var audio = _glSoundInstance(url);
-    audio.loop = !!loop;
-    var start = function () {
-      try { audio.currentTime = 0; } catch (e) {} // can throw if the file isn't seekable yet - play() still works from 0 either way
-      var p = audio.play();
-      if (p && p.catch) p.catch(function () {});
-    };
-    // Setting currentTime before the browser has even loaded metadata can
-    // throw and skip playback entirely (silently, since it's caught above) -
-    // this is the other half of "sound doesn't always work": it depended on
-    // whether the file happened to already be loaded from an earlier play.
-    if (audio.readyState >= 1) start();
-    else audio.addEventListener('loadedmetadata', start, { once: true });
-  } catch (e) {}
-}
-
-function stopSound(url) {
-  var pool = _glSoundCache[url];
-  if (pool) { for (var i = 0; i < pool.length; i++) { pool[i].pause(); pool[i].currentTime = 0; } }
-}
-
-// ---- Web Audio (preferred) ----
-// On phones, an <audio> element hitches the game the first time it plays (the file is loaded and decoded mid-race), and
-// phone browsers often refuse to play one that wasn't created during a tap - so collecting a coin could lag or make no
-// sound at all. Instead every sound is decoded into memory once, up front, and played through a single AudioContext
-// that is unlocked on the first touch/click/key. Playing a decoded sound is instant and never drops. If Web Audio isn't
-// available, the <audio> pool above is used as before.
-(function () {
-  var AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC || !window.fetch) return;
-  var ctx;
-  try { ctx = new AC(); } catch (e) { return; }
-  var buffers = {}, loading = {}, playing = {};
-  var FILES = ['app_tab_sound', 'bounce_1', 'coin_1', 'deep_pass_by_whoosh_1', 'deep_pass_by_whoosh_7_fast', 'energy_bar_recharge_4',
-    'f1_race', 'go_male', 'lighthearted_bonus_objective_1', 'peaceful_win_1', 'perfect_clean_app_button_click',
-    'puzzle_game_organic_wood_block_tone_tap_1', 'puzzle_game_secret_unlock_01', 'puzzle_game_ui_pop_01', 'puzzle_game_ui_pop_tiny_01',
-    'rain_thunderstorm_calm', 'retro_game_simple_impact_1', 'vibrant_game_life_lost_1', 'vibrant_game_start_with_tone_hum',
-    'vibrant_ui_mouse_click_1', 'vibrant_ui_tap_1'];
-
-  function load(file) {
-    if (buffers[file] || loading[file]) return loading[file];
-    loading[file] = fetch(file).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (data) {
-      return new Promise(function (ok, fail) { ctx.decodeAudioData(data, ok, fail); });   // callback form works on older Safari too
-    }).then(function (buf) { buffers[file] = buf; return buf; }, function () { delete loading[file]; });
-    return loading[file];
-  }
-  FILES.forEach(function (n) { load('exponent-racer-sounds/' + n + '.mp3'); });
-
-  // Phones start the AudioContext suspended until the player touches the screen; resume it on every gesture (cheap once running)
-  function unlock() {
-    if (ctx.state !== 'running') {
-      ctx.resume();
-      var s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);   // iOS needs a sound started inside the gesture
-    }
-  }
-  ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, unlock, true); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') unlock(); });
-
-  function start(url, buf, loop) {
-    var src = ctx.createBufferSource();
-    src.buffer = buf; src.loop = !!loop;
-    src.connect(ctx.destination);
-    src.start(0);
-    if (loop) (playing[url] = playing[url] || []).push(src);
-    else src.onended = function () { src.disconnect(); };
-  }
-
-  playSound = function (url, loop) {
-    try {
-      var file = _glSoundFile(url), buf = buffers[file];
-      if (ctx.state === 'suspended') ctx.resume();
-      if (buf) start(url, buf, loop);
-      else { var p = load(file); if (p) p.then(function (b) { if (b) start(url, b, loop); }); }
-    } catch (e) {}
-  };
-  stopSound = function (url) {
-    var list = playing[url];
-    if (list) { list.forEach(function (s) { try { s.stop(0); } catch (e) {} }); playing[url] = []; }
-  };
-})();
+function playSound(url, loop) { SiteSound.play(_glSoundFile(url), loop); }
+function stopSound(url) { SiteSound.stop(_glSoundFile(url)); }

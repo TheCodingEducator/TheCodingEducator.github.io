@@ -1,76 +1,10 @@
-// On-screen numeric keypad for typing a degree answer on touch devices.
-// This game's only touch-unfriendly input is typing the bank-shot
-// angle - aiming/power is a natural drag gesture on the canvas itself
-// and needs no on-screen control. Shown only while holePhase is
-// QUESTION (see bank-shot-angle-golf-game.js), matching the same
-// swap-by-game-state pattern every other mobile-controls.js on this
-// site uses.
-(function () {
-  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
-    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-  if (!isTouch) return;
-
-  var wrap = document.createElement('div');
-  wrap.id = 'mobile-controls';
-  wrap.innerHTML =
-    '<div id="mc-numpad">' +
-      '<button class="mc-num" data-key="1">1</button><button class="mc-num" data-key="2">2</button><button class="mc-num" data-key="3">3</button>' +
-      '<button class="mc-num" data-key="4">4</button><button class="mc-num" data-key="5">5</button><button class="mc-num" data-key="6">6</button>' +
-      '<button class="mc-num" data-key="7">7</button><button class="mc-num" data-key="8">8</button><button class="mc-num" data-key="9">9</button>' +
-      '<button class="mc-num" id="mc-backspace" data-key="backspace">&#9003;</button><button class="mc-num" data-key="0">0</button><button class="mc-num" id="mc-enter" data-key="enter">&#9166;</button>' +
-    '</div>';
-  document.body.appendChild(wrap);
-
-  var style = document.createElement('style');
-  style.textContent =
-    // pointer-events starts at none, not auto - this 240px bottom strip
-    // spans the FULL viewport width, and whenever the numpad itself
-    // isn't shown (any screen other than an active question - the
-    // title/menu, between-hole overlays, and critically the standards
-    // panel/teaching notes further down the page once scrolled into
-    // this band) an always-on "auto" here would silently swallow every
-    // tap and scroll gesture that lands in it, with nothing visible to
-    // explain why. The .mc-active class (toggled alongside mc-visible
-    // in refreshVisibility below) re-enables it only while the numpad
-    // itself is actually up.
-    // z-index 10001: above the pseudo-fullscreen slot's own z-index:9999
-    // opaque background (see the HTML file), which otherwise painted over
-    // this body-level bar once pseudo-fullscreen made the canvas grow -
-    // that, not anything about the joystick/numpad itself, was why the
-    // controls appeared to sit "inside" the game instead of below it.
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 10001; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
-    '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
-    '#mc-numpad.mc-visible { display: grid; }' +
-    '.mc-num { border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,24,44,0.85); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; }' +
-    '.mc-num:active { background: rgba(91,140,255,0.7); }' +
-    '#mc-enter { background: rgba(60,255,140,0.35); }' +
-    '#mc-enter:active { background: rgba(60,255,140,0.6); }' +
-    '#mc-backspace { background: rgba(255,90,90,0.25); }' +
-    '#mc-backspace:active { background: rgba(255,90,90,0.55); }';
-  document.head.appendChild(style);
-
-  var numpadEl = document.getElementById('mc-numpad');
-  var numButtons = document.querySelectorAll('#mc-numpad .mc-num');
-  for (var i = 0; i < numButtons.length; i++) {
-    (function (btn) {
-      var key = btn.getAttribute('data-key');
-      btn.addEventListener('pointerdown', function (e) {
-        e.preventDefault();
-        if (typeof handleAnswerKey === 'function') handleAnswerKey(key);
-      });
-    })(numButtons[i]);
+// On-screen number pad for typing the bank-shot angle on phones and tablets (built by the site's shared
+// ../site-controls.js). Aiming and power are a drag on the canvas itself, so this is the only touch control. Shown only
+// while a hole's question is up.
+SiteControls.create({
+  numpad: ['backspace', 'enter'],
+  onKey: function (key) { if (typeof handleAnswerKey === 'function') handleAnswerKey(key); },
+  show: function () {
+    return { numpad: typeof gameState !== 'undefined' && gameState === 'PLAYING' && typeof holePhase !== 'undefined' && holePhase === 'QUESTION' };
   }
-
-  function refreshVisibility() {
-    var show = typeof gameState !== 'undefined' && gameState === 'PLAYING' &&
-      typeof holePhase !== 'undefined' && holePhase === 'QUESTION';
-    numpadEl.classList.toggle('mc-visible', show);
-    wrap.classList.toggle('mc-active', show);
-  }
-
-  var _mcPrevDraw = window.draw;
-  window.draw = function () {
-    _mcPrevDraw();
-    refreshVisibility();
-  };
-})();
+});

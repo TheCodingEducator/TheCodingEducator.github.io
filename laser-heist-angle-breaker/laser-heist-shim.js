@@ -57,30 +57,20 @@ function keyDown(name) {
 // laser-heist-angle-breaker/sounds/ folder instead. The game already
 // wraps every playSfx() call in its own try/catch, so this doesn't
 // need to fail silently itself - but does anyway, to be safe if
-// something ever calls it directly.
-var _glSoundCache = {};
-
+// something ever calls it directly. Files play through the site's shared sound player (../site-sound.js): preloaded,
+// instant, and reliable on phones.
 function _glSoundFile(url) {
   var parts = url.split('/');
   return 'sounds/' + parts[parts.length - 1];
 }
+SiteSound.preload(['cartoon_negative_bling', 'game_over_2', 'melodic_win_1', 'vibrant_game_correct_answer_1']
+  .map(function (n) { return 'sounds/' + n + '.mp3'; }));
 
 function playSound(url, loop) {
   if (url.indexOf('synth://') === 0) { _glPlaySynth(url.slice('synth://'.length)); return; }
-  try {
-    var audio = _glSoundCache[url];
-    if (!audio) { audio = new Audio(_glSoundFile(url)); _glSoundCache[url] = audio; }
-    audio.loop = !!loop;
-    audio.currentTime = 0;
-    var p = audio.play();
-    if (p && p.catch) p.catch(function () {});
-  } catch (e) {}
+  SiteSound.play(_glSoundFile(url), loop);
 }
-
-function stopSound(url) {
-  var audio = _glSoundCache[url];
-  if (audio) { audio.pause(); audio.currentTime = 0; }
-}
+function stopSound(url) { SiteSound.stop(_glSoundFile(url)); }
 
 // ---- Synthesized cues ----
 // A couple of cues (the sneaking-phase near-miss "tension" blip) are
@@ -91,6 +81,7 @@ function stopSound(url) {
 // sound library for the closest available file.
 var _glAudioCtx = null;
 function _glGetAudioCtx() {
+  if (!_glAudioCtx) _glAudioCtx = SiteSound.context();   // the shared one, already unlocked by the first tap
   if (!_glAudioCtx) {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     _glAudioCtx = new Ctx();

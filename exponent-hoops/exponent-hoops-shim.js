@@ -155,26 +155,15 @@ function mouseWentDown() { return _glMouseNow && !_glMousePrev; }
 // library ("sound://category_x/name.mp3"), which isn't reachable outside
 // Code.org. This looks for a same-named file in a local
 // exponent-hoops-sounds/ folder instead, and fails silently if it isn't
-// there - see exponent-hoops-sounds/README.txt.
-var _glSoundCache = {};
-
+// there - see exponent-hoops-sounds/README.txt. Played through the site's shared sound player (../site-sound.js):
+// preloaded, instant, and reliable on phones.
 function _glSoundFile(url) {
   var parts = url.split('/');
   return 'exponent-hoops-sounds/' + parts[parts.length - 1];
 }
+SiteSound.preload(['Double_Whistle_SFX', 'perfect_clean_app_button_click', 'power_down_1', 'retro_game_hit_block_3', 'slight_negative_select_1',
+  'vibrant_game_achievement_2', 'vibrant_game_positive_achievement_1', 'vibrant_game_start_with_tone_hum', 'vibrant_ui_tap_1']
+  .map(function (n) { return 'exponent-hoops-sounds/' + n + '.mp3'; }));
 
-function playSound(url, loop) {
-  try {
-    var audio = _glSoundCache[url];
-    if (!audio) { audio = new Audio(_glSoundFile(url)); _glSoundCache[url] = audio; }
-    audio.loop = !!loop;
-    audio.currentTime = 0;
-    var p = audio.play();
-    if (p && p.catch) p.catch(function () {});
-  } catch (e) {}
-}
-
-function stopSound(url) {
-  var audio = _glSoundCache[url];
-  if (audio) { audio.pause(); audio.currentTime = 0; }
-}
+function playSound(url, loop) { SiteSound.play(_glSoundFile(url), loop); }
+function stopSound(url) { SiteSound.stop(_glSoundFile(url)); }
