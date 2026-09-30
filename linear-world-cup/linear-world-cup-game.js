@@ -2110,8 +2110,9 @@ function drawField() {
   }
 
   // The numbers and the axes go away once the pass is played and the player dribbles up the field (the breakaway),
-  // and stay away through the shot - the field has scrolled, so they no longer line up with anything.
-  var skipLabels = screenState === "revealLine" || screenState === "kicking" || screenState === "breakaway" || screenState === "powering" || screenState === "aiming" || screenState === "shootFlight" || screenState === "postHit" || screenState === "saved" || screenState === "blocked" || screenState === "celebrate";
+  // and stay away through the shot - the field has scrolled, so they no longer line up with anything. They're also
+  // hidden while the other team has the ball, when there's no equation to write.
+  var skipLabels = screenState === "enemyPossession" || (screenState === "feedback" && feedbackScene === "enemy") || screenState === "revealLine" || screenState === "kicking" || screenState === "breakaway" || screenState === "powering" || screenState === "aiming" || screenState === "shootFlight" || screenState === "postHit" || screenState === "saved" || screenState === "blocked" || screenState === "celebrate";
   if (!skipLabels) {
     // Solid black x- and y-axes whenever the numbers are showing. The y-axis (x = 0) runs up the middle; the x-axis is the
     // row whose label is 0 (in Hard the y numbers shift, so it's drawn only when y = 0 is on the field).
