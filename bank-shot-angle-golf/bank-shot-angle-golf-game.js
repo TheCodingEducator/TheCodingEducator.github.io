@@ -1474,6 +1474,11 @@ function simulateTrail(shot, isCorrect) {
       pts.push({ x: b.x, y: b.y });
       if (pts.bounceIdx !== undefined) after += step;
     }
+    if (pts.bounceIdx !== undefined && after > 4 && mag(b.vx, b.vy) > 0.5) {   // a second wall ends the line
+      var h2 = Math.atan2(b.vy, b.vx);
+      if (pts.postHeading !== undefined && Math.abs(Math.atan2(Math.sin(h2 - pts.postHeading), Math.cos(h2 - pts.postHeading))) > ANGLE_REVEAL_BOUNCE_RAD) { pts.push({ x: b.x, y: b.y }); break; }
+      pts.postHeading = h2;
+    }
     if (pts.bounceIdx === undefined) {
       if (isCorrect) {
         if (pending.applied) pts.bounceIdx = pts.length - 1;
@@ -1503,6 +1508,15 @@ function updateTrail() {
   // only draw the route up to that point - see drawTrail).
   if (ri.revealed && ri.trailCut === undefined) ri.trailCut = ri.trail.length;
   if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
+  // Once past the bounce, stop the line the moment the ball hits a second wall.
+  if (ri.revealed && !ri.trailDone && mag(ball.vx, ball.vy) > 0.5) {
+    var hd = Math.atan2(ball.vy, ball.vx);
+    if (ri.postHeading !== undefined && ri.afterReveal > 4) {
+      var tn = Math.abs(Math.atan2(Math.sin(hd - ri.postHeading), Math.cos(hd - ri.postHeading)));
+      if (tn > ANGLE_REVEAL_BOUNCE_RAD) { ri.trail.push({ x: ball.x, y: ball.y }); ri.trailDone = true; }
+    }
+    ri.postHeading = hd;
+  }
 }
 
 // The angle between the two green route lines where the correct shot bounces:
