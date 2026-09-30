@@ -980,16 +980,23 @@ function makePattern(kind, type, x, level) {
     // most one level up from there; after that the clear lane is never more than 2 levels from the last one
     let open = [flooded ? 1 : 0], gx = x + 460, maxStep = 1;
     // walls: one or two lanes left clear
+    // On a touch screen the only button is JUMP (there's no way to drop down), so there the walls never ask you to go down:
+    // each gap is at or above the highest lane you might be on, and still within reach of the lowest.
+    const climbOnly = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
     while (gx < x + len - 260) {
-      const anchor = pick(open), near = lanes.filter(l => Math.abs(l - anchor) <= maxStep && !(open.length === 1 && l === anchor && Math.random() < .7));
+      const lo = Math.min(...open), hi = Math.max(...open), anchor = pick(open);
+      let near = climbOnly ? lanes.filter(l => l >= hi && l <= lo + maxStep)
+        : lanes.filter(l => Math.abs(l - anchor) <= maxStep && !(open.length === 1 && l === anchor && Math.random() < .7));
+      if (climbOnly && !near.length) near = [hi];
       maxStep = 2;
-      const first = pick(near.length ? near : lanes), rest = lanes.filter(l => l !== first);
-      open = openN === 2 ? [first, pick(rest)] : [first];
+      const first = pick(near.length ? near : lanes);
+      const rest = lanes.filter(l => l !== first && (!climbOnly || (l >= first && l <= first + 1)));   // (touch: the 2nd gap is just above the first)
+      open = openN === 2 && rest.length ? [first, pick(rest)] : [first];
       for (const l of lanes) if (!open.includes(l)) obs.push(mk(pick(standing), gx + rnd(-12, 12), { lift: SKY_H[l] }));
       gx += spd * (rnd(125, 165) / 100) + (level <= 2 ? 80 : 0);
     }
     const endX = x + len + 20;
-    return { obs, floats, last: { x: endX + spd * .5, type: 'barrier', fly: false }, endX };   // (room to drop down off the top deck before what's next)
+    return { obs, floats, last: { x: endX + spd * .5, type: 'barrier', fly: false, sky: true }, endX };   // (room to drop down off the top deck before what's next)
   }
   if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
   else if (kind === 'skyField') { const w = rnd(380, 500); obs.push(mk(type, x, { w })); floats.push({ x: x - 40, w: w + 80, h: pick([170, 185, 195]) }); }
@@ -1014,7 +1021,10 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
     if (prev && !first && PATTERNS[level] && Math.random() < PATTERN_CHANCE[level - 1]) {          // a bigger move instead of a single obstacle
       const kind = pick(PATTERNS[level]), ptype = patternType(kind, level);
       if (!(prev.fly && OBS[ptype].fly)) {
-        const px0 = prev.x + gapAfter(prev, ptype, level) + (kind === 'skyway' ? 120 : 0), pat = makePattern(kind, ptype, px0, level);
+        // (a skyway keeps well clear of a flyer just before it: a bird hangs at exactly the height of someone up on a deck)
+        const spd0 = 330 * SPEED_BY_LEVEL[level - 1];
+        const px0 = prev.x + gapAfter(prev, ptype, level) + (kind === 'skyway' ? 120 : 0) + (prev.fly && kind !== 'lowLine' ? spd0 * 1.1 : 0), pat = makePattern(kind, ptype, px0, level);
+        if (pat.floats.length) pat.last.sky = true;                        // (any pattern with platforms: no flyer right after it)
         if (pat.endX < p.e - 300) { pat.obs.forEach(c => p.obs.push(c)); pat.floats.forEach(f => patFloats.push(f)); prev = pat.last; continue; }
       }
     }
@@ -1032,6 +1042,7 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
     const swoop = !!prev && SWOOP_TYPES.includes(type) && Math.random() < SWOOP_CHANCE[level - 1];
     const roll = ROLLERS[type], rolling = !!prev && !!roll && roll.level === level && Math.random() < roll.chance;
     if (prev) x = prev.x + gapAfter(prev, type, level, swoop);
+    if (prev && prev.sky && OBS[type].fly) x += 330 * SPEED_BY_LEVEL[level - 1] * .9;   // time to come down off the decks before a flyer
     if (x >= p.e - 300) break;
     const c = { x, type, fly: !!OBS[type].fly, hit: false, t0: Math.random() * PIPE_CYCLE };
     if (swoop) c.swoop = true;
@@ -1045,7 +1056,9 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
   fresh.forEach(c => {
     if (c.fly || OBS[c.type].vx || c.vx || Math.random() > 0.7) return;
     const w = (OBS[c.type].w || 40) + 100 + rnd(0, 60), fx = c.x - 50 - rnd(0, 20);
-    if (flyers.some(f => f.x > fx - 90 && f.x < fx + w + 90)) return;
+    // no flyer anywhere near: someone standing on (or stepping off) a platform is right at a bird's height
+    const clear = 330 * SPEED_BY_LEVEL[level - 1] * .8;
+    if (flyers.some(f => f.x > fx - clear && f.x < fx + w + clear)) return;
     p.floats.push({ x: fx, w, h: pick([105, 115, 125]) });
   });
 }
@@ -2467,7 +2480,6 @@ addEventListener('keydown', e => {
 });
 $('stage').addEventListener('pointerdown', e => { audioInit(); jump(); });
 $('jumpBtn').addEventListener('pointerdown', e => { e.stopPropagation(); audioInit(); jump(); });
-$('downBtn').addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); audioInit(); drop(); });
 $('btnPlay').onclick = () => { audioInit(); buildMenu(); showScreen('menu'); };
 $('btnMenuBack').onclick = () => showScreen('title');
 $('btnPractice').onclick = openPractice;

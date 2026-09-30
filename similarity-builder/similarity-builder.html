@@ -272,8 +272,6 @@
   @media (pointer:coarse) { #sb #jumpBtn { display:block; } }
   /* touch screens: the Jump button sits beside the game, never on top of it */
   #sb #stageRow { position:relative; }
-  #sb #downBtn { position:absolute; left:4px; bottom:4px; width:74px; height:74px; border-radius:50%; border:4px solid #fff; background:rgba(47,128,237,.9); color:#fff; font-weight:900; font-size:14px; display:none; touch-action:none; }
-  @media (pointer:coarse) { #sb #downBtn { display:block; } }
   @media (pointer:coarse) { #sb #stage { width:min(var(--stage-w), calc(100% - 180px)); } #sb #jumpBtn { right:4px; bottom:4px; } }
   #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
 
@@ -421,7 +419,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Similarity Builder</h1>
-<p class="sr-only">A runner game about similar figures. You run across a canyon, and at every gap a puzzle shows two similar shapes of different sizes: find the scale factor between them (level 1), or use the scale factor to find a missing side length by multiplying or dividing (levels 2 to 4, where the shapes get turned, flipped, and eventually only label one side out of each group of equal sides). Whatever number you answer is what the bridge gets built with - too small and it buckles, too large and it snaps, and either way you fall and lose a heart. Between puzzles, dodge obstacles that are the real-world reasons a bridge does not get built - protesters, endangered animals, lawyers who need permits, red tape, unstable soil, flooded land, holes, loose pipes, and electrical lines. Each level has its own obstacles, and every one costs a heart if it touches you. Jump the ones on the ground and run under the ones overhead (except a bird, drone or helicopter that dives down low as it reaches you: jump that one), watch for boulders and barrels that roll toward you, and land on floating platforms. Skyways stack three platforms above the ground: jump up through them and press the down arrow (or DOWN on a touch screen) to drop to the level below, lining up with the gap in each wall of obstacles. Clearing an obstacle by a hair gets a "Close call!" cheer. Every correct answer earns a coin to spend in the Shop on a bridge-building crew member such as a politician, architect, engineer, electrician, or safety inspector, each in four different looks. Controls: Space, Enter, or the up arrow (or a tap) jumps, and pressing again in the air double jumps. Type whole-number answers and press Enter or the Build button. The Menu button or the Escape key pauses. From the title screen, Play opens the Menu screen, where you can start a Bridge Run, open Practice (no obstacles or hearts, with a choice of question types), or open the Shop.</p>
+<p class="sr-only">A runner game about similar figures. You run across a canyon, and at every gap a puzzle shows two similar shapes of different sizes: find the scale factor between them (level 1), or use the scale factor to find a missing side length by multiplying or dividing (levels 2 to 4, where the shapes get turned, flipped, and eventually only label one side out of each group of equal sides). Whatever number you answer is what the bridge gets built with - too small and it buckles, too large and it snaps, and either way you fall and lose a heart. Between puzzles, dodge obstacles that are the real-world reasons a bridge does not get built - protesters, endangered animals, lawyers who need permits, red tape, unstable soil, flooded land, holes, loose pipes, and electrical lines. Each level has its own obstacles, and every one costs a heart if it touches you. Jump the ones on the ground and run under the ones overhead (except a bird, drone or helicopter that dives down low as it reaches you: jump that one), watch for boulders and barrels that roll toward you, and land on floating platforms. Skyways stack three platforms above the ground: jump up through them and press the down arrow to drop to the level below (on a touch screen you only ever need to climb), lining up with the gap in each wall of obstacles. Clearing an obstacle by a hair gets a "Close call!" cheer. Every correct answer earns a coin to spend in the Shop on a bridge-building crew member such as a politician, architect, engineer, electrician, or safety inspector, each in four different looks. Controls: Space, Enter, or the up arrow (or a tap) jumps, and pressing again in the air double jumps. Type whole-number answers and press Enter or the Build button. The Menu button or the Escape key pauses. From the title screen, Play opens the Menu screen, where you can start a Bridge Run, open Practice (no obstacles or hearts, with a choice of question types), or open the Shop.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -439,7 +437,6 @@
         <div id="toast"></div>
       </div>
       <button id="jumpBtn" data-es="SALTA">JUMP</button>
-      <button id="downBtn" data-es="BAJA">DOWN</button>
       </div>
       <div id="help" data-es="Saltar: <b>Espacio</b> / <b>Enter</b> / <b>&uarr;</b> / toca &mdash; otra vez en el aire para un <b>doble salto</b>. <b>&darr;</b> / <b>S</b> baja de una plataforma. Esc o Menú pausa.">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; again in the air to <b>double jump</b>. <b>&darr;</b> / <b>S</b> drops down off a platform. Esc or Menu pauses.</div>
 
@@ -588,7 +585,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="similarity-builder-game.js?v=26890ec4"></script>
+<script src="similarity-builder-game.js?v=e4b99a0c"></script>
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
