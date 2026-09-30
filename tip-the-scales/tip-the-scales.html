@@ -1721,7 +1721,17 @@
           return Math.abs(nV) > 10 || Math.abs(nC) > 10 || Math.abs(nGC) > 10;
       };
 
-      if (checkExceeds(state.leftState) || checkExceeds(state.rightState)) { showMessage(tl('Exceeds limit of 10!', '¡Pasa el límite de 10!')); return; }
+      // 1-Step and 2-Step Equations distribute right away (×2 turns x + 3 into 2x + 6, never 2(x + 3)); the Expand
+      // button, and parentheses, are for Variables Both Sides and Complex
+      const autoDistribute = state.mode === 'challenge' && (state.difficulty === '1-step' || state.difficulty === '2-step');
+      const expandedExceeds = (s) => {
+          const g = s.groups;
+          return Math.abs((s.variables + (g ? g.count * g.variables : 0)) * multiplier) > 10 ||
+                 Math.abs((s.constants + (g ? g.count * g.constants : 0)) * multiplier) > 10;
+      };
+      const exceeds = autoDistribute ? (expandedExceeds(state.leftState) || expandedExceeds(state.rightState))
+                                     : (checkExceeds(state.leftState) || checkExceeds(state.rightState));
+      if (exceeds) { showMessage(tl('Exceeds limit of 10!', '¡Pasa el límite de 10!')); return; }
 
       state.history.push({ left: cloneSide(state.leftState), right: cloneSide(state.rightState) });
 
@@ -1746,6 +1756,14 @@
 
       applyMult(state.leftState, multiplier);
       applyMult(state.rightState, multiplier);
+      if (autoDistribute) {
+          [state.leftState, state.rightState].forEach((s) => {
+              if (!s.groups) return;
+              s.variables = cleanFloat(s.variables + s.groups.variables * s.groups.count);
+              s.constants = cleanFloat(s.constants + s.groups.constants * s.groups.count);
+              s.groups = null;
+          });
+      }
 
       updateUI();
     }
@@ -2047,7 +2065,8 @@
             expBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 15l-6 6m6-6v4.8m0-4.8H4.2M9 9 3 3m6 6V4.2M9 9H4.2m5.8-5.8 6 6m-6-6v4.8m0-4.8h4.8"/></svg> ${tl("Expand", "Expandir")}`;
             expBtn.onclick = null;
         }
-        // 1-Step and 2-Step Equations never need it, so the button only shows in Variables Both Sides and Complex
+        // 1-Step and 2-Step Equations never need it (multiplying there distributes right away - see handleMultiply), so the
+        // button only shows in Variables Both Sides and Complex
         if (state.mode === 'challenge' && (state.difficulty === '1-step' || state.difficulty === '2-step')) expBtn.classList.add('hidden');
       }
 
