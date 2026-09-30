@@ -2306,9 +2306,13 @@ function mouseDragged() {
 // the same mouse handlers, since p5 keeps mouseX/mouseY in sync with
 // the active touch point regardless - makes canvas drag-to-aim work
 // reliably on every touch device instead of depending on that quirk.
-function touchStarted() { mousePressed(); return false; }
-function touchMoved() { mouseDragged(); return false; }
-function touchEnded() { mouseReleased(); return false; }
+// p5 listens for touches on the whole page, so only touches that start on the game itself are handled (and kept from
+// scrolling); anywhere else - the top bar's All games / Fullscreen / Standards buttons, the number pad - the tap goes
+// through untouched. (Returning false for every touch used to swallow those taps on phones.)
+function onGame(e) { return !!(e && e.target && e.target.tagName === 'CANVAS'); }
+function touchStarted(e) { if (!onGame(e)) return; mousePressed(); return false; }
+function touchMoved(e) { if (!onGame(e)) return; mouseDragged(); return false; }
+function touchEnded(e) { if (!onGame(e)) return; mouseReleased(); return false; }
 
 // Desktop keyboard: digits, backspace, enter for the answer box. Mobile
 // uses the on-screen keypad in bank-shot-angle-golf-mobile-controls.js,

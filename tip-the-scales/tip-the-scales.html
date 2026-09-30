@@ -547,7 +547,7 @@
     }
     .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-hint 1.6s ease-in-out infinite; }
     @keyframes rotate-hint { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
-    .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin-bottom: 10px; }
+    .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin-bottom: 10px; color: #f8fafc; }   /* light on the dark prompt (the page h2 is dark) */
     .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; }
 
     @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
@@ -636,6 +636,31 @@
        .teaching-notes' own base display rules, which are declared above. */
     @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
       .site-topbar, .game-frame, .teaching-notes { display: none; }
+    }
+
+    /* Short, wide screens (a phone held sideways): stacked top to bottom, the equation, buttons and answer box used up
+       nearly all the height and squeezed the scale down to a thin strip. Here the scale gets its own column on the
+       left, at full height, and the controls and answer box stack in a column on the right (fitScale() sizes the
+       scale to whatever room its column has). */
+    @media (orientation: landscape) and (max-height: 520px) {
+      .center-area {
+        display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); grid-template-rows: 1fr auto auto 1fr;
+        column-gap: 0.5rem; align-items: center; justify-items: center; align-self: stretch;
+      }
+      .center-area > .scale-wrapper { grid-column: 1; grid-row: 1 / -1; height: 100%; margin: 0; }
+      .center-area > .challenge-controls { grid-column: 2; grid-row: 2; flex-wrap: wrap; overflow: visible; row-gap: 0.35rem; margin: 0; }
+      .center-area > .sandbox-math-panel { grid-column: 2; grid-row: 2 / span 2; margin: 0; }
+      /* Sandbox: the side panels already take the edges, so the scale gets most of the middle and the x = panel stays narrow */
+      .center-area:has(> .sandbox-math-panel:not(.hidden)) { grid-template-columns: minmax(0, 1fr) minmax(0, 170px); }
+      .center-area > .sandbox-math-panel { width: 100%; min-width: 0; }
+      .center-area > .answer-panel { grid-column: 2; grid-row: 3; margin: 0.35rem 0 0; padding: 0.35rem 0.5rem; gap: 0.5rem; }
+      .center-area .ch-wrap, .center-area .action-group-row, .center-area .action-btns-row { flex-wrap: wrap; justify-content: center; row-gap: 0.3rem; flex-shrink: 1; min-width: 0; max-width: 100%; }
+      .center-area > .challenge-controls { width: 100%; padding: 0.35rem; }
+      .center-area .ch-wrap .divider { display: none; }
+      .center-area .action-title { display: none; }
+      .center-area .btn-action { min-width: 34px; padding: 0 0.3rem; }
+      .center-area .answer-input { width: 96px; }
+      .center-area .btn-submit { padding: 0.5rem 1rem; }
     }
   </style>
 <script data-goatcounter="https://thecodingeducator.goatcounter.com/count"

@@ -8,11 +8,14 @@
 //     numpad: ['backspace', 'enter'],      // a 1-9 / 0 pad; the two keys beside the 0 (any of backspace, enter, sign)
 //     keys: _glKeysNow,                    // where held keys are written (the game reads them with keyDown())
 //     onKey: function (key) {},            // optional: number pad taps call this instead of holding a key
-//     active: function () { return true; },// optional: whether the controls take touches right now
+//     active: function () { return true; },// optional: whether the controls are steering the game right now
+//     menus: true,                         // optional: when not active(), the joystick and GO button work the menus
 //     show: function () { return { joystick: true, numpad: false }; }   // optional: which parts are showing right now
 //   });
 //
 // active() and show() are checked every frame (after the game's own draw()). Without show(), every part is always shown.
+// With menus: true, on the game's menu screens the joystick presses the arrow keys and GO presses Enter - one press per
+// push, exactly like a keyboard - so students can move through the menus the same way they do with arrow keys.
 (function () {
   var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
     (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
@@ -64,7 +67,16 @@
     // ---- Joystick: holds the arrow keys while pushed past 30% of the way out ----
     var base = document.getElementById('mc-joy-base'), stick = document.getElementById('mc-joy-stick');
     var dirs = { up: false, down: false, left: false, right: false }, joyId = null, R = 65, MAX = 46;
-    function setDir(name, on) { if (dirs[name] !== on) { dirs[name] = on; keys[name] = on; } }
+    var menuMode = false;   // on a menu screen (menus: true): send real key presses instead of holding keys for the game
+    var ARROW = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
+    function press(key, down) {
+      document.body.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { key: key, code: key, bubbles: true, cancelable: true }));
+    }
+    function setDir(name, on) {
+      if (dirs[name] === on) return;
+      dirs[name] = on;
+      if (menuMode) press(ARROW[name], on); else keys[name] = on;
+    }
     function clearDirs() {
       setDir('up', false); setDir('down', false); setDir('left', false); setDir('right', false);
       if (stick) stick.style.transform = 'translate(0px, 0px)';
@@ -87,8 +99,16 @@
     // ---- GO button: holds Space and Enter (whichever the game reads) ----
     var act = document.getElementById('mc-action');
     if (act) {
-      var actOn = function (e) { e.preventDefault(); keys.space = true; keys.enter = true; };
-      var actOff = function () { keys.space = false; keys.enter = false; };
+      var actDown = false, actPressed = false;   // actPressed: this press went out as a real Enter key (menu screen)
+      var actOn = function (e) {
+        e.preventDefault(); actDown = true; actPressed = menuMode;
+        if (menuMode) press('Enter', true); else { keys.space = true; keys.enter = true; }
+      };
+      var actOff = function () {
+        if (!actDown) return; actDown = false;
+        if (actPressed) press('Enter', false);   // even if GO just started the game and the screen is no longer a menu
+        keys.space = false; keys.enter = false;
+      };
       act.addEventListener('pointerdown', actOn);
       ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { act.addEventListener(ev, actOff); });
     }
@@ -111,8 +131,10 @@
       if (base) base.classList.toggle('mc-hide', !joyOn);
       if (pad) pad.classList.toggle('mc-hide', !padOn);
       var on = o.active ? !!o.active() : (s ? (s.joystick || s.numpad || s.action) : true);
-      wrap.classList.toggle('mc-active', !!on);
-      if (!on || !joyOn) clearDirs();
+      var menu = !on && !!o.menus;
+      if (menu !== menuMode) { clearDirs(); menuMode = menu; }   // let go of everything when switching between game and menus
+      wrap.classList.toggle('mc-active', !!on || menu);
+      if ((!on && !menu) || !joyOn) clearDirs();
     }
     var prevDraw = window.draw;
     if (typeof prevDraw === 'function') window.draw = function () { try { prevDraw(); } finally { refresh(); } };

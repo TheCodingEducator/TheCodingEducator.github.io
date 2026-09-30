@@ -422,9 +422,12 @@ function kbEndFrame() {
 // mouseClicked() here removes the dependency on that synthesis entirely -
 // see bank-shot-angle-golf-game.js's touchStarted/touchEnded for the same
 // pattern already proven to work on this site.
-function touchStarted() { mouseIsPressed = true; return false; }
-function touchMoved() { return false; }
-function touchEnded() { mouseIsPressed = false; mouseClicked(); return false; }
+// p5 listens for touches on the whole page, so only touches that start on the game itself are handled; anywhere else -
+// the top bar's buttons, the number pad - the tap goes through untouched (returning false for every touch swallowed them).
+function onGame(e) { return !!(e && e.target && e.target.tagName === 'CANVAS'); }
+function touchStarted(e) { if (!onGame(e)) return; mouseIsPressed = true; return false; }
+function touchMoved(e) { if (!onGame(e)) return; return false; }
+function touchEnded(e) { if (!onGame(e)) return; mouseIsPressed = false; mouseClicked(); return false; }
 
 function pointSegDist(px, py, ax, ay, bx, by) {
   var dx = bx - ax, dy = by - ay;
