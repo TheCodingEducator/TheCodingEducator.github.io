@@ -851,10 +851,10 @@ function newWorld(menu, cp, mode) {
     platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
       : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? themeFor(lv, cp.solved) : 0, lv)],
     pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0,
-    dodges: 0, pops: []                       // obstacles cleared in a row since the last crash, and the little cheers that float up
+    pops: []                                  // the little cheers that float up
   };
 }
-// a short cheer that floats up above the runner ("Close call!", "10 in a row!") - just for fun, no stars
+// a short cheer that floats up above the runner ("Close call!") - just for fun, no stars
 function pop(text, color) { G.pops.push({ text, color, x: G.px, y: G.py - 110, life: 1.1 }); }
 
 // Obstacles: the real-world reasons a bridge doesn't get built (plus the terrain around it).
@@ -1445,15 +1445,14 @@ function update(dt) {
         if (over) clr = top - G.py;
       }
       if (clr !== null && !c.hit) c.minClr = Math.min(c.minClr === undefined ? 999 : c.minClr, clr);
-      // cleared it without a scratch: count the dodge (a streak of them gets a cheer), and a very tight one is a close call
+      // cleared it by a hair: a "Close call!" cheer
       const farEdge = d.fly ? c.x + (dw ? dw / 2 : 28) : c.x + (dw || 0);
       if (!c.hit && !c.passed && G.px - 10 > farEdge) {
-        c.passed = true; G.dodges = (G.dodges || 0) + 1;
+        c.passed = true;
         if (c.minClr !== undefined && c.minClr < 16) pop(tl('Close call!', '¡Por poco!'), '#ffd166');
-        else if (G.dodges % 5 === 0) pop(tl(`${G.dodges} in a row!`, `¡${G.dodges} seguidos!`), '#7ee2a8');
       }
       if (hurt && G.inv <= 0 && !c.hit) {
-        c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--; G.dodges = 0;
+        c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
         toast(G.lives > 0 ? `${d.msg || tl('You ran into the ' + d.label + '!', '¡Chocaste con ' + d.label + '!')} −1 ❤️` : tl('Crashed out!', '¡Chocaste demasiado!'), 'bad');
         if (G.lives <= 0) { G.crashed = true; gameOver(); return; }
@@ -2163,7 +2162,7 @@ function draw() {
   drawRunner();
   for (const p of G.particles) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - G.cam, p.y, 5, 5); }
   ctx.font = '900 20px Trebuchet MS, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-  for (const q of G.pops) {                                               // "Close call!" / "10 in a row!" cheers
+  for (const q of G.pops) {                                               // "Close call!" cheers
     ctx.globalAlpha = clamp(q.life * 2.5, 0, 1);
     ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(20,24,50,.85)'; ctx.strokeText(q.text, q.x - G.cam, q.y);
     ctx.fillStyle = q.color; ctx.fillText(q.text, q.x - G.cam, q.y);
@@ -2386,7 +2385,7 @@ addEventListener('keydown', e => {
   }
   if (e.code === 'Escape') {
     e.preventDefault();
-    if (!$('exitConfirm').classList.contains('hidden')) { $('exitConfirm').classList.add('hidden'); $('pause').classList.remove('hidden'); }
+    if (!$('exitConfirm').classList.contains('hidden')) $('btnExitConfirmNo').click();     // Esc = Keep playing (back to the pause menu)
     else if (!$('shop').classList.contains('hidden')) closeShop();
     else if (screen === 'practice') showScreen('menu');
     else if (screen === 'menu') { showScreen('title'); }
@@ -2395,14 +2394,16 @@ addEventListener('keydown', e => {
     return;
   }
   const vis = id => !$(id).classList.contains('hidden'), enter = e.code === 'Enter' || e.code === 'NumpadEnter', space = e.code === 'Space', cardAge = performance.now() - cardAt;
+  // the "Leave this run?" box: arrow keys move between its buttons (below); Enter / Space press the focused one, never jump
+  if (vis('exitConfirm') && !['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.code)) return;
   // Enter / Space carry on past the "Oops" card and the end-of-run card (a short delay so a jump-key tap doesn't skip it by accident)
   if ((enter || space) && screen === 'play' && !paused && !vis('shop')) {
     if (vis('feedback')) { e.preventDefault(); if (!e.repeat && cardAge > 350) $('btnNext').click(); return; }
     if (vis('over')) { e.preventDefault(); if (!e.repeat && cardAge > 700) $('btnAgain').click(); return; }
   }
   // Arrow keys jump to the nearest button in that direction (Tab works too); Enter / Space press the focused button
-  if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.code) && (screen !== 'play' || vis('shop') || vis('pause') || vis('over') || vis('feedback'))) {
-    const ov = ['shop', 'pause', 'over', 'feedback', 'practice', 'menu'].map($).find(el => !el.classList.contains('hidden'));
+  if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.code) && (screen !== 'play' || vis('shop') || vis('pause') || vis('exitConfirm') || vis('over') || vis('feedback'))) {
+    const ov = ['exitConfirm', 'shop', 'pause', 'over', 'feedback', 'practice', 'menu'].map($).find(el => !el.classList.contains('hidden'));
     if (ov) {
       e.preventDefault();
       const btns = [...ov.querySelectorAll('button:not(:disabled)')].filter(b => b.offsetParent !== null), cur = document.activeElement;
@@ -2427,7 +2428,7 @@ addEventListener('keydown', e => {
     }
     return;
   }
-  if (screen !== 'play') return;  if (screen !== 'play') return;
+  if (screen !== 'play') return;
   if (paused) return;
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
   const isJumpKey = ['Space', 'ArrowUp', 'KeyW', 'Enter', 'NumpadEnter'].includes(e.code) || e.key === 'Enter';
@@ -2462,9 +2463,10 @@ $('btnResume').onclick = () => setPaused(false);
 $('btnShop').onclick = openShop;                 // (Menu screen only)
 $('btnShopClose').onclick = closeShop;
 $('btnRestart').onclick = () => { const pr = G && G.mode === 'practice' ? G.ptypes : null; setPaused(false); if (pr && pr.length) startPractice(pr); else startGame(G && G.level > 1 ? checkpoints[G.level] : undefined); };  // restarts THIS run's level, not all the way back to level 1
-$('btnTitle').onclick = () => { $('pause').classList.add('hidden'); $('exitConfirm').classList.remove('hidden'); };
+// "Are you sure?" box: the keyboard lands on Keep playing (the safe choice), and going back puts it on Menu screen again
+$('btnTitle').onclick = () => { $('pause').classList.add('hidden'); $('exitConfirm').classList.remove('hidden'); $('btnExitConfirmNo').focus(); };
 $('btnExitConfirmYes').onclick = () => { $('exitConfirm').classList.add('hidden'); toMenu(); };
-$('btnExitConfirmNo').onclick = () => { $('exitConfirm').classList.add('hidden'); $('pause').classList.remove('hidden'); };
+$('btnExitConfirmNo').onclick = () => { $('exitConfirm').classList.add('hidden'); $('pause').classList.remove('hidden'); $('btnTitle').focus(); };
 (function keypad() {
   const kp = $('keypad');
   ['7','8','9','4','5','6','1','2','3','Clear','0','⌫'].forEach(k => {
