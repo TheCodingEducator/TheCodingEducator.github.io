@@ -84,7 +84,7 @@
   // Phones and tablets: a game page is one screen that never scrolls (styles in site-layout.css). The game is
   // sized to sit above the on-screen joystick / number pad, whose height goes in --mc.
   function lockPhoneScroll() {
-    if (!matchMedia('(hover: none), (pointer: coarse)').matches) return;
+    if (!matchMedia('(hover: none) and (pointer: coarse)').matches) return;
     if (!document.querySelector('.play-area, .game-frame')) return;   // only game pages (My Stats still scrolls)
     var root = document.documentElement;
     root.classList.add('site-lock');

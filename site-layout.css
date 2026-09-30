@@ -99,7 +99,7 @@ body.site-fit { padding-top: 44px; box-sizing: border-box; }
 /* Phones and tablets: the game page is exactly one screen and never scrolls (no page scroll, no rubber-band
    bounce). The game sits at the top, clear of the on-screen joystick / number pad, whose height site-layout.js
    puts in --mc. */
-@media (hover: none), (pointer: coarse) {
+@media (hover: none) and (pointer: coarse) {
   html.site-lock, html.site-lock body {
     height: 100% !important; min-height: 0 !important; overflow: hidden !important; overscroll-behavior: none;
   }

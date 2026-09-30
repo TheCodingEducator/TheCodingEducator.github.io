@@ -13,7 +13,8 @@
 #    - the shared site files: site-lang.js, site-keyboard.js, site-layout.js, site-layout.css, site-fullscreen.js
 #    - no copy of its own of the fullscreen code (it comes from site-fullscreen.js)
 #    - recorded sound files play through site-sound.js (no "new Audio(" in the game's own scripts)
-#    - on-screen joystick / number pad built with site-controls.js
+#    - on-screen joystick / number pad built with site-controls.js, and every keypad / touch button shown only on phones
+#      and tablets: the strict test (hover: none) and (pointer: coarse), never a loose "either one" or "any touchscreen"
 #    - listed on the home page and in sitemap.xml
 #    - every page has a <title>
 #    - public wording: "student devices" (not "Chromebook"), the teacher "designs" games (never "codes" them), no "AI"
@@ -86,7 +87,9 @@ foreach ($g in $games) {
       if ($main -notmatch '\.\./site-controls\.js') { Problem "${name}: doesn't load ../site-controls.js" }
     }
     if ($t -match 'SiteSound\.' -and $main -notmatch '\.\./site-sound\.js') { Problem "${name}: uses SiteSound but doesn't load ../site-sound.js" }
+    if ($t -match "\(hover: none\), \(pointer: coarse\)|'\(pointer: ?coarse\)'") { Problem "${name}: $($js.Name) uses a loose touch test (use '(hover: none) and (pointer: coarse)' so keypads only show on phones and tablets)" }
   }
+  if ($main -match '@media \(hover: none\), \(pointer: coarse\)|@media \(pointer: ?coarse\)') { Problem "${name}: its page uses a loose touch test in its CSS (use '(hover: none) and (pointer: coarse)')" }
   if ($homePage -notmatch [regex]::Escape("$name/$name.html")) { Problem "${name}: not listed on the home page" }
   if ($sitemap -notmatch [regex]::Escape("/$name/$name.html")) { Problem "${name}: not in sitemap.xml" }
 }

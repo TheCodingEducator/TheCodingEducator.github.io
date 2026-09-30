@@ -9,7 +9,7 @@
   var T = window.tl || function (en) { return en; };
   var SC = window.AreaArtistScenes;
   var aa = $('aa'), cv = $('cv'), ctx = cv.getContext('2d');
-  var TOUCH = matchMedia('(hover: none), (pointer: coarse)').matches;
+  var TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (TOUCH) aa.classList.add('touch');
 
   // e = Product Picasso, h = Multiplication Monet. sizes: the picture's grid (columns x rows) for a short, medium

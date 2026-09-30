@@ -268,7 +268,7 @@
   #sb #toast.good { background:#c9f7dc; color:#0d6b38; }
   #sb #toast.bad { background:#ffd6d6; color:#9b1c1c; }
   #sb #jumpBtn { position:absolute; right:12px; bottom:12px; width:74px; height:74px; border-radius:50%; border:4px solid #fff; background:rgba(255,122,26,.9); color:#fff; font-weight:900; font-size:15px; display:none; touch-action:none; }
-  @media (pointer:coarse) { #sb #jumpBtn { display:block; } }
+  @media (hover: none) and (pointer: coarse) { #sb #jumpBtn { display:block; } }
   #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
 
   #sb .overlay { position:absolute; inset:0; background:rgba(10,12,30,.74); display:flex; align-items:center; justify-content:center; padding:12px; z-index:10; overflow:hidden; }
@@ -299,7 +299,7 @@
   @keyframes sbShake { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
   #sb #keypad { display:none; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
   #sb #keypad button { font-size:22px; font-weight:800; padding:8px 0; border-radius:10px; border:2px solid #c5cbe8; background:#f5f7ff; color:var(--ink); font-family:inherit; }
-  @media (pointer:coarse) { #sb #keypad { display:grid; } }
+  @media (hover: none) and (pointer: coarse) { #sb #keypad { display:grid; } }
   #sb .chip { display:inline-block; min-width:44px; text-align:center; border:3px solid; border-radius:12px; padding:2px 10px; font-weight:900; font-size:20px; background:#fff; }
   #sb .verdict { display:flex; align-items:center; justify-content:center; gap:12px; font-weight:900; font-size:clamp(20px,4vw,28px); margin:4px 0 8px; }
   #sb .verdict .bad { color:var(--bad); } #sb .verdict .ok { color:var(--good); } #sb .verdict small { font-size:14px; font-weight:700; }
@@ -437,10 +437,10 @@
   #sb #touch #tAct { font-size:max(11px,2.2cqw); padding:max(4px,1cqw) max(6px,1.6cqw); opacity:.95; }
   #sb #tUp { grid-column:2; grid-row:1; } #sb #tLeft { grid-column:1; grid-row:2; } #sb #tRight { grid-column:3; grid-row:2; } #sb #tDown { grid-column:2; grid-row:3; }
   #sb #touch button:active { transform:translateY(0.4cqw); box-shadow:0 0.1cqw 0 #3b2416; }
-  @media (pointer:coarse) { #sb #touch:not(.hidden) { display:flex; } }
+  @media (hover: none) and (pointer: coarse) { #sb #touch:not(.hidden) { display:flex; } }
   /* touch screens: the arrow pad sits to the left of the kitchen and the Take / Cook / Serve button to its right - beside the game, never on top of it */
   #sb #stageRow { position:relative; }
-  @media (pointer:coarse) {
+  @media (hover: none) and (pointer: coarse) {
     #sb #stage { width:min(var(--stage-w), calc(100% - 232px)); }
     #sb #touch { bottom:0; padding:0; align-items:flex-end; }
     #sb #touch button { font-size:16px; border-width:2px; border-radius:10px; box-shadow:0 3px 0 #3b2416; }
@@ -482,7 +482,7 @@
   #sb #btnServe { margin-left:auto; font-size:2.5cqw; padding:0.8cqw 1.8cqw; border-radius:1cqw; }
   #sb #keypad { display:none; grid-template-columns:repeat(7,1fr); gap:0.5cqw; }
   #sb #keypad button { font-size:2.3cqw; font-weight:800; padding:0.5cqw 0; border-radius:0.7cqw; border:0.2cqw solid #c9a27a; background:#fff; color:#1d2340; font-family:inherit; }
-  @media (pointer:coarse) { #sb #keypad { display:grid; } }
+  @media (hover: none) and (pointer: coarse) { #sb #keypad { display:grid; } }
   /* a real stacked fraction: numerator, a bar, denominator */
   #sb .fr { display:inline-flex; flex-direction:column; align-items:stretch; vertical-align:middle; font-size:.76em; line-height:1.05; margin:0 .1em; text-align:center; }
   #sb .fr .fn { border-bottom:.11em solid currentColor; padding:0 .18em .04em; }
@@ -609,9 +609,9 @@
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-keyboard.js?v=813246f6"></script>
-<link rel="stylesheet" href="../site-layout.css?v=bd075d4e">
+<link rel="stylesheet" href="../site-layout.css?v=affad520">
 <script src="../site-stats.js?v=92be3a90"></script>
-<script src="../site-layout.js?v=dd80191f"></script>
+<script src="../site-layout.js?v=614993d0"></script>
 </head>
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
@@ -789,7 +789,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="proportional-plates-game.js?v=27cea29a"></script>
+<script src="proportional-plates-game.js?v=16faa3fa"></script>
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>

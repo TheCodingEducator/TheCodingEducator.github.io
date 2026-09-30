@@ -17,8 +17,8 @@
 // With menus: true, on the game's menu screens the joystick presses the arrow keys and GO presses Enter - one press per
 // push, exactly like a keyboard - so students can move through the menus the same way they do with arrow keys.
 (function () {
-  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
-    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+  // phones and tablets only: a computer with a mouse or trackpad never gets these, even if its screen is a touchscreen
+  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
   var CSS =
     // The bar spans the full width but takes no touches itself (pointer-events: none), so it never swallows taps meant for

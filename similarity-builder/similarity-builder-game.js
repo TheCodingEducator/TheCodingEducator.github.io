@@ -1275,7 +1275,7 @@ function startSolve() {
   $('ansUnit').style.display = P.type === 'scale' || P.alg ? 'none' : '';
   $('ans').value = '';
   $('problem').classList.remove('hidden');
-  setTimeout(() => { if (!sim && !matchMedia('(pointer:coarse)').matches) $('ans').focus(); }, 30);
+  setTimeout(() => { if (!sim && !matchMedia('(hover: none) and (pointer: coarse)').matches) $('ans').focus(); }, 30);
 }
 
 function parseAns(str) {                          // whole numbers only

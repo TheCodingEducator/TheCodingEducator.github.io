@@ -27,7 +27,7 @@
   var app = $('ps'), canvas = $('ps-canvas');
   var scrTitle = $('scr-title'), scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
   var qIn = $('q-in'), qIn2 = $('q-in2'), activeIn = null, msg = $('msg'), chance = $('chance'), aimHint = $('aimhint'), hud = $('hud');
-  var isTouch = window.matchMedia && matchMedia('(hover: none), (pointer: coarse)').matches;
+  var isTouch = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (isTouch) [qIn, qIn2].forEach(function (el) { el.readOnly = true; el.setAttribute('inputmode', 'none'); });   // the on-screen pad instead of the phone keyboard
 
   function show(el) { el.hidden = false; }

@@ -223,7 +223,7 @@ const TICKET_COLORS = ['#e0483c', '#2f80ed', '#1e9e57', '#9b51e0', '#f2994a', '#
 const newLook = () => ({ skin: pick(SKINS), hair: pick(HAIRS), shirt: pick(SHIRTS), style: pick(['short', 'long', 'bun', 'curly', 'pony', 'bald']) });
 const keys = { left: false, right: false, up: false, down: false };
 const clearKeys = () => { keys.left = keys.right = keys.up = keys.down = false; };
-const coarse = () => matchMedia('(pointer:coarse)').matches;
+const coarse = () => matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 function newWorld(mode, level, kinds) {
   const lv = level || 1;
