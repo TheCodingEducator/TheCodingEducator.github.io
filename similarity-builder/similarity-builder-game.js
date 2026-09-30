@@ -889,9 +889,7 @@ const OBS = {
   // --- level 5 ---
   crate:     { kind: 'solid', w: 44, h: 84, label: tl('stack of crates', 'una pila de cajas') },
   truck:     { kind: 'solid', w: 100, h: 54, vx: -95, label: tl('dump truck', 'un camión de volteo') },
-  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') },
-  // --- skyways (any level): a striped road barrier standing on a platform or the ground ---
-  barrier:   { kind: 'solid', w: 40, h: 46, label: tl('road barrier', 'una barrera') }
+  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') }
 };
 // Every level has its OWN obstacles (none repeat on another level), and every one of them costs a heart if it touches you.
 // (A name listed twice shows up twice as often.)
@@ -903,12 +901,13 @@ const LEVEL_OBS = [
   ['crate', 'crate', 'truck', 'truck', 'helicopter', 'helicopter']                          // 5: tall stacks, a dump truck rolling at you, and a helicopter overhead
 ];
 const flyY = c => GROUND - 125 + Math.sin(G.t * 4 + c.x) * 8;
-// A SWOOPER is a bird or drone that dives as it reaches you: high while it's far off, down at knee height (centre 30 px
-// up) for the last stretch - so this one you JUMP, instead of running under. Its shadow on the ground grows as it dives.
+// A SWOOPER is a bird, drone or helicopter flying low, at knee height (centre 30 px up) - so this one you JUMP, instead of
+// running under. It dives down while it's still off-screen (the runner sees about 720 px ahead), so it's already low when
+// it comes into view and never changes height in front of you; it only climbs away once you're past it.
 const SWOOP_LOW = GROUND - 30;
 const swoopT = c => {
   const d = c.x - G.px;                                                            // how far ahead of the runner it is
-  const t = d > 420 ? 0 : d > 120 ? (420 - d) / 300 : d > -60 ? 1 : Math.max(0, 1 - (-60 - d) / 200);   // dives in, then climbs away behind you
+  const t = d > 1150 ? 0 : d > 850 ? (1150 - d) / 300 : d > -60 ? 1 : Math.max(0, 1 - (-60 - d) / 200);
   return t * t * (3 - 2 * t);
 };
 const flyYOf = c => OBS[c.type].still ? GROUND - 128                               // power lines don't bob
@@ -958,46 +957,11 @@ function gapAfter(prev, type, level, swoop) {
 //   skyField  a long stretch of flooded land / unstable soil: only a HIGH platform (double jump) gets you across without touching it
 //   lowLine   a very long power line / storm cloud: you must stay down on the ground for the whole length
 //   pipeRow   three loose pipes in a row: run through when they are down, or take the high platform over them
-//   skyway    three platforms stacked above the ground (100, 200 and 300 px up). Every so often a "wall" of obstacles
-//             stands across them with only one or two levels left clear, so you keep climbing (jump up through a
-//             platform) and dropping (Down) to line up with the gap. From level 3 the ground under it may be flooded.
-const PATTERNS = { 1: ['skyway'], 2: ['tapeWall', 'skyway'], 3: ['skyField', 'lowLine', 'skyway'], 4: ['lowLine', 'pipeRow', 'skyway'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow', 'skyway'] };
-const PATTERN_CHANCE = [.14, .26, .34, .42, .5];
-const SKY_H = [0, 100, 200, 300];                              // lane heights: the ground, then the three platforms
-function patternType(kind, level) { return kind === 'skyway' ? 'barrier' : kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
+const PATTERNS = { 2: ['tapeWall'], 3: ['skyField', 'lowLine'], 4: ['lowLine', 'pipeRow'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow'] };
+const PATTERN_CHANCE = [0, .22, .32, .4, .48];
+function patternType(kind, level) { return kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
 function makePattern(kind, type, x, level) {
   const obs = [], floats = [], mk = (t, xx, extra) => Object.assign({ x: xx, type: t, fly: !!OBS[t].fly, hit: false, t0: Math.random() * PIPE_CYCLE }, extra || {});
-  if (kind === 'skyway') {
-    const spd = 330 * SPEED_BY_LEVEL[level - 1], len = Math.round(spd * rnd(38, 52) / 10);   // about 4-5 s of running
-    for (let i = 1; i <= 3; i++) floats.push({ x, w: len, h: SKY_H[i], sky: true });
-    const flooded = level >= 3 && Math.random() < .5;                       // no ground lane: get up there!
-    if (flooded) obs.push(mk(pick(['flood', 'soil']), x + 170, { w: len - 260 }));
-    // what can stand on a platform: this level's own standing obstacles, plus road barriers
-    const standing = LEVEL_OBS[level - 1].filter(t => OBS[t].kind === 'solid' && !OBS[t].vx && OBS[t].h <= 62).concat(['barrier', 'barrier']);
-    const lanes = flooded ? [1, 2, 3] : [0, 1, 2, 3];
-    const openN = level <= 1 ? 2 : level <= 3 ? pick([1, 2, 2]) : pick([1, 1, 2]);
-    // you come in from the ground (or hop straight up onto the lowest deck over a flood), so the first wall's gap is at
-    // most one level up from there; after that the clear lane is never more than 2 levels from the last one
-    let open = [flooded ? 1 : 0], gx = x + 460, maxStep = 1;
-    // walls: one or two lanes left clear
-    // On a touch screen the only button is JUMP (there's no way to drop down), so there the walls never ask you to go down:
-    // each gap is at or above the highest lane you might be on, and still within reach of the lowest.
-    const climbOnly = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    while (gx < x + len - 260) {
-      const lo = Math.min(...open), hi = Math.max(...open), anchor = pick(open);
-      let near = climbOnly ? lanes.filter(l => l >= hi && l <= lo + maxStep)
-        : lanes.filter(l => Math.abs(l - anchor) <= maxStep && !(open.length === 1 && l === anchor && Math.random() < .7));
-      if (climbOnly && !near.length) near = [hi];
-      maxStep = 2;
-      const first = pick(near.length ? near : lanes);
-      const rest = lanes.filter(l => l !== first && (!climbOnly || (l >= first && l <= first + 1)));   // (touch: the 2nd gap is just above the first)
-      open = openN === 2 && rest.length ? [first, pick(rest)] : [first];
-      for (const l of lanes) if (!open.includes(l)) obs.push(mk(pick(standing), gx + rnd(-12, 12), { lift: SKY_H[l] }));
-      gx += spd * (rnd(125, 165) / 100) + (level <= 2 ? 80 : 0);
-    }
-    const endX = x + len + 20;
-    return { obs, floats, last: { x: endX + spd * .5, type: 'barrier', fly: false, sky: true }, endX };   // (room to drop down off the top deck before what's next)
-  }
   if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
   else if (kind === 'skyField') { const w = rnd(380, 500); obs.push(mk(type, x, { w })); floats.push({ x: x - 40, w: w + 80, h: pick([170, 185, 195]) }); }
   else if (kind === 'lowLine') { const w = rnd(360, 480); obs.push(mk(type, x + w / 2, { w })); }
@@ -1021,9 +985,8 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
     if (prev && !first && PATTERNS[level] && Math.random() < PATTERN_CHANCE[level - 1]) {          // a bigger move instead of a single obstacle
       const kind = pick(PATTERNS[level]), ptype = patternType(kind, level);
       if (!(prev.fly && OBS[ptype].fly)) {
-        // (a skyway keeps well clear of a flyer just before it: a bird hangs at exactly the height of someone up on a deck)
         const spd0 = 330 * SPEED_BY_LEVEL[level - 1];
-        const px0 = prev.x + gapAfter(prev, ptype, level) + (kind === 'skyway' ? 120 : 0) + (prev.fly && kind !== 'lowLine' ? spd0 * 1.1 : 0), pat = makePattern(kind, ptype, px0, level);
+        const px0 = prev.x + gapAfter(prev, ptype, level) + (prev.fly && kind !== 'lowLine' ? spd0 * 1.1 : 0), pat = makePattern(kind, ptype, px0, level);
         if (pat.floats.length) pat.last.sky = true;                        // (any pattern with platforms: no flyer right after it)
         if (pat.endX < p.e - 300) { pat.obs.forEach(c => p.obs.push(c)); pat.floats.forEach(f => patFloats.push(f)); prev = pat.last; continue; }
       }
@@ -1042,7 +1005,7 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
     const swoop = !!prev && SWOOP_TYPES.includes(type) && Math.random() < SWOOP_CHANCE[level - 1];
     const roll = ROLLERS[type], rolling = !!prev && !!roll && roll.level === level && Math.random() < roll.chance;
     if (prev) x = prev.x + gapAfter(prev, type, level, swoop);
-    if (prev && prev.sky && OBS[type].fly) x += 330 * SPEED_BY_LEVEL[level - 1] * .9;   // time to come down off the decks before a flyer
+    if (prev && prev.sky && OBS[type].fly) x += 330 * SPEED_BY_LEVEL[level - 1] * .9;   // time to come down off the platforms before a flyer
     if (x >= p.e - 300) break;
     const c = { x, type, fly: !!OBS[type].fly, hit: false, t0: Math.random() * PIPE_CYCLE };
     if (swoop) c.swoop = true;
@@ -1474,10 +1437,8 @@ function update(dt) {
         const h = pipeH(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
         hurt = h > 16 && over && G.py > GROUND - h + 4; ey = GROUND - h / 2;
       } else {
-        // (a hopping boulder's top is higher mid-bounce; on a skyway the obstacle stands on a platform c.lift px up, so it only
-        // touches you if you're at that level: feet below its top, head above the platform it stands on)
-        const base = GROUND - (c.lift || 0), top = base - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
-        hurt = over && G.py > top + 4 && G.py - 80 < base; ey = top + d.h / 2;
+        const top = GROUND - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;   // (a hopping boulder's top is higher mid-bounce)
+        hurt = over && G.py > top + 4; ey = top + d.h / 2;
       }
       if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
@@ -1763,14 +1724,9 @@ function drawBridge(p, T) {
 function drawObstacle(c, x) {
   const G0 = GROUND, ol = '#3b2a1a', T = G.t, d = OBS[c.type], dw = c.w || d.w;
   ctx.save(); if (c.hit && d.kind !== 'zone' && d.kind !== 'pipe') ctx.globalAlpha = .4;
-  if (c.lift) ctx.translate(0, -c.lift);                                 // standing on a skyway platform
-  if (c.swoop && !c.hit) {                                               // a swooper's shadow grows on the ground as it dives, with a warning arrow
+  if (c.swoop && !c.hit) {                                               // a low flyer's shadow on the ground right under it
     const s = swoopT(c);
     ctx.fillStyle = `rgba(0,0,0,${.12 + .28 * s})`; ctx.beginPath(); ctx.ellipse(x, G0 - 2, 8 + 18 * s, 3 + 3 * s, 0, 0, 7); ctx.fill();
-    if (s > .02 && s < .7) {
-      const y = flyYOf(c) - 26;
-      ctx.fillStyle = '#ff5d5d'; ctx.beginPath(); ctx.moveTo(x - 7, y - 6); ctx.lineTo(x + 7, y - 6); ctx.lineTo(x, y + 4); ctx.closePath(); ctx.fill();
-    }
   }
   const hop = hopOf(c);                                                  // a hopping boulder: shadow stays on the ground, the rock bounces
   if (hop > 0 && !c.hit) {
@@ -1798,13 +1754,6 @@ function drawObstacle(c, x) {
       rr(x, G0 - 30, 64, 30, 10, '#8a5a2b'); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x + 14, G0 - 20); ctx.lineTo(x + 50, G0 - 20); ctx.moveTo(x + 10, G0 - 10); ctx.lineTo(x + 40, G0 - 10); ctx.stroke();
       ctx.strokeStyle = ol; ctx.lineWidth = 3; ctx.fillStyle = '#c99760'; ctx.beginPath(); ctx.ellipse(x + 56, G0 - 15, 7, 13, 0, 0, 7); ctx.fill(); ctx.stroke(); break;
-    case 'barrier':                                                    // a striped sawhorse road barrier
-      ctx.fillStyle = '#6b6f80'; ctx.fillRect(x + 5, G0 - 30, 5, 30); ctx.fillRect(x + 30, G0 - 30, 5, 30);
-      rr(x, G0 - 46, 40, 16, 4, '#fff');
-      ctx.save(); ctx.beginPath(); ctx.roundRect(x, G0 - 46, 40, 16, 4); ctx.clip(); ctx.fillStyle = '#ff6a1a';
-      for (let sx = -16; sx < 44; sx += 14) { ctx.beginPath(); ctx.moveTo(x + sx, G0 - 30); ctx.lineTo(x + sx + 7, G0 - 30); ctx.lineTo(x + sx + 17, G0 - 46); ctx.lineTo(x + sx + 10, G0 - 46); ctx.closePath(); ctx.fill(); }
-      ctx.restore(); ctx.strokeStyle = ol; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, G0 - 46, 40, 16, 4); ctx.stroke();
-      ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(x + 20, G0 - 51, 4, 0, 7); ctx.fill(); ctx.stroke(); break;
     case 'stump':
       rr(x, G0 - 44, 36, 44, 5, '#7a4b22'); ctx.fillStyle = '#c99760'; ctx.beginPath(); ctx.ellipse(x + 18, G0 - 44, 18, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#7a4b22'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x + 18, G0 - 44, 9, 3, 0, 0, 7); ctx.stroke(); break;
@@ -2407,12 +2356,6 @@ addEventListener('keydown', e => {
   if (screen === 'menu') buildMenu();
 });
 function jump() { if (G && G.state === 'run' && !paused) G.jumpBuf = .12; }
-// Down: drop through the platform you're standing on to the level below (platforms only catch you from above)
-function drop() {
-  if (!G || G.state !== 'run' || paused || !G.onGround || G.py >= GROUND - 4) return;
-  G.py += 8; G.vy = 60; G.onGround = false; G.airJumps = 0;
-  beep(330, .08, 'triangle', .04);
-}
 addEventListener('keydown', e => {
   if (window.isPageControlKey && window.isPageControlKey(e)) return;   // keys for the page's own controls (All games, Fullscreen, notes...)
   if (screen === 'title') {                                          // Enter / Space on the title screen = Play
@@ -2469,7 +2412,6 @@ addEventListener('keydown', e => {
   // Enter (main keyboard or numpad) jumps exactly like Space; while a question is showing, Enter still submits the answer
   const isJumpKey = ['Space', 'ArrowUp', 'KeyW', 'Enter', 'NumpadEnter'].includes(e.code) || e.key === 'Enter';
   if (isJumpKey && G && G.state === 'run') { e.preventDefault(); if (!e.repeat) jump(); }
-  if ((e.code === 'ArrowDown' || e.code === 'KeyS') && G && G.state === 'run') { e.preventDefault(); if (!e.repeat) drop(); }
   if (G && G.state === 'solve' && G.problem.type === 'sim') {              // "Similar or not?": arrow keys pick a button, Enter / Space presses it
     const yes = $('btnSimYes'), no = $('btnSimNo');
     if (e.code === 'ArrowLeft' || e.code === 'ArrowUp' || e.code === 'KeyS') { e.preventDefault(); yes.focus(); return; }
