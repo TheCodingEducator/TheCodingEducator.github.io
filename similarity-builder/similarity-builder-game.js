@@ -850,9 +850,12 @@ function newWorld(menu, cp, mode) {
     level: lv, theme: cp ? themeFor(lv, cp.solved) : 0, dist: 0, missed: [],
     platforms: [menu ? { s: -5000, e: 1e9, obs: [], bridged: true }
       : makePlatform(x0 - 460, x0 - 460 + runLen, true, cp ? themeFor(lv, cp.solved) : 0, lv)],
-    pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0
+    pi: 0, particles: [], problem: null, timeLeft: 0, timeTotal: 0, tipT: 0,
+    dodges: 0, pops: []                       // obstacles cleared in a row since the last crash, and the little cheers that float up
   };
 }
+// a short cheer that floats up above the runner ("Close call!", "10 in a row!") - just for fun, no stars
+function pop(text, color) { G.pops.push({ text, color, x: G.px, y: G.py - 110, life: 1.1 }); }
 
 // Obstacles: the real-world reasons a bridge doesn't get built (plus the terrain around it).
 //   solid    = something standing on the ground: jump it.           vx = it walks toward you (px/s), so it comes at you faster
@@ -901,7 +904,22 @@ const LEVEL_OBS = [
   ['crate', 'crate', 'truck', 'truck', 'helicopter', 'helicopter']                          // 5: tall stacks, a dump truck rolling at you, and a helicopter overhead
 ];
 const flyY = c => GROUND - 125 + Math.sin(G.t * 4 + c.x) * 8;
-const flyYOf = c => OBS[c.type].still ? GROUND - 128 : flyY(c);                   // power lines don't bob
+// A SWOOPER is a bird or drone that dives as it reaches you: high while it's far off, down at knee height (centre 30 px
+// up) for the last stretch - so this one you JUMP, instead of running under. Its shadow on the ground grows as it dives.
+const SWOOP_LOW = GROUND - 30;
+const swoopT = c => {
+  const d = c.x - G.px;                                                            // how far ahead of the runner it is
+  const t = d > 420 ? 0 : d > 120 ? (420 - d) / 300 : d > -60 ? 1 : Math.max(0, 1 - (-60 - d) / 200);   // dives in, then climbs away behind you
+  return t * t * (3 - 2 * t);
+};
+const flyYOf = c => OBS[c.type].still ? GROUND - 128                               // power lines don't bob
+  : c.swoop ? flyY(c) + (SWOOP_LOW - flyY(c)) * swoopT(c) : flyY(c);
+// Which flyers can swoop, and how often, per level (level 1 has no flyers; on level 5 the news helicopter dives too)
+const SWOOP_TYPES = ['vulture', 'parrot', 'falcon', 'drone', 'helicopter'], SWOOP_CHANCE = [0, .3, .5, .45, .35];
+// Rolling obstacles: some boulders (level 1) hop along the ground toward you and some hazmat barrels (level 2) roll at
+// you - they're moving, so when to jump is different every time.   vx = speed toward you, hop = bounce height (px)
+const ROLLERS = { rock: { level: 1, chance: .3, vx: -45, hop: 20 }, barrel: { level: 2, chance: .35, vx: -70, hop: 0 } };
+const hopOf = c => c.hop ? Math.abs(Math.sin(G.t * 6 + (c.t0 || 0) * 3)) * c.hop : 0;
 // a loose pipe: sits low, wobbles as a warning, shoots up, then sinks again (a 2.4 s cycle, out of step with its neighbours)
 const PIPE_CYCLE = 2.4;
 const pipeH = c => {
@@ -920,12 +938,14 @@ const COMBO_CHANCE = [0, .1, .25, .35, .45];                      // chance that
 const PRACTICE_SECONDS = 3;                                  // Practice: about how long you run between two questions
 // Distance from the previous obstacle to the next one. Always random, never below what can be cleared:
 // a ground obstacle followed by a flyer leaves time to land first; a flyer followed by a ground obstacle leaves time to get past it before jumping.
-function gapAfter(prev, type, level) {
+function gapAfter(prev, type, level, swoop) {
   const spd = 330 * SPEED_BY_LEVEL[level - 1], minPx = spd * MIN_GAP_SEC[level - 1], d = OBS[type], pd = prev ? OBS[prev.type] : null;
   const [tight, medium] = GAP_MIX[level - 1], r = Math.random();
   const mult = r < tight ? 1 + Math.random() * .15 : r < tight + medium ? 1.35 + Math.random() * .55 : 2 + Math.random() * .8;
   let g = minPx * mult + (pd && !pd.fly ? (prev.w ? prev.w : Math.min(pd.w || 40, 90) * .6) : 0);       // (prev.w = a long stretch from a pattern: leave its whole length)
-  if (pd && pd.vx) g += 110;                                                       // walkers move toward you: keep clear of whatever is in front of them
+  if (pd && (pd.vx || prev.vx)) g += 110;                                          // walkers and rollers move toward you: keep clear of whatever is in front of them
+  if (swoop && pd && !pd.fly) g = Math.max(g, spd * .95);                           // land from the last jump in time to jump the swooper
+  if (prev && prev.swoop) g = Math.max(g, spd * .95 + 40);                         // ...and after jumping a swooper, time to land before the next thing
   if (pd && pd.kind === 'zone' && !prev.w) g += pd.w * .5;
   if (d.fly && pd && !pd.fly) g = Math.max(g, spd * .78 + (d.w || 0) * .5);        // land from the jump before the flyer arrives
   if (pd && pd.fly && !d.fly) g = Math.max(g, (prev.w ? prev.w / 2 : pd.w || 0) + 28 + spd * .48);       // get past the flyer before jumping the next thing
@@ -978,10 +998,15 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
     }
     if (!type) type = pool.find(t => !OBS[t].fly);
     // later levels: sometimes a flyer right behind a ground obstacle - jump, land, then run under it
-    if (prev && !prev.fly && !OBS[prev.type].vx && flyPool.length && Math.random() < COMBO_CHANCE[level - 1]) type = pick(flyPool);
-    if (prev) x = prev.x + gapAfter(prev, type, level);
+    if (prev && !prev.fly && !OBS[prev.type].vx && !prev.vx && flyPool.length && Math.random() < COMBO_CHANCE[level - 1]) type = pick(flyPool);
+    // some flyers swoop down (jump them), and some boulders / barrels roll at you - never during the quiet start
+    const swoop = !!prev && SWOOP_TYPES.includes(type) && Math.random() < SWOOP_CHANCE[level - 1];
+    const roll = ROLLERS[type], rolling = !!prev && !!roll && roll.level === level && Math.random() < roll.chance;
+    if (prev) x = prev.x + gapAfter(prev, type, level, swoop);
     if (x >= p.e - 300) break;
     const c = { x, type, fly: !!OBS[type].fly, hit: false, t0: Math.random() * PIPE_CYCLE };
+    if (swoop) c.swoop = true;
+    if (rolling) { c.vx = roll.vx; c.hop = roll.hop; }
     p.obs.push(c); fresh.push(c); prev = c;
   }
   // floating platforms: you can land on them (from above) and run along them to hop over a ground obstacle.
@@ -989,7 +1014,7 @@ function fillContent(p, first, theme, level = 1, keepX = null) {
   p.floats = keptFloats.concat(patFloats);
   const flyers = p.obs.filter(c => c.fly);
   fresh.forEach(c => {
-    if (c.fly || OBS[c.type].vx || Math.random() > 0.7) return;
+    if (c.fly || OBS[c.type].vx || c.vx || Math.random() > 0.7) return;
     const w = (OBS[c.type].w || 40) + 100 + rnd(0, 60), fx = c.x - 50 - rnd(0, 20);
     if (flyers.some(f => f.x > fx - 90 && f.x < fx + w + 90)) return;
     p.floats.push({ x: fx, w, h: pick([105, 115, 125]) });
@@ -1353,6 +1378,8 @@ function update(dt) {
   if (G.tipT > 0) G.tipT -= dt;
   for (const p of G.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.life -= dt; }
   G.particles = G.particles.filter(p => p.life > 0);
+  for (const q of G.pops) { q.y -= 40 * dt; q.life -= dt; }
+  G.pops = G.pops.filter(q => q.life > 0);
 
   if (G.state === 'menu') { G.px += 170 * dt; G.cam = G.px - 240; return; }
   { const cb = G.platforms[G.pi] && G.platforms[G.pi].bridge; if (cb && cb.collapsed) cb.cAnim += dt; }   // debris keeps falling
@@ -1376,7 +1403,7 @@ function update(dt) {
     }
     // things that walk toward you (protesters, lawyers, endangered animals) start moving once they're on screen
     for (const q of G.platforms) for (const c of q.obs) {
-      const vx = OBS[c.type].vx;
+      const vx = OBS[c.type].vx || c.vx;                                  // (c.vx: a boulder or barrel rolling at you)
       if (vx && !c.hit && c.x - G.cam < W + 200 && c.x - G.cam > -150) c.x += vx * dt;
     }
     // obstacles: a crash costs a heart, then you get a moment of invincibility
@@ -1386,9 +1413,14 @@ function update(dt) {
       const d = OBS[c.type], dw = c.w || d.w;
       if (c.hit && d.kind !== 'zone') continue;
       let hurt = false, ex = c.x + (dw || 0) / 2, ey = GROUND - 20;
+      if (c.swoop && !G.swoopTold && c.x - G.px < 560) {                  // the first swooper of a run gets a heads-up (the one flyer you jump)
+        G.swoopTold = true; toast(tl('Look out - it\'s diving! Jump over this one!', '¡Cuidado, está bajando en picada! ¡Salta sobre este!'), '');
+      }
+      let clr = null;                                                     // how close you came (px) while level with it - for "Close call!"
       if (d.fly) {
-        const y = flyYOf(c), half = dw ? dw / 2 + 12 : 28;
-        hurt = Math.abs(G.px - c.x) < half && (G.py - 92) < y + 14 && G.py > y - 14; ex = c.x; ey = y;
+        const y = flyYOf(c), half = dw ? dw / 2 + 12 : 28, over = Math.abs(G.px - c.x) < half;
+        hurt = over && (G.py - 92) < y + 14 && G.py > y - 14; ex = c.x; ey = y;
+        if (over) clr = Math.max((G.py - 92) - (y + 14), (y - 14) - G.py);   // ran under it, or (a swooper) jumped over it
       } else if (d.kind === 'zone') {
         const inside = grounded && G.px + 6 > c.x && G.px - 6 < c.x + dw;
         if (inside && !c.hit) {
@@ -1404,13 +1436,24 @@ function update(dt) {
         } else if (d.effect === 'collapse' && !c.collapsed) c.sink = 0;
         ey = GROUND + 6;
       } else if (d.kind === 'pipe') {
-        const h = pipeH(c);
-        hurt = h > 16 && G.px + 10 > c.x && G.px - 10 < c.x + dw && G.py > GROUND - h + 4; ey = GROUND - h / 2;
+        const h = pipeH(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
+        hurt = h > 16 && over && G.py > GROUND - h + 4; ey = GROUND - h / 2;
+        if (over && h > 16) clr = (GROUND - h) - G.py;
       } else {
-        hurt = G.px + 10 > c.x && G.px - 10 < c.x + dw && G.py > GROUND - d.h + 4; ey = GROUND - d.h / 2;
+        const top = GROUND - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;   // (a hopping boulder's top is higher mid-bounce)
+        hurt = over && G.py > top + 4; ey = top + d.h / 2;
+        if (over) clr = top - G.py;
+      }
+      if (clr !== null && !c.hit) c.minClr = Math.min(c.minClr === undefined ? 999 : c.minClr, clr);
+      // cleared it without a scratch: count the dodge (a streak of them gets a cheer), and a very tight one is a close call
+      const farEdge = d.fly ? c.x + (dw ? dw / 2 : 28) : c.x + (dw || 0);
+      if (!c.hit && !c.passed && G.px - 10 > farEdge) {
+        c.passed = true; G.dodges = (G.dodges || 0) + 1;
+        if (c.minClr !== undefined && c.minClr < 16) pop(tl('Close call!', '¡Por poco!'), '#ffd166');
+        else if (G.dodges % 5 === 0) pop(tl(`${G.dodges} in a row!`, `¡${G.dodges} seguidos!`), '#7ee2a8');
       }
       if (hurt && G.inv <= 0 && !c.hit) {
-        c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
+        c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--; G.dodges = 0;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
         toast(G.lives > 0 ? `${d.msg || tl('You ran into the ' + d.label + '!', '¡Chocaste con ' + d.label + '!')} −1 ❤️` : tl('Crashed out!', '¡Chocaste demasiado!'), 'bad');
         if (G.lives <= 0) { G.crashed = true; gameOver(); return; }
@@ -1693,6 +1736,19 @@ function drawBridge(p, T) {
 function drawObstacle(c, x) {
   const G0 = GROUND, ol = '#3b2a1a', T = G.t, d = OBS[c.type], dw = c.w || d.w;
   ctx.save(); if (c.hit && d.kind !== 'zone' && d.kind !== 'pipe') ctx.globalAlpha = .4;
+  if (c.swoop && !c.hit) {                                               // a swooper's shadow grows on the ground as it dives, with a warning arrow
+    const s = swoopT(c);
+    ctx.fillStyle = `rgba(0,0,0,${.12 + .28 * s})`; ctx.beginPath(); ctx.ellipse(x, G0 - 2, 8 + 18 * s, 3 + 3 * s, 0, 0, 7); ctx.fill();
+    if (s > .02 && s < .7) {
+      const y = flyYOf(c) - 26;
+      ctx.fillStyle = '#ff5d5d'; ctx.beginPath(); ctx.moveTo(x - 7, y - 6); ctx.lineTo(x + 7, y - 6); ctx.lineTo(x, y + 4); ctx.closePath(); ctx.fill();
+    }
+  }
+  const hop = hopOf(c);                                                  // a hopping boulder: shadow stays on the ground, the rock bounces
+  if (hop > 0 && !c.hit) {
+    ctx.fillStyle = `rgba(0,0,0,${.3 - hop / 120})`; ctx.beginPath(); ctx.ellipse(x + (dw || 40) / 2, G0 - 1, (dw || 40) / 2 - hop / 4, 4, 0, 0, 7); ctx.fill();
+    ctx.translate(0, -hop);
+  }
   ctx.lineWidth = 3; ctx.strokeStyle = ol; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   const rr = (a, b, w, h, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(a, b, w, h, r); ctx.fill(); ctx.stroke(); };
   const txt = (s, tx, ty, size, col) => { ctx.fillStyle = col || '#222'; ctx.font = `900 ${size}px Trebuchet MS, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, tx, ty); };
@@ -2106,6 +2162,12 @@ function draw() {
   drawWorld(T);
   drawRunner();
   for (const p of G.particles) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - G.cam, p.y, 5, 5); }
+  ctx.font = '900 20px Trebuchet MS, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  for (const q of G.pops) {                                               // "Close call!" / "10 in a row!" cheers
+    ctx.globalAlpha = clamp(q.life * 2.5, 0, 1);
+    ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(20,24,50,.85)'; ctx.strokeText(q.text, q.x - G.cam, q.y);
+    ctx.fillStyle = q.color; ctx.fillText(q.text, q.x - G.cam, q.y);
+  }
   ctx.globalAlpha = 1;
   ctx.restore();
   if (G.state === 'menu') { /* keep clean behind the menu card */ }
