@@ -889,17 +889,7 @@ function drawBreakawayScene() {
   var bdMag = sqrt(bdx * bdx + bdy * bdy) || 1;
   drawBall(gridSX(dribX + (bdx / bdMag) * 0.3), gridSY(dribY + (bdy / bdMag) * 0.3));
 
-  var xB2 = FIELD_XB, yB2 = FIELD_YB;
-  noStroke(); fill(255); textSize(11);
-  textAlign(CENTER);
-  for (var xi2 = GX_MIN; xi2 <= GX_MAX; xi2++) {
-    text(dispX(xi2), constrain(xB2[xi2 - GX_MIN], 8, 392), FIELD_Y0 + 15);
-  }
-  textAlign(RIGHT);
-  for (var yi2 = GY_MIN; yi2 <= GY_MAX; yi2++) {
-    text(dispY(yi2), FX1 - 6, yB2[yi2 - GY_MIN] + 4);
-  }
-
+  // (no axis numbers here: the field is scrolling up, so they'd no longer line up with anything)
   fill(10, 10, 40); noStroke();
   rect(0, FY2 + 1, 400, 400 - (FY2 + 1));
   drawEquationReadout(FY2 + 24);
@@ -2114,20 +2104,21 @@ function drawField() {
   }
 
   if (screenState === "input" || screenState === "moving") {
-
     stroke(255, 255, 255, 35); strokeWeight(0.5);
     for (var xi = GX_MIN; xi <= GX_MAX; xi++) line(gridSX(xi), FY1, gridSX(xi), FIELD_Y0);
     for (var yi = GY_MIN; yi <= GY_MAX; yi++) line(FX1, gridSY(yi), FX2, gridSY(yi));
-
-    if (subMode !== "hard") {
-      stroke(0, 0, 0, 160); strokeWeight(1);
-      line(gridSX(0), FY1, gridSX(0), FIELD_Y0);
-      line(FX1, gridSY(0), FX2, gridSY(0));
-    }
   }
 
-  var skipLabels = screenState === "revealLine" || screenState === "kicking" || screenState === "shootFlight" || screenState === "postHit" || screenState === "saved" || screenState === "blocked" || screenState === "celebrate";
+  // The numbers and the axes go away once the pass is played and the player dribbles up the field (the breakaway),
+  // and stay away through the shot - the field has scrolled, so they no longer line up with anything.
+  var skipLabels = screenState === "revealLine" || screenState === "kicking" || screenState === "breakaway" || screenState === "powering" || screenState === "aiming" || screenState === "shootFlight" || screenState === "postHit" || screenState === "saved" || screenState === "blocked" || screenState === "celebrate";
   if (!skipLabels) {
+    // Solid black x- and y-axes whenever the numbers are showing. The y-axis (x = 0) runs up the middle; the x-axis is the
+    // row whose label is 0 (in Hard the y numbers shift, so it's drawn only when y = 0 is on the field).
+    stroke(0); strokeWeight(2);
+    line(gridSX(0), FY1, gridSX(0), FIELD_Y0);
+    var zeroRow = (subMode === "hard" && mainMode !== "proportional") ? -hardYOffset : 0;
+    if (zeroRow >= GY_MIN && zeroRow <= GY_MAX) line(FX1, gridSY(zeroRow), FX2, gridSY(zeroRow));
 
     noStroke(); fill(255); textSize(11);
     textAlign(CENTER);
