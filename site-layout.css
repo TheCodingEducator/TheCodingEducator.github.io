@@ -117,17 +117,49 @@ body.site-fit { padding-top: 44px; box-sizing: border-box; }
     width: 100vw !important; height: calc(100vh - 48px) !important; height: calc(100dvh - 48px) !important;
   }
   html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) #sb { width: 100vw !important; }
-  /* sideways: the controls sit in the bottom corners, beside the game, so the game gets the full height */
+  /* Fullscreen (real or the CSS fallback): site-layout.js moves the joystick / number pad into the fullscreen box,
+     and the game sits at the top, above them, never underneath */
+  html.site-lock body #game-canvas-slot:fullscreen, html.site-lock body #game-canvas-slot:-webkit-full-screen,
+  html.site-lock body #game-canvas-slot.pseudo-fullscreen { align-items: flex-start !important; height: 100vh; height: 100dvh; }
+  html.site-lock body #game-canvas-slot:fullscreen canvas.p5Canvas, html.site-lock body #game-canvas-slot.pseudo-fullscreen canvas.p5Canvas {
+    width: min(100vw, calc(100vh - 8px - var(--mc, 0px))) !important; height: min(100vw, calc(100vh - 8px - var(--mc, 0px))) !important;
+    width: min(100vw, calc(100dvh - 8px - var(--mc, 0px))) !important; height: min(100vw, calc(100dvh - 8px - var(--mc, 0px))) !important;
+  }
+  html.site-lock body #game-canvas-slot:-webkit-full-screen canvas.p5Canvas {
+    width: min(100vw, calc(100vh - 8px - var(--mc, 0px))) !important; height: min(100vw, calc(100vh - 8px - var(--mc, 0px))) !important;
+  }
+  /* sideways: the controls sit in the bottom corners, beside the game, so the game gets the full height - but never so
+     wide that it reaches under them (the joystick and GO button each need about 160px at the sides) */
   @media (orientation: landscape) {
     html.site-lock body.site-fit .play-area { height: calc(100vh - 44px); height: calc(100dvh - 44px); }
     html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) canvas.p5Canvas {
-      width: min(100vw, calc(100vh - 48px)) !important; height: min(100vw, calc(100vh - 48px)) !important;
-      width: min(100vw, calc(100dvh - 48px)) !important; height: min(100vw, calc(100dvh - 48px)) !important;
+      width: min(calc(100vw - 320px), calc(100vh - 48px)) !important; height: min(calc(100vw - 320px), calc(100vh - 48px)) !important;
+      width: min(calc(100vw - 320px), calc(100dvh - 48px)) !important; height: min(calc(100vw - 320px), calc(100dvh - 48px)) !important;
     }
-    /* games with a number pad: the game on the left, the pad (and joystick) centered in the space to its right */
+    html.site-lock body #game-canvas-slot:fullscreen, html.site-lock body #game-canvas-slot:-webkit-full-screen,
+    html.site-lock body #game-canvas-slot.pseudo-fullscreen { align-items: center !important; }
+    html.site-lock body #game-canvas-slot:fullscreen canvas.p5Canvas, html.site-lock body #game-canvas-slot:-webkit-full-screen canvas.p5Canvas,
+    html.site-lock body #game-canvas-slot.pseudo-fullscreen canvas.p5Canvas {
+      width: min(calc(100vw - 320px), 100vh) !important; height: min(calc(100vw - 320px), 100vh) !important;
+      width: min(calc(100vw - 320px), 100dvh) !important; height: min(calc(100vw - 320px), 100dvh) !important;
+    }
+    /* games with a number pad: the game on the left, the pad (and joystick) centered in the space to its right,
+       which is kept at least 290px wide so the 256px pad always fits beside the game */
     html.site-lock.site-pad body.site-fit .play-area { justify-content: flex-start; }
-    html.site-lock.site-pad #mc-numpad { left: calc(100dvh - 48px + (100vw - 100dvh + 48px - 256px) / 2) !important; transform: none !important; }
-    html.site-lock.site-pad #mc-joy-base { left: calc(100dvh - 48px + (100vw - 100dvh + 48px - 130px) / 2) !important; }
+    html.site-lock.site-pad body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) canvas.p5Canvas {
+      width: min(calc(100vw - 290px), calc(100vh - 48px)) !important; height: min(calc(100vw - 290px), calc(100vh - 48px)) !important;
+      width: min(calc(100vw - 290px), calc(100dvh - 48px)) !important; height: min(calc(100vw - 290px), calc(100dvh - 48px)) !important;
+    }
+    html.site-lock.site-pad #mc-numpad { left: calc(var(--pad-game) + (100vw - var(--pad-game) - 256px) / 2) !important; transform: none !important; }
+    html.site-lock.site-pad #mc-joy-base { left: calc(var(--pad-game) + (100vw - var(--pad-game) - 130px) / 2) !important; }
+    html.site-lock.site-pad { --pad-game: min(calc(100vw - 290px), calc(100vh - 48px)); --pad-game: min(calc(100vw - 290px), calc(100dvh - 48px)); }
+    html.site-lock.site-pad.site-fs { --pad-game: min(calc(100vw - 290px), 100vh); --pad-game: min(calc(100vw - 290px), 100dvh); }
+    html.site-lock.site-pad body #game-canvas-slot:fullscreen, html.site-lock.site-pad body #game-canvas-slot:-webkit-full-screen,
+    html.site-lock.site-pad body #game-canvas-slot.pseudo-fullscreen { justify-content: flex-start !important; }
+    html.site-lock.site-pad body #game-canvas-slot:fullscreen canvas.p5Canvas, html.site-lock.site-pad body #game-canvas-slot:-webkit-full-screen canvas.p5Canvas,
+    html.site-lock.site-pad body #game-canvas-slot.pseudo-fullscreen canvas.p5Canvas {
+      width: var(--pad-game) !important; height: var(--pad-game) !important;
+    }
   }
 }
 /* narrow screens: the bar's buttons show just their icons, so the whole bar fits */

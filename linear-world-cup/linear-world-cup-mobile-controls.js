@@ -47,7 +47,7 @@
     // this body-level bar once pseudo-fullscreen made the canvas grow -
     // that, not anything about the joystick/numpad itself, was why the
     // controls appeared to sit "inside" the game instead of below it.
-    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 240px; z-index: 10001; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
+    '#mobile-controls { position: fixed; left: 0; right: 0; bottom: 0; height: 280px; z-index: 10001; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }' +
     '#mc-numpad { display: none; grid-template-columns: repeat(3, 80px); grid-auto-rows: 56px; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; pointer-events: auto; }' +
     '#mc-numpad.mc-visible { display: grid; }' +
     '.mc-num { border-radius: 8px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,24,44,0.85); color: #fff; font: bold 22px -apple-system, sans-serif; touch-action: none; }' +

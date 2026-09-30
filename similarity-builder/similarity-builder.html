@@ -270,6 +270,9 @@
   #sb #toast.bad { background:#ffd6d6; color:#9b1c1c; }
   #sb #jumpBtn { position:absolute; right:12px; bottom:12px; width:74px; height:74px; border-radius:50%; border:4px solid #fff; background:rgba(255,122,26,.9); color:#fff; font-weight:900; font-size:15px; display:none; touch-action:none; }
   @media (pointer:coarse) { #sb #jumpBtn { display:block; } }
+  /* touch screens: the Jump button sits beside the game, never on top of it */
+  #sb #stageRow { position:relative; }
+  @media (pointer:coarse) { #sb #stage { width:min(var(--stage-w), calc(100% - 180px)); } #sb #jumpBtn { right:4px; bottom:4px; } }
   #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
 
   #sb .overlay { position:absolute; inset:0; background:rgba(10,12,30,.74); display:flex; align-items:center; justify-content:center; padding:12px; z-index:10; overflow:hidden; }
@@ -426,12 +429,14 @@
         <span class="pill" id="hCorrectPill" style="display:none">&#9989; <span data-es="Correctas">Correct</span> <b id="hCorrect">0</b></span>
         <span class="pill">🔥 <span data-es="Racha">Streak</span> <b id="hStreak">0</b></span>
         <span class="pill" title="1 star for every correct answer - spend them in the Shop" data-es-title="1 estrella por cada respuesta correcta: gástalas en la tienda"><span class="coinDot">&#11088;</span> <b id="hCoins">0</b></span>
-        <span class="pill">🏃 <b id="hDist">0</b> m</span>
+        <span class="pill"><span data-es="Distancia">Distance</span> <b id="hDist">0</b> m</span>
       </div>
+      <div id="stageRow">
       <div id="stage">
         <canvas id="c" width="960" height="540"></canvas>
         <div id="toast"></div>
-        <button id="jumpBtn" data-es="SALTA">JUMP</button>
+      </div>
+      <button id="jumpBtn" data-es="SALTA">JUMP</button>
       </div>
       <div id="help" data-es="Saltar: <b>Espacio</b> / <b>Enter</b> / <b>&uarr;</b> / toca &mdash; presiona otra vez en el aire para un <b>doble salto</b>. Esc o Menú pausa.">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; press again in the air to <b>double jump</b>. Esc or Menu pauses.</div>
 

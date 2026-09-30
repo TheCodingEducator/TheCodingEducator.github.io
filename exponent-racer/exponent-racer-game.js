@@ -59,6 +59,12 @@ function saveExponentProgress() {
     localStorage.setItem('exprace_cheat_used', String(cheatCoinsUsed));
   } catch (e) {}
 }
+// Saves shortly after a burst of coins instead of on the exact frame each one is collected
+var saveTimer = 0;
+function saveSoon() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(function () { saveTimer = 0; saveExponentProgress(); }, 1200);
+}
 // Safety net: flush whatever's in memory the instant the tab is hidden
 // or closed (switching tabs, closing the browser, navigating away
 // mid-run), so nothing earned since the last checkpoint save is lost
@@ -1305,7 +1311,7 @@ function playGame(isFrozen) {
              }
              var coinsGained = (equipped.boost === "doublecoins") ? cValue * 2 : cValue;
              score += (cValue / 10); totalCoins = Math.min(999999, totalCoins + coinsGained); // cap at $9999.99
-             saveExponentProgress(); // a discrete per-coin event (not a per-frame loop), so saving here immediately is safe - otherwise coins earned mid-run are lost if the page closes before a checkpoint
+             saveSoon(); // saved a moment later rather than in the middle of the collect frame (a hitch on phones); leaving the page still saves at once
              coinPopupValue = "+$" + (coinsGained / 100).toFixed(2); coinPopupColor = rgbColor; coinPopupTimer = 60;
              coinActive = false; coinSprite.x = -100; coinSprite.velocityX = 0;
              playSound("sound://category_achievements/lighthearted_bonus_objective_1.mp3");

@@ -438,6 +438,17 @@
   #sb #tUp { grid-column:2; grid-row:1; } #sb #tLeft { grid-column:1; grid-row:2; } #sb #tRight { grid-column:3; grid-row:2; } #sb #tDown { grid-column:2; grid-row:3; }
   #sb #touch button:active { transform:translateY(0.4cqw); box-shadow:0 0.1cqw 0 #3b2416; }
   @media (pointer:coarse) { #sb #touch:not(.hidden) { display:flex; } }
+  /* touch screens: the arrow pad sits to the left of the kitchen and the Take / Cook / Serve button to its right - beside the game, never on top of it */
+  #sb #stageRow { position:relative; }
+  @media (pointer:coarse) {
+    #sb #stage { width:min(var(--stage-w), calc(100% - 232px)); }
+    #sb #touch { bottom:0; padding:0; align-items:flex-end; }
+    #sb #touch button { font-size:16px; border-width:2px; border-radius:10px; box-shadow:0 3px 0 #3b2416; }
+    #sb .dpad { gap:3px; width:112px; justify-content:center; }
+    #sb .dpad button { min-width:36px !important; padding:6px 0 !important; font-size:16px !important; }
+    #sb #touch #tAct { width:110px; white-space:normal; font-size:14px; padding:8px 6px; line-height:1.25; }
+    #sb #touch button:active { transform:translateY(2px); box-shadow:0 1px 0 #3b2416; }
+  }
   @keyframes tkIn { from { transform:translateY(-110%); } to { transform:none; } }
   @keyframes tkShake { 25% { transform:rotate(-2.5deg); } 75% { transform:rotate(2.5deg); } }
   #sb #cook { position:absolute; left:1%; top:23.5%; width:62%; bottom:2.4%; background:#fffaf0; border:0.35cqw solid #8a6a4a; border-radius:1.2cqw; color:#2a2320;
@@ -626,6 +637,7 @@
         <span class="pill" title="1 star for every correct order" data-es-title="1 estrella por cada pedido correcto"><span class="coinDot">&#11088;</span> <b id="hStars">0</b></span>
         <span data-es="Nivel <b id='hLevel'>1</b>" class="pill" id="hLevelPill">Level <b id="hLevel">1</b></span>
       </div>
+      <div id="stageRow">
       <div id="stage">
         <canvas id="c" width="960" height="540"></canvas>
         <div id="rail" aria-label="Order tickets" data-es-aria="Boletos de pedidos"></div>
@@ -645,6 +657,8 @@
           </div>
           <div id="keypad"></div>
         </div>
+        <div id="toast"></div>
+      </div>
         <div id="touch" class="hidden">
           <div class="dpad">
             <button type="button" id="tUp" aria-label="Walk back" data-es-aria="Caminar hacia atrás">&#9650;</button>
@@ -654,7 +668,6 @@
           </div>
           <button data-es="&#9995; Tomar / Cocinar / Servir" type="button" id="tAct">&#9995; Take / Cook / Serve</button>
         </div>
-        <div id="toast"></div>
       </div>
       <div data-es="<b>Flechas</b> (o WASD / haz clic en el piso) para caminar &middot; <b>Espacio</b> toma un pedido, cocina en la estufa y sirve &middot; en la estufa, escribe la cantidad y presiona <b>Enter</b> &middot; <b>Esc</b> para alejarte / pausar." id="help"><b>Arrow keys</b> (or WASD / click the floor) walk &middot; <b>Space</b> takes an order, cooks at the stove, and serves &middot; at the stove, type the amount and press <b>Enter</b> &middot; <b>Esc</b> steps away / pauses.</div>
 

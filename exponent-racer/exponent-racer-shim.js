@@ -189,3 +189,63 @@ function stopSound(url) {
   var pool = _glSoundCache[url];
   if (pool) { for (var i = 0; i < pool.length; i++) { pool[i].pause(); pool[i].currentTime = 0; } }
 }
+
+// ---- Web Audio (preferred) ----
+// On phones, an <audio> element hitches the game the first time it plays (the file is loaded and decoded mid-race), and
+// phone browsers often refuse to play one that wasn't created during a tap - so collecting a coin could lag or make no
+// sound at all. Instead every sound is decoded into memory once, up front, and played through a single AudioContext
+// that is unlocked on the first touch/click/key. Playing a decoded sound is instant and never drops. If Web Audio isn't
+// available, the <audio> pool above is used as before.
+(function () {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || !window.fetch) return;
+  var ctx;
+  try { ctx = new AC(); } catch (e) { return; }
+  var buffers = {}, loading = {}, playing = {};
+  var FILES = ['app_tab_sound', 'bounce_1', 'coin_1', 'deep_pass_by_whoosh_1', 'deep_pass_by_whoosh_7_fast', 'energy_bar_recharge_4',
+    'f1_race', 'go_male', 'lighthearted_bonus_objective_1', 'peaceful_win_1', 'perfect_clean_app_button_click',
+    'puzzle_game_organic_wood_block_tone_tap_1', 'puzzle_game_secret_unlock_01', 'puzzle_game_ui_pop_01', 'puzzle_game_ui_pop_tiny_01',
+    'rain_thunderstorm_calm', 'retro_game_simple_impact_1', 'vibrant_game_life_lost_1', 'vibrant_game_start_with_tone_hum',
+    'vibrant_ui_mouse_click_1', 'vibrant_ui_tap_1'];
+
+  function load(file) {
+    if (buffers[file] || loading[file]) return loading[file];
+    loading[file] = fetch(file).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (data) {
+      return new Promise(function (ok, fail) { ctx.decodeAudioData(data, ok, fail); });   // callback form works on older Safari too
+    }).then(function (buf) { buffers[file] = buf; return buf; }, function () { delete loading[file]; });
+    return loading[file];
+  }
+  FILES.forEach(function (n) { load('exponent-racer-sounds/' + n + '.mp3'); });
+
+  // Phones start the AudioContext suspended until the player touches the screen; resume it on every gesture (cheap once running)
+  function unlock() {
+    if (ctx.state !== 'running') {
+      ctx.resume();
+      var s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);   // iOS needs a sound started inside the gesture
+    }
+  }
+  ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown'].forEach(function (ev) { window.addEventListener(ev, unlock, true); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') unlock(); });
+
+  function start(url, buf, loop) {
+    var src = ctx.createBufferSource();
+    src.buffer = buf; src.loop = !!loop;
+    src.connect(ctx.destination);
+    src.start(0);
+    if (loop) (playing[url] = playing[url] || []).push(src);
+    else src.onended = function () { src.disconnect(); };
+  }
+
+  playSound = function (url, loop) {
+    try {
+      var file = _glSoundFile(url), buf = buffers[file];
+      if (ctx.state === 'suspended') ctx.resume();
+      if (buf) start(url, buf, loop);
+      else { var p = load(file); if (p) p.then(function (b) { if (b) start(url, b, loop); }); }
+    } catch (e) {}
+  };
+  stopSound = function (url) {
+    var list = playing[url];
+    if (list) { list.forEach(function (s) { try { s.stop(0); } catch (e) {} }); playing[url] = []; }
+  };
+})();

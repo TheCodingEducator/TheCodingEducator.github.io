@@ -100,6 +100,21 @@
     measure();
     var n = 0, t = setInterval(function () { measure(); if (++n > 20) clearInterval(t); }, 250);   // the controls are added after load
     window.addEventListener('orientationchange', function () { setTimeout(measure, 300); });
+    // Fullscreen shows only the game box, so the joystick / number pad (which live on the page) would vanish. They move
+    // into the fullscreen box while it's up, and back out afterwards; the game is sized to stay above them either way.
+    function followFullscreen() {
+      var mc = document.getElementById('mobile-controls');
+      if (!mc) return;
+      var fs = document.fullscreenElement || document.webkitFullscreenElement;
+      var home = fs || document.body;
+      if (mc.parentNode !== home) home.appendChild(mc);
+      root.classList.toggle('site-fs', !!fs || !!document.querySelector('.pseudo-fullscreen'));
+      last = -1; measure();
+    }
+    document.addEventListener('fullscreenchange', followFullscreen);
+    document.addEventListener('webkitfullscreenchange', followFullscreen);
+    var slot = document.getElementById('game-canvas-slot');
+    if (slot && window.MutationObserver) new MutationObserver(followFullscreen).observe(slot, { attributes: true, attributeFilter: ['class'] });   // pseudo-fullscreen
     // a page that scrolled anyway (focusing a text box, the address bar sliding) snaps back to the top
     window.addEventListener('scroll', function () { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
   }
