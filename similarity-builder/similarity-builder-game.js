@@ -1269,9 +1269,9 @@ function onBridgeBuilt() {
       for (let i = G.pi + 1; i < G.platforms.length; i++) fillContent(G.platforms[i], false, G.theme, G.level, G.cam + W + 160);   // never touch what is already on screen
     addCoins(1); sfx.coin();                                          // 1 star for every correct answer
     const up = ' · +1 ⭐';
-    toast((b.P.type === 'scale' ? tl(`Scale ×${b.P.k} — ${SHAPES[b.P.shape].bridge} locked in!`, `Escala ×${b.P.k} — ¡${SHAPES[b.P.shape].bridge} listo!`)
-      : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? tl('Similar', 'Semejantes') : tl('Not similar', 'No semejantes')} — ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
-      : b.P.alg ? `x = ${b.P.answer} — ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
+    toast((b.P.type === 'scale' ? tl(`${SHAPES[b.P.shape].bridge} locked in with scale ×${b.P.k}!`, `¡${SHAPES[b.P.shape].bridge} listo con escala ×${b.P.k}!`)
+      : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? tl('Similar!', '¡Semejantes!') : tl('Not similar!', '¡No semejantes!')} ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
+      : b.P.alg ? tl(`${SHAPES[b.P.shape].bridge} locked in with x = ${b.P.answer}!`, `¡${SHAPES[b.P.shape].bridge} listo con x = ${b.P.answer}!`)
       : tl(`${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`, `¡${SHAPES[b.P.shape].bridge} listo con tu pieza clave de ${fmt(b.P.answer)} pies!`)) + up, 'good'); sfx.good();
     G.state = 'run';
   } else {
