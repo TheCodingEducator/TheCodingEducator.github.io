@@ -889,7 +889,21 @@ const OBS = {
   // --- level 5 ---
   crate:     { kind: 'solid', w: 44, h: 84, label: tl('stack of crates', 'una pila de cajas') },
   truck:     { kind: 'solid', w: 100, h: 54, vx: -95, label: tl('dump truck', 'un camión de volteo') },
-  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') }
+  helicopter:{ fly: true, w: 60, label: tl('news helicopter', 'un helicóptero de noticias') },
+  // --- rhythm rows (levels 3-5): a construction pile driver that lifts and drops on a steady beat ---
+  piledriver:{ kind: 'press', w: 52, label: tl('pile driver', 'un martinete') }
+};
+// A pile driver's weight: up high (run under it), a steady drop, resting on the ground (jump it like a crate), then a
+// slow lift - the same 2.8 s beat every time. The beat is tied to how far away you are, not the clock, so it plays out
+// as you approach and is always settled - fully up or fully down (c.t0) - by the time you reach it: never mid-drop.
+const PILE_CYCLE = 2.8, PILE_H = 52, PILE_UP = 150, PILE_SETTLED = { up: .5, down: 1.78 };
+const pileLift = c => {                                                  // how high the weight's bottom is off the ground (px)
+  const secsAway = (c.x - G.px) / (330 * 1.25);
+  const ph = (((c.t0 || 0) - secsAway) % PILE_CYCLE + PILE_CYCLE) % PILE_CYCLE;
+  return ph < 1.0 ? PILE_UP                                              // up
+    : ph < 1.35 ? PILE_UP * (1 - ((ph - 1.0) / .35) ** 2)               // dropping
+    : ph < 2.2 ? 0                                                      // down
+    : PILE_UP * (ph - 2.2) / .6;                                        // lifting
 };
 // Every level has its OWN obstacles (none repeat on another level), and every one of them costs a heart if it touches you.
 // (A name listed twice shows up twice as often.)
@@ -957,12 +971,25 @@ function gapAfter(prev, type, level, swoop) {
 //   skyField  a long stretch of flooded land / unstable soil: only a HIGH platform (double jump) gets you across without touching it
 //   lowLine   a very long power line / storm cloud: you must stay down on the ground for the whole length
 //   pipeRow   three loose pipes in a row: run through when they are down, or take the high platform over them
-const PATTERNS = { 2: ['tapeWall'], 3: ['skyField', 'lowLine'], 4: ['lowLine', 'pipeRow'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow'] };
-const PATTERN_CHANCE = [0, .22, .32, .4, .48];
-function patternType(kind, level) { return kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
+//   rhythm    3 to 5 of the same small obstacle, evenly spaced: a jump-land-jump beat you can see coming
+//   pileRow   2 or 3 pile drivers on the same steady beat, each a half-beat after the last
+const PATTERNS = { 1: ['rhythm'], 2: ['tapeWall', 'rhythm'], 3: ['skyField', 'lowLine', 'rhythm', 'pileRow'], 4: ['lowLine', 'pipeRow', 'pileRow'], 5: ['tapeWall', 'skyField', 'lowLine', 'pipeRow', 'rhythm', 'pileRow'] };
+const PATTERN_CHANCE = [.16, .28, .36, .42, .5];
+// the small, standing (not walking) obstacle a rhythm row is made of: this level's own, or road cones
+function rhythmType(level) { const t = LEVEL_OBS[level - 1].filter(k => OBS[k].kind === 'solid' && !OBS[k].vx && OBS[k].h <= 48); return t.length ? pick(t) : 'cone'; }
+function patternType(kind, level) { return kind === 'rhythm' ? rhythmType(level) : kind === 'pileRow' ? 'piledriver' : kind === 'tapeWall' ? 'redtape' : kind === 'skyField' ? pick(['flood', 'soil']) : kind === 'lowLine' ? (level === 3 ? 'powerline' : level === 4 ? 'storm' : pick(['powerline', 'storm'])) : 'pipe'; }
 function makePattern(kind, type, x, level) {
   const obs = [], floats = [], mk = (t, xx, extra) => Object.assign({ x: xx, type: t, fly: !!OBS[t].fly, hit: false, t0: Math.random() * PIPE_CYCLE }, extra || {});
-  if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
+  const spd = 330 * SPEED_BY_LEVEL[(level || 1) - 1];
+  if (kind === 'rhythm') {                                               // same obstacle, same spacing: jump, land, jump, land...
+    const n = rnd(3, level >= 3 ? 5 : 4), step = spd * (rnd(80, 92) / 100) + OBS[type].w;
+    for (let i = 0; i < n; i++) obs.push(mk(type, x + i * step));
+  }
+  else if (kind === 'pileRow') {                                         // up, down, up... (or down, up, down): run under, jump, run under
+    const n = rnd(2, 3), step = Math.round(spd * 1.35), startUp = Math.random() < .5;
+    for (let i = 0; i < n; i++) obs.push(mk('piledriver', x + i * step, { t0: (i % 2 === 0) === startUp ? PILE_SETTLED.up : PILE_SETTLED.down }));
+  }
+  else if (kind === 'tapeWall') { const w = rnd(300, 380); obs.push(mk('redtape', x, { w })); floats.push({ x: x - 30, w: w + 60, h: 115 }); }
   else if (kind === 'skyField') { const w = rnd(380, 500); obs.push(mk(type, x, { w })); floats.push({ x: x - 40, w: w + 80, h: pick([170, 185, 195]) }); }
   else if (kind === 'lowLine') { const w = rnd(360, 480); obs.push(mk(type, x + w / 2, { w })); }
   else { for (let i = 0; i < 3; i++) obs.push(mk('pipe', x + i * 190)); if (Math.random() < .5) floats.push({ x: x - 30, w: 2 * 190 + 56 + 60, h: 175 }); }
@@ -1110,7 +1137,14 @@ function beep(f, d = .1, type = 'sine', v = .05, delay = 0) {
 }
 const sfx = {
   jump() { beep(420, .12, 'square', .03); beep(620, .1, 'square', .03, .05); },
-  jump2() { beep(640, .1, 'square', .03); beep(900, .12, 'square', .03, .05); },
+  jump2() { [660, 880, 1175].forEach((f, i) => beep(f, .09, 'triangle', .045, i * .04)); beep(1480, .14, 'sine', .03, .12); },   // a bright little sparkle
+  land() { beep(140, .07, 'triangle', .035); },
+  // the crowd cheers as you sprint across your bridge: a quick rise of whoops over a warm chord
+  cheer() {
+    [392, 494, 587].forEach(f => beep(f, .5, 'triangle', .025));
+    for (let i = 0; i < 9; i++) beep(700 + Math.random() * 700, .12, 'sine', .02, .05 + i * .06);
+  },
+  perfect() { [784, 988, 1175, 1568].forEach((f, i) => beep(f, .22, 'sine', .05, i * .07)); },
   coin() { beep(880, .08, 'triangle', .05); beep(1320, .12, 'triangle', .05, .06); },
   good() { [523, 659, 784, 1047].forEach((f, i) => beep(f, .16, 'triangle', .06, i * .08)); },
   bad() { beep(220, .25, 'sawtooth', .06); beep(150, .35, 'sawtooth', .06, .15); },
@@ -1221,6 +1255,7 @@ function startSolve() {
   const gp = G.platforms[G.pi];
   G.problem = gp.problem || nextProblem(); gp.problem = null;
   G.timeTotal = G.timeLeft = answerTime();
+  G.solveStart = G.t;                                                  // for the "perfect build" (a quick right answer)
   const P = G.problem;
   const bn = SHAPES[P.shape].bridge;
   const practice = G.mode === 'practice';
@@ -1277,6 +1312,8 @@ function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for
   const maxRatio = Math.min(2.2, 590 / (overhang * p.gapW));
   const ratio = ok ? 1 : P.type === 'sim' ? (val === null ? 0.1 : val === 'yes' ? 1.6 : 0.55) : (val === null || val <= 0 ? 0.1 : clamp(val / P.answer, 0.1, maxRatio));     // the bridge is built at the scale YOUR number implies
   p.bridge = { ratio, len: p.gapW * ratio, ok, prog: 0, collapsed: false, cAnim: 0, P, val, sparked: false, material: pick(BRIDGE_MATERIALS) };  // a fresh random material for every bridge
+  // a PERFECT build: right, and quick - within the first half of the timer (Practice has no timer: within 12 s)
+  p.bridge.perfect = ok && (G.t - (G.solveStart || G.t)) <= (G.mode === 'run' ? G.timeTotal * .5 : 12);
   $('problem').classList.add('hidden');
   G.state = 'build'; sfx.build();
 }
@@ -1303,6 +1340,19 @@ function onBridgeBuilt() {
       : b.P.type === 'sim' ? `${b.P.answer === 'yes' ? tl('Similar!', '¡Semejantes!') : tl('Not similar!', '¡No semejantes!')} ${SHAPES[b.P.shape].bridge}${tl(' locked in!', ' ¡listo!')}`
       : b.P.alg ? tl(`${SHAPES[b.P.shape].bridge} locked in with x = ${b.P.answer}!`, `¡${SHAPES[b.P.shape].bridge} listo con x = ${b.P.answer}!`)
       : tl(`${SHAPES[b.P.shape].bridge} locked in by your ${fmt(b.P.answer)} ft keystone!`, `¡${SHAPES[b.P.shape].bridge} listo con tu pieza clave de ${fmt(b.P.answer)} pies!`)) + up, 'good'); sfx.good();
+    // THE BRIDGE SPRINT: the runner rushes across the new bridge and on past the next stretch - faster, glowing, and
+    // untouchable while it lasts - with the crowd cheering. Harder levels give a bigger rush; a perfect build a bit more.
+    G.rush = 1.5 + .15 * (G.level - 1) + (b.perfect ? .4 : 0);
+    G.rushMul = 1.3 + .05 * (G.level - 1) + (b.perfect ? .1 : 0);
+    sfx.cheer();
+    for (let i = 0; i < 40; i++) G.particles.push({ x: G.px + (Math.random() - .3) * 500, y: GROUND - 240 - Math.random() * 120, vx: (Math.random() - .5) * 240, vy: -80 - Math.random() * 160, life: .8 + Math.random() * .6, color: pick(['#ffd23f', '#ff5d73', '#4dd0e1', '#7ee2a8', '#fff']) });
+    if (b.perfect) {                                                   // fireworks over the gold-trimmed bridge
+      sfx.perfect();
+      for (let k = 0; k < 3; k++) {
+        const fx = p.e + b.len * (.2 + .3 * k), fy = GROUND - 190 - k % 2 * 50, col = ['#ffd23f', '#ff8ad8', '#8ae8ff'][k];
+        for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2, s = 180 + Math.random() * 80; G.particles.push({ x: fx, y: fy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, life: .9 + Math.random() * .3, color: col }); }
+      }
+    }
     G.state = 'run';
   } else {
     G.state = 'cross';
@@ -1381,6 +1431,7 @@ function update(dt) {
   G.cam += ((G.px - 240) - G.cam) * Math.min(1, dt * 12);
   if (G.shake > 0) G.shake -= dt;
   if (G.tipT > 0) G.tipT -= dt;
+  G.squash = Math.max(0, (G.squash || 0) - dt); G.stretch = Math.max(0, (G.stretch || 0) - dt);
   for (const p of G.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.life -= dt; }
   G.particles = G.particles.filter(p => p.life > 0);
 
@@ -1393,12 +1444,18 @@ function update(dt) {
   G.jumpBuf = Math.max(0, G.jumpBuf - dt);
 
   if (G.state === 'run') {
-    const sp = speedNow() * (G.stumble > 0 ? 0.5 : 1);
+    if (G.rush > 0) G.rush -= dt;
+    const sp = speedNow() * (G.stumble > 0 ? 0.5 : 1) * (G.rush > 0 ? (G.rushMul || 1.3) : 1);
     G.stumble = Math.max(0, G.stumble - dt);
     G.px += sp * dt;
+    if (G.rush > 0 && Math.random() < .5) G.particles.push({ x: G.px - 14, y: G.py - 20 - Math.random() * 50, vx: -240, vy: -20, life: .3, color: pick(['#ffd23f', '#fff3a0']) });   // a golden trail
     if (!p.bridged && G.px >= p.e - 70) { G.px = p.e - 70; startSolve(); }
     if (G.jumpBuf > 0) {
-      if (G.onGround) { G.vy = -830; G.onGround = false; G.jumpBuf = 0; G.airJumps = 0; sfx.jump(); }
+      if (G.onGround) {
+        G.vy = -830; G.onGround = false; G.jumpBuf = 0; G.airJumps = 0; sfx.jump();
+        G.stretch = .16;                                                 // stretch tall as you spring up, with a little puff of dust
+        for (let i = 0; i < 6; i++) G.particles.push({ x: G.px + (Math.random() - .5) * 16, y: G.py - 3, vx: (Math.random() - .5) * 120, vy: -30 - Math.random() * 60, life: .3, color: 'rgba(230,215,190,.9)' });
+      }
       else if (G.airJumps < 1) {                                       // double jump: one extra jump in mid-air
         G.airJumps++; G.vy = -800; G.jumpBuf = 0; sfx.jump2();
         for (let i = 0; i < 10; i++) G.particles.push({ x: G.px + (Math.random() - .5) * 20, y: G.py - 4, vx: (Math.random() - .5) * 200, vy: 60 + Math.random() * 100, life: .35, color: '#fff' });
@@ -1433,6 +1490,9 @@ function update(dt) {
           } else if (d.effect === 'hurt') hurt = true;                  // a hole in the ground
         } else if (d.effect === 'collapse' && !c.collapsed) c.sink = 0;
         ey = GROUND + 6;
+      } else if (d.kind === 'press') {                                   // pile driver: only the weight itself, wherever it is on its beat
+        const bot = GROUND - pileLift(c), top = bot - PILE_H, over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
+        hurt = over && G.py > top + 4 && G.py - 88 < bot; ey = (top + bot) / 2;
       } else if (d.kind === 'pipe') {
         const h = pipeH(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;
         hurt = h > 16 && over && G.py > GROUND - h + 4; ey = GROUND - h / 2;
@@ -1440,6 +1500,7 @@ function update(dt) {
         const top = GROUND - d.h - hopOf(c), over = G.px + 10 > c.x && G.px - 10 < c.x + dw;   // (a hopping boulder's top is higher mid-bounce)
         hurt = over && G.py > top + 4; ey = top + d.h / 2;
       }
+      if (hurt && G.rush > 0) hurt = false;                            // the bridge sprint: nothing can touch you while the rush lasts
       if (hurt && G.inv <= 0 && !c.hit) {
         c.hit = true; G.inv = 1.6; G.stumble = .5; G.shake = .35; G.lives--;
         sfx.hit(); sfx.bad(); burst(ex - G.cam, ey, '#ff8a5c', 18);
@@ -1506,7 +1567,7 @@ function update(dt) {
       beep(300, .5, 'sine', .05); beep(600, .5, 'sine', .05, .25);
     }
   } else if (G.state !== 'fall') {
-    const prevPy = G.py;
+    const prevPy = G.py, wasGround = G.onGround, fallV = G.vy;
     G.vy += 2400 * dt; G.py += G.vy * dt;
     // (no ceiling: you can jump right off the top of the screen and come back down)
     let landed = false;
@@ -1520,6 +1581,11 @@ function update(dt) {
     if (!landed) {
       if (G.vy >= 0 && G.py >= GROUND && G.py <= GROUND + 40 && support(G.px)) { G.py = GROUND; G.vy = 0; G.onGround = true; G.airJumps = 0; }
       else G.onGround = false;
+    }
+    if (!wasGround && G.onGround && fallV > 350) {                     // a landing: squash, a thud and a puff of dust at your feet
+      G.squash = .14; sfx.land();
+      const n = fallV > 900 ? 12 : 7;
+      for (let i = 0; i < n; i++) { const s = i % 2 ? 1 : -1; G.particles.push({ x: G.px + s * (4 + Math.random() * 10), y: G.py - 3, vx: s * (60 + Math.random() * 110), vy: -40 - Math.random() * 70, life: .35, color: 'rgba(230,215,190,.9)' }); }
     }
     if (G.py > GROUND + 40 && !support(G.px)) { G.state = 'fall'; applyFail(); }
   } else {
@@ -1535,6 +1601,11 @@ function update(dt) {
 function hash(n) { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); }
 function themeNow() { return THEMES[G.theme] || THEMES[0]; }         // (never let an odd theme value stop the drawing)
 
+// how far through the day it is on this level: 0 = morning ... 1 = dusk, by the distance run since the level began
+function timeOfDay(T) {
+  if (T.city || G.state === 'menu') return 0;
+  return ((G.px / 30) % METERS_PER_LEVEL) / METERS_PER_LEVEL;
+}
 function drawSky(T) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, T.sky[0]); g.addColorStop(1, T.sky[1]);
@@ -1686,9 +1757,19 @@ function drawBridge(p, T) {
     else mat(i, f, 7);
   });
   if (ti === 0 && deckP >= 1) { ctx.save(); ctx.shadowColor = b.ok ? '#ffd23f' : '#ff5d5d'; ctx.shadowBlur = 14 + 10 * pulse; seg(0, 1, 13, b.ok ? 'rgba(255,210,63,.7)' : 'rgba(255,93,93,.7)'); ctx.restore(); mat(0, 1, 8); }
-  // joints, tinted per material
+  // a PERFECT build (a quick right answer): the whole frame gets a shimmering gold trim, with gold joints and sparkles
+  if (done && b.ok && b.perfect) {
+    ctx.save(); ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 10 + 8 * pulse;
+    ctx.strokeStyle = `rgba(255,215,70,${.75 + .25 * pulse})`; ctx.lineWidth = 3.5; ctx.lineJoin = 'round';
+    ctx.beginPath(); V.forEach((v, i) => i ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1])); ctx.closePath(); ctx.stroke(); ctx.restore();
+    for (let i = 0; i < 6; i++) {
+      const v = V[i % n], w = V[(i + 1) % n], t = (G.t * .6 + i * .37) % 1, sx = v[0] + (w[0] - v[0]) * t, sy = v[1] + (w[1] - v[1]) * t, r = 2 + 2 * Math.abs(Math.sin(G.t * 5 + i));
+      ctx.fillStyle = '#fff6c4'; ctx.beginPath(); ctx.moveTo(sx, sy - r * 2); ctx.lineTo(sx + r * .6, sy); ctx.lineTo(sx, sy + r * 2); ctx.lineTo(sx - r * .6, sy); ctx.closePath(); ctx.fill();
+    }
+  }
+  // joints, tinted per material (gold on a perfect build)
   if (done) {
-    const jc = { wood: ['#a06b34', '#5c3a1a'], steel: ['#6b7280', '#1f2937'], stone: ['#c9bd9a', '#6b6152'], cable: ['#5b6478', '#2f3540'] }[material] || ['#fff', '#5c2f18'];
+    const jc = b.ok && b.perfect ? ['#ffd23f', '#a86b00'] : { wood: ['#a06b34', '#5c3a1a'], steel: ['#6b7280', '#1f2937'], stone: ['#c9bd9a', '#6b6152'], cable: ['#5b6478', '#2f3540'] }[material] || ['#fff', '#5c2f18'];
     ctx.fillStyle = jc[0]; ctx.strokeStyle = jc[1]; ctx.lineWidth = 2; V.forEach(v => { ctx.beginPath(); ctx.arc(v[0], v[1], 5, 0, 7); ctx.fill(); ctx.stroke(); });
   }
   };
@@ -1754,6 +1835,17 @@ function drawObstacle(c, x) {
       rr(x, G0 - 30, 64, 30, 10, '#8a5a2b'); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x + 14, G0 - 20); ctx.lineTo(x + 50, G0 - 20); ctx.moveTo(x + 10, G0 - 10); ctx.lineTo(x + 40, G0 - 10); ctx.stroke();
       ctx.strokeStyle = ol; ctx.lineWidth = 3; ctx.fillStyle = '#c99760'; ctx.beginPath(); ctx.ellipse(x + 56, G0 - 15, 7, 13, 0, 0, 7); ctx.fill(); ctx.stroke(); break;
+    case 'piledriver': {                                               // two guide rails from the top of the screen, a striped steel weight
+      const lift = pileLift(c), bot = G0 - lift, top = bot - PILE_H, shade = 1 - lift / PILE_UP;
+      ctx.fillStyle = `rgba(0,0,0,${.12 + .25 * shade})`; ctx.beginPath(); ctx.ellipse(x + 26, G0 - 1, 18 + 10 * shade, 4, 0, 0, 7); ctx.fill();   // its shadow grows as it comes down
+      ctx.fillStyle = '#5b6070'; ctx.fillRect(x - 6, -40, 6, G0 + 40); ctx.fillRect(x + 52, -40, 6, G0 + 40);            // guide rails
+      ctx.fillStyle = '#3d4150'; ctx.fillRect(x + 23, -40, 6, top + 40);                                                  // the cable
+      rr(x, top, 52, PILE_H, 5, '#8a93a8');
+      ctx.save(); ctx.beginPath(); ctx.roundRect(x, top, 52, PILE_H, 5); ctx.clip(); ctx.fillStyle = '#ffd23f';
+      for (let sx = -30; sx < 60; sx += 16) { ctx.beginPath(); ctx.moveTo(x + sx, bot); ctx.lineTo(x + sx + 8, bot); ctx.lineTo(x + sx + 20, bot - 12); ctx.lineTo(x + sx + 12, bot - 12); ctx.closePath(); ctx.fill(); }
+      ctx.restore(); ctx.strokeStyle = ol; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, top, 52, PILE_H, 5); ctx.stroke();
+      ctx.fillStyle = '#c3cad8'; ctx.fillRect(x + 8, top + 8, 36, 6); break;
+    }
     case 'stump':
       rr(x, G0 - 44, 36, 44, 5, '#7a4b22'); ctx.fillStyle = '#c99760'; ctx.beginPath(); ctx.ellipse(x + 18, G0 - 44, 18, 6, 0, 0, 7); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#7a4b22'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x + 18, G0 - 44, 9, 3, 0, 0, 7); ctx.stroke(); break;
@@ -2109,6 +2201,15 @@ function drawRunner() {
   const ph = G.t * (G.state === 'cross' ? 12 : 16) * (G.stumble > 0 ? .5 : 1);
   ctx.save();
   if (G.inv > 0 && Math.floor(G.t * 14) % 2) ctx.globalAlpha = .35;      // blink while invincible
+  if (G.rush > 0) {                                                      // the bridge sprint: a warm golden glow around the runner
+    const a = Math.min(1, G.rush / .4);
+    const gl = ctx.createRadialGradient(x, fy - 45, 6, x, fy - 45, 70);
+    gl.addColorStop(0, `rgba(255,220,90,${.45 * a})`); gl.addColorStop(1, 'rgba(255,220,90,0)');
+    ctx.fillStyle = gl; ctx.fillRect(x - 70, fy - 115, 140, 140);
+  }
+  // squash on landing (wider, shorter) and stretch on a jump (taller, thinner), from the feet
+  const sq = (G.squash || 0) / .14 * .22, st = (G.stretch || 0) / .16 * .16;
+  ctx.translate(x, fy); ctx.scale(1 + sq - st * .6, 1 - sq + st); ctx.translate(-x, -fy);
   drawChar(ctx, x, fy, ch, { ph, running, air: !G.onGround });
   ctx.restore();
   if (G.state === 'rise') {                                              // balloons carry the runner back up
@@ -2140,14 +2241,38 @@ function draw() {
   ctx.save();
   if (G.shake > 0) ctx.translate((Math.random() - .5) * 8, (Math.random() - .5) * 8);
   drawSky(T);
+  // TIME OF DAY: each level starts in daylight and runs on into a sunset glow, then dusk with the first stars, as you go
+  // farther (a new level brings a new morning). Night City is already night, so it stays as it is.
+  const tod = timeOfDay(T), sm = v => { v = clamp(v, 0, 1); return v * v * (3 - 2 * v); };
+  const sunset = sm((tod - .4) / .25) * (1 - sm((tod - .7) / .25)), dusk = sm((tod - .65) / .27);
+  if (sunset > 0) { const sg = ctx.createLinearGradient(0, 0, 0, 380); sg.addColorStop(0, `rgba(255,120,70,${.28 * sunset})`); sg.addColorStop(1, `rgba(255,190,90,${.3 * sunset})`); ctx.fillStyle = sg; ctx.fillRect(0, 0, W, 380); }
+  if (dusk > 0) {
+    ctx.fillStyle = `rgba(30,28,90,${.5 * dusk})`; ctx.fillRect(0, 0, W, 380);
+    ctx.fillStyle = '#fff'; for (let i = 0; i < 36; i++) { ctx.globalAlpha = dusk * (.45 + .45 * Math.sin(G.t * 2 + i)); ctx.fillRect(hash(i + 50) * W, hash(i + 90) * 230, 2, 2); } ctx.globalAlpha = 1;
+  }
   drawHills(T, .18, T.far, 330, 130);
   drawHills(T, .4, T.near, 380, 110);
+  if (sunset > 0) { ctx.fillStyle = `rgba(255,140,80,${.12 * sunset})`; ctx.fillRect(0, 0, W, H); }
+  if (dusk > 0) { ctx.fillStyle = `rgba(25,25,80,${.3 * dusk})`; ctx.fillRect(0, 0, W, H); }
   ctx.save(); ctx.translate(0, -G.camY);                            // the view slides down when the bridge has to go underground
   drawWorld(T);
+  if (dusk > 0) { ctx.fillStyle = `rgba(25,25,80,${.16 * dusk})`; ctx.fillRect(0, G.camY, W, H); }   // (the world dims a little too, but stays easy to read)
   drawRunner();
   for (const p of G.particles) { ctx.globalAlpha = clamp(p.life * 2, 0, 1); ctx.fillStyle = p.color; ctx.fillRect(p.x - G.cam, p.y, 5, 5); }
   ctx.globalAlpha = 1;
   ctx.restore();
+  // SPEED LINES: streaks rushing past once you're running fast (later levels) and during the bridge sprint
+  if (G.state === 'run') {
+    const fast = clamp((speedNow() / 330 - 1.25) / .35, 0, 1) * .6 + (G.rush > 0 ? 1 : 0);
+    if (fast > 0) {
+      ctx.strokeStyle = G.rush > 0 ? 'rgba(255,236,150,.55)' : 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+      for (let i = 0; i < 14; i++) {
+        if (hash(i + 7) > fast) continue;
+        const y = 40 + hash(i + 3) * (GROUND - 60), len = 60 + hash(i + 11) * 90, x = W - ((G.t * (900 + hash(i) * 500) + hash(i + 5) * W) % (W + len));
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke();
+      }
+    }
+  }
   if (G.state === 'menu') { /* keep clean behind the menu card */ }
   if (G.tipT > 0 && G.state === 'run') {
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.roundRect(W / 2 - 250, 110, 500, 40, 20); ctx.fill();
