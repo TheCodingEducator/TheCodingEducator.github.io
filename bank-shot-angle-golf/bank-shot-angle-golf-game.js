@@ -349,6 +349,7 @@ var confirmExitOpen = false;
 // moment and share the same lifecycle.
 var explainOpen = false;
 var retryHint = false;   // a retried question shows the 90 / 180 rule as a hint
+var slowTick = 0;        // frame counter for the slower wrong-answer playback
 
 // Set the instant a wrong answer resolves (see submitAnswer) and cleared
 // the instant the resulting shot comes to rest (see updatePhysics'
@@ -1880,6 +1881,8 @@ function updatePhysics() {
   }
 
 
+  // a wrong answer plays back a little slower (3 of every 4 frames), on exactly the same path
+  if (resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct && (slowTick = (slowTick + 1) % 4) === 0) return;
   stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones, false, holeBlockedThisStroke);
   checkHoleComplete();
 }
