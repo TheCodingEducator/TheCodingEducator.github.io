@@ -1669,8 +1669,19 @@ function drawExactRoute(ri) {
     pts = tr.slice(0, ri.trailCut);
     pts.push({ x: p.point.x, y: p.point.y });   // end exactly where the dotted line meets the wall
   } else {
-    pts = tr.slice();
-    if (!ri.trailDone) pts.push({ x: ball.x, y: ball.y });
+    // a straight shot's line stops the moment the ball first touches a rail
+    if (ri.hitIdx === undefined) {
+      for (var i = ri.scanIdx || 1; i < tr.length && ri.hitIdx === undefined; i++) {
+        if (dist(tr[i].x, tr[i].y, tr[0].x, tr[0].y) < BALL_R * 3) continue;   // (a rail it starts against doesn't count)
+        for (var w = 0; w < hole.walls.length; w++) {
+          var hw = hole.walls[w], c = closestPointOnSegment(tr[i].x, tr[i].y, hw.x1, hw.y1, hw.x2, hw.y2);
+          if (dist(tr[i].x, tr[i].y, c.x, c.y) <= BALL_R + 1.5) { ri.hitIdx = i; break; }
+        }
+      }
+      ri.scanIdx = tr.length;
+    }
+    pts = ri.hitIdx !== undefined ? tr.slice(0, ri.hitIdx + 1) : tr.slice();
+    if (ri.hitIdx === undefined && !ri.trailDone) pts.push({ x: ball.x, y: ball.y });
   }
   push();
   noFill();
