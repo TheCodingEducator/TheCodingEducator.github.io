@@ -1603,28 +1603,8 @@ function wallAnswerArc(g) {
     vx: g.v.x - ri.offsetDir.x * BALL_R, vy: g.v.y - ri.offsetDir.y * BALL_R };
 }
 var WALL_HALF_R = 32;   // radius of the after-shot wall angle arcs
-// After a straight shot, the right angle from the question stays on the green: the
-// square side, the dotted line splitting it, and the corner mark (the aim line is the route).
-function drawStraightRightAngle() {
-  var ri = resolvedInfo, r = 58;
-  var known = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
-  var b = ri.baseAngle, s = ri.sweepSign, px = ri.point.x, py = ri.point.y;
-  push();
-  noFill();
-  strokeCap(ROUND);
-  stroke(255, 255, 255, 210);
-  strokeWeight(2.5);
-  line(px, py, px + cos(b) * r * 1.15, py + sin(b) * r * 1.15);
-  drawingContext.setLineDash([5, 6]);
-  line(px, py, px + cos(b + s * known) * r * 1.15, py + sin(b + s * known) * r * 1.15);
-  drawingContext.setLineDash([]);
-  var m = 16, ux = cos(b), uy = sin(b), vx = cos(b + s * 90), vy = sin(b + s * 90);
-  beginShape();
-  vertex(px + ux * m, py + uy * m); vertex(px + (ux + vx) * m, py + (uy + vy) * m); vertex(px + vx * m, py + vy * m);
-  endShape();
-  pop();
-}
 function drawGreenAngleArc() {
+  if (resolvedInfo && resolvedInfo.shot) { drawLiveAngleDiagram(resolvedInfo.shot, true); return; }
   var g = getGreenArms();
   if (!g) return;
   var span = shownAngleDeg();
@@ -1663,7 +1643,6 @@ function drawGreenAngleArc() {
     arc(wa.vx, wa.vy, R, R, min(wa.from, wa.kTo), max(wa.from, wa.kTo));
   }
   else {
-    if (resolvedInfo.type === 'STRAIGHT') drawStraightRightAngle();
     arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
   }
   pop();
@@ -1723,7 +1702,7 @@ function drawTrail() {
 // shows the number they were actually judged against, stacked further
 // out along the same offset direction so the two labels never overlap.
 function drawResolvedAngleLabels() {
-  if (!resolvedInfo) return;
+  if (!resolvedInfo || resolvedInfo.shot) return;   // (the after-shot diagram carries its own numbers)
   var d = resolvedInfo.offsetDir;
   noStroke();
   textAlign(CENTER, CENTER);
@@ -2039,9 +2018,14 @@ function closestPointOnSegment(px, py, x1, y1, x2, y2) {
 // a glance, not something you have to trace with your eyes. Known
 // angle in solid gold with its degree value large and centered in its
 // own wedge; the unknown angle in blue with a big "?" the same way.
-function drawLiveAngleDiagram() {
-  if (!pendingShot || holePhase !== 'QUESTION') return;
-  var p = pendingShot;
+// Also drawn after the shot (reveal = true) from the same shot, so the angle the player sees
+// afterwards is exactly the one they answered - with the "?" replaced by the answer.
+function drawLiveAngleDiagram(shot, reveal) {
+  if (!reveal && (!pendingShot || holePhase !== 'QUESTION')) return;
+  var p = shot || pendingShot;
+  if (!p) return;
+  var wrongR = reveal && resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct;
+  var from = reveal ? (p.launchFrom || p.point) : ball;
   var dir0, sweepDir, totalDeg, knownVal;
   if (p.type === 'WALL') {
     // measured from the wall behind the ball, so the ball's own dotted path is the line between the two angles
@@ -2061,7 +2045,7 @@ function drawLiveAngleDiagram() {
   drawingContext.setLineDash([6, 8]);
   stroke(255, 255, 255, 190);
   strokeWeight(2.5);
-  line(ball.x, ball.y, p.point.x, p.point.y);
+  line(from.x, from.y, p.point.x, p.point.y);
   drawingContext.setLineDash([]);
   pop();
 
@@ -2078,7 +2062,7 @@ function drawLiveAngleDiagram() {
   noStroke();
   fill(224, 160, 48, 95);
   arc(0, 0, r * 2, r * 2, kLo, kHi, PIE);
-  fill(91, 140, 255, 95);
+  if (!reveal) fill(91, 140, 255, 95); else if (wrongR) fill(230, 57, 70, 110); else fill(77, 255, 77, 100);
   arc(0, 0, r * 2, r * 2, uLo, uHi, PIE);
 
   noFill();
@@ -2090,7 +2074,7 @@ function drawLiveAngleDiagram() {
   strokeWeight(4);
   stroke('#e0a030');
   arc(0, 0, r * 2, r * 2, kLo, kHi);
-  stroke('#5b8cff');
+  stroke(!reveal ? '#5b8cff' : wrongR ? '#e63946' : '#4dff4d');
   arc(0, 0, r * 2, r * 2, uLo, uHi);
 
   // the white dotted line carries on through the diagram, splitting the known angle from the unknown
@@ -2129,9 +2113,9 @@ function drawLiveAngleDiagram() {
   textStyle(BOLD);
   textSize(15);
   text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
-  fill('#bcd4ff');
-  textSize(23);
-  text('?', p.point.x + uWorld.x, p.point.y + uWorld.y);
+  fill(!reveal ? '#bcd4ff' : wrongR ? '#e63946' : '#4dff4d');
+  textSize(reveal ? 19 : 23);
+  text(!reveal ? '?' : (wrongR ? resolvedInfo.typed : p.correctAnswer) + '°', p.point.x + uWorld.x, p.point.y + uWorld.y);
   textStyle(NORMAL);
 }
 
@@ -2301,6 +2285,7 @@ function submitAnswer() {
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     wd: pendingShot.type === 'WALL' ? pendingShot.Wd : null,
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
+    shot: pendingShot,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
     aimAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x), launchAngle: atan2(launchDir.y, launchDir.x),
@@ -2494,6 +2479,7 @@ function triggerTimeoutChaos() {
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     wd: pendingShot.type === 'WALL' ? pendingShot.Wd : null,
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
+    shot: pendingShot,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
     aimAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x), launchAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x),
