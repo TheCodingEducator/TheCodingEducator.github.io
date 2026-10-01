@@ -1661,31 +1661,16 @@ function drawGreenAngleArc() {
 }
 
 // Green for a correct answer, red for a wrong one (or a Hero-mode timeout).
-// A correct shot's route, drawn as straight lines that sit exactly on the angle diagram:
-// a wall shot comes in along the line between the gold and green angles and leaves at the
-// mirrored angle; a straight shot runs along the aim side of the right angle. It grows as
-// far as the real ball has rolled (and stops where the real line stops).
+// A correct shot's route: exactly the path the ball really rolled, so it lies right on top of
+// the white dotted line from the tee to the wall. A wall shot's line stops at the wall.
 function drawExactRoute(ri) {
-  var p = ri.shot, A = p.launchFrom, L = 0, tr = ri.trail;
-  for (var i = 1; i < tr.length; i++) L += dist(tr[i].x, tr[i].y, tr[i - 1].x, tr[i - 1].y);
-  if (!ri.trailDone) L += dist(ball.x, ball.y, tr[tr.length - 1].x, tr[tr.length - 1].y);
-  var pts = [{ x: A.x, y: A.y }];
-  if (p.type === 'WALL') {
-    // Built from the question's own numbers (easy holes round the real angle to a friendly
-    // one), so the line lands exactly on the diagram: in along the gold/green border, and it
-    // stops at the wall.
-    var V = p.point, inLen = dist(A.x, A.y, V.x, V.y);
-    var k = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
-    var backDir = vAdd(vScale(p.Wd, -cos(k)), vScale(p.N, sin(k)));
-    var behind = raycastWalls(V, backDir, inLen, hole.walls, p.wallRef);   // never start the line past another rail
-    if (behind) inLen = behind.t;
-    var S = vAdd(V, vScale(backDir, inLen));
-    pts = [{ x: S.x, y: S.y }];
-    if (L <= inLen) pts.push(vAdd(S, vScale(backDir, -L)));
-    else pts.push({ x: V.x, y: V.y });   // the line stops at the wall - the angle diagram shows the rest
+  var p = ri.shot, tr = ri.trail, pts;
+  if (p.type === 'WALL' && ri.revealed && ri.trailCut !== undefined) {
+    pts = tr.slice(0, ri.trailCut);
+    pts.push({ x: p.point.x, y: p.point.y });   // end exactly where the dotted line meets the wall
   } else {
-    var ahead = raycastWalls(A, p.aimDir, L + 1, hole.walls);   // stop at the first rail in the way
-    pts.push(vAdd(A, vScale(p.aimDir, ahead ? ahead.t : L)));
+    pts = tr.slice();
+    if (!ri.trailDone) pts.push({ x: ball.x, y: ball.y });
   }
   push();
   noFill();
