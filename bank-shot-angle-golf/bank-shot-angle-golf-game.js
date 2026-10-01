@@ -1660,16 +1660,15 @@ function drawExactRoute(ri) {
   var pts = [{ x: A.x, y: A.y }];
   if (p.type === 'WALL') {
     // Built from the question's own numbers (easy holes round the real angle to a friendly
-    // one), so the lines land exactly on the diagram: in along the gold/green border, out at
-    // the same known angle on the far side of the wall's normal.
+    // one), so the line lands exactly on the diagram: in along the gold/green border, and it
+    // stops at the wall.
     var V = p.point, inLen = dist(A.x, A.y, V.x, V.y);
     var k = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
     var backDir = vAdd(vScale(p.Wd, -cos(k)), vScale(p.N, sin(k)));
-    var outDir = vAdd(vScale(p.Wd, cos(k)), vScale(p.N, sin(k)));
     var S = vAdd(V, vScale(backDir, inLen));
     pts = [{ x: S.x, y: S.y }];
     if (L <= inLen) pts.push(vAdd(S, vScale(backDir, -L)));
-    else pts.push({ x: V.x, y: V.y }, vAdd(V, vScale(outDir, L - inLen)));
+    else pts.push({ x: V.x, y: V.y });   // the line stops at the wall - the angle diagram shows the rest
   } else {
     pts.push(vAdd(A, vScale(p.aimDir, L)));
   }
