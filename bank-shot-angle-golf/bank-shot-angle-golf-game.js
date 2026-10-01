@@ -1668,45 +1668,30 @@ function drawGreenAngleArc() {
 // A correct shot's route: exactly the path the ball really rolled, so it lies right on top of
 // the white dotted line from the tee to the wall. A wall shot's line stops at the wall.
 function drawExactRoute(ri, wrong) {
-  var p = ri.shot, tr = ri.trail, pts;
+  // Every route line is a STRAIGHT line along the angle's direction - currents, hills and bushes
+  // can bend the ball itself, but never the lines. Each one grows as far as the ball has rolled
+  // and stops at the first rail in its way.
+  var p = ri.shot, tr = ri.trail, A = p.launchFrom, L = 0;
+  for (var q = 1; q < tr.length; q++) L += dist(tr[q].x, tr[q].y, tr[q - 1].x, tr[q - 1].y);
+  if (!ri.trailDone) L += dist(ball.x, ball.y, tr[tr.length - 1].x, tr[tr.length - 1].y);
+  var ray = function (from, dir, len, skip) {   // a straight piece, cut off at the first rail
+    var hit = raycastWalls(from, dir, len + 1, hole.walls, skip);
+    return vAdd(from, vScale(dir, hit ? hit.t : len));
+  };
+  var pts = [{ x: A.x, y: A.y }];
   if (p.type === 'WALL') {
-    // In to the wall: exactly on the white dotted line (tee to wall), growing as the ball rolls.
-    var A = p.launchFrom, V = p.point, inLen = dist(A.x, A.y, V.x, V.y), L = 0;
-    for (var q = 1; q < tr.length; q++) L += dist(tr[q].x, tr[q].y, tr[q - 1].x, tr[q - 1].y);
-    if (!ri.trailDone && !ri.revealed) L += dist(ball.x, ball.y, tr[tr.length - 1].x, tr[tr.length - 1].y);
+    // in to the wall exactly along the white dotted line
+    var V = p.point, inLen = dist(A.x, A.y, V.x, V.y);
     var reached = ri.revealed || L >= inLen;
-    pts = [{ x: A.x, y: A.y }, reached ? { x: V.x, y: V.y } : vAdd(A, vScale(vNorm(vSub(V, A)), L))];
-    // A right answer stops at the wall. A wrong one keeps going in red from the wall, at the typed
-    // angle, until it touches another rail.
-    if (wrong && ri.revealed && ri.trailCut !== undefined) {
-      if (ri.outHit === undefined) {
-        for (var oi = ri.outScan || ri.trailCut; oi < tr.length && ri.outHit === undefined; oi++) {
-          if (dist(tr[oi].x, tr[oi].y, V.x, V.y) < BALL_R * 3) continue;
-          for (var ow = 0; ow < hole.walls.length; ow++) {
-            var w2 = hole.walls[ow], c2 = closestPointOnSegment(tr[oi].x, tr[oi].y, w2.x1, w2.y1, w2.x2, w2.y2);
-            if (dist(tr[oi].x, tr[oi].y, c2.x, c2.y) <= BALL_R + 1.5) { ri.outHit = oi; break; }
-          }
-        }
-        ri.outScan = tr.length;
-      }
-      var outPts = tr.slice(ri.trailCut, ri.outHit !== undefined ? ri.outHit + 1 : tr.length);
-      pts = pts.concat(outPts);
-      if (ri.outHit === undefined && !ri.trailDone) pts.push({ x: ball.x, y: ball.y });
+    pts.push(reached ? { x: V.x, y: V.y } : vAdd(A, vScale(vNorm(vSub(V, A)), L)));
+    // a right answer stops at the wall; a wrong one leaves it in red at the typed angle
+    if (wrong && reached && p.resolvedAngle !== undefined) {
+      var outDir = vNorm(vAdd(vScale(p.Wd, sin(p.resolvedAngle)), vScale(p.N, cos(p.resolvedAngle))));
+      pts.push(ray(V, outDir, max(0, L - inLen), p.wallRef));
     }
   } else {
-    // a straight shot's line stops the moment the ball first touches a rail
-    if (ri.hitIdx === undefined) {
-      for (var i = ri.scanIdx || 1; i < tr.length && ri.hitIdx === undefined; i++) {
-        if (dist(tr[i].x, tr[i].y, tr[0].x, tr[0].y) < BALL_R * 3) continue;   // (a rail it starts against doesn't count)
-        for (var w = 0; w < hole.walls.length; w++) {
-          var hw = hole.walls[w], c = closestPointOnSegment(tr[i].x, tr[i].y, hw.x1, hw.y1, hw.x2, hw.y2);
-          if (dist(tr[i].x, tr[i].y, c.x, c.y) <= BALL_R + 1.5) { ri.hitIdx = i; break; }
-        }
-      }
-      ri.scanIdx = tr.length;
-    }
-    pts = ri.hitIdx !== undefined ? tr.slice(0, ri.hitIdx + 1) : tr.slice();
-    if (ri.hitIdx === undefined && !ri.trailDone) pts.push({ x: ball.x, y: ball.y });
+    var dir = wrong && p.launchDir ? p.launchDir : p.aimDir;
+    pts.push(ray(A, dir, L));
   }
   push();
   noFill();
