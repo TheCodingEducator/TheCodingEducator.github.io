@@ -1593,8 +1593,12 @@ function wallAnswerArc(g) {
   var ri = resolvedInfo;
   if (!ri || ri.type !== 'WALL' || !ri.wd || !g || g.a2 === undefined) return null;
   var back = atan2(-ri.wd.y, -ri.wd.x);
+  var fwd = atan2(ri.wd.y, ri.wd.x);
+  var k = ((fwd - g.a2) % 360 + 540) % 360 - 180;   // the known angle: outgoing line to the wall ahead
   var d = ((back - g.a2) % 360 + 540) % 360 - 180;
-  return { from: g.a2, to: g.a2 + d, mid: g.a2 + d / 2 };
+  return { from: g.a2, to: g.a2 + d, mid: g.a2 + d / 2 , kTo: g.a2 + k, kMid: g.a2 + k / 2,
+    // the vertex sits ON the wall (the bounce point is the ball's center, one radius off it)
+    vx: g.v.x - ri.offsetDir.x * BALL_R, vy: g.v.y - ri.offsetDir.y * BALL_R };
 }
 function drawGreenAngleArc() {
   var g = getGreenArms();
@@ -1619,7 +1623,20 @@ function drawGreenAngleArc() {
   }
   stroke(resolvedInfo.typed !== null && !resolvedInfo.correct ? '#e63946' : '#e0a030');
   strokeWeight(3.5);
-  if (wa) arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(wa.from, wa.to), max(wa.from, wa.to));
+  if (wa) {
+    // Option A: the outgoing line splits the wall's straight line in two - a filled
+    // wedge for the answer (green, red when wrong) and a gold arc for the known angle.
+    var wrongW = resolvedInfo.typed !== null && !resolvedInfo.correct;
+    var R = GREEN_ARC_R * 2.4;
+    noStroke();
+    fill(wrongW ? color(230, 57, 70, 110) : color(77, 255, 77, 110));
+    arc(wa.vx, wa.vy, R, R, min(wa.from, wa.to), max(wa.from, wa.to), PIE);
+    noFill();
+    stroke(wrongW ? '#e63946' : '#4dff4d');
+    arc(wa.vx, wa.vy, R, R, min(wa.from, wa.to), max(wa.from, wa.to));
+    stroke('#e0a030');
+    arc(wa.vx, wa.vy, R, R, min(wa.from, wa.kTo), max(wa.from, wa.kTo));
+  }
   else arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
   pop();
 }
@@ -1655,6 +1672,15 @@ function drawTrail() {
   strokeWeight(4);
   strokeCap(ROUND);
   strokeJoin(ROUND);
+  var fadeTo = (!wrong && ri.type === 'WALL' && ri.trailCut !== undefined) ? min(ri.trailCut, pts.length) : 0;
+  if (fadeTo > 1) {   // the path IN is faded, so the outgoing line and the wall angle stand out
+    stroke(77, 255, 77, 120);
+    beginShape();
+    for (var fi = 0; fi < fadeTo; fi++) vertex(pts[fi].x, pts[fi].y);
+    endShape();
+    stroke('#4dff4d');
+    pts = pts.slice(fadeTo - 1);
+  }
   beginShape();
   for (var i = 0; i < pts.length; i++) vertex(pts[i].x, pts[i].y);
   if (live) vertex(ball.x, ball.y);
@@ -1688,9 +1714,17 @@ function drawResolvedAngleLabels() {
   var lblAng = gArms ? (gArms.a2 !== undefined ? gArms.mid : gArms.a1 + gArms.s * shownAngleDeg() / 2) : 0;
   var waL = gArms ? wallAnswerArc(gArms) : null;
   if (waL) lblAng = waL.mid;
-  var cx = gArms ? gArms.v.x + cos(lblAng) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
-  var cy = gArms ? gArms.v.y + sin(lblAng) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
+  var cx = gArms ? (waL ? waL.vx : gArms.v.x) + cos(lblAng) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
+  var cy = gArms ? (waL ? waL.vy : gArms.v.y) + sin(lblAng) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
   var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
+  if (waL && !wrong) {   // the known angle, in gold, on the other side of the outgoing line
+    var kx = waL.vx + cos(waL.kMid) * GREEN_LABEL_R * 0.95, ky = waL.vy + sin(waL.kMid) * GREEN_LABEL_R * 0.95;
+    var kLbl = (resolvedInfo.algebra ? (resolvedInfo.algebra.a * resolvedInfo.algebra.x + resolvedInfo.algebra.b) : resolvedInfo.known) + '°';
+    textSize(19);
+    fill(0, 0, 0, 150); text(kLbl, kx + 1.5, ky + 1.5);
+    fill('#ffce6b'); text(kLbl, kx, ky);
+    textSize(26);
+  }
   fill(0, 0, 0, 150);
   text(label, cx + 1.5, cy + 1.5);
   fill(wrong ? '#e63946' : '#4dff4d');
