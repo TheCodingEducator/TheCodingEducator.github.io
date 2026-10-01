@@ -347,6 +347,7 @@ var confirmExitOpen = false;
 // than its own snapshot, since both are set together at the same
 // moment and share the same lifecycle.
 var explainOpen = false;
+var retryHint = false;   // a retried question shows the 90 / 180 rule as a hint
 
 // Set the instant a wrong answer resolves (see submitAnswer) and cleared
 // the instant the resulting shot comes to rest (see updatePhysics'
@@ -1477,7 +1478,7 @@ function simulateTrail(shot, isCorrect) {
     type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
     resolvedAngle: isCorrect ? wallNormalAngle(shot.correctAnswer) : shot.resolvedAngle, correct: isCorrect,
     bendDeg: isCorrect ? 0 : (shot.bendDeg || 0),
-    launchFrom: from, triggerDist: shot.triggerDist, applied: !isCorrect
+    launchFrom: from, triggerDist: shot.triggerDist, applied: !isCorrect && shot.type !== 'WALL'   // a wrong wall shot still bounces at the wall (at the typed angle)
   };
   var walls = allWalls();
   var pts = [{ x: b.x, y: b.y }];
@@ -1663,11 +1664,32 @@ function drawGreenAngleArc() {
 // Green for a correct answer, red for a wrong one (or a Hero-mode timeout).
 // A correct shot's route: exactly the path the ball really rolled, so it lies right on top of
 // the white dotted line from the tee to the wall. A wall shot's line stops at the wall.
-function drawExactRoute(ri) {
+function drawExactRoute(ri, wrong) {
   var p = ri.shot, tr = ri.trail, pts;
-  if (p.type === 'WALL' && ri.revealed && ri.trailCut !== undefined) {
-    pts = tr.slice(0, ri.trailCut);
-    pts.push({ x: p.point.x, y: p.point.y });   // end exactly where the dotted line meets the wall
+  if (p.type === 'WALL') {
+    // In to the wall: exactly on the white dotted line (tee to wall), growing as the ball rolls.
+    var A = p.launchFrom, V = p.point, inLen = dist(A.x, A.y, V.x, V.y), L = 0;
+    for (var q = 1; q < tr.length; q++) L += dist(tr[q].x, tr[q].y, tr[q - 1].x, tr[q - 1].y);
+    if (!ri.trailDone && !ri.revealed) L += dist(ball.x, ball.y, tr[tr.length - 1].x, tr[tr.length - 1].y);
+    var reached = ri.revealed || L >= inLen;
+    pts = [{ x: A.x, y: A.y }, reached ? { x: V.x, y: V.y } : vAdd(A, vScale(vNorm(vSub(V, A)), L))];
+    // A right answer stops at the wall. A wrong one keeps going in red from the wall, at the typed
+    // angle, until it touches another rail.
+    if (wrong && ri.revealed && ri.trailCut !== undefined) {
+      if (ri.outHit === undefined) {
+        for (var oi = ri.outScan || ri.trailCut; oi < tr.length && ri.outHit === undefined; oi++) {
+          if (dist(tr[oi].x, tr[oi].y, V.x, V.y) < BALL_R * 3) continue;
+          for (var ow = 0; ow < hole.walls.length; ow++) {
+            var w2 = hole.walls[ow], c2 = closestPointOnSegment(tr[oi].x, tr[oi].y, w2.x1, w2.y1, w2.x2, w2.y2);
+            if (dist(tr[oi].x, tr[oi].y, c2.x, c2.y) <= BALL_R + 1.5) { ri.outHit = oi; break; }
+          }
+        }
+        ri.outScan = tr.length;
+      }
+      var outPts = tr.slice(ri.trailCut, ri.outHit !== undefined ? ri.outHit + 1 : tr.length);
+      pts = pts.concat(outPts);
+      if (ri.outHit === undefined && !ri.trailDone) pts.push({ x: ball.x, y: ball.y });
+    }
   } else {
     // a straight shot's line stops the moment the ball first touches a rail
     if (ri.hitIdx === undefined) {
@@ -1685,7 +1707,7 @@ function drawExactRoute(ri) {
   }
   push();
   noFill();
-  stroke('#4dff4d');
+  stroke(wrong ? '#e63946' : '#4dff4d');
   strokeWeight(4);
   strokeCap(ROUND);
   strokeJoin(ROUND);
@@ -1699,7 +1721,7 @@ function drawTrail() {
   if (!ri || ri.trail.length < 1) return;
   var wrong = ri.typed !== null && !ri.correct;
   var pts = ri.trail, live = !ri.trailDone;
-  if (!wrong && ri.shot && ri.shot.launchFrom) { drawExactRoute(ri); return; }
+  if (ri.shot && ri.shot.launchFrom) { drawExactRoute(ri, wrong); return; }
   if (wrong) {
     // A wrong answer draws ONE red line: the route in to the vertex, and no
     // further (the angle it makes is drawn by drawGreenAngleArc).
@@ -1839,6 +1861,12 @@ function updatePhysics() {
   var speed = mag(ball.vx, ball.vy);
   if (speed < MIN_STOP_SPEED && millis() >= chaosUntil) {
     ball.vx = 0; ball.vy = 0;
+    if (holePhase === 'ROLLING' && resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct && resolvedInfo.shot) {
+      // a wrong answer: once the ball stops, explain it, then the same question is asked again
+      holePhase = 'EXPLAIN';
+      explainOpen = true;
+      return;
+    }
     if (holePhase === 'ROLLING') {
       holePhase = 'AIMING';
       rollAlgebraSeed();
@@ -2099,7 +2127,14 @@ function drawLiveAngleDiagram(shot, reveal) {
   translate(p.point.x, p.point.y);
   rotate(baseAngle);
 
-  var knownEnd = sweepSign * knownVal;
+  // The line between the two colors IS the ball's path (the one dotted line). The question can
+  // round the angle it asks about, so the wedge is drawn at the real angle of that path.
+  var drawKnown = knownVal;
+  if (p.type === 'WALL' && dist(from.x, from.y, p.point.x, p.point.y) > 1) {
+    var tb = vNorm(vSub(from, p.point));
+    drawKnown = degrees(Math.acos(constrain(vDot(dir0, tb), -1, 1)));
+  }
+  var knownEnd = sweepSign * drawKnown;
   var totalEnd = sweepSign * totalDeg;
   var kLo = min(0, knownEnd), kHi = max(0, knownEnd);
   var uLo = min(knownEnd, totalEnd), uHi = max(knownEnd, totalEnd);
@@ -2108,27 +2143,37 @@ function drawLiveAngleDiagram(shot, reveal) {
   noStroke();
   fill(224, 160, 48, 95);
   arc(0, 0, r * 2, r * 2, kLo, kHi, PIE);
-  if (!reveal) fill(91, 140, 255, 95); else if (wrongR) fill(230, 57, 70, 110); else fill(77, 255, 77, 100);
-  arc(0, 0, r * 2, r * 2, uLo, uHi, PIE);
+  if (!wrongR) {
+    if (!reveal) fill(91, 140, 255, 95); else fill(77, 255, 77, 100);
+    arc(0, 0, r * 2, r * 2, uLo, uHi, PIE);
+  }
 
   noFill();
   stroke(255, 255, 255, 200);
   strokeWeight(2.5);
   line(p.type === 'WALL' ? -r * 1.15 : 0, 0, r * 1.15, 0);
-  if (p.type !== 'WALL') line(0, 0, cos(totalEnd) * r * 1.15, sin(totalEnd) * r * 1.15);
+  if (p.type !== 'WALL') {   // a straight shot's one dotted line is its path: the aim side of the right angle
+    drawingContext.setLineDash([6, 8]);
+    line(0, 0, cos(totalEnd) * r * 1.6, sin(totalEnd) * r * 1.6);
+    drawingContext.setLineDash([]);
+  }
 
   strokeWeight(4);
   stroke('#e0a030');
   arc(0, 0, r * 2, r * 2, kLo, kHi);
-  stroke(!reveal ? '#5b8cff' : wrongR ? '#e63946' : '#4dff4d');
-  arc(0, 0, r * 2, r * 2, uLo, uHi);
+  if (!wrongR) {
+    stroke(!reveal ? '#5b8cff' : '#4dff4d');
+    arc(0, 0, r * 2, r * 2, uLo, uHi);
+  }
 
-  // the white dotted line carries on through the diagram, splitting the known angle from the unknown
-  stroke(255, 255, 255, 220);
-  strokeWeight(2.5);
-  drawingContext.setLineDash([6, 8]);
-  line(0, 0, cos(knownEnd) * r * 1.15, sin(knownEnd) * r * 1.15);
-  drawingContext.setLineDash([]);
+  if (wrongR) {   // a wrong answer: a red arc at the typed angle, where the ball really went (no correct answer shown)
+    var ty = constrain(resolvedInfo.typed, 1, 179);
+    var rs = p.type === 'WALL' ? 0 : knownEnd, re = rs + sweepSign * ty;
+    stroke('#e63946');
+    strokeWeight(4);
+    arc(0, 0, r * 2.4, r * 2.4, min(rs, re), max(rs, re));
+    var tMid = (rs + re) / 2;
+  }
 
   if (totalDeg === 90) {
     noFill();
@@ -2148,6 +2193,7 @@ function drawLiveAngleDiagram(shot, reveal) {
   var kLocal = { x: cos(kMid) * r * 0.6, y: sin(kMid) * r * 0.6 };
   var uMid = (knownEnd + totalEnd) / 2;
   var uLocal = { x: cos(uMid) * r * 0.65, y: sin(uMid) * r * 0.65 };
+  if (wrongR) uLocal = { x: cos(tMid) * r * 1.5, y: sin(tMid) * r * 1.5 };   // the typed number, by its red arc
   pop();
 
   var kWorld = rotatePoint(kLocal, baseAngle);
@@ -2196,6 +2242,19 @@ function drawQuestionOverlay() {
   fill(216, 226, 216);
   text(tl('These two angles ', 'Estos dos ángulos ') + relWord, width / 2, 150);
 
+  if (retryHint) {
+    var hintY = pendingShot.algebra ? 206 : 178;
+    var hints = [tl('Hint: complementary angles always add up to 90°.', 'Pista: los ángulos complementarios siempre suman 90°.'),
+      tl('Supplementary angles always add up to 180°.', 'Los ángulos suplementarios siempre suman 180°.')];
+    textSize(15);
+    for (var hi = 0; hi < 2; hi++) {
+      fill(0, 0, 0, 140);
+      text(hints[hi], width / 2 + 1, hintY + hi * 20 + 1);
+      fill('#ffce6b');
+      text(hints[hi], width / 2, hintY + hi * 20);
+    }
+    textSize(18);
+  }
   if (pendingShot.algebra) {
     var alg = pendingShot.algebra;
     fill(0, 0, 0, 130);
@@ -2285,32 +2344,17 @@ function submitAnswer() {
   var launchDir = pendingShot.aimDir;
   if (pendingShot.type === 'WALL') {
     pendingShot.resolvedAngle = wallNormalAngle(correct ? pendingShot.correctAnswer : constrain(typed, 1, 179));
-    if (!correct) {
-      // The direction a ball leaving the wall AT the typed angle would
-      // be heading (same outgoing-ray formula resolveWallCollision uses
-      // for a real bounce - see its own comment for the derivation).
-      var outDir = vNorm(vAdd(vScale(pendingShot.Wd, sin(pendingShot.resolvedAngle)), vScale(pendingShot.N, cos(pendingShot.resolvedAngle))));
-      // Mirroring that back across the wall's own normal gives the
-      // INCOMING direction that would produce it on a genuine physics
-      // bounce off this same wall (reflection is its own inverse) - so
-      // a typed answer close to correct launches close to the real aim
-      // (reflecting the true answer's outDir back out this way is
-      // provably a no-op, landing exactly on aimDir again), instead of
-      // jumping straight to the unrelated post-bounce direction, which
-      // could point anywhere - even roughly opposite the real aim -
-      // for even a one-degree miss. `applied` is still marked used up
-      // so the wall doesn't ALSO fire its own scripted-angle override
-      // when the ball reaches it - whatever wall this incoming path
-      // actually touches bounces off via real, ordinary physics.
-      launchDir = vNorm(vAdd(outDir, vScale(pendingShot.N, -2 * vDot(outDir, pendingShot.N))));
-      pendingShot.applied = true;
-    }
+    // Right or wrong, the ball rolls the aimed path to the wall, and there it leaves at the
+    // typed angle, measured from the wall behind the ball (the same way the answer is) - so a
+    // wrong number shows up exactly where the question was asked.
   } else {
     if (!correct) {
-      pendingShot.bendDeg = constrain(typed - pendingShot.correctAnswer, -75, 75);
-      var aimAngle = atan2(pendingShot.aimDir.y, pendingShot.aimDir.x);
-      var bentAngle = aimAngle + pendingShot.bendDeg;
-      launchDir = { x: cos(bentAngle), y: sin(bentAngle) };
+      // the typed angle measured on the question's right angle: the ball leaves along that line
+      var bs = shotBaseAngleAndSweep(pendingShot);
+      var kv = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
+      var outAng = bs.baseAngle + bs.sweepSign * (kv + constrain(typed, 1, 179));
+      launchDir = { x: cos(outAng), y: sin(outAng) };
+      pendingShot.bendDeg = 0;
       pendingShot.applied = true;
     }
   }
@@ -2338,7 +2382,6 @@ function submitAnswer() {
     trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
     intendedTrail: simulateTrail(pendingShot, correct)
   };
-  if (!correct) explainOpen = true;
 }
 
 // ---------------------------------------------------------------
@@ -2378,7 +2421,7 @@ function drawScreenFlash() {
 // ---------------------------------------------------------------
 function mousePressed() {
   if (explainOpen) {
-    if (explainModalHit(mouseX, mouseY)) { explainOpen = false; playSound('click'); }
+    if (explainModalHit(mouseX, mouseY)) { explainOpen = false; playSound('click'); retryQuestion(); }
     return;
   }
   if (confirmExitOpen) {
@@ -2472,7 +2515,7 @@ function keyPressed(ev) {
     return false;
   }
   if (explainOpen) {
-    if (keyCode === ENTER || keyCode === RETURN || key === ' ') { explainOpen = false; playSound('click'); }
+    if (keyCode === ENTER || keyCode === RETURN || key === ' ') { explainOpen = false; playSound('click'); retryQuestion(); }
     return false;
   }
   if (gameState === 'HOLE_COMPLETE') {
@@ -2503,6 +2546,7 @@ function mouseReleased() {
   var power = (d / MAX_DRAG) * MAX_LAUNCH_SPEED;
 
   pendingShot = classifyAndBuildShot(aimDir, power, currentHoleNum());
+  retryHint = false;
   answerText = '';
   answerLocked = false;
   timerStart = millis();
@@ -2675,7 +2719,7 @@ function drawExplainDiagram(cx, cy, r, info) {
   fill('#4dff4d');
   textSize(r * 0.22);
   var uMid = -(known + sum) / 2;
-  text(correctAns + '°', cos(uMid) * r * 0.65, sin(uMid) * r * 0.65);
+  text('?', cos(uMid) * r * 0.65, sin(uMid) * r * 0.65);
   textStyle(NORMAL);
   pop();
 }
@@ -2744,11 +2788,11 @@ function drawExplainModal() {
     text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, eqY);
     fill('#4dff4d');
     textSize(25);
-    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY + 36);
+    text(sum + '° − ' + resolvedInfo.known + '° = ?', width / 2, eqY + 36);
   } else {
     fill('#4dff4d');
     textSize(28);
-    text(sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, eqY);
+    text(sum + '° − ' + resolvedInfo.known + '° = ?', width / 2, eqY);
   }
   textStyle(NORMAL);
 
@@ -2767,6 +2811,25 @@ function drawExplainModal() {
   textStyle(BOLD);
   text(tl('Got It', 'Entendido'), width / 2, btnY + btn.h / 2 + 1);
   textStyle(NORMAL);
+}
+
+// After the explanation card: the ball goes back to where it was hit and the SAME question
+// (same aim, power and angle) is asked again, this time with the rule shown as a hint.
+function retryQuestion() {
+  var ri = resolvedInfo;
+  if (!ri || !ri.shot || holePhase !== 'EXPLAIN') return;
+  var p = ri.shot;
+  ball.x = p.launchFrom.x; ball.y = p.launchFrom.y; ball.vx = 0; ball.vy = 0;
+  p.applied = false; p.typed = undefined; p.correct = undefined; p.resolvedAngle = undefined;
+  p.launchDir = undefined; p.bendDeg = 0;
+  pendingShot = p;
+  resolvedInfo = null;
+  holeBlockedThisStroke = false;
+  retryHint = true;
+  answerText = '';
+  answerLocked = false;
+  timerStart = millis();
+  holePhase = 'QUESTION';
 }
 
 function explainModalHit(mx, my) {
