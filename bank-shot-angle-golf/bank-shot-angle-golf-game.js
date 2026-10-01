@@ -138,7 +138,8 @@ function makeHole(par, points, widths, bushes, zones) {
     cup: { x: cupPos.x, y: cupPos.y },
     walls: corridor.walls,
     fairwayLeft: corridor.left, fairwayRight: corridor.right,
-    bushes: bushes || [], zones: zones || []
+    // bushes are drawn and collide at 60% of their listed size, so there is room to play around them
+    bushes: (bushes || []).map(function (b) { return { x: b.x, y: b.y, r: Math.max(7, Math.round(b.r * 0.6)) }; }), zones: zones || []
   };
 }
 
