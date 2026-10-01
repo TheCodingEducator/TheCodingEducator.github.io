@@ -1055,13 +1055,15 @@ function simulateFirstWallContact(origin, aimDir, power) {
   for (var frame = 0; frame < 2000; frame++) {
     var speed = mag(b.vx, b.vy);
     if (speed < MIN_STOP_SPEED) return null;
+    var vx0 = b.vx, vy0 = b.vy;   // the heading BEFORE any bounce this frame
     stepBallOneFrame(b, null, hole.walls, hole.bushes, hole.zones, true);
     if (hole.cup && dist(b.x, b.y, hole.cup.x, hole.cup.y) < CUP_R - 2 && mag(b.vx, b.vy) < CUP_CAPTURE_SPEED) return null;
     if (frame < 2) continue;
     for (var i = 0; i < hole.walls.length; i++) {
       var w = hole.walls[i];
       var c = closestPointOnSegment(b.x, b.y, w.x1, w.y1, w.x2, w.y2);
-      if (dist(b.x, b.y, c.x, c.y) <= BALL_R + 1.5) return { wall: w, point: { x: b.x, y: b.y } };
+      // only a wall the ball is rolling INTO counts - not one it starts next to and rolls away from
+      if (dist(b.x, b.y, c.x, c.y) <= BALL_R + 1.5 && (vx0 * (c.x - b.x) + vy0 * (c.y - b.y)) > 0) return { wall: w, point: { x: b.x, y: b.y } };
     }
   }
   return null;
@@ -1099,6 +1101,13 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
   // different wall touched -> ask about THAT wall.
   var angDir = aimDir;
   var sim = simulateFirstWallContact(origin, aimDir, power);
+  // If a bush, hill or current would push the ball into a wall well away from where the player
+  // aimed, the question would show up somewhere unexpected - ask the straight-shot question instead.
+  if (sim) {
+    var toHit = vSub(sim.point, origin);
+    var offAim = Math.abs(((degrees(Math.atan2(toHit.y, toHit.x)) - degrees(Math.atan2(aimDir.y, aimDir.x))) % 360 + 540) % 360 - 180);
+    if (offAim > 10) sim = null;
+  }
   if (!sim) {
     hit = null;
   } else if (!hit || hit.wall !== sim.wall) {
