@@ -1136,6 +1136,9 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
   }
 
   var tier2 = applyDifficultyTier(null, gameMode, holeNum, 89);
+  // The missing (complementary) angle is any whole number from 1° to 89° on every hole - no rounding
+  // to 10s or 5s. (Hero mode's algebra questions keep their own known-angle expression.)
+  if (!tier2.algebra) tier2.known = 90 - floor(random(1, 90));
   return {
     type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: tier2.timerOn,
     correctAnswer: 90 - tier2.known,
