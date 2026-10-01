@@ -1600,6 +1600,28 @@ function wallAnswerArc(g) {
     // the vertex sits ON the wall (the bounce point is the ball's center, one radius off it)
     vx: g.v.x - ri.offsetDir.x * BALL_R, vy: g.v.y - ri.offsetDir.y * BALL_R };
 }
+var WALL_HALF_R = 48;   // the after-shot half-circle on the wall (a little smaller than the question's)
+// After a straight shot, the right angle from the question stays on the green: the
+// square side, the dotted line splitting it, and the corner mark (the aim line is the route).
+function drawStraightRightAngle() {
+  var ri = resolvedInfo, r = 58;
+  var known = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
+  var b = ri.baseAngle, s = ri.sweepSign, px = ri.point.x, py = ri.point.y;
+  push();
+  noFill();
+  strokeCap(ROUND);
+  stroke(255, 255, 255, 210);
+  strokeWeight(2.5);
+  line(px, py, px + cos(b) * r * 1.15, py + sin(b) * r * 1.15);
+  drawingContext.setLineDash([5, 6]);
+  line(px, py, px + cos(b + s * known) * r * 1.15, py + sin(b + s * known) * r * 1.15);
+  drawingContext.setLineDash([]);
+  var m = 16, ux = cos(b), uy = sin(b), vx = cos(b + s * 90), vy = sin(b + s * 90);
+  beginShape();
+  vertex(px + ux * m, py + uy * m); vertex(px + (ux + vx) * m, py + (uy + vy) * m); vertex(px + vx * m, py + vy * m);
+  endShape();
+  pop();
+}
 function drawGreenAngleArc() {
   var g = getGreenArms();
   if (!g) return;
@@ -1624,20 +1646,24 @@ function drawGreenAngleArc() {
   stroke(resolvedInfo.typed !== null && !resolvedInfo.correct ? '#e63946' : '#e0a030');
   strokeWeight(3.5);
   if (wa) {
-    // Option A: the outgoing line splits the wall's straight line in two - a filled
-    // wedge for the answer (green, red when wrong) and a gold arc for the known angle.
+    // A half-circle on the wall, like the question's diagram: the outgoing line splits
+    // the wall's straight line into the known angle (gold) and the answer (green, red when wrong).
     var wrongW = resolvedInfo.typed !== null && !resolvedInfo.correct;
-    var R = GREEN_ARC_R * 2.4;
+    var R = WALL_HALF_R * 2;
     noStroke();
-    fill(wrongW ? color(230, 57, 70, 110) : color(77, 255, 77, 110));
+    fill(224, 160, 48, 120);
+    arc(wa.vx, wa.vy, R, R, min(wa.from, wa.kTo), max(wa.from, wa.kTo), PIE);
+    fill(wrongW ? color(230, 57, 70, 120) : color(77, 255, 77, 110));
     arc(wa.vx, wa.vy, R, R, min(wa.from, wa.to), max(wa.from, wa.to), PIE);
     noFill();
-    stroke(wrongW ? '#e63946' : '#4dff4d');
-    arc(wa.vx, wa.vy, R, R, min(wa.from, wa.to), max(wa.from, wa.to));
-    stroke('#e0a030');
-    arc(wa.vx, wa.vy, R, R, min(wa.from, wa.kTo), max(wa.from, wa.kTo));
+    strokeWeight(2.5);
+    stroke(255, 255, 255, 190);
+    arc(wa.vx, wa.vy, R, R, min(wa.kTo, wa.to), max(wa.kTo, wa.to));
   }
-  else arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
+  else {
+    if (resolvedInfo.type === 'STRAIGHT') drawStraightRightAngle();
+    arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
+  }
   pop();
 }
 
@@ -1714,17 +1740,18 @@ function drawResolvedAngleLabels() {
   var lblAng = gArms ? (gArms.a2 !== undefined ? gArms.mid : gArms.a1 + gArms.s * shownAngleDeg() / 2) : 0;
   var waL = gArms ? wallAnswerArc(gArms) : null;
   if (waL) lblAng = waL.mid;
-  var cx = gArms ? (waL ? waL.vx : gArms.v.x) + cos(lblAng) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
-  var cy = gArms ? (waL ? waL.vy : gArms.v.y) + sin(lblAng) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
+  var cx = gArms ? (waL ? waL.vx : gArms.v.x) + cos(lblAng) * (waL ? WALL_HALF_R * 0.62 : GREEN_LABEL_R) : resolvedInfo.point.x + d.x * 30;
+  var cy = gArms ? (waL ? waL.vy : gArms.v.y) + sin(lblAng) * (waL ? WALL_HALF_R * 0.62 : GREEN_LABEL_R) : resolvedInfo.point.y + d.y * 30;
   var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
   if (waL && !wrong) {   // the known angle, in gold, on the other side of the outgoing line
-    var kx = waL.vx + cos(waL.kMid) * GREEN_LABEL_R * 0.95, ky = waL.vy + sin(waL.kMid) * GREEN_LABEL_R * 0.95;
+    var kx = waL.vx + cos(waL.kMid) * WALL_HALF_R * 0.62, ky = waL.vy + sin(waL.kMid) * WALL_HALF_R * 0.62;
     var kLbl = (resolvedInfo.algebra ? (resolvedInfo.algebra.a * resolvedInfo.algebra.x + resolvedInfo.algebra.b) : resolvedInfo.known) + '°';
-    textSize(19);
+    textSize(14);
     fill(0, 0, 0, 150); text(kLbl, kx + 1.5, ky + 1.5);
     fill('#ffce6b'); text(kLbl, kx, ky);
-    textSize(26);
+    textSize(18);
   }
+  if (waL) textSize(18);
   fill(0, 0, 0, 150);
   text(label, cx + 1.5, cy + 1.5);
   fill(wrong ? '#e63946' : '#4dff4d');
@@ -2016,7 +2043,8 @@ function drawLiveAngleDiagram() {
   var p = pendingShot;
   var dir0, sweepDir, totalDeg, knownVal;
   if (p.type === 'WALL') {
-    dir0 = p.Wd; sweepDir = p.N; totalDeg = 180;
+    // measured from the wall behind the ball, so the ball's own dotted path is the line between the two angles
+    dir0 = vScale(p.Wd, -1); sweepDir = p.N; totalDeg = 180;
   } else {
     // a right angle whose far side is the aim line: known from the square edge, answer up to the aim
     dir0 = vPerp(p.aimDir); sweepDir = p.aimDir; totalDeg = 90;
@@ -2063,6 +2091,13 @@ function drawLiveAngleDiagram() {
   arc(0, 0, r * 2, r * 2, kLo, kHi);
   stroke('#5b8cff');
   arc(0, 0, r * 2, r * 2, uLo, uHi);
+
+  // the white dotted line carries on through the diagram, splitting the known angle from the unknown
+  stroke(255, 255, 255, 220);
+  strokeWeight(2.5);
+  drawingContext.setLineDash([6, 8]);
+  line(0, 0, cos(knownEnd) * r * 1.15, sin(knownEnd) * r * 1.15);
+  drawingContext.setLineDash([]);
 
   if (totalDeg === 90) {
     noFill();
