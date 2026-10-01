@@ -1067,6 +1067,12 @@ function simulateFirstWallContact(origin, aimDir, power) {
   return null;
 }
 
+// A wall question asks for the SUPPLEMENTARY angle: the angle between the ball's
+// outgoing path and the wall behind the contact point (the known angle is the
+// other half of that straight line). The bounce physics works in angles measured
+// from the wall's normal, which is this answer minus 90.
+function wallNormalAngle(answerDeg) { return answerDeg - 90; }
+
 function classifyAndBuildShot(aimDir, power, holeNum) {
   var origin = { x: ball.x, y: ball.y };
   var maxDist = stoppingDistance(power);
@@ -1110,7 +1116,7 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     var tier = applyDifficultyTier(rawKnown, gameMode, holeNum, 89);
     var wallShot = {
       type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: tier.timerOn,
-      correctAnswer: 90 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
+      correctAnswer: 180 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
       aimDir: aimDir, power: power, applied: false, launchFrom: { x: origin.x, y: origin.y }
     };
     // Only ask a wall question if the correct answer would really make the ball
@@ -1120,10 +1126,10 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     if (simulateTrail(wallShot, true).bounceIdx !== undefined) return wallShot;
   }
 
-  var tier2 = applyDifficultyTier(null, gameMode, holeNum, 179);
+  var tier2 = applyDifficultyTier(null, gameMode, holeNum, 89);
   return {
     type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: tier2.timerOn,
-    correctAnswer: 180 - tier2.known,
+    correctAnswer: 90 - tier2.known,
     // The diagram/camera anchor for a straight shot - unlike WALL's
     // point (the actual contact point on a rail), there's no natural
     // "where" for an open-green shot except the ball's own launch spot.
@@ -1457,7 +1463,7 @@ function simulateTrail(shot, isCorrect) {
   // (see submitAnswer), so its "bounce" is just where its heading first turns.
   var pending = {
     type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
-    resolvedAngle: isCorrect ? shot.correctAnswer : shot.resolvedAngle, correct: isCorrect,
+    resolvedAngle: isCorrect ? wallNormalAngle(shot.correctAnswer) : shot.resolvedAngle, correct: isCorrect,
     bendDeg: isCorrect ? 0 : (shot.bendDeg || 0),
     launchFrom: from, triggerDist: shot.triggerDist, applied: !isCorrect
   };
@@ -1560,7 +1566,7 @@ function getGreenArms() {
       // backward ray).
       var wrongShot = ri.typed !== null && !ri.correct;
       var a1 = wrongShot ? ri.launchAngle : ri.aimAngle;
-      ri.greenArms = { v: ri.point, a1: a1, diff: -ri.sweepSign * 180, mid: a1 - ri.sweepSign * 90, s: -ri.sweepSign };
+      ri.greenArms = { v: ri.point, a1: a1, diff: -ri.sweepSign * 90, mid: a1 - ri.sweepSign * 45, s: -ri.sweepSign };
     } else {
       // A correct wall shot bounces off the question wall, whose normal is known.
       var nAng = (ri.type === 'WALL' && ri.correct && ri.offsetDir) ? atan2(ri.offsetDir.y, ri.offsetDir.x) : null;
@@ -1580,6 +1586,16 @@ function shownAngleDeg() {
   return (resolvedInfo.typed !== null && !resolvedInfo.correct) ? resolvedInfo.typed : resolvedInfo.correctAnswer;
 }
 var OTHER_LINE_LEN = 96;
+// A wall shot's answer is supplementary: the angle from the ball's outgoing line
+// back to the wall BEHIND the contact point (the other half of that straight
+// line is the known angle). Returns the arc for it, or null for a straight shot.
+function wallAnswerArc(g) {
+  var ri = resolvedInfo;
+  if (!ri || ri.type !== 'WALL' || !ri.wd || !g || g.a2 === undefined) return null;
+  var back = atan2(-ri.wd.y, -ri.wd.x);
+  var d = ((back - g.a2) % 360 + 540) % 360 - 180;
+  return { from: g.a2, to: g.a2 + d, mid: g.a2 + d / 2 };
+}
 function drawGreenAngleArc() {
   var g = getGreenArms();
   if (!g) return;
@@ -1590,6 +1606,7 @@ function drawGreenAngleArc() {
   // to the wall's normal (half the bend) partway there. STRAIGHT has no real
   // second line to match, so it keeps the constructed reference ray.
   var a2 = g.a2 !== undefined ? g.a2 : g.a1 + g.s * span;
+  var wa = wallAnswerArc(g);
   push();
   noFill();
   strokeCap(ROUND);
@@ -1602,7 +1619,8 @@ function drawGreenAngleArc() {
   }
   stroke(resolvedInfo.typed !== null && !resolvedInfo.correct ? '#e63946' : '#e0a030');
   strokeWeight(3.5);
-  arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
+  if (wa) arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(wa.from, wa.to), max(wa.from, wa.to));
+  else arc(g.v.x, g.v.y, GREEN_ARC_R * 2, GREEN_ARC_R * 2, min(g.a1, a2), max(g.a1, a2));
   pop();
 }
 
@@ -1668,6 +1686,8 @@ function drawResolvedAngleLabels() {
   // the two green lines (the wall's normal); STRAIGHT has no real second line,
   // so it keeps the constructed reference ray's own midpoint.
   var lblAng = gArms ? (gArms.a2 !== undefined ? gArms.mid : gArms.a1 + gArms.s * shownAngleDeg() / 2) : 0;
+  var waL = gArms ? wallAnswerArc(gArms) : null;
+  if (waL) lblAng = waL.mid;
   var cx = gArms ? gArms.v.x + cos(lblAng) * GREEN_LABEL_R : resolvedInfo.point.x + d.x * 30;
   var cy = gArms ? gArms.v.y + sin(lblAng) * GREEN_LABEL_R : resolvedInfo.point.y + d.y * 30;
   var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
@@ -1962,9 +1982,10 @@ function drawLiveAngleDiagram() {
   var p = pendingShot;
   var dir0, sweepDir, totalDeg, knownVal;
   if (p.type === 'WALL') {
-    dir0 = p.Wd; sweepDir = p.N; totalDeg = 90;
+    dir0 = p.Wd; sweepDir = p.N; totalDeg = 180;
   } else {
-    dir0 = vScale(p.aimDir, -1); sweepDir = vPerp(dir0); totalDeg = 180;
+    // a right angle whose far side is the aim line: known from the square edge, answer up to the aim
+    dir0 = vPerp(p.aimDir); sweepDir = p.aimDir; totalDeg = 90;
   }
   knownVal = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
 
@@ -2000,7 +2021,8 @@ function drawLiveAngleDiagram() {
   noFill();
   stroke(255, 255, 255, 200);
   strokeWeight(2.5);
-  line(p.type === 'WALL' ? -18 : -r * 1.15, 0, r * 1.15, 0);
+  line(p.type === 'WALL' ? -r * 1.15 : 0, 0, r * 1.15, 0);
+  if (p.type !== 'WALL') line(0, 0, cos(totalEnd) * r * 1.15, sin(totalEnd) * r * 1.15);
 
   strokeWeight(4);
   stroke('#e0a030');
@@ -2055,8 +2077,8 @@ function rotatePoint(pt, deg) {
 function drawQuestionOverlay() {
   if (!pendingShot) return;
   var isWall = pendingShot.type === 'WALL';
-  var title = isWall ? tl('Complementary Angles', 'Ángulos complementarios') : tl('Supplementary Angles', 'Ángulos suplementarios');
-  var relWord = isWall ? tl('sum to 90°', 'suman 90°') : tl('sum to 180°', 'suman 180°');
+  var title = isWall ? tl('Supplementary Angles', 'Ángulos suplementarios') : tl('Complementary Angles', 'Ángulos complementarios');
+  var relWord = isWall ? tl('sum to 180°', 'suman 180°') : tl('sum to 90°', 'suman 90°');
 
   noStroke();
   textAlign(CENTER, TOP);
@@ -2129,8 +2151,8 @@ function handleAnswerKey(k) {
 // is the 0deg baseline, which way does the known angle sweep" derived
 // from a shot object, so this is the one place that math lives.
 function shotBaseAngleAndSweep(shot) {
-  var dir0 = shot.type === 'WALL' ? shot.Wd : vScale(shot.aimDir, -1);
-  var sweepDirVec = shot.type === 'WALL' ? shot.N : vPerp(dir0);
+  var dir0 = shot.type === 'WALL' ? shot.Wd : vPerp(shot.aimDir);
+  var sweepDirVec = shot.type === 'WALL' ? shot.N : shot.aimDir;
   return {
     baseAngle: atan2(dir0.y, dir0.x),
     sweepSign: vDot(sweepDirVec, vPerp(dir0)) >= 0 ? 1 : -1
@@ -2162,7 +2184,7 @@ function submitAnswer() {
 
   var launchDir = pendingShot.aimDir;
   if (pendingShot.type === 'WALL') {
-    pendingShot.resolvedAngle = correct ? pendingShot.correctAnswer : constrain(typed, 1, 179);
+    pendingShot.resolvedAngle = wallNormalAngle(correct ? pendingShot.correctAnswer : constrain(typed, 1, 179));
     if (!correct) {
       // The direction a ball leaving the wall AT the typed angle would
       // be heading (same outgoing-ray formula resolveWallCollision uses
@@ -2207,6 +2229,7 @@ function submitAnswer() {
     correctAnswer: pendingShot.correctAnswer, typed: typed, correct: correct,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
+    wd: pendingShot.type === 'WALL' ? pendingShot.Wd : null,
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
@@ -2399,6 +2422,7 @@ function triggerTimeoutChaos() {
     correctAnswer: pendingShot.correctAnswer, typed: null, correct: false,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
+    wd: pendingShot.type === 'WALL' ? pendingShot.Wd : null,
     type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
@@ -2481,7 +2505,7 @@ function drawHUD() {
 // of a shrunk-down version of this.
 function drawEquation() {
   if (!resolvedInfo || !resolvedInfo.correct) return;
-  var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
+  var sum = resolvedInfo.type === 'WALL' ? 180 : 90;
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
@@ -2506,7 +2530,7 @@ function drawEquation() {
 // now. Reveals the solved unknown angle in green instead of a "?",
 // since the whole point here is showing what it resolves to.
 function drawExplainDiagram(cx, cy, r, info) {
-  var sum = info.type === 'WALL' ? 90 : 180;
+  var sum = info.type === 'WALL' ? 180 : 90;
   var known = info.known, correctAns = info.correctAnswer;
   push();
   translate(cx, cy);
@@ -2590,8 +2614,8 @@ function drawExplainModal() {
   noFill();
   rect(bx, by, b.w, b.h, 18);
 
-  var sum = resolvedInfo.type === 'WALL' ? 90 : 180;
-  var relWord = resolvedInfo.type === 'WALL' ? tl('complementary', 'complementarios') : tl('supplementary', 'suplementarios');
+  var sum = resolvedInfo.type === 'WALL' ? 180 : 90;
+  var relWord = resolvedInfo.type === 'WALL' ? tl('supplementary', 'suplementarios') : tl('complementary', 'complementarios');
 
   noStroke();
   textAlign(CENTER, CENTER);
