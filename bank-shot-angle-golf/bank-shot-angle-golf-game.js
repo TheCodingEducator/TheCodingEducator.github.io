@@ -1649,11 +1649,47 @@ function drawGreenAngleArc() {
 }
 
 // Green for a correct answer, red for a wrong one (or a Hero-mode timeout).
+// A correct shot's route, drawn as straight lines that sit exactly on the angle diagram:
+// a wall shot comes in along the line between the gold and green angles and leaves at the
+// mirrored angle; a straight shot runs along the aim side of the right angle. It grows as
+// far as the real ball has rolled (and stops where the real line stops).
+function drawExactRoute(ri) {
+  var p = ri.shot, A = p.launchFrom, L = 0, tr = ri.trail;
+  for (var i = 1; i < tr.length; i++) L += dist(tr[i].x, tr[i].y, tr[i - 1].x, tr[i - 1].y);
+  if (!ri.trailDone) L += dist(ball.x, ball.y, tr[tr.length - 1].x, tr[tr.length - 1].y);
+  var pts = [{ x: A.x, y: A.y }];
+  if (p.type === 'WALL') {
+    // Built from the question's own numbers (easy holes round the real angle to a friendly
+    // one), so the lines land exactly on the diagram: in along the gold/green border, out at
+    // the same known angle on the far side of the wall's normal.
+    var V = p.point, inLen = dist(A.x, A.y, V.x, V.y);
+    var k = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
+    var backDir = vAdd(vScale(p.Wd, -cos(k)), vScale(p.N, sin(k)));
+    var outDir = vAdd(vScale(p.Wd, cos(k)), vScale(p.N, sin(k)));
+    var S = vAdd(V, vScale(backDir, inLen));
+    pts = [{ x: S.x, y: S.y }];
+    if (L <= inLen) pts.push(vAdd(S, vScale(backDir, -L)));
+    else pts.push({ x: V.x, y: V.y }, vAdd(V, vScale(outDir, L - inLen)));
+  } else {
+    pts.push(vAdd(A, vScale(p.aimDir, L)));
+  }
+  push();
+  noFill();
+  stroke('#4dff4d');
+  strokeWeight(4);
+  strokeCap(ROUND);
+  strokeJoin(ROUND);
+  beginShape();
+  for (var j = 0; j < pts.length; j++) vertex(pts[j].x, pts[j].y);
+  endShape();
+  pop();
+}
 function drawTrail() {
   var ri = resolvedInfo;
   if (!ri || ri.trail.length < 1) return;
   var wrong = ri.typed !== null && !ri.correct;
   var pts = ri.trail, live = !ri.trailDone;
+  if (!wrong && ri.shot && ri.shot.launchFrom) { drawExactRoute(ri); return; }
   if (wrong) {
     // A wrong answer draws ONE red line: the route in to the vertex, and no
     // further (the angle it makes is drawn by drawGreenAngleArc).
