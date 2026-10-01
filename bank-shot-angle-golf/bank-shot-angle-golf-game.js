@@ -1526,7 +1526,8 @@ function updateTrail() {
   // Remember how much of the route existed when it first bounced (wrong answers
   // only draw the route up to that point - see drawTrail).
   if (ri.revealed && ri.trailCut === undefined) ri.trailCut = ri.trail.length;
-  if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX) ri.trailDone = true;
+  // (a straight shot's line keeps following the ball until it touches a rail - see drawExactRoute)
+  if (ri.afterReveal >= TRAIL_AFTER_BOUNCE_PX && !(ri.type === 'STRAIGHT' && ri.hitIdx === undefined)) ri.trailDone = true;
   // Once past the bounce, stop the line the moment the ball hits a second wall.
   if (ri.revealed && !ri.trailDone && mag(ball.vx, ball.vy) > 0.5) {
     var hd = Math.atan2(ball.vy, ball.vx);
