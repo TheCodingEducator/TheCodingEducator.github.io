@@ -2245,15 +2245,15 @@ function drawQuestionOverlay() {
 
   if (retryHint) {
     var hintY = pendingShot.algebra ? 206 : 178;
-    var hints = [tl('Hint: complementary angles always add up to 90°.', 'Pista: los ángulos complementarios siempre suman 90°.'),
-      tl('Supplementary angles always add up to 180°.', 'Los ángulos suplementarios siempre suman 180°.')];
-    textSize(15);
-    for (var hi = 0; hi < 2; hi++) {
-      fill(0, 0, 0, 140);
-      text(hints[hi], width / 2 + 1, hintY + hi * 20 + 1);
-      fill('#ffce6b');
-      text(hints[hi], width / 2, hintY + hi * 20);
-    }
+    // just the rule for THIS question: a wall shot is supplementary, a straight shot complementary
+    var hint = isWall
+      ? tl('Hint: supplementary angles always add up to 180°.', 'Pista: los ángulos suplementarios siempre suman 180°.')
+      : tl('Hint: complementary angles always add up to 90°.', 'Pista: los ángulos complementarios siempre suman 90°.');
+    textSize(16);
+    fill(0, 0, 0, 140);
+    text(hint, width / 2 + 1, hintY + 1);
+    fill('#ffce6b');
+    text(hint, width / 2, hintY);
     textSize(18);
   }
   if (pendingShot.algebra) {
