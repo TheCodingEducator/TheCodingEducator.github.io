@@ -1677,12 +1677,15 @@ function drawExactRoute(ri) {
     var V = p.point, inLen = dist(A.x, A.y, V.x, V.y);
     var k = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
     var backDir = vAdd(vScale(p.Wd, -cos(k)), vScale(p.N, sin(k)));
+    var behind = raycastWalls(V, backDir, inLen, hole.walls, p.wallRef);   // never start the line past another rail
+    if (behind) inLen = behind.t;
     var S = vAdd(V, vScale(backDir, inLen));
     pts = [{ x: S.x, y: S.y }];
     if (L <= inLen) pts.push(vAdd(S, vScale(backDir, -L)));
     else pts.push({ x: V.x, y: V.y });   // the line stops at the wall - the angle diagram shows the rest
   } else {
-    pts.push(vAdd(A, vScale(p.aimDir, L)));
+    var ahead = raycastWalls(A, p.aimDir, L + 1, hole.walls);   // stop at the first rail in the way
+    pts.push(vAdd(A, vScale(p.aimDir, ahead ? ahead.t : L)));
   }
   push();
   noFill();
