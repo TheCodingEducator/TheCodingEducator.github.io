@@ -1668,7 +1668,7 @@ function drawGreenAngleArc() {
 // A correct shot's route: exactly the path the ball really rolled, so it lies right on top of
 // the white dotted line from the tee to the wall. A wall shot's line stops at the wall.
 function drawExactRoute(ri, wrong) {
-  // Every route line is a STRAIGHT line along the angle's direction - currents, hills and bushes
+  // Every route line (green right, red wrong) is a STRAIGHT line along the angle's direction - currents, hills and bushes
   // can bend the ball itself, but never the lines. Each one grows as far as the ball has rolled
   // and stops at the first rail in its way.
   var p = ri.shot, tr = ri.trail, A = p.launchFrom, L = 0;
@@ -1684,11 +1684,7 @@ function drawExactRoute(ri, wrong) {
     var V = p.point, inLen = dist(A.x, A.y, V.x, V.y);
     var reached = ri.revealed || L >= inLen;
     pts.push(reached ? { x: V.x, y: V.y } : vAdd(A, vScale(vNorm(vSub(V, A)), L)));
-    // a right answer stops at the wall; a wrong one leaves it in red at the typed angle
-    if (wrong && reached && p.resolvedAngle !== undefined) {
-      var outDir = vNorm(vAdd(vScale(p.Wd, sin(p.resolvedAngle)), vScale(p.N, cos(p.resolvedAngle))));
-      pts.push(ray(V, outDir, max(0, L - inLen), p.wallRef));
-    }
+    // right or wrong, the line stops at the wall (a wrong answer's red arc shows the typed angle)
   } else {
     var dir = wrong && p.launchDir ? p.launchDir : p.aimDir;
     pts.push(ray(A, dir, L));
