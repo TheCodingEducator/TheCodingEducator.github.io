@@ -200,7 +200,7 @@
           '<a class="ss-all" href="../my-stats.html">See all my stats and badges &rarr;</a>';
       };
       fillStats();
-      addPanel(right, 'sb-stats', '&#128202;', T('My stats', 'Mis estadísticas'), [statsBox], !!tipBar, fillStats);
+      addPanel(right, 'sb-stats', '&#128202;', T('My Stats', 'Mis estadísticas'), [statsBox], !!tipBar, fillStats);
     }
     var erase = reset ? resetPanelNodes(reset) : null;
     if (erase) addPanel(right, 'sb-reset', '&#128465;&#65039;', T('Reset progress', 'Borrar progreso'), [reset], !!tipBar, erase.startCountdown, erase.stopCountdown);
