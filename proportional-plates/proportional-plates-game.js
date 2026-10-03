@@ -397,7 +397,7 @@ function vizHTML(P) {
     : `<span class="vzG" style="grid-template-columns:repeat(${cols},1em)">${foodIcon(P.dish).repeat(per)}</span>`;
   const row = (label, n, dishes, amount) => `<span class="vzL">${label} &middot; <b>${dishes}</b> ${nounOf(P, dishes)}</span><span></span>` +
     `<span class="vzGs">${batch().repeat(n)}</span><span class="vzA">&#10140; ${ingIcon(P.ing)} ${amount}</span>`;
-  return `<div class="viz">${row('Recipe', a, P.baseN, `<b>${fhtml(P.baseQ)}</b> ${fval(P.baseQ) === 1 ? P.ing.u1 : P.ing.u}`)}${row('Order', b, P.tgtN, `<b class="q">?</b> ${P.ing.u}`)}</div>`;
+  return `<div class="viz">${row(L('Recipe', 'Receta'), a, P.baseN, `<b>${fhtml(P.baseQ)}</b> ${fval(P.baseQ) === 1 ? P.ing.u1 : P.ing.u}`)}${row(L('Order', 'Pedido'), b, P.tgtN, `<b class="q">?</b> ${P.ing.u}`)}</div>`;
 }
 // The question as a picture, for every kind of order: the recipe and the order are two bars made of equal boxes
 // (each box is the same number of dishes - or one item at the market), so students can SEE how many recipes the

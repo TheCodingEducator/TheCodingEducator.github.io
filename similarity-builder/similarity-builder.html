@@ -441,7 +441,7 @@
       <div id="help" data-es="Saltar: <b>Espacio</b> / <b>Enter</b> / <b>&uarr;</b> / toca &mdash; otra vez en el aire para un <b>doble salto</b>. Esc o Menú pausa.">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; again in the air to <b>double jump</b>. Esc or Menu pauses.</div>
 
       <!-- Always-available menu button + pause menu -->
-      <button id="menuBtn" aria-label="Menu">&#9776; Menu</button>
+      <button id="menuBtn" aria-label="Menu" data-es-aria="Menú" data-es="&#9776; Menú">&#9776; Menu</button>
       <div id="pause" class="overlay hidden"><div class="card center" style="max-width:440px">
         <h2 data-es="&#9208; En pausa">&#9208; Paused</h2>
         <button class="btn" id="btnResume" data-es="&#9654; Continuar">&#9654; Resume</button>
@@ -508,7 +508,7 @@
         <div id="ptypes" class="ptypes"></div>
         <div class="center pbar">
           <button class="btn ghost" id="btnPracBack" data-es="&larr; Atrás">&larr; Back</button>
-          <button class="btn" id="btnPracStart">Start Practice</button>
+          <button class="btn" id="btnPracStart" data-es="Empezar práctica">Start Practice</button>
         </div>
       </div></div>
 
@@ -533,10 +533,10 @@
 
       <!-- Wrong-answer explanation -->
       <div id="feedback" class="overlay hidden"><div class="card">
-        <h2 id="fbTitle">&#128165; The bridge failed!</h2>
+        <h2 id="fbTitle" data-es="&#128165; ¡El puente falló!">&#128165; The bridge failed!</h2>
         <div id="fbBody"></div>
         <p id="fbStorm" style="font-weight:700"></p>
-        <div class="center"><button class="btn alt" id="btnNext">Try a new bridge</button><p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para continuar">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
+        <div class="center"><button class="btn alt" id="btnNext" data-es="Prueba otro puente">Try a new bridge</button><p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para continuar">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
       </div></div>
 
       <!-- Run over -->
@@ -544,7 +544,7 @@
         <h2 id="ovTitle">&#127937; Run over!</h2>
         <div class="stats" id="ovStats"></div>
         <div id="ovContinue"></div>
-        <button class="btn" id="btnAgain">Run again</button>
+        <button class="btn" id="btnAgain" data-es="Correr otra vez">Run again</button>
         <button class="btn ghost" id="btnOverMenu" style="margin-left:6px" data-es="&#127968; Menú">&#127968; Menu</button>
         <p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para jugar otra vez &middot; <b>Esc</b> para el menú">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
         <div id="ovReview"></div>
