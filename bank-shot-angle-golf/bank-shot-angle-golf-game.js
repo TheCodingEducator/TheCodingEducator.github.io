@@ -2137,10 +2137,11 @@ function drawLiveAngleDiagram(shot, reveal) {
   noFill();
   stroke(255, 255, 255, 200);
   strokeWeight(2.5);
-  line(p.type === 'WALL' ? -r * 1.15 : 0, 0, r * 1.15, 0);
+  var lineR = wrongR ? r : r * 1.15;   // after a wrong answer the sides stop right at the arc
+  line(p.type === 'WALL' ? -lineR : 0, 0, lineR, 0);
   if (p.type !== 'WALL') {   // a straight shot's one dotted line is its path: the aim side of the right angle
     drawingContext.setLineDash([6, 8]);
-    line(0, 0, cos(totalEnd) * r * 1.6, sin(totalEnd) * r * 1.6);
+    line(0, 0, cos(totalEnd) * (wrongR ? r : r * 1.6), sin(totalEnd) * (wrongR ? r : r * 1.6));
     drawingContext.setLineDash([]);
   }
 
