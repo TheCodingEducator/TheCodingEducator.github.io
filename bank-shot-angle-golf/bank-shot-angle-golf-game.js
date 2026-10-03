@@ -2152,13 +2152,23 @@ function drawLiveAngleDiagram(shot, reveal) {
     arc(0, 0, r * 2, r * 2, uLo, uHi);
   }
 
-  if (wrongR) {   // a wrong answer: a red arc at the typed angle, where the ball really went (no correct answer shown)
-    var ty = constrain(resolvedInfo.typed, 1, 179);
-    var rs = p.type === 'WALL' ? 0 : knownEnd, re = rs + sweepSign * ty;
+  if (wrongR) {
+    // A wrong answer: the student's number as a red wedge, starting where the known angle ends.
+    // Too small leaves a gray gap before the wall (the "?" still to find); too big spills past it.
+    var ty = min(max(resolvedInfo.typed, 1), 359 - abs(knownEnd));
+    var rs = knownEnd, re = knownEnd + sweepSign * ty;
+    noStroke();
+    fill(230, 57, 70, 120);
+    arc(0, 0, r * 2, r * 2, min(rs, re), max(rs, re), PIE);
+    if (abs(re) < abs(totalEnd)) {
+      fill(255, 255, 255, 60);
+      arc(0, 0, r * 2, r * 2, min(re, totalEnd), max(re, totalEnd), PIE);
+    }
+    noFill();
     stroke('#e63946');
     strokeWeight(4);
-    arc(0, 0, r * 2.4, r * 2.4, min(rs, re), max(rs, re));
-    var tMid = (rs + re) / 2;
+    arc(0, 0, r * 2, r * 2, min(rs, re), max(rs, re));
+    var tMid = (rs + re) / 2, gMid = (re + totalEnd) / 2, hasGap = abs(re) < abs(totalEnd);
   }
 
   if (totalDeg === 90) {
@@ -2179,7 +2189,8 @@ function drawLiveAngleDiagram(shot, reveal) {
   var kLocal = { x: cos(kMid) * r * 0.6, y: sin(kMid) * r * 0.6 };
   var uMid = (knownEnd + totalEnd) / 2;
   var uLocal = { x: cos(uMid) * r * 0.65, y: sin(uMid) * r * 0.65 };
-  if (wrongR) uLocal = { x: cos(tMid) * r * 1.5, y: sin(tMid) * r * 1.5 };   // the typed number, by its red arc
+  if (wrongR) uLocal = { x: cos(tMid) * r * 0.62, y: sin(tMid) * r * 0.62 };   // the typed number, inside its red wedge
+  var gLocal = wrongR && hasGap ? { x: cos(gMid) * r * 0.7, y: sin(gMid) * r * 0.7 } : null;
   pop();
 
   var kWorld = rotatePoint(kLocal, baseAngle);
@@ -2191,7 +2202,12 @@ function drawLiveAngleDiagram(shot, reveal) {
   textStyle(BOLD);
   textSize(15);
   text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
-  fill(!reveal ? '#bcd4ff' : wrongR ? '#e63946' : '#4dff4d');
+  if (gLocal) {   // the gap the typed angle left unfilled
+    var gWorld = rotatePoint(gLocal, baseAngle);
+    fill(255); textSize(18);
+    text('?', p.point.x + gWorld.x, p.point.y + gWorld.y);
+  }
+  fill(!reveal ? '#bcd4ff' : wrongR ? '#ffffff' : '#4dff4d');
   textSize(reveal ? 19 : 23);
   text(!reveal ? '?' : (wrongR ? resolvedInfo.typed : p.correctAnswer) + '°', p.point.x + uWorld.x, p.point.y + uWorld.y);
   textStyle(NORMAL);
@@ -2635,8 +2651,30 @@ function drawHUD() {
 // so it's sized to be unmissable rather than a small readout. A wrong
 // answer gets its own full explanation via drawExplainModal instead
 // of a shrunk-down version of this.
+// After a wrong answer: a small card adding the two angles, showing they miss the total -
+// without giving away the right number (the question is asked again).
+function drawSumCheckCard() {
+  var ri = resolvedInfo, sum = ri.type === 'WALL' ? 180 : 90;
+  var k = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
+  var line1 = k + '° + ' + ri.typed + '° = ' + (k + ri.typed) + '°';
+  var line2 = tl('not ', 'no ') + sum + '°';
+  noStroke();
+  fill(15, 22, 16, 225);
+  rect(width / 2 - 140, 10, 280, 66, 12);
+  textAlign(CENTER, CENTER);
+  textStyle(BOLD);
+  fill(255);
+  textSize(24);
+  text(line1, width / 2, 32);
+  fill('#ff8a93');
+  textSize(19);
+  text(line2, width / 2, 58);
+  textStyle(NORMAL);
+  textAlign(LEFT, BASELINE);
+}
 function drawEquation() {
-  if (!resolvedInfo || !resolvedInfo.correct) return;
+  if (!resolvedInfo) return;
+  if (!resolvedInfo.correct) { if (resolvedInfo.typed !== null) drawSumCheckCard(); return; }
   var sum = resolvedInfo.type === 'WALL' ? 180 : 90;
   noStroke();
   textAlign(CENTER, CENTER);
