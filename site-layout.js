@@ -1,5 +1,5 @@
 // Shared page layout for every game (styles in site-layout.css).
-// Builds a slim top bar (All games on the left; Fullscreen, Standards and Teaching notes on the right) and moves the
+// Builds a slim top bar (All games on the left; Fullscreen, Standards, Full Teacher Guide and Quick Teacher Tips on the right) and moves the
 // page's Common Core standards, its teaching notes and its Reset progress into pop-out panels, the way Tip the
 // Scales does its Standards. With nothing beside or below it, the game fills the rest of the screen on a computer.
 // Tip the Scales already has its own top bar: there it just adds a Teaching notes pop-out next to Standards.
@@ -175,21 +175,22 @@
       stdEl.innerHTML = stdEl.innerHTML.replace('Standards', '<span class="sb-lbl">Standards</span>');
       stdEl.setAttribute('aria-label', 'Standards');
     }
+    // Standards first, so the two teacher buttons (Full Teacher Guide, Quick Teacher Tips) sit side by side
+    if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', T('Standards', 'Estándares'), [standards], false);
     // a link to this game's teacher guide (guide.html in the game's folder)
     if (document.getElementById('game-canvas-slot') || tipBar) {
       var guide = document.createElement('a');
       guide.href = 'guide.html';
       guide.className = tipBar ? 'ccss-toggle sb-guide' : 'sb-toggle sb-guide';
-      guide.innerHTML = '&#128216; <span class="sb-lbl">' + T('Teacher guide', 'Guía docente') + '</span>';
-      guide.setAttribute('aria-label', T('Teacher guide', 'Guía docente'));
+      guide.innerHTML = '&#128216; <span class="sb-lbl">' + T('Full Teacher Guide', 'Guía docente completa') + '</span>';
+      guide.setAttribute('aria-label', T('Full Teacher Guide', 'Guía docente completa'));
       if (tipBar) {   // Tip the Scales keeps its page controls off the keyboard
         guide.tabIndex = -1;
         guide.addEventListener('mousedown', function (e) { e.preventDefault(); });
       }
       right.appendChild(guide);
     }
-    if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', T('Standards', 'Estándares'), [standards], false);
-    addPanel(right, 'sb-notes', '&#128221;', T('Teaching notes', 'Notas para docentes'), [notes], !!tipBar);
+    addPanel(right, 'sb-notes', '&#128221;', T('Quick Teacher Tips', 'Consejos rápidos para docentes'), [notes], !!tipBar);
     // this game's saved stats and badges (site-stats.js), read fresh each time it opens
     if (window.SiteStats && !/my-stats\.html$/.test(location.pathname)) {
       var statsBox = document.createElement('div'), gameKey = SiteStats.keyForPage();
@@ -203,6 +204,10 @@
     }
     var erase = reset ? resetPanelNodes(reset) : null;
     if (erase) addPanel(right, 'sb-reset', '&#128465;&#65039;', T('Reset progress', 'Borrar progreso'), [reset], !!tipBar, erase.startCountdown, erase.stopCountdown);
+    // Fullscreen always sits last, in the top-right corner
+    if (fsEl) right.appendChild(fsEl);
+    var fsExit = right.querySelector('#pseudo-fullscreen-exit-btn');
+    if (fsExit) right.appendChild(fsExit);
     // a click anywhere else closes the panels
     document.addEventListener('click', function (e) {
       if (!panels.some(function (p) { return p.panel.contains(e.target) || p.btn.contains(e.target); })) closeAll();

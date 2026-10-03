@@ -579,7 +579,7 @@ function drawMenu() {
   drawModeCard(width / 2 - 12 - MENU_CARD_W, MENU_CARD_Y, tl('Golf Gamer', 'Golfista gamer'), 'EASY', '⛳',
     [tl('Angles ease in - 10s, then 5s,', 'Ángulos fáciles: de 10 en 10, luego de 5,'), tl('then anything by hole 7.', 'y cualquiera desde el hoyo 7.')], tl('No clock. Take your time.', 'Sin reloj. Tómate tu tiempo.'), '#3ea158');
   drawModeCard(width / 2 + 12, MENU_CARD_Y, tl('Hole-In-One Hero', 'Héroe del hoyo en uno'), 'HARD', '🔥',
-    [tl('Any angle from hole 1 -', 'Cualquier ángulo desde el hoyo 1 -'), tl('algebra by the back nine.', 'álgebra en los últimos nueve.')], tl('10s clock from hole 4. Miss it, ball goes wild.', 'Reloj de 10 s desde el hoyo 4. Si fallas, la bola se descontrola.'), '#e0562f');
+    [tl('Any angle from hole 1 -', 'Cualquier ángulo desde el hoyo 1 -'), tl('algebra by the back nine.', 'álgebra en los últimos nueve.')], tl('10s clock from hole 4. Run out and it counts as a miss.', 'Reloj de 10 s desde el hoyo 4. Si se acaba, cuenta como fallo.'), '#e0562f');
 
   drawPracticeButton();
 
