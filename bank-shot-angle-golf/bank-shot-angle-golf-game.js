@@ -2367,10 +2367,11 @@ function submitAnswer() {
 
   var launchDir = pendingShot.aimDir;
   if (pendingShot.type === 'WALL') {
-    pendingShot.resolvedAngle = wallNormalAngle(correct ? pendingShot.correctAnswer : constrain(typed, 1, 179));
-    // Right or wrong, the ball rolls the aimed path to the wall, and there it leaves at the
-    // typed angle, measured from the wall behind the ball (the same way the answer is) - so a
-    // wrong number shows up exactly where the question was asked.
+    // A right answer bounces like a real bank shot. A wrong one leaves along the far edge of the red
+    // wedge drawn afterwards: the typed angle measured on from the ball's incoming path (skimming
+    // along the wall if the typed angle runs past it).
+    var kw = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
+    pendingShot.resolvedAngle = correct ? wallNormalAngle(pendingShot.correctAnswer) : wallNormalAngle(constrain(kw + typed, 3, 177));
   } else {
     if (!correct) {
       // the typed angle measured on the question's right angle: the ball leaves along that line
