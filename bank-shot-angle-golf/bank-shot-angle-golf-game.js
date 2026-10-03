@@ -456,8 +456,8 @@ function kbUpdateAim() {
   var push = (keyIsDown(UP_ARROW) ? 1 : 0) - (keyIsDown(DOWN_ARROW) ? 1 : 0);
   if (!kbAim) {
     if (!turn && !push) return;
-    var target = hole.cup || { x: 350, y: 350 };
-    kbAim = { ang: atan2(target.y - ball.y, target.x - ball.x), power: 0.45 };
+    // always starts pointing straight up the screen - not at the cup, so the player does the aiming
+    kbAim = { ang: -90, power: 0.45 };
   }
   var fine = keyIsDown(SHIFT) ? 0.25 : 1;   // hold Shift for small adjustments
   kbAim.ang += turn * 1.6 * fine;
@@ -1126,6 +1126,19 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     var N = vDot(perp, angDir) < 0 ? perp : vScale(perp, -1);
     var rawKnown = degrees(Math.acos(constrain(vDot(angDir, Wd), -1, 1)));
     var tier = applyDifficultyTier(rawKnown, gameMode, holeNum, 89);
+    // The question can round the real angle (43 -> 40 on easy holes). Turn the shot so it really
+    // meets the wall at the asked angle - then the diagram, the dotted line and the ball all agree.
+    var askedAim = vNorm(vAdd(vScale(Wd, cos(tier.known)), vScale(N, -sin(tier.known))));
+    var askedSim = simulateFirstWallContact(origin, askedAim, power);
+    if (askedSim && askedSim.wall === w) {
+      aimDir = askedAim;
+      angDir = vNorm(vSub(askedSim.point, origin));
+      hit = { wall: w, point: askedSim.point, t: dist(origin.x, origin.y, askedSim.point.x, askedSim.point.y) };
+      // the diagram sits where the STRAIGHT aim line meets the wall - currents and hills can curve
+      // the ball on the way, but never the drawn angle
+      var straightHit = raycastWalls(origin, askedAim, 100000, hole.walls);
+      if (straightHit && straightHit.wall === w) { hit.point = straightHit.point; angDir = askedAim; }
+    }
     var wallShot = {
       type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: tier.timerOn,
       correctAnswer: 180 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
@@ -1403,6 +1416,14 @@ function drawBlockingPole(h) {
   ellipse(h.x, h.y, d * 0.84, d * 0.84);
   fill(255);
   rect(h.x - d * 0.28, h.y - d * 0.08, d * 0.56, d * 0.16, d * 0.04);
+  var ft = (millis() - coverFlashAt) / 450;   // a white ring pulses out when the ball hits it
+  if (ft < 1) {
+    noFill();
+    stroke(255, 255, 255, 255 * (1 - ft));
+    strokeWeight(4);
+    ellipse(h.x, h.y, d * (1 + ft * 0.9), d * (1 + ft * 0.9));
+    noStroke();
+  }
 }
 
 function drawBall() {
@@ -1608,6 +1629,7 @@ function wallAnswerArc(g) {
 }
 var WALL_HALF_R = 32;   // radius of the after-shot wall angle arcs
 function drawGreenAngleArc() {
+  if (resolvedInfo && resolvedInfo.timedOut) return;   // (nothing to show - the question is asked again)
   if (resolvedInfo && resolvedInfo.shot) { drawLiveAngleDiagram(resolvedInfo.shot, true); return; }
   var g = getGreenArms();
   if (!g) return;
@@ -2029,6 +2051,7 @@ function collideBushes(b, bushes) {
 // soft hedge.
 var POLE_R = CUP_R * 1.45 + BALL_R;   // the ball bounces off the edge of the "no entry" cover (see drawBlockingPole)
 var POLE_REST = 0.85;
+var coverFlashAt = -10000;   // when the ball last hit the "no entry" cover (for its flash)
 
 function collidePole(b, cup) {
   var dx = b.x - cup.x, dy = b.y - cup.y;
@@ -2041,6 +2064,7 @@ function collidePole(b, cup) {
     if (vn < 0) {
       b.vx -= (1 + POLE_REST) * vn * nx;
       b.vy -= (1 + POLE_REST) * vn * ny;
+      if (b === ball) { coverFlashAt = millis(); playSound('bounce'); }
     }
   }
 }
@@ -2244,6 +2268,15 @@ function drawQuestionOverlay() {
     text(hint, width / 2 + 1, hintY + 1);
     fill('#ffce6b');
     text(hint, width / 2, hintY);
+    if ((pendingShot.tries || 1) >= 3) {   // a second wrong try: the equation, with a blank to fill
+      var kq = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
+      var eq = (isWall ? 180 : 90) + '° − ' + kq + '° = ?';
+      textSize(22);
+      fill(0, 0, 0, 140);
+      text(eq, width / 2 + 1, hintY + 27);
+      fill(255);
+      text(eq, width / 2, hintY + 26);
+    }
     textSize(18);
   }
   if (pendingShot.algebra) {
@@ -2549,54 +2582,29 @@ function mouseReleased() {
 // Hero-mode timeout chaos shot
 // ---------------------------------------------------------------
 function triggerTimeoutChaos() {
+  // Running out of time counts as a miss, like a wrong answer: the ball doesn't move, the
+  // explanation card opens, and then the same question is asked again with the hint.
   answerLocked = true;
-  // Captured before pendingShot goes null just below - chaos never lets
-  // the player answer, but they should still see what the correct angle
-  // WAS, same as a normal wrong answer would show.
-  var baseSweep = shotBaseAngleAndSweep(pendingShot);
+  var shot = pendingShot;
+  shot.launchFrom = { x: ball.x, y: ball.y };
+  var baseSweep = shotBaseAngleAndSweep(shot);
   resolvedInfo = {
-    correctAnswer: pendingShot.correctAnswer, typed: null, correct: false,
-    point: { x: pendingShot.point.x, y: pendingShot.point.y },
-    offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
-    wd: pendingShot.type === 'WALL' ? pendingShot.Wd : null,
-    type: pendingShot.type, known: pendingShot.known, algebra: pendingShot.algebra,
-    shot: pendingShot,
+    correctAnswer: shot.correctAnswer, typed: null, correct: false, timedOut: true,
+    point: { x: shot.point.x, y: shot.point.y },
+    offsetDir: shot.type === 'WALL' ? shot.N : { x: 0, y: -1 },
+    wd: shot.type === 'WALL' ? shot.Wd : null,
+    type: shot.type, known: shot.known, algebra: shot.algebra,
+    shot: shot,
     baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
     revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    aimAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x), launchAngle: atan2(pendingShot.aimDir.y, pendingShot.aimDir.x),
-    trail: [{ x: ball.x, y: ball.y }], trailDone: false, afterReveal: 0,
-    intendedTrail: simulateTrail(pendingShot, true)
+    aimAngle: atan2(shot.aimDir.y, shot.aimDir.x), launchAngle: atan2(shot.aimDir.y, shot.aimDir.x),
+    trail: [{ x: ball.x, y: ball.y }], trailDone: true, afterReveal: 0, intendedTrail: []
   };
-  pendingShot = null; // chaos bypasses the normal wall/straight resolution entirely
-  holePhase = 'ROLLING';
-  // A timeout is exactly as "not correct" as a wrong typed answer, and
-  // the wild shot below is aimed straight at the cup (with only a
-  // random spread) rather than off in whatever direction a bank-shot
-  // miss happens to send it - if anything, the cup is MORE likely to
-  // be in the ball's path here, so it needs the same metal-pole block.
-  holeBlockedThisStroke = true;
-  preShotPos.x = ball.x; preShotPos.y = ball.y;
-  var toCup = atan2(hole.cup.y - ball.y, hole.cup.x - ball.x);
-  var wildAngle = toCup + random(-40, 40);
-  ball.vx = cos(wildAngle) * MAX_LAUNCH_SPEED * CHAOS_SPEED_MULT;
-  ball.vy = sin(wildAngle) * MAX_LAUNCH_SPEED * CHAOS_SPEED_MULT;
-  chaosUntil = millis() + 1400;
-  chaosShakeMag = 5;
   nextStroke();
-  playSound('chaos');
+  playSound('wrong');
   triggerScreenFlash('#e63946', false);
-
-  setTimeout(function () {
-    chaosShakeMag = 0;
-    var away = atan2(preShotPos.y - hole.cup.y, preShotPos.x - hole.cup.x);
-    var dist2 = random(25, 45);
-    ball.x = preShotPos.x + cos(away) * dist2;
-    ball.y = preShotPos.y + sin(away) * dist2;
-    ball.vx = 0; ball.vy = 0;
-    holePhase = 'AIMING';
-    holeBlockedThisStroke = false;
-    rollAlgebraSeed();
-  }, 1400);
+  holePhase = 'EXPLAIN';
+  explainOpen = true;
 }
 
 // ---------------------------------------------------------------
@@ -2809,6 +2817,11 @@ function drawExplainModal() {
   }
   textStyle(NORMAL);
 
+  if (resolvedInfo.timedOut) {
+    fill(230, 130, 130);
+    textSize(15);
+    text(tl('Time ran out.', 'Se acabó el tiempo.'), width / 2, by + L.typedY);
+  }
   if (resolvedInfo.typed !== null) {
     fill(230, 130, 130);
     textSize(15);
@@ -2833,6 +2846,7 @@ function retryQuestion() {
   if (!ri || !ri.shot || holePhase !== 'EXPLAIN') return;
   var p = ri.shot;
   ball.x = p.launchFrom.x; ball.y = p.launchFrom.y; ball.vx = 0; ball.vy = 0;
+  p.tries = (p.tries || 1) + 1;   // how many times this question has been asked
   p.applied = false; p.typed = undefined; p.correct = undefined; p.resolvedAngle = undefined;
   p.launchDir = undefined; p.bendDeg = 0;
   pendingShot = p;
