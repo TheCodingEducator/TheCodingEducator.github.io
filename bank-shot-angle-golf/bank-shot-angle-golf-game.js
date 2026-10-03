@@ -1388,33 +1388,21 @@ function drawCup() {
   triangle(h.x, h.y - 70, h.x + 26 + wave, h.y - 62, h.x, h.y - 54);
 }
 
-// Caps the cup with a hazard-striped metal pole for the stroke a wrong
-// answer just cost the player (see holeBlockedThisStroke/collidePole) -
-// a solid plate seals the mouth of the hole so the ball visibly cannot
-// drop in, and the red/white banding reads as "blocked" the same way a
-// real construction barrier pole does, at a glance and from any zoom.
+// Covers the cup for the stroke a wrong answer just cost the player (see
+// holeBlockedThisStroke/collidePole), so the ball visibly cannot drop in.
 function drawBlockingPole(h) {
+  // A "no entry" cover, bigger than the cup in every direction, so no part of the hole shows:
+  // a red disc with a white rim and a white bar across it.
+  var d = CUP_R * 2.9;
   noStroke();
-  fill(60, 64, 68);
-  ellipse(h.x, h.y, CUP_R * 2.3, CUP_R * 1.5);
-  fill(178, 183, 188);
-  ellipse(h.x, h.y, CUP_R * 2.0, CUP_R * 1.2);
-  fill(228, 231, 235);
-  ellipse(h.x - CUP_R * 0.3, h.y - CUP_R * 0.18, CUP_R * 0.9, CUP_R * 0.42);
-
-  var top = h.y - 62, poleW = 10, bandH = 8;
-  for (var y = h.y; y > top; y -= bandH) {
-    var bandIdx = floor((h.y - y) / bandH);
-    fill(bandIdx % 2 === 0 ? '#e6e6e6' : '#d1372f');
-    rect(h.x - poleW / 2, max(y - bandH, top), poleW, min(bandH, y - top));
-  }
-  fill(255, 255, 255, 90);
-  rect(h.x - poleW / 2 + 1.5, top, 2, h.y - top);
-
-  fill(210, 214, 218);
-  ellipse(h.x, top, poleW + 4, poleW + 4);
-  fill(255, 255, 255, 150);
-  ellipse(h.x - 2, top - 2, (poleW + 4) * 0.4, (poleW + 4) * 0.4);
+  fill(0, 0, 0, 90);
+  ellipse(h.x + 2, h.y + 3, d, d);
+  fill(255);
+  ellipse(h.x, h.y, d, d);
+  fill('#d62f2f');
+  ellipse(h.x, h.y, d * 0.84, d * 0.84);
+  fill(255);
+  rect(h.x - d * 0.28, h.y - d * 0.08, d * 0.56, d * 0.16, d * 0.04);
 }
 
 function drawBall() {
@@ -2039,7 +2027,7 @@ function collideBushes(b, bushes) {
 // ever gets close enough to satisfy checkHoleComplete's sink radius, and
 // springier (POLE_REST) since it reads as a firm metal bounce, not a
 // soft hedge.
-var POLE_R = CUP_R + BALL_R * 0.6;
+var POLE_R = CUP_R * 1.45 + BALL_R;   // the ball bounces off the edge of the "no entry" cover (see drawBlockingPole)
 var POLE_REST = 0.85;
 
 function collidePole(b, cup) {
