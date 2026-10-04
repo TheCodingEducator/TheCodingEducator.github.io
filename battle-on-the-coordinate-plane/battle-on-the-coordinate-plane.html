@@ -82,7 +82,7 @@
     background: var(--c1); box-shadow: 0 5px 0 var(--c2), 0 8px 18px rgba(11,37,69,0.25); transition: transform 0.1s, box-shadow 0.1s, filter 0.15s; text-transform: uppercase; }
   #bc .btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
   #bc .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--c2), 0 3px 8px rgba(11,37,69,0.25); }
-  #bc .btn:disabled { --c1: #9fb3c8; --c2: #7a8ea4; cursor: not-allowed; color: #eef3f8; }
+  #bc .btn:disabled, #bc .btn.orange:disabled, #bc .btn.green:disabled, #bc .btn.red:disabled { --c1: #9fb3c8; --c2: #7a8ea4; cursor: not-allowed; color: #eef3f8; }
   #bc .btn.orange { --c1: var(--orange); --c2: var(--orange-d); }
   #bc .btn.green { --c1: var(--green); --c2: var(--green-d); }
   #bc .btn.red { --c1: var(--red); --c2: var(--red-d); }
@@ -407,6 +407,8 @@
   #bc .ship.drag-src { opacity: 0.25; }
   #bc .ship.ghost { opacity: 0.75; pointer-events: none; }
   #bc .ship.ghost.badpos .ship-body { filter: grayscale(0.6) sepia(1) hue-rotate(-50deg) saturate(3); }
+  /* ships that overlap while being arranged: tinted red until they are moved apart */
+  #bc .ship.overlap .ship-body { filter: grayscale(0.4) sepia(1) hue-rotate(-50deg) saturate(4) brightness(0.92); }
   #bc .placing .ship { cursor: grab; }
   #bc .ship .peg { fill: #fff; stroke: #12263f; stroke-width: 2.5; }
   #bc .ship .pegc { fill: #12263f; }
@@ -691,7 +693,7 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=ea74cc31"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=4a0ef7e3"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>

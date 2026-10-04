@@ -757,6 +757,23 @@
     if (r.why === 'off') return T('Not allowed: ships must stay on the coordinate plane.', 'No se puede: los barcos deben quedarse en el plano cartesiano.');
     return T('Not allowed: ships can’t overlap. ' + SHIP[r.other].name + ' is already on ' + pair(r.at[0], r.at[1]) + '.', 'No se puede: los barcos no pueden encimarse. El ' + SHIP[r.other].name + ' ya está en ' + pair(r.at[0], r.at[1]) + '.');
   }
+  // Ships may overlap while the student is still arranging them; START GAME stays locked until they don't.
+  function sharedPoints() {
+    var a = G.my.buddy, b = G.my.galley;
+    if (!a.placed || !b.placed) return [];
+    var kb = cellsOf(b).map(function (c) { return key(c[0], c[1]); });
+    return cellsOf(a).filter(function (c) { return kb.indexOf(key(c[0], c[1])) >= 0; });
+  }
+  function isShared(p) { return sharedPoints().some(function (c) { return c[0] === p[0] && c[1] === p[1]; }); }
+  function overlapMsg() {
+    var sp = sharedPoints().map(function (c) { return pair(c[0], c[1]); }).join(', ');
+    return T('The ships overlap on ' + sp + '. Move or rotate one so they are on different points before you start.', 'Los barcos se enciman en ' + sp + '. Mueve o gira uno para que estén en puntos diferentes antes de empezar.');
+  }
+  // after any change: say where the ship is, or warn (in red) that the ships overlap
+  function placedMsg(text) {
+    if (sharedPoints().length) { placeMsg(overlapMsg(), 'bad'); say(overlapMsg(), true); }
+    else placeMsg(text, 'good');
+  }
   function shipLabel(s) {
     var c = cellsOf(s);
     return SHIP[s.id].name + ', ' + (s.dir === 'h' ? T('horizontal', 'horizontal') : T('vertical', 'vertical')) + ', ' + T('on', 'en') + ' ' + c.map(function (p) { return pair(p[0], p[1]); }).join(', ') +
@@ -789,9 +806,14 @@
       });
       g.addEventListener('keydown', function (e) { shipKey(e, sh.id); });
       g.addEventListener('focus', function () { if (selId !== sh.id) { selId = sh.id; markSel(); } });
-      if (selId === sh.id) cellsOf(s).forEach(function (p) { b.ring(p[0], p[1], 'occ ok', 17); });
+      if (selId === sh.id) cellsOf(s).forEach(function (p) { if (!isShared(p)) b.ring(p[0], p[1], 'occ ok', 17); });
     });
-    $('#btn-start').disabled = !(G.my.buddy.placed && G.my.galley.placed);
+    var shared = sharedPoints();
+    if (shared.length) {
+      SHIPS.forEach(function (sh) { if (b.shipEls[sh.id]) b.shipEls[sh.id].classList.add('overlap'); });
+      shared.forEach(function (c) { b.ring(c[0], c[1], 'occ bad', 21); });
+    }
+    $('#btn-start').disabled = !(G.my.buddy.placed && G.my.galley.placed) || shared.length > 0;
   }
   function markSel() {
     SHIPS.forEach(function (sh) {
@@ -800,7 +822,8 @@
       $('.ship-card[data-id="' + sh.id + '"]').classList.toggle('sel', selId === sh.id);
     });
     B.place.L.ui.innerHTML = '';
-    if (selId && G.my[selId].placed) cellsOf(G.my[selId]).forEach(function (p) { B.place.ring(p[0], p[1], 'occ ok', 17); });
+    if (selId && G.my[selId].placed) cellsOf(G.my[selId]).forEach(function (p) { if (!isShared(p)) B.place.ring(p[0], p[1], 'occ ok', 17); });
+    sharedPoints().forEach(function (c) { B.place.ring(c[0], c[1], 'occ bad', 21); });
   }
   function refocusShip(id) { var g = B.place.shipEls[id]; if (g) g.focus(); }
 
@@ -809,12 +832,11 @@
     var d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[k];
     if (d) {
       e.preventDefault();
-      // slide one point; the edge of the board and the other ship both block the move (and say why)
+      // slide one point; ships may pass over each other (they turn red while they overlap), but not off the board
       var nx = s.x + d[0], ny = s.y + d[1];
       var r = check(G.my, id, nx, ny, s.dir);
-      if (r.ok) { s.x = nx; s.y = ny; Sound.play('place'); renderPlace(); refocusShip(id); placeMsg(T(SHIP[id].name + ' is on ', 'El ' + SHIP[id].name + ' está en ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.', 'good'); return; }
+      if (r.ok || r.why === 'overlap') { s.x = nx; s.y = ny; Sound.play(r.ok ? 'place' : 'invalid'); renderPlace(); refocusShip(id); placedMsg(T(SHIP[id].name + ' is on ', 'El ' + SHIP[id].name + ' está en ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.'); return; }
       flashBad(id, nx, ny, s.dir, r);
-      if (r.why === 'overlap') placeMsg(badWhy(r) + ' ' + T('Go around it or rotate with R.', 'Rodéalo o gíralo con R.'), 'bad');
       return;
     }
     if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') { e.preventDefault(); rotateShip(id, Math.floor(SHIP[id].len / 2)); refocusShip(id); return; }
@@ -824,19 +846,22 @@
     var s = G.my[id], nd = s.dir === 'h' ? 'v' : 'h', len = SHIP[id].len;
     var order = [pivot];
     for (var i = 0; i < len; i++) if (i !== pivot) order.push(i);
-    var first = null;
+    // prefer a spot that doesn't overlap the other ship, but allow one that does (never one off the board)
+    var first = null, spot = null;
     for (i = 0; i < order.length; i++) {
       var k = order[i], c = cellsOf(s)[k];
       var nx = nd === 'h' ? c[0] - k : c[0], ny = nd === 'v' ? c[1] - k : c[1];
       var r = check(G.my, id, nx, ny, nd);
       if (!first) first = { x: nx, y: ny, r: r };
-      if (r.ok) {
-        s.x = nx; s.y = ny; s.dir = nd; selId = id;
-        Sound.play('rotate'); renderPlace();
-        placeMsg(T(SHIP[id].name + ' is now ' + (nd === 'h' ? 'horizontal' : 'vertical') + ': ', 'El ' + SHIP[id].name + ' ahora está en ' + (nd === 'h' ? 'horizontal' : 'vertical') + ': ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.', 'good');
-        say(shipLabel(s));
-        return true;
-      }
+      if (r.ok) { spot = { x: nx, y: ny }; break; }
+      if (r.why === 'overlap' && !spot) spot = { x: nx, y: ny };
+    }
+    if (spot) {
+      s.x = spot.x; s.y = spot.y; s.dir = nd; selId = id;
+      Sound.play('rotate'); renderPlace();
+      placedMsg(T(SHIP[id].name + ' is now ' + (nd === 'h' ? 'horizontal' : 'vertical') + ': ', 'El ' + SHIP[id].name + ' ahora está en ' + (nd === 'h' ? 'horizontal' : 'vertical') + ': ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.');
+      say(shipLabel(s));
+      return true;
     }
     flashBad(id, first.x, first.y, nd, first.r);
     placeMsg(T('No room to rotate ' + SHIP[id].name + ' here. ', 'No hay espacio para girar el ' + SHIP[id].name + ' aquí. ') + badWhy(first.r), 'bad');
@@ -889,6 +914,7 @@
         else b.ring(c[0], c[1], 'occ bad', 17);
       });
       if (r.ok) placeMsg(T('Drop to place on ', 'Suelta para ubicarlo en ') + r.cells.map(function (c) { return pair(c[0], c[1]); }).join(', '), 'good');
+      else if (r.why === 'overlap') placeMsg(T('This overlaps ' + SHIP[r.other].name + '. You can drop it here, but the ships must be on different points before you start.', 'Esto se encima con el ' + SHIP[r.other].name + '. Puedes soltarlo aquí, pero los barcos deben estar en puntos diferentes antes de empezar.'), 'bad');
       else placeMsg(badWhy(r), 'bad');
     } else {
       drag.spot = null;
@@ -930,13 +956,13 @@
       return;
     }
     if (d.over && d.spot) {
-      if (d.spot.r.ok) {
+      if (d.spot.r.ok || d.spot.r.why === 'overlap') {
         G.my[d.id] = { id: d.id, x: d.spot.x, y: d.spot.y, dir: d.dir, placed: true };
         selId = d.id;
-        Sound.play('place');
+        Sound.play(d.spot.r.ok ? 'place' : 'invalid');
         renderPlace();
-        placeMsg(T(SHIP[d.id].name + ' placed on ', SHIP[d.id].name + ' ubicado en ') + cellsOf(G.my[d.id]).map(function (c) { return pair(c[0], c[1]); }).join(', ') + '.', 'good');
-        if (G.my.buddy.placed && G.my.galley.placed) setTimeout(function () { placeMsg(T('Fleet ready! Rotate or move ships, or press START GAME.', '¡Flota lista! Gira o mueve los barcos, o pulsa EMPEZAR.'), 'good'); }, 1400);
+        placedMsg(T(SHIP[d.id].name + ' placed on ', SHIP[d.id].name + ' ubicado en ') + cellsOf(G.my[d.id]).map(function (c) { return pair(c[0], c[1]); }).join(', ') + '.');
+        if (G.my.buddy.placed && G.my.galley.placed && !sharedPoints().length) setTimeout(function () { if (!sharedPoints().length) placeMsg(T('Fleet ready! Rotate or move ships, or press START GAME.', '¡Flota lista! Gira o mueve los barcos, o pulsa EMPEZAR.'), 'good'); }, 1400);
         return;
       }
       Sound.play('invalid');
@@ -957,6 +983,7 @@
   $('#place-back').addEventListener('click', function () { Sound.play('click'); showInstructions(false); });
   $('#btn-start').addEventListener('click', function () {
     if (!(G.my.buddy.placed && G.my.galley.placed)) return;
+    if (sharedPoints().length) { Sound.play('invalid'); placeMsg(overlapMsg(), 'bad'); return; }
     Sound.play('click');
     startBattle();
   });
