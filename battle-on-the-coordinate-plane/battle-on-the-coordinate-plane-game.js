@@ -41,10 +41,13 @@
     hard: { min: -3, max: 3, label: T('3-STAR GENERAL', 'GENERAL DE 3 ESTRELLAS'), name: T('Coordinate Commander', 'Comandante de coordenadas'), hard: true }
   };
   var SHIPS = [
-    { id: 'buddy', len: 3, name: T('Boat Buddy', 'Barquito Amigo'), up: T('BOAT BUDDY', 'BARQUITO AMIGO') },
-    { id: 'galley', len: 4, name: T('Giant Galley', 'Galeón Gigante'), up: T('GIANT GALLEY', 'GALEÓN GIGANTE') }
+    { id: 'smallfry', len: 3, name: T('Small Fry', 'Pececito'), up: T('SMALL FRY', 'PECECITO') },
+    { id: 'buddy', len: 4, name: T('Boat Buddy', 'Barquito Amigo'), up: T('BOAT BUDDY', 'BARQUITO AMIGO') },
+    { id: 'galley', len: 5, name: T('Giant Galley', 'Galeón Gigante'), up: T('GIANT GALLEY', 'GALEÓN GIGANTE') }
   ];
-  var SHIP = { buddy: SHIPS[0], galley: SHIPS[1] };
+  var SHIP = {};
+  SHIPS.forEach(function (sh) { SHIP[sh.id] = sh; });
+  function emptyFleet() { var f = {}; SHIPS.forEach(function (sh) { f[sh.id] = { id: sh.id, placed: false }; }); return f; }
   var TIME = { fire: 35, locate: 35, quiz: 35 };   // Hard mode seconds: enough to read and think, not a typing race
 
   function cellsOf(s) {
@@ -72,15 +75,19 @@
     }
     return { ok: true, cells: c };
   }
+  // a legal random fleet: biggest ship first; on the rare dead end, start over
   function randomFleet() {
-    var f = { buddy: { id: 'buddy', placed: false }, galley: { id: 'galley', placed: false } };
-    ['galley', 'buddy'].forEach(function (id) {
-      for (var n = 0; n < 500; n++) {
-        var dir = Math.random() < 0.5 ? 'h' : 'v';
-        var x = G.min + rnd(G.max - G.min + 1), y = G.min + rnd(G.max - G.min + 1);
-        if (check(f, id, x, y, dir).ok) { f[id] = { id: id, x: x, y: y, dir: dir, placed: true }; break; }
-      }
-    });
+    for (var tries = 0; tries < 50; tries++) {
+      var f = emptyFleet();
+      SHIPS.slice().sort(function (a, b) { return b.len - a.len; }).forEach(function (sh) {
+        for (var n = 0; n < 500; n++) {
+          var dir = Math.random() < 0.5 ? 'h' : 'v';
+          var x = G.min + rnd(G.max - G.min + 1), y = G.min + rnd(G.max - G.min + 1);
+          if (check(f, sh.id, x, y, dir).ok) { f[sh.id] = { id: sh.id, x: x, y: y, dir: dir, placed: true }; break; }
+        }
+      });
+      if (SHIPS.every(function (sh) { return f[sh.id].placed; })) return f;
+    }
     return f;
   }
 
@@ -206,35 +213,49 @@
   // Drawn facing right with the first point at (0, 0) and one board unit = 60. Each white peg marks a point the ship covers.
   var U = 60;
   function shipArt(id) {
-    var s = '';
-    if (id === 'buddy') {
-      s += '<rect class="sel-ring" x="-40" y="-30" width="210" height="60" rx="30"/>';
-      s += '<path d="M-28 -16 Q-34 0 -28 16 L112 16 Q142 16 158 0 Q142 -16 112 -16 Z" fill="#ff7043" stroke="#8a2b12" stroke-width="3" stroke-linejoin="round"/>';
-      s += '<path d="M-20 -9 L110 -9 Q131 -9 144 0 Q131 9 110 9 L-20 9 Q-23 0 -20 -9 Z" fill="#ffd166"/>';
+    var s = '', len = SHIP[id].len, w = (len - 1) * U;
+    if (id === 'smallfry') {
+      // a little yellow fishing boat: wheelhouse, a coiled net, a pennant at the bow
+      s += '<rect class="sel-ring" x="-36" y="-27" width="' + (w + 78) + '" height="54" rx="27"/>';
+      s += '<path d="M-24 -13 Q-29 0 -24 13 L' + (w - 10) + ' 13 Q' + (w + 18) + ' 13 ' + (w + 32) + ' 0 Q' + (w + 18) + ' -13 ' + (w - 10) + ' -13 Z" fill="#ffc93c" stroke="#7a5a00" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<path d="M-17 -7 L' + (w - 12) + ' -7 Q' + (w + 8) + ' -7 ' + (w + 19) + ' 0 Q' + (w + 8) + ' 7 ' + (w - 12) + ' 7 L-17 7 Q-20 0 -17 -7 Z" fill="#fff3c4"/>';
+      s += '<rect x="15" y="-10" width="30" height="20" rx="7" fill="#fff" stroke="#7a5a00" stroke-width="2.5"/>';
+      s += '<rect x="22" y="-4" width="16" height="8" rx="2" fill="#4cc9f0"/>';
+      s += '<circle cx="90" cy="0" r="9" fill="none" stroke="#7a5a00" stroke-width="2"/><path d="M83 -5 L97 5 M83 5 L97 -5 M90 -9 V9" stroke="#7a5a00" stroke-width="1.5"/>';
+      s += '<path d="M' + (w + 14) + ' 0 L' + (w + 24) + ' -7 L' + (w + 24) + ' 7 Z" fill="#e63946"/>';
+    } else if (id === 'buddy') {
+      // the friendly orange boat: cabin, life ring, a blue smokestack, a flag at the bow
+      s += '<rect class="sel-ring" x="-40" y="-30" width="' + (w + 86) + '" height="60" rx="30"/>';
+      s += '<path d="M-28 -16 Q-34 0 -28 16 L' + (w - 8) + ' 16 Q' + (w + 22) + ' 16 ' + (w + 38) + ' 0 Q' + (w + 22) + ' -16 ' + (w - 8) + ' -16 Z" fill="#ff7043" stroke="#8a2b12" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<path d="M-20 -9 L' + (w - 10) + ' -9 Q' + (w + 11) + ' -9 ' + (w + 24) + ' 0 Q' + (w + 11) + ' 9 ' + (w - 10) + ' 9 L-20 9 Q-23 0 -20 -9 Z" fill="#ffd166"/>';
       s += '<rect x="14" y="-12" width="32" height="24" rx="9" fill="#fff" stroke="#8a2b12" stroke-width="2.5"/>';
       s += '<circle cx="30" cy="0" r="5" fill="#4cc9f0" stroke="#8a2b12" stroke-width="1.5"/>';
       s += '<circle cx="90" cy="0" r="9" fill="none" stroke="#fff" stroke-width="5"/><circle cx="90" cy="0" r="9" fill="none" stroke="#e63946" stroke-width="5" stroke-dasharray="7 7"/>';
-      s += '<path d="M138 0 L150 -8 L150 8 Z" fill="#2b7de9"/>';
+      s += '<circle cx="150" cy="0" r="8" fill="#2b7de9" stroke="#8a2b12" stroke-width="2"/>';
+      s += '<path d="M' + (w + 18) + ' 0 L' + (w + 30) + ' -8 L' + (w + 30) + ' 8 Z" fill="#2b7de9"/>';
     } else {
-      s += '<rect class="sel-ring" x="-44" y="-34" width="280" height="68" rx="34"/>';
-      s += '<path d="M-32 -20 Q-38 0 -32 20 L172 20 Q206 20 224 0 Q206 -20 172 -20 Z" fill="#1b9aaa" stroke="#0b4f57" stroke-width="3" stroke-linejoin="round"/>';
-      s += '<path d="M-24 -12 L170 -12 Q196 -12 210 0 Q196 12 170 12 L-24 12 Q-28 0 -24 -12 Z" fill="#e9f5f2"/>';
+      // the big teal galley: two cabins, twin smokestacks, a cargo deck with crates, a flag at the bow
+      s += '<rect class="sel-ring" x="-44" y="-34" width="' + (w + 98) + '" height="68" rx="34"/>';
+      s += '<path d="M-32 -20 Q-38 0 -32 20 L' + (w - 8) + ' 20 Q' + (w + 26) + ' 20 ' + (w + 44) + ' 0 Q' + (w + 26) + ' -20 ' + (w - 8) + ' -20 Z" fill="#1b9aaa" stroke="#0b4f57" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<path d="M-24 -12 L' + (w - 10) + ' -12 Q' + (w + 16) + ' -12 ' + (w + 30) + ' 0 Q' + (w + 16) + ' 12 ' + (w - 10) + ' 12 L-24 12 Q-28 0 -24 -12 Z" fill="#e9f5f2"/>';
       s += '<rect x="13" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
       s += '<circle cx="30" cy="0" r="6" fill="#4cc9f0" stroke="#0b4f57" stroke-width="1.5"/>';
       s += '<rect x="73" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
       s += '<circle cx="83" cy="0" r="6" fill="#ff8a1f" stroke="#0b4f57" stroke-width="2"/><circle cx="97" cy="0" r="6" fill="#ff8a1f" stroke="#0b4f57" stroke-width="2"/>';
-      s += '<rect x="136" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="152" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="144" y="1" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/>';
-      s += '<path d="M200 0 L212 -8 L212 8 Z" fill="#ffd60a"/>';
+      s += '<rect x="133" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
+      s += '<rect x="140" y="-5" width="8" height="10" rx="2" fill="#4cc9f0"/><rect x="152" y="-5" width="8" height="10" rx="2" fill="#4cc9f0"/>';
+      s += '<rect x="196" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="212" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="204" y="1" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/>';
+      s += '<path d="M' + (w + 20) + ' 0 L' + (w + 32) + ' -8 L' + (w + 32) + ' 8 Z" fill="#ffd60a"/>';
     }
     // Standard and Hard: weathered paint and wood decks instead of bright toy colors (each ship keeps its own hue)
     if (G.mode !== 'easy') s = s.replace(/#ff7043/g, '#a5552e').replace(/#8a2b12/g, '#1d262d').replace(/#ffd166/g, '#b8955e')
-      .replace(/#1b9aaa/g, '#2f5f66').replace(/#0b4f57/g, '#1d262d').replace(/#e9f5f2/g, '#b8955e').replace(/#4cc9f0/g, '#9fc3d6');
-    var len = SHIP[id].len;
+      .replace(/#1b9aaa/g, '#2f5f66').replace(/#0b4f57/g, '#1d262d').replace(/#e9f5f2/g, '#b8955e').replace(/#4cc9f0/g, '#9fc3d6')
+      .replace(/#ffc93c/g, '#b8892a').replace(/#7a5a00/g, '#1d262d').replace(/#fff3c4/g, '#c9ae7a');
     for (var i = 0; i < len; i++) s += '<circle class="peg" cx="' + i * U + '" cy="0" r="10"/><circle class="pegc" cx="' + i * U + '" cy="0" r="3.5"/>';
-    // the underwater look, shown once the ship is sunk
-    var w = (len - 1) * U;
-    s += '<g class="water"><path d="M-30 -8 q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0' + (len > 3 ? ' t24 0 t24 0' : '') + '"/>' +
-      '<path d="M-24 10 q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0' + (len > 3 ? ' t24 0 t24 0 t24 0' : '') + '"/>' +
+    // the underwater look, shown once the ship is sunk: wavy water lines across the whole hull, and a few bubbles
+    var waves = '', n = Math.ceil((w + 60) / 24);
+    for (i = 0; i < n; i++) waves += ' t24 0';
+    s += '<g class="water"><path d="M-30 -8 q12 -7 24 0' + waves + '"/><path d="M-24 10 q12 -7 24 0' + waves + '"/>' +
       '<circle cx="' + (w * 0.25 + 10) + '" cy="-24" r="5"/><circle cx="' + (w * 0.6) + '" cy="-28" r="7"/><circle cx="' + (w + 20) + '" cy="-22" r="4"/></g>';
     return s;
   }
@@ -628,14 +649,14 @@
   function showInstructions(fromPause) {
     var m = MODES[G.mode], easy = G.mode === 'easy';
     var steps = [
-      ['&#9875;', T('Place your two ships: <b>Boat Buddy</b> (3 points) and <b>Giant Galley</b> (4 points).', 'Ubica tus dos barcos: <b>Barquito Amigo</b> (3 puntos) y <b>Galeón Gigante</b> (4 puntos).')],
+      ['&#9875;', T('Place your three ships: <b>Small Fry</b> (3 points), <b>Boat Buddy</b> (4 points) and <b>Giant Galley</b> (5 points).', 'Ubica tus tres barcos: <b>Pececito</b> (3 puntos), <b>Barquito Amigo</b> (4 puntos) y <b>Galeón Gigante</b> (5 puntos).')],
       ['&#8596;', T('Ships face <b>horizontally or vertically</b>, never diagonally.', 'Los barcos van en <b>horizontal o vertical</b>, nunca en diagonal.')],
       ['&#128683;', T('Ships <b>cannot overlap</b>.', 'Los barcos <b>no pueden encimarse</b>.')],
       ['&#8635;', T('<b>Click a ship</b> on the board to rotate it (or press <kbd>R</kbd>).', '<b>Haz clic en un barco</b> del tablero para girarlo (o pulsa <kbd>R</kbd>).')],
       ['&#9654;', T('Press <b>START GAME</b> when your fleet is ready.', 'Pulsa <b>EMPEZAR</b> cuando tu flota esté lista.')],
       ['&#127919;', G.hard ? T('On your turn, <b>type the whole ordered pair</b>, like (2, &minus;3), and fire.', 'En tu turno, <b>escribe el par ordenado completo</b>, como (2, &minus;3), y dispara.') : T('On your turn, <b>enter a coordinate</b> and fire.', 'En tu turno, <b>escribe una coordenada</b> y dispara.')],
       ['&#128680;', T('On the computer&rsquo;s turn, it gives you a coordinate. <b>Find that point on your own board.</b>', 'En el turno de la computadora, te da una coordenada. <b>Encuentra ese punto en tu propio tablero.</b>')],
-      ['&#127942;', T('<b>Sink both enemy ships</b> to win!', '<b>¡Hunde los dos barcos enemigos</b> para ganar!')]
+      ['&#127942;', T('<b>Sink all three enemy ships</b> to win!', '<b>¡Hunde los tres barcos enemigos</b> para ganar!')]
     ];
     var noteMode = easy
       ? T('<b>1-Star General:</b> every coordinate is in the <b>first quadrant</b>. x and y go from 0 to 6, and the origin (0, 0) is in the bottom-left corner.', '<b>General de 1 estrella:</b> todas las coordenadas están en el <b>primer cuadrante</b>. x y y van de 0 a 6, y el origen (0, 0) está en la esquina inferior izquierda.')
@@ -691,7 +712,7 @@
   function startPlacement() {
     G.id++;
     stopTimer();
-    G.my = { buddy: { id: 'buddy', placed: false }, galley: { id: 'galley', placed: false } };
+    G.my = emptyFleet();
     selId = null;
     show('place');
     B.place.setup();
@@ -761,15 +782,20 @@
   }
   // Ships may overlap while the student is still arranging them; START GAME stays locked until they don't.
   function sharedPoints() {
-    var a = G.my.buddy, b = G.my.galley;
-    if (!a.placed || !b.placed) return [];
-    var kb = cellsOf(b).map(function (c) { return key(c[0], c[1]); });
-    return cellsOf(a).filter(function (c) { return kb.indexOf(key(c[0], c[1])) >= 0; });
+    // every point covered by more than one placed ship
+    var seen = {}, out = [];
+    SHIPS.forEach(function (sh) {
+      var s = G.my[sh.id];
+      if (!s.placed) return;
+      cellsOf(s).forEach(function (c) { var k = key(c[0], c[1]); seen[k] = (seen[k] || 0) + 1; if (seen[k] === 2) out.push(c); });
+    });
+    return out;
   }
   function isShared(p) { return sharedPoints().some(function (c) { return c[0] === p[0] && c[1] === p[1]; }); }
+  function allPlaced() { return SHIPS.every(function (sh) { return G.my[sh.id].placed; }); }
   function overlapMsg() {
-    var sp = sharedPoints().map(function (c) { return pair(c[0], c[1]); }).join(', ');
-    return T('The ships overlap on ' + sp + '. Move or rotate one so they are on different points before you start.', 'Los barcos se enciman en ' + sp + '. Mueve o gira uno para que estén en puntos diferentes antes de empezar.');
+    var all = sharedPoints(), sp = all.slice(0, 3).map(function (c) { return pair(c[0], c[1]); }).join(', ') + (all.length > 3 ? ' …' : '');   // at most three points, so it fits
+    return T('Ships overlap on ' + sp + '. Move them onto different points to start.', 'Los barcos se enciman en ' + sp + '. Sepáralos en puntos diferentes para empezar.');
   }
   // after any change: say where the ship is, or warn (in red) that the ships overlap
   function placedMsg(text) {
@@ -815,7 +841,7 @@
       SHIPS.forEach(function (sh) { if (b.shipEls[sh.id]) b.shipEls[sh.id].classList.add('overlap'); });
       shared.forEach(function (c) { b.ring(c[0], c[1], 'occ bad', 21); });
     }
-    $('#btn-start').disabled = !(G.my.buddy.placed && G.my.galley.placed) || shared.length > 0;
+    $('#btn-start').disabled = !allPlaced() || shared.length > 0;
   }
   function markSel() {
     SHIPS.forEach(function (sh) {
@@ -916,7 +942,7 @@
         else b.ring(c[0], c[1], 'occ bad', 17);
       });
       if (r.ok) placeMsg(T('Drop to place on ', 'Suelta para ubicarlo en ') + r.cells.map(function (c) { return pair(c[0], c[1]); }).join(', '), 'good');
-      else if (r.why === 'overlap') placeMsg(T('This overlaps ' + SHIP[r.other].name + '. You can drop it here, but the ships must be on different points before you start.', 'Esto se encima con el ' + SHIP[r.other].name + '. Puedes soltarlo aquí, pero los barcos deben estar en puntos diferentes antes de empezar.'), 'bad');
+      else if (r.why === 'overlap') placeMsg(T('This overlaps ' + SHIP[r.other].name + '. You can drop it, but ships must be apart to start.', 'Esto se encima con el ' + SHIP[r.other].name + '. Puedes soltarlo, pero deben estar separados para empezar.'), 'bad');
       else placeMsg(badWhy(r), 'bad');
     } else {
       drag.spot = null;
@@ -964,7 +990,7 @@
         Sound.play(d.spot.r.ok ? 'place' : 'invalid');
         renderPlace();
         placedMsg(T(SHIP[d.id].name + ' placed on ', SHIP[d.id].name + ' ubicado en ') + cellsOf(G.my[d.id]).map(function (c) { return pair(c[0], c[1]); }).join(', ') + '.');
-        if (G.my.buddy.placed && G.my.galley.placed && !sharedPoints().length) setTimeout(function () { if (!sharedPoints().length) placeMsg(T('Fleet ready! Rotate or move ships, or press START GAME.', '¡Flota lista! Gira o mueve los barcos, o pulsa EMPEZAR.'), 'good'); }, 1400);
+        if (allPlaced() && !sharedPoints().length) setTimeout(function () { if (!sharedPoints().length) placeMsg(T('Fleet ready! Rotate or move ships, or press START GAME.', '¡Flota lista! Gira o mueve los barcos, o pulsa EMPEZAR.'), 'good'); }, 1400);
         return;
       }
       Sound.play('invalid');
@@ -984,7 +1010,7 @@
   });
   $('#place-back').addEventListener('click', function () { Sound.play('click'); showInstructions(false); });
   $('#btn-start').addEventListener('click', function () {
-    if (!(G.my.buddy.placed && G.my.galley.placed)) return;
+    if (!allPlaced()) return;
     if (sharedPoints().length) { Sound.play('invalid'); placeMsg(overlapMsg(), 'bad'); return; }
     Sound.play('click');
     startBattle();
@@ -1853,7 +1879,7 @@
       var card = $('#end-card');
       card.className = 'card ' + (win ? 'end-win' : 'end-lose');
       $('#end-h').innerHTML = win ? '&#127942; ' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') : '&#9875; ' + T('BATTLE OVER', 'FIN DE LA BATALLA');
-      $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
+      $('#end-p').innerHTML = win ? T('You sank all three enemy ships!', '¡Hundiste los tres barcos enemigos!') : T('The computer found all three of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus tres barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
       $('#scr-end').hidden = false;
       Sound.play(win ? 'victory' : 'lose');
       say($('#end-h').textContent + '. ' + $('#end-p').textContent, true);

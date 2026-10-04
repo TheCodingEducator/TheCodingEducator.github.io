@@ -170,7 +170,7 @@
   @keyframes bc-jolt { 15% { transform: translate(-6px, 3px) rotate(-0.6deg); } 35% { transform: translate(5px, -3px) rotate(0.5deg); } 55% { transform: translate(-3px, 2px); } 75% { transform: translate(2px, -1px); } }
   @media (prefers-reduced-motion: reduce) { #bc.storm .zone.jolt { animation: none; } }
   #bc.storm .zone.mine { --zc: #0d5f6b; } #bc.storm .zone.foe { --zc: #8f2a20; }
-  #bc.storm .fleet .ico-buddy { background: #a5552e; border-color: #1d262d; } #bc.storm .fleet .ico-galley { background: #2f5f66; border-color: #1d262d; }
+  #bc.storm .fleet .ico-buddy { background: #a5552e; border-color: #1d262d; } #bc.storm .fleet .ico-galley { background: #2f5f66; border-color: #1d262d; } #bc.storm .fleet .ico-smallfry { background: #b8892a; border-color: #1d262d; }
 
   /* ===== Cards used by menus ===== */
   #bc .card { background: var(--card); border-radius: 24px; box-shadow: 0 14px 40px rgba(11,37,69,0.22); padding: clamp(16px, 3cqmin, 30px); }
@@ -232,28 +232,28 @@
   #bc .zone .ztag { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--yellow); color: var(--ink); font: 900 14px 'Nunito', sans-serif;
     border-radius: 999px; padding: 3px 12px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 2; animation: bc-bounce 1s ease-in-out infinite; }
   @keyframes bc-bounce { 50% { transform: translate(-50%, -3px); } }
-  #bc .dock { width: 330px; max-width: 100%; display: flex; flex-direction: column; gap: 8px; }
-  #bc .dock h2 { margin: 0; font-size: clamp(24px, 4cqmin, 34px); line-height: 1; }
-  #bc .dock .dhelp { margin: 0; font-size: 15px; color: var(--ink2); line-height: 1.35; }
-  #bc .ship-card { background: #fff; border-radius: 18px; padding: 8px 10px; box-shadow: 0 4px 12px rgba(11,37,69,0.12); border: 3px solid transparent; }
+  #bc .dock { width: 330px; max-width: 100%; display: flex; flex-direction: column; gap: 6px; }
+  #bc .dock h2 { margin: 0; font-size: clamp(22px, 3.4cqmin, 30px); line-height: 1; }
+  #bc .dock .dhelp { margin: 0; font-size: 13.5px; color: var(--ink2); line-height: 1.35; }
+  #bc .ship-card { background: #fff; border-radius: 18px; padding: 6px 10px; box-shadow: 0 4px 12px rgba(11,37,69,0.12); border: 3px solid transparent; }
   #bc .ship-card.sel { border-color: var(--yellow); box-shadow: 0 0 0 3px var(--ink), 0 4px 12px rgba(11,37,69,0.12); }
   #bc .ship-card .sc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   #bc .ship-card .sc-name { font: 800 20px/1.1 'Baloo 2', sans-serif; }
   #bc .ship-card .sc-len { font-size: 13px; color: var(--ink2); }
   #bc .ship-card .sc-status { font-size: 13px; font-weight: 900; border-radius: 999px; padding: 2px 10px; background: #e5edf6; color: var(--ink2); white-space: nowrap; }
   #bc .ship-card.placed .sc-status { background: #dcf5e7; color: var(--green-d); }
-  #bc .ship-pick { display: block; width: 100%; background: #eaf6ff; border: 2px dashed #9cc3e3; border-radius: 14px; padding: 6px; margin-top: 6px; cursor: grab; touch-action: none; }
+  #bc .ship-pick { display: block; width: 100%; background: #eaf6ff; border: 2px dashed #9cc3e3; border-radius: 14px; padding: 4px; margin-top: 4px; cursor: grab; touch-action: none; }
   #bc .ship-pick:active { cursor: grabbing; }
   #bc .ship-card.placed .ship-pick { opacity: 0.55; border-style: solid; }
-  #bc .ship-pick svg { display: block; width: 100%; height: auto; max-height: 56px; margin: 0 auto; overflow: visible; }
-  #bc .ship-card[data-id="buddy"] .ship-pick svg { width: 75%; }
+  #bc .ship-pick svg { display: block; width: 100%; height: auto; max-height: 42px; margin: 0 auto; overflow: visible; }
+  #bc .ship-card[data-id="smallfry"] .ship-pick svg { width: 62%; } #bc .ship-card[data-id="buddy"] .ship-pick svg { width: 80%; }
   /* fixed sizes so moving a ship never changes the panel's height (the board and buttons stay put) */
-  #bc .sc-pts { margin-top: 6px; font-size: 13px; color: var(--ink); height: 1.4em; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #bc .pmsg { height: calc(4 * 1.3em + 14px); overflow: hidden; border: 2px solid transparent; border-radius: 12px; padding: 7px 12px; font-size: 14px; line-height: 1.3; background: rgba(255,255,255,0.75); }
+  #bc .sc-pts { margin-top: 3px; font-size: 12.5px; color: var(--ink); height: 1.4em; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bc .pmsg { height: calc(3 * 1.3em + 14px); overflow: hidden; border: 2px solid transparent; border-radius: 12px; padding: 7px 12px; font-size: 13px; line-height: 1.3; background: rgba(255,255,255,0.75); }
   #bc .pmsg.bad { background: #ffe1e1; color: #8f1414; border: 2px solid var(--red); }
   #bc .pmsg.good { background: #ddf6e8; color: #0d5c37; }
   #bc .dock .row { margin-top: 0; justify-content: flex-start; }
-  #bc .keys-help { font-size: 13px; color: var(--ink2); line-height: 1.4; margin: 0; }
+  #bc .keys-help { font-size: 12px; color: var(--ink2); line-height: 1.4; margin: 0; }
   #bc kbd { font: 800 12px 'Nunito', sans-serif; background: #fff; border: 1px solid #9fb3c8; border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; color: var(--ink); }
   #bc .drag-ghost { position: absolute; z-index: 60; pointer-events: none; opacity: 0.85; filter: drop-shadow(0 8px 10px rgba(11,37,69,0.35)); }
 
@@ -347,10 +347,11 @@
 
   /* Fleet bar: ship names on wide screens; on tablets, small colored ships (the names stay for screen readers) */
   #bc .fleet .ico { display: none; width: 22px; height: 11px; border-radius: 3px 8px 8px 3px; border: 2px solid; }
-  #bc .fleet .ico-buddy { background: #ff7043; border-color: #8a2b12; }
-  #bc .fleet .ico-galley { background: #1b9aaa; border-color: #0b4f57; width: 28px; }
+  #bc .fleet .ico-buddy { background: #ff7043; border-color: #8a2b12; width: 24px; }
+  #bc .fleet .ico-smallfry { background: #ffc93c; border-color: #7a5a00; width: 18px; }
+  #bc .fleet .ico-galley { background: #1b9aaa; border-color: #0b4f57; width: 30px; }
   #bc .fleet .fl-t .sh { display: none; }
-  @container (max-width: 1250px) {
+  @container (max-width: 1600px) {
     #bc .fleet .ico { display: inline-block; }
     #bc .fleet .nm, #bc[data-screen="battle"] .cbtn .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
     #bc .fleet .fl-t .lg { display: none; } #bc .fleet .fl-t .sh { display: inline; }
@@ -533,7 +534,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Battle on the Coordinate Plane</h1>
-<p class="sr-only">A sea battle game on the coordinate plane. Place two ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink both enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
+<p class="sr-only">A sea battle game on the coordinate plane. Place three ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink all three enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -725,10 +726,10 @@
     <li><strong>quadrant</strong>: one of the four regions made by the axes, numbered I to IV counterclockwise from the upper right</li>
   </ul>
   <h3>Tips for using the game</h3>
-  <p>A real sea battle against the computer, played like the classic ship-hunting board game, where every shot is an ordered pair. Students place two ships, fire by typing coordinates, and must find each of the computer's shots on their own board.</p>
+  <p>A real sea battle against the computer, played like the classic ship-hunting board game, where every shot is an ordered pair. Students place three ships, fire by typing coordinates, and must find each of the computer's shots on their own board.</p>
   <ul>
     <li><strong>Three modes:</strong> 1-Star General uses the first quadrant (0 to 6, origin in the bottom-left). 2-Star General uses all four quadrants (&minus;3 to 3, origin in the center). 3-Star General (Coordinate Commander) uses all four quadrants with a timer, typed ordered pairs, and short Radar Check questions.</li>
-    <li><strong>Ships sit on points, not in squares:</strong> Boat Buddy covers 3 points and Giant Galley covers 4, horizontal or vertical, and they can lie on an axis or across the origin.</li>
+    <li><strong>Ships sit on points, not in squares:</strong> Small Fry covers 3 points, Boat Buddy 4 and Giant Galley 5, horizontal or vertical, and they can lie on an axis or across the origin.</li>
     <li><strong>The plane shows x first, then y:</strong> after every shot a plane starts at the origin, flies left or right for x, turns, then flies up or down for y, with the moves labeled ("2 right", "3 down").</li>
     <li><strong>Repeated shots are allowed on purpose:</strong> a student who keeps reversing x and y sees the plane land somewhere else and the miss stay on the board. The shot log lists every shot.</li>
     <li><strong>Finding the enemy's shots:</strong> the computer names a coordinate and the student must select it on their own board. Wrong picks get feedback about the specific mistake (x and y swapped, wrong direction for x or y) and stronger hints each time; on the fourth try the path is drawn on the board.</li>
@@ -737,7 +738,7 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=8f8a3b16"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=c379322f"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
