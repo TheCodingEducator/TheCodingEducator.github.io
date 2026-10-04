@@ -36,14 +36,13 @@
 
   // ---------------------------------------------------------------- modes and ships
   var MODES = {
-    easy: { min: 0, max: 6, label: T('1-STAR GENERAL', 'GENERAL DE 1 ESTRELLA'), name: T('First Quadrant', 'Primer cuadrante') },
-    standard: { min: -3, max: 3, label: T('2-STAR GENERAL', 'GENERAL DE 2 ESTRELLAS'), name: T('Full Coordinate Plane', 'Plano cartesiano completo') },
-    hard: { min: -3, max: 3, label: T('3-STAR GENERAL', 'GENERAL DE 3 ESTRELLAS'), name: T('Coordinate Commander', 'Comandante de coordenadas'), hard: true }
+    easy: { min: 0, max: 4, label: T('1-STAR GENERAL', 'GENERAL DE 1 ESTRELLA'), name: T('First Quadrant', 'Primer cuadrante') },
+    standard: { min: -2, max: 2, label: T('2-STAR GENERAL', 'GENERAL DE 2 ESTRELLAS'), name: T('Full Coordinate Plane', 'Plano cartesiano completo') },
+    hard: { min: -2, max: 2, label: T('3-STAR GENERAL', 'GENERAL DE 3 ESTRELLAS'), name: T('Coordinate Commander', 'Comandante de coordenadas'), hard: true }
   };
   var SHIPS = [
-    { id: 'smallfry', len: 3, name: T('Small Fry', 'Pececito'), up: T('SMALL FRY', 'PECECITO') },
-    { id: 'buddy', len: 4, name: T('Boat Buddy', 'Barquito Amigo'), up: T('BOAT BUDDY', 'BARQUITO AMIGO') },
-    { id: 'galley', len: 5, name: T('Giant Galley', 'Galeón Gigante'), up: T('GIANT GALLEY', 'GALEÓN GIGANTE') }
+    { id: 'buddy', len: 3, name: T('Boat Buddy', 'Barquito Amigo'), up: T('BOAT BUDDY', 'BARQUITO AMIGO') },
+    { id: 'galley', len: 4, name: T('Giant Galley', 'Galeón Gigante'), up: T('GIANT GALLEY', 'GALEÓN GIGANTE') }
   ];
   var SHIP = {};
   SHIPS.forEach(function (sh) { SHIP[sh.id] = sh; });
@@ -214,16 +213,7 @@
   var U = 60;
   function shipArt(id) {
     var s = '', len = SHIP[id].len, w = (len - 1) * U;
-    if (id === 'smallfry') {
-      // a little yellow fishing boat: wheelhouse, a coiled net, a pennant at the bow
-      s += '<rect class="sel-ring" x="-36" y="-27" width="' + (w + 78) + '" height="54" rx="27"/>';
-      s += '<path d="M-24 -13 Q-29 0 -24 13 L' + (w - 10) + ' 13 Q' + (w + 18) + ' 13 ' + (w + 32) + ' 0 Q' + (w + 18) + ' -13 ' + (w - 10) + ' -13 Z" fill="#ffc93c" stroke="#7a5a00" stroke-width="3" stroke-linejoin="round"/>';
-      s += '<path d="M-17 -7 L' + (w - 12) + ' -7 Q' + (w + 8) + ' -7 ' + (w + 19) + ' 0 Q' + (w + 8) + ' 7 ' + (w - 12) + ' 7 L-17 7 Q-20 0 -17 -7 Z" fill="#fff3c4"/>';
-      s += '<rect x="15" y="-10" width="30" height="20" rx="7" fill="#fff" stroke="#7a5a00" stroke-width="2.5"/>';
-      s += '<rect x="22" y="-4" width="16" height="8" rx="2" fill="#4cc9f0"/>';
-      s += '<circle cx="90" cy="0" r="9" fill="none" stroke="#7a5a00" stroke-width="2"/><path d="M83 -5 L97 5 M83 5 L97 -5 M90 -9 V9" stroke="#7a5a00" stroke-width="1.5"/>';
-      s += '<path d="M' + (w + 14) + ' 0 L' + (w + 24) + ' -7 L' + (w + 24) + ' 7 Z" fill="#e63946"/>';
-    } else if (id === 'buddy') {
+    if (id === 'buddy') {
       // the friendly orange boat: cabin, life ring, a blue smokestack, a flag at the bow
       s += '<rect class="sel-ring" x="-40" y="-30" width="' + (w + 86) + '" height="60" rx="30"/>';
       s += '<path d="M-28 -16 Q-34 0 -28 16 L' + (w - 8) + ' 16 Q' + (w + 22) + ' 16 ' + (w + 38) + ' 0 Q' + (w + 22) + ' -16 ' + (w - 8) + ' -16 Z" fill="#ff7043" stroke="#8a2b12" stroke-width="3" stroke-linejoin="round"/>';
@@ -231,7 +221,7 @@
       s += '<rect x="14" y="-12" width="32" height="24" rx="9" fill="#fff" stroke="#8a2b12" stroke-width="2.5"/>';
       s += '<circle cx="30" cy="0" r="5" fill="#4cc9f0" stroke="#8a2b12" stroke-width="1.5"/>';
       s += '<circle cx="90" cy="0" r="9" fill="none" stroke="#fff" stroke-width="5"/><circle cx="90" cy="0" r="9" fill="none" stroke="#e63946" stroke-width="5" stroke-dasharray="7 7"/>';
-      s += '<circle cx="150" cy="0" r="8" fill="#2b7de9" stroke="#8a2b12" stroke-width="2"/>';
+      if (len >= 4) s += '<circle cx="150" cy="0" r="8" fill="#2b7de9" stroke="#8a2b12" stroke-width="2"/>';   // a smokestack on a longer hull
       s += '<path d="M' + (w + 18) + ' 0 L' + (w + 30) + ' -8 L' + (w + 30) + ' 8 Z" fill="#2b7de9"/>';
     } else {
       // the big teal galley: two cabins, twin smokestacks, a cargo deck with crates, a flag at the bow
@@ -242,15 +232,17 @@
       s += '<circle cx="30" cy="0" r="6" fill="#4cc9f0" stroke="#0b4f57" stroke-width="1.5"/>';
       s += '<rect x="73" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
       s += '<circle cx="83" cy="0" r="6" fill="#ff8a1f" stroke="#0b4f57" stroke-width="2"/><circle cx="97" cy="0" r="6" fill="#ff8a1f" stroke="#0b4f57" stroke-width="2"/>';
-      s += '<rect x="133" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
-      s += '<rect x="140" y="-5" width="8" height="10" rx="2" fill="#4cc9f0"/><rect x="152" y="-5" width="8" height="10" rx="2" fill="#4cc9f0"/>';
-      s += '<rect x="196" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="212" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="204" y="1" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/>';
+      if (len >= 5) {   // a longer galley gets a third cabin
+        s += '<rect x="133" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
+        s += '<rect x="140" y="-5" width="8" height="10" rx="2" fill="#4cc9f0"/><rect x="152" y="-5" width="8" height="10" rx="2" fill="#4cc9f0"/>';
+      }
+      var cx = w - 44;   // cargo crates just behind the bow
+      s += '<rect x="' + cx + '" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="' + (cx + 16) + '" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="' + (cx + 8) + '" y="1" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/>';
       s += '<path d="M' + (w + 20) + ' 0 L' + (w + 32) + ' -8 L' + (w + 32) + ' 8 Z" fill="#ffd60a"/>';
     }
     // Standard and Hard: weathered paint and wood decks instead of bright toy colors (each ship keeps its own hue)
     if (G.mode !== 'easy') s = s.replace(/#ff7043/g, '#a5552e').replace(/#8a2b12/g, '#1d262d').replace(/#ffd166/g, '#b8955e')
-      .replace(/#1b9aaa/g, '#2f5f66').replace(/#0b4f57/g, '#1d262d').replace(/#e9f5f2/g, '#b8955e').replace(/#4cc9f0/g, '#9fc3d6')
-      .replace(/#ffc93c/g, '#b8892a').replace(/#7a5a00/g, '#1d262d').replace(/#fff3c4/g, '#c9ae7a');
+      .replace(/#1b9aaa/g, '#2f5f66').replace(/#0b4f57/g, '#1d262d').replace(/#e9f5f2/g, '#b8955e').replace(/#4cc9f0/g, '#9fc3d6');
     for (var i = 0; i < len; i++) s += '<circle class="peg" cx="' + i * U + '" cy="0" r="10"/><circle class="pegc" cx="' + i * U + '" cy="0" r="3.5"/>';
     // the underwater look, shown once the ship is sunk: wavy water lines across the whole hull, and a few bubbles
     var waves = '', n = Math.ceil((w + 60) / 24);
@@ -268,14 +260,15 @@
     s.innerHTML = '';
     s.setAttribute('viewBox', '0 0 ' + VB + ' ' + VB);
     this.min = G.min; this.max = G.max; this.easy = G.mode === 'easy';
+    this.u = 420 / (this.max - this.min + 1);   // grid spacing: the plane always fills the same space, whatever its size
     this.marks = {}; this.shipEls = {};
     this.L = {};
     var self = this;
     ['bg', 'grid', 'labels', 'pts', 'ships', 'marks', 'ui', 'fx'].forEach(function (n) { self.L[n] = svgEl('g', { 'class': 'L-' + n }, s); });
     this.drawGrid();
   };
-  Board.prototype.sx = function (x) { return ML + (x - this.min + 0.5) * U; };
-  Board.prototype.sy = function (y) { return MT + (this.max + 0.5 - y) * U; };
+  Board.prototype.sx = function (x) { return ML + (x - this.min + 0.5) * this.u; };
+  Board.prototype.sy = function (y) { return MT + (this.max + 0.5 - y) * this.u; };
   Board.prototype.drawGrid = function () {
     var min = this.min, max = this.max, L = this.L, i;
     var x0 = this.sx(min - 0.5), x1 = this.sx(max + 0.5), y0 = this.sy(max + 0.5), y1 = this.sy(min - 0.5);
@@ -313,7 +306,7 @@
     if (!m) return { fx: -99, fy: -99 };
     var p = this.svg.createSVGPoint(); p.x = cx; p.y = cy;
     var q = p.matrixTransform(m.inverse());
-    return { fx: (q.x - ML) / U - 0.5 + this.min, fy: this.max + 0.5 - (q.y - MT) / U };
+    return { fx: (q.x - ML) / this.u - 0.5 + this.min, fy: this.max + 0.5 - (q.y - MT) / this.u };
   };
   Board.prototype.nearest = function (cx, cy, tol) {
     var p = this.toBoard(cx, cy), x = Math.round(p.fx), y = Math.round(p.fy);
@@ -321,8 +314,8 @@
     if (Math.abs(p.fx - x) > tol || Math.abs(p.fy - y) > tol) return null;
     return { x: x, y: y };
   };
-  Board.prototype.unitPx = function () { return this.svg.getBoundingClientRect().width / VB * U; };
-  Board.prototype.shipTransform = function (x, y, dir) { return 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' + (dir === 'v' ? ' rotate(-90)' : ''); };
+  Board.prototype.unitPx = function () { return this.svg.getBoundingClientRect().width / VB * this.u; };
+  Board.prototype.shipTransform = function (x, y, dir) { return 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' + (dir === 'v' ? ' rotate(-90)' : '') + ' scale(' + (this.u / U) + ')'; };   // ship art is drawn at 60 per unit
   Board.prototype.drawShip = function (s, cls, layer) {
     var g = svgEl('g', { 'class': 'ship ship-' + s.id + (cls ? ' ' + cls : ''), transform: this.shipTransform(s.x, s.y, s.dir) }, layer || this.L.ships);
     var body = svgEl('g', { 'class': 'ship-body' }, g);
@@ -649,21 +642,21 @@
   function showInstructions(fromPause) {
     var m = MODES[G.mode], easy = G.mode === 'easy';
     var steps = [
-      ['&#9875;', T('Place your three ships: <b>Small Fry</b> (3 points), <b>Boat Buddy</b> (4 points) and <b>Giant Galley</b> (5 points).', 'Ubica tus tres barcos: <b>Pececito</b> (3 puntos), <b>Barquito Amigo</b> (4 puntos) y <b>Galeón Gigante</b> (5 puntos).')],
+      ['&#9875;', T('Place your two ships: <b>Boat Buddy</b> (4 points) and <b>Giant Galley</b> (5 points).', 'Ubica tus dos barcos: <b>Barquito Amigo</b> (4 puntos) y <b>Galeón Gigante</b> (5 puntos).')],
       ['&#8596;', T('Ships face <b>horizontally or vertically</b>, never diagonally.', 'Los barcos van en <b>horizontal o vertical</b>, nunca en diagonal.')],
       ['&#128683;', T('Ships <b>cannot overlap</b>.', 'Los barcos <b>no pueden encimarse</b>.')],
       ['&#8635;', T('<b>Click a ship</b> on the board to rotate it (or press <kbd>R</kbd>).', '<b>Haz clic en un barco</b> del tablero para girarlo (o pulsa <kbd>R</kbd>).')],
       ['&#9654;', T('Press <b>START GAME</b> when your fleet is ready.', 'Pulsa <b>EMPEZAR</b> cuando tu flota esté lista.')],
-      ['&#127919;', G.hard ? T('On your turn, <b>type the whole ordered pair</b>, like (2, &minus;3), and fire.', 'En tu turno, <b>escribe el par ordenado completo</b>, como (2, &minus;3), y dispara.') : T('On your turn, <b>enter a coordinate</b> and fire.', 'En tu turno, <b>escribe una coordenada</b> y dispara.')],
+      ['&#127919;', G.hard ? T('On your turn, <b>type the whole ordered pair</b>, like (2, &minus;1), and fire.', 'En tu turno, <b>escribe el par ordenado completo</b>, como (2, &minus;1), y dispara.') : T('On your turn, <b>enter a coordinate</b> and fire.', 'En tu turno, <b>escribe una coordenada</b> y dispara.')],
       ['&#128680;', T('On the computer&rsquo;s turn, it gives you a coordinate. <b>Find that point on your own board.</b>', 'En el turno de la computadora, te da una coordenada. <b>Encuentra ese punto en tu propio tablero.</b>')],
-      ['&#127942;', T('<b>Sink all three enemy ships</b> to win!', '<b>¡Hunde los tres barcos enemigos</b> para ganar!')]
+      ['&#127942;', T('<b>Sink both enemy ships</b> to win!', '<b>¡Hunde los dos barcos enemigos</b> para ganar!')]
     ];
     var noteMode = easy
-      ? T('<b>1-Star General:</b> every coordinate is in the <b>first quadrant</b>. x and y go from 0 to 6, and the origin (0, 0) is in the bottom-left corner.', '<b>General de 1 estrella:</b> todas las coordenadas están en el <b>primer cuadrante</b>. x y y van de 0 a 6, y el origen (0, 0) está en la esquina inferior izquierda.')
-      : T('<b>' + (G.hard ? '3' : '2') + '-Star General:</b> coordinates can be <b>negative</b>. x and y go from &minus;3 to 3, and the origin (0, 0) is in the center. Negative x is <b>left</b>; negative y is <b>down</b>.', '<b>General de ' + (G.hard ? '3' : '2') + ' estrellas:</b> las coordenadas pueden ser <b>negativas</b>. x y y van de &minus;3 a 3, y el origen (0, 0) está en el centro. x negativa es a la <b>izquierda</b>; y negativa es <b>hacia abajo</b>.');
+      ? T('<b>1-Star General:</b> every coordinate is in the <b>first quadrant</b>. x and y go from 0 to 4, and the origin (0, 0) is in the bottom-left corner.', '<b>General de 1 estrella:</b> todas las coordenadas están en el <b>primer cuadrante</b>. x y y van de 0 a 4, y el origen (0, 0) está en la esquina inferior izquierda.')
+      : T('<b>' + (G.hard ? '3' : '2') + '-Star General:</b> coordinates can be <b>negative</b>. x and y go from &minus;2 to 2, and the origin (0, 0) is in the center. Negative x is <b>left</b>; negative y is <b>down</b>.', '<b>General de ' + (G.hard ? '3' : '2') + ' estrellas:</b> las coordenadas pueden ser <b>negativas</b>. x y y van de &minus;2 a 2, y el origen (0, 0) está en el centro. x negativa es a la <b>izquierda</b>; y negativa es <b>hacia abajo</b>.');
     var hardNote = G.hard ? '<div class="note hard">' + T('&#9201; <b>Timer:</b> ' + TIME.fire + ' seconds for each task. Out of time on your shot? You lose that shot. On the enemy&rsquo;s shot, the game shows you where it lands. &#128225; <b>Radar Checks</b> pop up between turns: answer them to keep going. Read carefully: the enemy may give <b>y before x</b>!',
       '&#9201; <b>Cronómetro:</b> ' + TIME.fire + ' segundos para cada tarea. ¿Se acaba el tiempo en tu disparo? Pierdes ese disparo. En el disparo enemigo, el juego te muestra dónde cae. &#128225; Entre turnos aparecen <b>Revisiones de radar</b>: respóndelas para seguir. ¡Lee con cuidado: el enemigo puede dar <b>y antes que x</b>!') + '</div>' : '';
-    var exPt = easy ? [2, 3] : [2, -3];
+    var exPt = easy ? [2, 3] : [2, -2];
     var html = '<div class="scr-head"><h1 id="instr-h">' + T('HOW TO PLAY', 'CÓMO JUGAR') + '</h1><p>' + m.label + ': ' + m.name + '</p></div>' +
       '<div class="instr"><div class="card"><ol class="steps">' +
       steps.map(function (s) { return '<li><span class="si" aria-hidden="true">' + s[0] + '</span><span>' + s[1] + '</span></li>'; }).join('') +
@@ -1220,14 +1213,14 @@
   }
   function parsePair(raw) {
     var v = raw.replace(/−/g, '-').replace(/\s+/g, '');
-    if (!v) return { err: T('Type an ordered pair, like (2,-3).', 'Escribe un par ordenado, como (2,-3).') };
+    if (!v) return { err: T('Type an ordered pair, like (2,-1).', 'Escribe un par ordenado, como (2,-1).') };
     if (v[0] !== '(') return { err: T('An ordered pair starts with an opening parenthesis: (', 'Un par ordenado empieza con un paréntesis de apertura: (') };
     if (v[v.length - 1] !== ')') return { err: T('Close the ordered pair with a parenthesis: )', 'Cierra el par ordenado con un paréntesis: )') };
     var inner = v.slice(1, -1);
     if (inner.indexOf(',') < 0) return { err: T('Separate x and y with a comma: (x, y)', 'Separa x y y con una coma: (x, y)') };
     var parts = inner.split(',');
     if (parts.length !== 2 || /[()]/.test(inner)) return { err: T('An ordered pair has exactly two numbers: (x, y)', 'Un par ordenado tiene exactamente dos números: (x, y)') };
-    if (!/^-?\d+$/.test(parts[0]) || !/^-?\d+$/.test(parts[1])) return { err: T('Each coordinate must be a whole number, like (2,-3).', 'Cada coordenada debe ser un número entero, como (2,-3).') };
+    if (!/^-?\d+$/.test(parts[0]) || !/^-?\d+$/.test(parts[1])) return { err: T('Each coordinate must be a whole number, like (2,-1).', 'Cada coordenada debe ser un número entero, como (2,-1).') };
     var x = parseInt(parts[0], 10), y = parseInt(parts[1], 10);
     if (!inRange(x) || !inRange(y)) return { err: rangeMsg() };
     return { x: x, y: y };
@@ -1630,6 +1623,7 @@
     return pair(x, y) + ': ' + signWord(x, 'x') + T(' and ', ' y ') + signWord(y, 'y') + '. ' + T('That is Quadrant ' + QN[q] + '.', 'Eso es el cuadrante ' + QN[q] + '.') +
       ' ' + T('(I: +,+ &nbsp; II: &minus;,+ &nbsp; III: &minus;,&minus; &nbsp; IV: +,&minus;)', '(I: +,+ &nbsp; II: &minus;,+ &nbsp; III: &minus;,&minus; &nbsp; IV: +,&minus;)');
   }
+  function nz() { return (Math.random() < 0.5 ? 1 : -1) * (1 + rnd(G.max)); }   // a nonzero coordinate on the board
   function randPt(nonzero) {
     var x, y;
     do { x = G.min + rnd(G.max - G.min + 1); y = G.min + rnd(G.max - G.min + 1); } while (nonzero && (x === 0 || y === 0));
@@ -1649,7 +1643,7 @@
     var P, i;
     if (k === 'quad') {
       var last = G.ai && G.ai.lastShot;
-      P = Math.random() < 0.3 ? (Math.random() < 0.5 ? { x: 0, y: pick([-3, -2, -1, 1, 2, 3]) } : { x: pick([-3, -2, -1, 1, 2, 3]), y: 0 }) : randPt(true);
+      P = Math.random() < 0.3 ? (Math.random() < 0.5 ? { x: 0, y: nz() } : { x: nz(), y: 0 }) : randPt(true);
       if (last && Math.random() < 0.4) P = last;
       var a = quad(P.x, P.y);
       q.prompt = pick([
@@ -1709,12 +1703,12 @@
     } else if (k === 'inq') {
       var tq = 1 + rnd(4);
       var sx = tq === 1 || tq === 4 ? 1 : -1, sy = tq === 1 || tq === 2 ? 1 : -1;
-      var ans = { x: sx * (1 + rnd(3)), y: sy * (1 + rnd(3)) };
+      var ans = { x: sx * (1 + rnd(G.max)), y: sy * (1 + rnd(G.max)) };
       var list = [ans];
       if (Math.abs(ans.x) !== Math.abs(ans.y) || ans.x !== ans.y) list.push({ x: ans.y, y: ans.x });
       var tries2 = 0;
       while (list.length < 4 && tries2++ < 80) {
-        var D = Math.random() < 0.25 ? (Math.random() < 0.5 ? { x: 0, y: sy * (1 + rnd(3)) } : { x: sx * (1 + rnd(3)), y: 0 }) : randPt(true);
+        var D = Math.random() < 0.25 ? (Math.random() < 0.5 ? { x: 0, y: sy * (1 + rnd(G.max)) } : { x: sx * (1 + rnd(G.max)), y: 0 }) : randPt(true);
         if (quad(D.x, D.y) === tq) continue;
         if (list.some(function (p) { return p.x === D.x && p.y === D.y; })) continue;
         list.push(D);
@@ -1725,8 +1719,8 @@
       q.explain = quadExplain(ans.x, ans.y);
       q.hint = T('Quadrant I: (+,+). II: (&minus;,+). III: (&minus;,&minus;). IV: (+,&minus;). Check x first, then y.', 'Cuadrante I: (+,+). II: (&minus;,+). III: (&minus;,&minus;). IV: (+,&minus;). Revisa primero x, luego y.');
     } else {   // negx
-      var a1 = { x: -(1 + rnd(3)), y: (Math.random() < 0.5 ? 1 : -1) * (1 + rnd(3)) };
-      var opts2 = [a1, { x: 1 + rnd(3), y: -(1 + rnd(3)) }, { x: Math.abs(a1.y), y: a1.x }, { x: rnd(4), y: -(1 + rnd(3)) }];
+      var a1 = { x: -(1 + rnd(G.max)), y: (Math.random() < 0.5 ? 1 : -1) * (1 + rnd(G.max)) };
+      var opts2 = [a1, { x: 1 + rnd(G.max), y: -(1 + rnd(G.max)) }, { x: Math.abs(a1.y), y: a1.x }, { x: rnd(G.max + 1), y: -(1 + rnd(G.max)) }];
       var uniq = [];
       opts2.forEach(function (p) { if (!uniq.some(function (u) { return u.x === p.x && u.y === p.y; }) && (p === a1 || p.x >= 0)) uniq.push(p); });
       q.prompt = T('Which ordered pair has a <b>negative x-coordinate</b>?', '¿Qué par ordenado tiene una <b>coordenada x negativa</b>?');
@@ -1879,7 +1873,7 @@
       var card = $('#end-card');
       card.className = 'card ' + (win ? 'end-win' : 'end-lose');
       $('#end-h').innerHTML = win ? '&#127942; ' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') : '&#9875; ' + T('BATTLE OVER', 'FIN DE LA BATALLA');
-      $('#end-p').innerHTML = win ? T('You sank all three enemy ships!', '¡Hundiste los tres barcos enemigos!') : T('The computer found all three of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus tres barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
+      $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
       $('#scr-end').hidden = false;
       Sound.play(win ? 'victory' : 'lose');
       say($('#end-h').textContent + '. ' + $('#end-p').textContent, true);

@@ -170,7 +170,7 @@
   @keyframes bc-jolt { 15% { transform: translate(-6px, 3px) rotate(-0.6deg); } 35% { transform: translate(5px, -3px) rotate(0.5deg); } 55% { transform: translate(-3px, 2px); } 75% { transform: translate(2px, -1px); } }
   @media (prefers-reduced-motion: reduce) { #bc.storm .zone.jolt { animation: none; } }
   #bc.storm .zone.mine { --zc: #0d5f6b; } #bc.storm .zone.foe { --zc: #8f2a20; }
-  #bc.storm .fleet .ico-buddy { background: #a5552e; border-color: #1d262d; } #bc.storm .fleet .ico-galley { background: #2f5f66; border-color: #1d262d; } #bc.storm .fleet .ico-smallfry { background: #b8892a; border-color: #1d262d; }
+  #bc.storm .fleet .ico-buddy { background: #a5552e; border-color: #1d262d; } #bc.storm .fleet .ico-galley { background: #2f5f66; border-color: #1d262d; }
 
   /* ===== Cards used by menus ===== */
   #bc .card { background: var(--card); border-radius: 24px; box-shadow: 0 14px 40px rgba(11,37,69,0.22); padding: clamp(16px, 3cqmin, 30px); }
@@ -246,7 +246,7 @@
   #bc .ship-pick:active { cursor: grabbing; }
   #bc .ship-card.placed .ship-pick { opacity: 0.55; border-style: solid; }
   #bc .ship-pick svg { display: block; width: 100%; height: auto; max-height: 42px; margin: 0 auto; overflow: visible; }
-  #bc .ship-card[data-id="smallfry"] .ship-pick svg { width: 62%; } #bc .ship-card[data-id="buddy"] .ship-pick svg { width: 80%; }
+  #bc .ship-card[data-id="buddy"] .ship-pick svg { width: 80%; }
   /* fixed sizes so moving a ship never changes the panel's height (the board and buttons stay put) */
   #bc .sc-pts { margin-top: 3px; font-size: 12.5px; color: var(--ink); height: 1.4em; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #bc .pmsg { height: calc(3 * 1.3em + 14px); overflow: hidden; border: 2px solid transparent; border-radius: 12px; padding: 7px 12px; font-size: 13px; line-height: 1.3; background: rgba(255,255,255,0.75); }
@@ -348,7 +348,6 @@
   /* Fleet bar: ship names on wide screens; on tablets, small colored ships (the names stay for screen readers) */
   #bc .fleet .ico { display: none; width: 22px; height: 11px; border-radius: 3px 8px 8px 3px; border: 2px solid; }
   #bc .fleet .ico-buddy { background: #ff7043; border-color: #8a2b12; width: 24px; }
-  #bc .fleet .ico-smallfry { background: #ffc93c; border-color: #7a5a00; width: 18px; }
   #bc .fleet .ico-galley { background: #1b9aaa; border-color: #0b4f57; width: 30px; }
   #bc .fleet .fl-t .sh { display: none; }
   @container (max-width: 1600px) {
@@ -534,7 +533,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Battle on the Coordinate Plane</h1>
-<p class="sr-only">A sea battle game on the coordinate plane. Place three ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink all three enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
+<p class="sr-only">A sea battle game on the coordinate plane. Place two ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink both enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -587,14 +586,14 @@
               <div class="m-art" aria-hidden="true"><svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="8" fill="#fff"/><g stroke="#8fb7a3" stroke-width="1.5"><path d="M30 14V82M42 14V82M54 14V82M66 14V82M78 14V82M18 70H88M18 58H88M18 46H88M18 34H88M18 22H88"/></g><path d="M18 82H90M18 82V10" stroke="#0b2545" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="82" r="5" fill="#c2410c"/><circle cx="54" cy="46" r="6" fill="#19a463" stroke="#0b2545" stroke-width="2"/></svg></div>
               <div class="m-name" data-es="Primer cuadrante">First Quadrant</div>
               <div class="m-desc" data-es="Practica cómo ubicar puntos con coordenadas positivas.">Practice plotting points using positive coordinates.</div>
-              <ul><li data-es="x de 0 a 6, y de 0 a 6">x = 0 to 6, y = 0 to 6</li><li data-es="El origen (0, 0) está abajo a la izquierda">Origin (0, 0) in the bottom-left</li></ul>
+              <ul><li data-es="x de 0 a 4, y de 0 a 4">x = 0 to 4, y = 0 to 4</li><li data-es="El origen (0, 0) está abajo a la izquierda">Origin (0, 0) in the bottom-left</li></ul>
             </button>
             <button type="button" class="mode std" data-mode="standard">
               <div class="m-top"><span class="m-stars" role="img" aria-label="2 stars" data-es-aria="2 estrellas"><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg></span><span class="m-lvl" data-es="GENERAL DE 2 ESTRELLAS">2-STAR GENERAL</span></div>
               <div class="m-art" aria-hidden="true"><svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="8" fill="#fff"/><g stroke="#9db4d6" stroke-width="1.5"><path d="M20 12V88M32 12V88M44 12V88M56 12V88M68 12V88M80 12V88M12 20H88M12 32H88M12 44H88M12 56H88M12 68H88M12 80H88"/></g><path d="M8 50H92M50 8V92" stroke="#0b2545" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="50" r="5" fill="#c2410c"/><circle cx="26" cy="74" r="6" fill="#2b7de9" stroke="#0b2545" stroke-width="2"/><circle cx="74" cy="26" r="6" fill="#2b7de9" stroke="#0b2545" stroke-width="2"/></svg></div>
               <div class="m-name" data-es="Plano cartesiano completo">Full Coordinate Plane</div>
               <div class="m-desc" data-es="Practica cómo ubicar puntos en los cuatro cuadrantes.">Practice plotting points in all four quadrants.</div>
-              <ul><li data-es="x de &minus;3 a 3, y de &minus;3 a 3">x = &minus;3 to 3, y = &minus;3 to 3</li><li data-es="El origen (0, 0) está en el centro">Origin (0, 0) in the center</li></ul>
+              <ul><li data-es="x de &minus;2 a 2, y de &minus;2 a 2">x = &minus;2 to 2, y = &minus;2 to 2</li><li data-es="El origen (0, 0) está en el centro">Origin (0, 0) in the center</li></ul>
             </button>
             <button type="button" class="mode hard" data-mode="hard">
               <div class="m-top"><span class="m-stars" role="img" aria-label="3 stars" data-es-aria="3 estrellas"><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg></span><span class="m-lvl" data-es="GENERAL DE 3 ESTRELLAS">3-STAR GENERAL</span></div>
@@ -697,12 +696,12 @@
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.5.G.A.2</span>
       <p>Represent real world and mathematical problems by graphing points in the first quadrant of the coordinate plane, and interpret coordinate values of points in the context of the situation.</p>
-      <p class="applies">Applies to: 1-Star General mode (x and y from 0 to 6).</p>
+      <p class="applies">Applies to: 1-Star General mode (x and y from 0 to 4).</p>
     </div>
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.6.NS.C.6</span>
       <p>Understand a rational number as a point on the number line. Extend number line diagrams and coordinate axes to represent points on the line and in the plane with negative number coordinates. (6.NS.C.6b: signs of numbers in ordered pairs indicate locations in quadrants. 6.NS.C.6c: find and position pairs of integers on a coordinate plane.)</p>
-      <p class="applies">Applies to: 2-Star and 3-Star General modes (&minus;3 to 3), quadrant challenges, and finding the computer's shots.</p>
+      <p class="applies">Applies to: 2-Star and 3-Star General modes (&minus;2 to 2), quadrant challenges, and finding the computer's shots.</p>
     </div>
     <div class="standard-entry">
       <span class="code">CCSS.MATH.CONTENT.6.NS.C.8</span>
@@ -726,19 +725,19 @@
     <li><strong>quadrant</strong>: one of the four regions made by the axes, numbered I to IV counterclockwise from the upper right</li>
   </ul>
   <h3>Tips for using the game</h3>
-  <p>A real sea battle against the computer, played like the classic ship-hunting board game, where every shot is an ordered pair. Students place three ships, fire by typing coordinates, and must find each of the computer's shots on their own board.</p>
+  <p>A real sea battle against the computer, played like the classic ship-hunting board game, where every shot is an ordered pair. Students place two ships, fire by typing coordinates, and must find each of the computer's shots on their own board.</p>
   <ul>
-    <li><strong>Three modes:</strong> 1-Star General uses the first quadrant (0 to 6, origin in the bottom-left). 2-Star General uses all four quadrants (&minus;3 to 3, origin in the center). 3-Star General (Coordinate Commander) uses all four quadrants with a timer, typed ordered pairs, and short Radar Check questions.</li>
-    <li><strong>Ships sit on points, not in squares:</strong> Small Fry covers 3 points, Boat Buddy 4 and Giant Galley 5, horizontal or vertical, and they can lie on an axis or across the origin.</li>
+    <li><strong>Three modes:</strong> 1-Star General uses the first quadrant (0 to 4, origin in the bottom-left). 2-Star General uses all four quadrants (&minus;2 to 2, origin in the center). 3-Star General (Coordinate Commander) uses all four quadrants with a timer, typed ordered pairs, and short Radar Check questions.</li>
+    <li><strong>Ships sit on points, not in squares:</strong> Boat Buddy covers 4 points and Giant Galley 5, horizontal or vertical, and they can lie on an axis or across the origin.</li>
     <li><strong>The plane shows x first, then y:</strong> after every shot a plane starts at the origin, flies left or right for x, turns, then flies up or down for y, with the moves labeled ("2 right", "3 down").</li>
     <li><strong>Repeated shots are allowed on purpose:</strong> a student who keeps reversing x and y sees the plane land somewhere else and the miss stay on the board. The shot log lists every shot.</li>
     <li><strong>Finding the enemy's shots:</strong> the computer names a coordinate and the student must select it on their own board. Wrong picks get feedback about the specific mistake (x and y swapped, wrong direction for x or y) and stronger hints each time; on the fourth try the path is drawn on the board.</li>
-    <li><strong>3-Star General mode:</strong> the computer's shots are given in words, often with y first ("The y-coordinate is &minus;2 and the x-coordinate is 3", "Move 2 units down and 3 units right"). Students type full ordered pairs with parentheses and a comma. Radar Checks ask about quadrants, points on an axis, reading a highlighted point, and comparing points. Running out of time skips your shot, shows where the enemy's shot landed, or reveals the Radar Check answer.</li>
+    <li><strong>3-Star General mode:</strong> the computer's shots are given in words, often with y first ("The y-coordinate is &minus;2 and the x-coordinate is 1", "Move 2 units down and 1 unit right"). Students type full ordered pairs with parentheses and a comma. Radar Checks ask about quadrants, points on an axis, reading a highlighted point, and comparing points. Running out of time skips your shot, shows where the enemy's shot landed, or reveals the Radar Check answer.</li>
     <li><strong>Nothing is saved:</strong> no accounts, no scores kept, no data stored. Every game starts fresh.</li>
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=c379322f"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=e4b3e2f9"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
