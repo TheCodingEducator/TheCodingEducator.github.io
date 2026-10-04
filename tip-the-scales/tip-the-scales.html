@@ -666,7 +666,7 @@
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
-<script src="../site-keyboard.js?v=813246f6"></script>
+<script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=92be3a90"></script>
 <script src="../site-layout.js?v=8c636f7a"></script>
@@ -2266,6 +2266,8 @@
       var score = along + Math.abs(dir[0] ? to.y - from.y : to.x - from.x) * 2.5;
       if (score < bestScore) { bestScore = score; best = el; }
     });
+    // in a pop-up whose buttons sit side by side (like "Keep Playing" / "Yes, Exit"), up and down step through them too
+    if (!best && popup && dir[0] === 0) best = els[(cur + (dir[1] > 0 ? 1 : els.length - 1)) % els.length];
     if (best) best.focus();
   });
   // All games, Fullscreen and Standards are mouse-only here: they're out of the Tab order (tabindex="-1"), and

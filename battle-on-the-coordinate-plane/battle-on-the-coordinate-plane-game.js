@@ -778,7 +778,7 @@
       var r = check(G.my, id, nx, ny, s.dir);
       if (r.ok) { s.x = nx; s.y = ny; Sound.play('place'); renderPlace(); refocusShip(id); placeMsg(T(SHIP[id].name + ' is on ', 'El ' + SHIP[id].name + ' está en ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.', 'good'); return; }
       flashBad(id, nx, ny, s.dir, r);
-      if (r.why === 'overlap') placeMsg(badWhy(r) + ' ' + T('Move around it, rotate with R, or move the other ship first.', 'Rodéalo, gíralo con R o mueve primero el otro barco.'), 'bad');
+      if (r.why === 'overlap') placeMsg(badWhy(r) + ' ' + T('Go around it or rotate with R.', 'Rodéalo o gíralo con R.'), 'bad');
       return;
     }
     if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') { e.preventDefault(); rotateShip(id, Math.floor(SHIP[id].len / 2)); refocusShip(id); return; }
@@ -1221,8 +1221,8 @@
     say(T('Firing at ', 'Disparando a ') + pair(x, y) + (note ? '. ' + note : ''));
     var ring = b.targetRing(x, y), lbl = b.coordLabel(x, y, pair(x, y));
     setPin('&#127919; ' + T('Firing at ', 'Disparando a ') + pair(x, y));
-    // Standard and Hard sometimes ask for the turn first (Easy always turns the same way, so it never asks)
-    var ask = G.mode !== 'easy' && x !== 0 && y !== 0 && Math.random() < 0.4;
+    // Hard (3-star general) sometimes asks for the turn first
+    var ask = G.hard && x !== 0 && y !== 0 && Math.random() < 0.4;
     var flight, turn = null;
     return (ask ? predictTurn(id, x, y, head).then(function (tw) { turn = tw; panel(info + '<div class="fb info">' + tw.why + '</div>'); }) : (panel(info), wait(0))).then(function () {
       Sound.play('fire');

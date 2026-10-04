@@ -687,6 +687,7 @@ function drawExitConfirmOverlay() {
   // keyboard: left/right choose, Space/Enter confirms, Esc cancels
   if (keyWentDown("left") || keyWentDown("a")) exitSel = 0;
   if (keyWentDown("right") || keyWentDown("d")) exitSel = 1;
+  if (keyWentDown("up") || keyWentDown("down") || keyWentDown("w") || keyWentDown("s")) exitSel = 1 - exitSel;   // side-by-side buttons: up / down switch too
   if (hoverYes) exitSel = 0; else if (hoverNo) exitSel = 1;
   fill(exitSel === 0 ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(exitSel === 0 ? 4 : 2); rect(60, 230, 130, 50, 10);
   fill(exitSel === 1 ? "#229954" : "#27ae60"); strokeWeight(exitSel === 1 ? 4 : 2); rect(210, 230, 130, 50, 10);

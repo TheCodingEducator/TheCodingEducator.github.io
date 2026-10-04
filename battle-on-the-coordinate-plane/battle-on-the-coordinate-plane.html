@@ -244,8 +244,9 @@
   #bc .ship-card.placed .ship-pick { opacity: 0.55; border-style: solid; }
   #bc .ship-pick svg { display: block; width: 100%; height: auto; max-height: 56px; margin: 0 auto; overflow: visible; }
   #bc .ship-card[data-id="buddy"] .ship-pick svg { width: 75%; }
-  #bc .sc-pts { margin-top: 6px; font-size: 14px; color: var(--ink); min-height: 1.3em; }
-  #bc .pmsg { min-height: 2.6em; border-radius: 12px; padding: 7px 12px; font-size: 15px; line-height: 1.3; background: rgba(255,255,255,0.75); }
+  /* fixed sizes so moving a ship never changes the panel's height (the board and buttons stay put) */
+  #bc .sc-pts { margin-top: 6px; font-size: 13px; color: var(--ink); height: 1.4em; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bc .pmsg { height: calc(4 * 1.3em + 14px); overflow: hidden; border: 2px solid transparent; border-radius: 12px; padding: 7px 12px; font-size: 14px; line-height: 1.3; background: rgba(255,255,255,0.75); }
   #bc .pmsg.bad { background: #ffe1e1; color: #8f1414; border: 2px solid var(--red); }
   #bc .pmsg.good { background: #ddf6e8; color: #0d5c37; }
   #bc .dock .row { margin-top: 0; justify-content: flex-start; }
@@ -473,7 +474,7 @@
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
-<script src="../site-keyboard.js?v=813246f6"></script>
+<script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-layout.js?v=8c636f7a"></script>
 <script src="../site-sound.js?v=4daed956"></script>
@@ -672,7 +673,7 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=164b2019"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=b22fc962"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>

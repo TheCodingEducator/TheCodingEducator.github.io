@@ -416,6 +416,7 @@ function kbKeyPressed() {
     kbShown = true;
     if (keyCode === LEFT_ARROW) { kbExitSel = 'cancel'; return true; }
     if (keyCode === RIGHT_ARROW) { kbExitSel = 'exit'; return true; }
+    if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) { kbExitSel = kbExitSel === 'exit' ? 'cancel' : 'exit'; return true; }   // the two buttons sit side by side: up / down switch too
     if (keyCode === ESCAPE) { confirmExitOpen = false; kbExitSel = 'cancel'; playSound('click'); return true; }
     if (kbConfirmKey()) {
       confirmExitOpen = false; playSound('click');

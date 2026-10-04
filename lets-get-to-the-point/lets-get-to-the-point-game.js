@@ -1496,7 +1496,7 @@ function drawExitConfirmOverlay(){
     if(hoverYes){ exitConfirmPending=false; STATE="START"; }
     else if(hoverNo){ exitConfirmPending=false; }
   }
-  if(keyWentDown("left")||keyWentDown("right")) exitConfirmSel=1-exitConfirmSel;
+  if(keyWentDown("left")||keyWentDown("right")||keyWentDown("up")||keyWentDown("down")) exitConfirmSel=1-exitConfirmSel;
   if(keyWentDown("escape")){ exitConfirmPending=false; return; }
   if(keyWentDown("space")||keyWentDown("enter")){
     if(exitConfirmSel===0){ exitConfirmPending=false; STATE="START"; }
