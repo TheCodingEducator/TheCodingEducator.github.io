@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://thecodingeducator.github.io/sitemap.xml
-Sitemap: https://thecodingeducator.github.io/sitemap.txt
+Sitemap: https://studentmathgames.com/sitemap.xml
+Sitemap: https://studentmathgames.com/sitemap.txt
