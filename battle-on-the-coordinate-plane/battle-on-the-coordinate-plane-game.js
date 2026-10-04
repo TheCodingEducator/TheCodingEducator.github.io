@@ -1208,14 +1208,15 @@
     if (same) return T('You already fired at ' + pair(x, y) + '. That’s allowed: the plane will fly to the same point again.', 'Ya disparaste a ' + pair(x, y) + '. Se vale: el avión volará otra vez al mismo punto.');
     return '';
   }
-  // Before some flights: which way will the plane turn at the x-axis? Right then up, or left then down, is a left turn
-  // (counterclockwise); right then down, or left then up, is a right turn (clockwise).
+  // Before some flights: which way will the plane turn at the x-axis? Points in Quadrants I and III need a
+  // counterclockwise turn; points in Quadrants II and IV need a clockwise turn.
   function turnWords(x, y) {
     var ccw = x * y > 0;
     return {
       ccw: ccw,
-      why: T('Flying <b>' + (x > 0 ? 'RIGHT' : 'LEFT') + '</b>, then turning to fly <b>' + (y > 0 ? 'UP' : 'DOWN') + '</b>, is a turn to the ' + (ccw ? 'left' : 'right') + ': <b>' + (ccw ? '&#8634; counterclockwise' : '&#8635; clockwise') + '</b>.',
-        'Volar a la <b>' + (x > 0 ? 'DERECHA' : 'IZQUIERDA') + '</b> y luego girar para volar hacia <b>' + (y > 0 ? 'ARRIBA' : 'ABAJO') + '</b> es girar a la ' + (ccw ? 'izquierda' : 'derecha') + ': <b>' + (ccw ? '&#8634; sentido antihorario' : '&#8635; sentido horario') + '</b>.')
+      // the explanation names only the turn (clockwise / counterclockwise), never left or right
+      why: T('At ' + pair(x, 0) + ' the plane turns <b>' + (ccw ? '&#8634; counterclockwise' : '&#8635; clockwise') + '</b> to fly <b>' + (y > 0 ? 'UP' : 'DOWN') + '</b> to ' + pair(x, y) + '. In Quadrants ' + (ccw ? 'I and III' : 'II and IV') + ' the turn is always ' + (ccw ? 'counterclockwise' : 'clockwise') + '.',
+        'En ' + pair(x, 0) + ' el avión gira en <b>' + (ccw ? '&#8634; sentido antihorario' : '&#8635; sentido horario') + '</b> para volar hacia <b>' + (y > 0 ? 'ARRIBA' : 'ABAJO') + '</b> hasta ' + pair(x, y) + '. En los cuadrantes ' + (ccw ? 'I y III' : 'II y IV') + ' el giro siempre es en sentido ' + (ccw ? 'antihorario' : 'horario') + '.')
     };
   }
   function predictTurn(id, x, y, head) {
