@@ -147,7 +147,13 @@
       planeStop: stopHum,
       lock: function () { tone(1000, 0.08, { type: 'square', vol: 0.06 }); tone(1400, 0.1, { type: 'square', vol: 0.06, delay: 0.1 }); },
       hit: function () { noise(1.0, { f: 2200, fto: 120, vol: 0.55 }); tone(110, 0.6, { type: 'sine', to: 38, vol: 0.5 }); tone(660, 0.25, { type: 'triangle', to: 990, vol: 0.12, delay: 0.25 }); },
-      miss: function () { noise(0.7, { ft: 'bandpass', f: 2600, fto: 500, vol: 0.32 }); tone(900, 0.18, { to: 350, vol: 0.07, delay: 0.05 }); },
+      // something plopping into water: a soft thud as it hits, the rising "bloop" of the bubble, a smaller bubble after
+      miss: function () {
+        tone(180, 0.09, { type: 'sine', to: 70, vol: 0.3, attack: 0.003 });
+        noise(0.12, { ft: 'lowpass', f: 1400, fto: 300, vol: 0.12, attack: 0.003 });
+        tone(320, 0.12, { type: 'sine', to: 1250, vol: 0.4, attack: 0.004, delay: 0.02 });
+        tone(520, 0.07, { type: 'sine', to: 1500, vol: 0.14, attack: 0.004, delay: 0.17 });
+      },
       correct: function () { tone(660, 0.12, { type: 'triangle', vol: 0.22 }); tone(990, 0.22, { type: 'triangle', vol: 0.22, delay: 0.1 }); },
       wrong: function () { tone(330, 0.15, { type: 'triangle', to: 260, vol: 0.22 }); tone(230, 0.26, { type: 'triangle', to: 170, vol: 0.22, delay: 0.14 }); },
       alarm: function () { tone(560, 0.2, { type: 'square', to: 880, vol: 0.07 }); tone(880, 0.2, { type: 'square', to: 560, vol: 0.07, delay: 0.2 }); tone(560, 0.2, { type: 'square', to: 880, vol: 0.07, delay: 0.4 }); },
