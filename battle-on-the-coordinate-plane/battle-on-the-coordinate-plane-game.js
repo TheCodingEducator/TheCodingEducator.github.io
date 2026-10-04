@@ -36,9 +36,9 @@
 
   // ---------------------------------------------------------------- modes and ships
   var MODES = {
-    easy: { min: 0, max: 6, label: T('EASY', 'FÁCIL'), name: T('First Quadrant', 'Primer cuadrante') },
-    standard: { min: -3, max: 3, label: T('STANDARD', 'ESTÁNDAR'), name: T('Full Coordinate Plane', 'Plano cartesiano completo') },
-    hard: { min: -3, max: 3, label: T('HARD', 'DIFÍCIL'), name: T('Coordinate Commander', 'Comandante de coordenadas'), hard: true }
+    easy: { min: 0, max: 6, label: T('1-STAR GENERAL', 'GENERAL DE 1 ESTRELLA'), name: T('First Quadrant', 'Primer cuadrante') },
+    standard: { min: -3, max: 3, label: T('2-STAR GENERAL', 'GENERAL DE 2 ESTRELLAS'), name: T('Full Coordinate Plane', 'Plano cartesiano completo') },
+    hard: { min: -3, max: 3, label: T('3-STAR GENERAL', 'GENERAL DE 3 ESTRELLAS'), name: T('Coordinate Commander', 'Comandante de coordenadas'), hard: true }
   };
   var SHIPS = [
     { id: 'buddy', len: 3, name: T('Boat Buddy', 'Barquito Amigo'), up: T('BOAT BUDDY', 'BARQUITO AMIGO') },
@@ -85,13 +85,9 @@
   }
 
   // ---------------------------------------------------------------- sound effects (no music)
-  // Recorded files (played through SiteSound) for the everyday sounds; the splashes, explosions and sinking are
-  // synthesized so each one can be shaped to the moment.
+  // All synthesized here, so each one can be shaped to the moment and none is shared with another game.
   var Sound = (function () {
     var ctx = null, master = null, muted = false, noiseBuf = null;
-    var FILES = ['click', 'place', 'rotate', 'invalid', 'plane', 'correct', 'wrong', 'victory', 'lose', 'timeout', 'tick'];
-    function file(n) { return 'sounds/' + n + '.mp3'; }
-    if (window.SiteSound) SiteSound.preload(FILES.map(file));
     function ac() {
       if (!ctx) {
         try { ctx = (window.SiteSound && SiteSound.context && SiteSound.context()) || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; }
@@ -133,7 +129,48 @@
       src.connect(f); f.connect(g); g.connect(master);
       src.start(t); src.stop(t + d + 0.05);
     }
+    // a ship's bell: a few inharmonic partials that ring and fade
+    function bell(f, delay, vol) {
+      [[1, 1], [2.76, 0.45], [5.4, 0.22], [8.93, 0.1]].forEach(function (p) { tone(f * p[0], 1.1 / Math.sqrt(p[0]), { type: 'sine', vol: vol * p[1], attack: 0.004, delay: delay }); });
+    }
+    // a low foghorn blast
+    function horn(f, d, delay, vol, to) {
+      var c = ac(); if (!c || muted) return;
+      var t = c.currentTime + (delay || 0), o1 = c.createOscillator(), o2 = c.createOscillator(), lp = c.createBiquadFilter(), g = c.createGain();
+      o1.type = o2.type = 'sawtooth'; o1.frequency.setValueAtTime(f, t); o2.frequency.setValueAtTime(f * 1.006, t);
+      if (to) { o1.frequency.exponentialRampToValueAtTime(to, t + d); o2.frequency.exponentialRampToValueAtTime(to * 1.006, t + d); }
+      lp.type = 'lowpass'; lp.frequency.value = 520;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.12); g.gain.setValueAtTime(vol, t + d - 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(master);
+      o1.start(t); o2.start(t); o1.stop(t + d + 0.05); o2.stop(t + d + 0.05);
+    }
+    // Every sound here is made for this game alone, so none of them repeats a sound from another game on the site.
     var fx = {
+      click: function () { noise(0.035, { ft: 'bandpass', f: 2600, vol: 0.18, attack: 0.002 }); tone(1750, 0.03, { type: 'sine', vol: 0.06, attack: 0.002 }); },
+      place: function () { tone(150, 0.16, { type: 'triangle', to: 85, vol: 0.4, attack: 0.004 }); noise(0.09, { f: 700, vol: 0.16, attack: 0.003 }); },
+      rotate: function () { noise(0.22, { ft: 'bandpass', f: 500, fto: 2600, vol: 0.12, attack: 0.03 }); tone(330, 0.16, { type: 'triangle', to: 520, vol: 0.1, delay: 0.04 }); },
+      invalid: function () { tone(132, 0.09, { type: 'square', vol: 0.1, attack: 0.003 }); tone(118, 0.13, { type: 'square', vol: 0.1, attack: 0.003, delay: 0.11 }); },
+      plane: function () {
+        // a small propeller plane passing: a buzzing motor that swells and fades over the flight
+        var c = ac(); if (!c || muted) return;
+        var t = c.currentTime, o = c.createOscillator(), lp = c.createBiquadFilter(), g = c.createGain(), l = c.createOscillator(), lg = c.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(88, t); o.frequency.linearRampToValueAtTime(104, t + 1.4);
+        lp.type = 'lowpass'; lp.frequency.value = 700;
+        l.frequency.value = 24; lg.gain.value = 0.03; l.connect(lg); lg.connect(g.gain);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+        o.connect(lp); lp.connect(g); g.connect(master);
+        o.start(t); l.start(t); o.stop(t + 2.3); l.stop(t + 2.3);
+      },
+      correct: function () { bell(1046, 0, 0.16); bell(1046, 0.26, 0.13); },          // ding-ding of a ship's bell
+      wrong: function () { tone(196, 0.13, { type: 'triangle', to: 165, vol: 0.28, attack: 0.004 }); tone(147, 0.22, { type: 'triangle', to: 118, vol: 0.28, attack: 0.004, delay: 0.15 }); },
+      tick: function () { tone(1480, 0.22, { type: 'sine', to: 1440, vol: 0.05, attack: 0.003 }); },   // a soft sonar ping
+      timeout: function () { horn(110, 0.9, 0, 0.16); },
+      victory: function () {
+        bell(1046, 0, 0.14); bell(1046, 0.22, 0.12); bell(1318, 0.44, 0.12);
+        [523, 659, 784, 1046].forEach(function (f, i) { tone(f, 0.5, { type: 'triangle', vol: 0.16, delay: 0.75 + i * 0.12 }); });
+        [523, 659, 784].forEach(function (f) { tone(f, 1.1, { type: 'triangle', vol: 0.12, delay: 1.25 }); });
+      },
+      lose: function () { horn(146, 0.7, 0, 0.14, 130); horn(110, 1.1, 0.8, 0.14, 92); },
       fire: function () { tone(260, 0.3, { type: 'sawtooth', to: 820, vol: 0.09 }); tone(520, 0.2, { type: 'triangle', to: 1300, vol: 0.08, delay: 0.08 }); },
       lock: function () { tone(1000, 0.08, { type: 'square', vol: 0.06 }); tone(1400, 0.1, { type: 'square', vol: 0.06, delay: 0.1 }); },
       hit: function () { noise(1.0, { f: 2200, fto: 120, vol: 0.55 }); tone(110, 0.6, { type: 'sine', to: 38, vol: 0.5 }); tone(660, 0.25, { type: 'triangle', to: 990, vol: 0.12, delay: 0.25 }); },
@@ -156,10 +193,9 @@
         if (muted) return;
         try {
           if (fx[n]) fx[n]();
-          else if (FILES.indexOf(n) >= 0 && window.SiteSound) SiteSound.play(file(n));
         } catch (e) {}
       },
-      setMuted: function (m) { muted = m; if (m && window.SiteSound) FILES.forEach(function (n) { SiteSound.stop(file(n)); }); },
+      setMuted: function (m) { muted = m; },
       isMuted: function () { return muted; },
       // the pause menu freezes every sound that's playing, and lets it finish on resume
       pause: function (p) { var c = ctx || (window.SiteSound && SiteSound.context && SiteSound.context()); if (!c) return; try { if (p) c.suspend(); else c.resume(); } catch (e) {} }
@@ -600,8 +636,8 @@
       ['&#127942;', T('<b>Sink both enemy ships</b> to win!', '<b>¡Hunde los dos barcos enemigos</b> para ganar!')]
     ];
     var noteMode = easy
-      ? T('<b>Easy mode:</b> every coordinate is in the <b>first quadrant</b>. x and y go from 0 to 6, and the origin (0, 0) is in the bottom-left corner.', '<b>Modo fácil:</b> todas las coordenadas están en el <b>primer cuadrante</b>. x y y van de 0 a 6, y el origen (0, 0) está en la esquina inferior izquierda.')
-      : T('<b>' + (G.hard ? 'Hard' : 'Standard') + ' mode:</b> coordinates can be <b>negative</b>. x and y go from &minus;3 to 3, and the origin (0, 0) is in the center. Negative x is <b>left</b>; negative y is <b>down</b>.', '<b>Modo ' + (G.hard ? 'difícil' : 'estándar') + ':</b> las coordenadas pueden ser <b>negativas</b>. x y y van de &minus;3 a 3, y el origen (0, 0) está en el centro. x negativa es a la <b>izquierda</b>; y negativa es <b>hacia abajo</b>.');
+      ? T('<b>1-Star General:</b> every coordinate is in the <b>first quadrant</b>. x and y go from 0 to 6, and the origin (0, 0) is in the bottom-left corner.', '<b>General de 1 estrella:</b> todas las coordenadas están en el <b>primer cuadrante</b>. x y y van de 0 a 6, y el origen (0, 0) está en la esquina inferior izquierda.')
+      : T('<b>' + (G.hard ? '3' : '2') + '-Star General:</b> coordinates can be <b>negative</b>. x and y go from &minus;3 to 3, and the origin (0, 0) is in the center. Negative x is <b>left</b>; negative y is <b>down</b>.', '<b>General de ' + (G.hard ? '3' : '2') + ' estrellas:</b> las coordenadas pueden ser <b>negativas</b>. x y y van de &minus;3 a 3, y el origen (0, 0) está en el centro. x negativa es a la <b>izquierda</b>; y negativa es <b>hacia abajo</b>.');
     var hardNote = G.hard ? '<div class="note hard">' + T('&#9201; <b>Timer:</b> ' + TIME.fire + ' seconds for each task. Out of time on your shot? You lose that shot. On the enemy&rsquo;s shot, the game shows you where it lands. &#128225; <b>Radar Checks</b> pop up between turns: answer them to keep going. Read carefully: the enemy may give <b>y before x</b>!',
       '&#9201; <b>Cronómetro:</b> ' + TIME.fire + ' segundos para cada tarea. ¿Se acaba el tiempo en tu disparo? Pierdes ese disparo. En el disparo enemigo, el juego te muestra dónde cae. &#128225; Entre turnos aparecen <b>Revisiones de radar</b>: respóndelas para seguir. ¡Lee con cuidado: el enemigo puede dar <b>y antes que x</b>!') + '</div>' : '';
     var exPt = easy ? [2, 3] : [2, -3];
