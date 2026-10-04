@@ -2,15 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://thecodingeducator.github.io/</loc>
-    <lastmod>2026-10-02</lastmod>
+    <lastmod>2026-10-03</lastmod>
   </url>
   <url>
     <loc>https://thecodingeducator.github.io/teachers.html</loc>
-    <lastmod>2026-10-02</lastmod>
+    <lastmod>2026-10-03</lastmod>
   </url>
   <url>
     <loc>https://thecodingeducator.github.io/whats-new.html</loc>
-    <lastmod>2026-10-02</lastmod>
+    <lastmod>2026-10-03</lastmod>
   </url>
   <url>
     <loc>https://thecodingeducator.github.io/my-stats.html</loc>
@@ -243,5 +243,21 @@
   <url>
     <loc>https://thecodingeducator.github.io/rooted-to-the-spot/exit-ticket.html</loc>
     <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/battle-on-the-coordinate-plane/battle-on-the-coordinate-plane.html</loc>
+    <lastmod>2026-10-03</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/battle-on-the-coordinate-plane/guide.html</loc>
+    <lastmod>2026-10-03</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/battle-on-the-coordinate-plane/worksheet.html</loc>
+    <lastmod>2026-10-03</lastmod>
+  </url>
+  <url>
+    <loc>https://thecodingeducator.github.io/battle-on-the-coordinate-plane/exit-ticket.html</loc>
+    <lastmod>2026-10-03</lastmod>
   </url>
 </urlset>

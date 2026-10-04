@@ -59,3 +59,7 @@ https://thecodingeducator.github.io/rooted-to-the-spot/rooted-to-the-spot.html
 https://thecodingeducator.github.io/rooted-to-the-spot/guide.html
 https://thecodingeducator.github.io/rooted-to-the-spot/worksheet.html
 https://thecodingeducator.github.io/rooted-to-the-spot/exit-ticket.html
+https://thecodingeducator.github.io/battle-on-the-coordinate-plane/battle-on-the-coordinate-plane.html
+https://thecodingeducator.github.io/battle-on-the-coordinate-plane/guide.html
+https://thecodingeducator.github.io/battle-on-the-coordinate-plane/worksheet.html
+https://thecodingeducator.github.io/battle-on-the-coordinate-plane/exit-ticket.html

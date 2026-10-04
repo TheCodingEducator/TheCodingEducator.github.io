@@ -1,0 +1,1742 @@
+// Battle on the Coordinate Plane.
+// Everything is drawn with SVG and HTML (no canvas), so the coordinate grids stay sharp at every size and every
+// control is a real button, input or focusable element. Nothing is saved: every game starts fresh.
+(function () {
+  'use strict';
+
+  var T = function (en, es) { return typeof window.tl === 'function' ? window.tl(en, es) : en; };
+  var ES = !!window.SITE_ES;
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var app = $('#bc');
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+  function svgEl(tag, attrs, parent) {
+    var e = document.createElementNS(SVGNS, tag);
+    if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function rnd(n) { return Math.floor(Math.random() * n); }
+  function pick(a) { return a[rnd(a.length)]; }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = rnd(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function key(x, y) { return x + ',' + y; }
+  function num(n) { return n < 0 ? '−' + (-n) : String(n); }          // a real minus sign, easy to see
+  function pair(x, y) { return '(' + num(x) + ', ' + num(y) + ')'; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function say(msg, urgent) { var r = $(urgent ? '#live2' : '#live'); r.textContent = ''; setTimeout(function () { r.textContent = msg; }, 30); }
+
+  // ---------------------------------------------------------------- modes and ships
+  var MODES = {
+    easy: { min: 0, max: 6, label: T('EASY', 'FÁCIL'), name: T('First Quadrant', 'Primer cuadrante') },
+    standard: { min: -3, max: 3, label: T('STANDARD', 'ESTÁNDAR'), name: T('Full Coordinate Plane', 'Plano cartesiano completo') },
+    hard: { min: -3, max: 3, label: T('HARD', 'DIFÍCIL'), name: T('Coordinate Commander', 'Comandante de coordenadas'), hard: true }
+  };
+  var SHIPS = [
+    { id: 'buddy', len: 3, name: T('Boat Buddy', 'Barquito Amigo'), up: T('BOAT BUDDY', 'BARQUITO AMIGO') },
+    { id: 'galley', len: 4, name: T('Giant Galley', 'Galeón Gigante'), up: T('GIANT GALLEY', 'GALEÓN GIGANTE') }
+  ];
+  var SHIP = { buddy: SHIPS[0], galley: SHIPS[1] };
+  var TIME = { fire: 35, locate: 35, quiz: 35 };   // Hard mode seconds: enough to read and think, not a typing race
+
+  function cellsOf(s) {
+    var out = [];
+    for (var i = 0; i < SHIP[s.id].len; i++) out.push(s.dir === 'h' ? [s.x + i, s.y] : [s.x, s.y + i]);
+    return out;
+  }
+  function onBoard(x, y) { return x >= G.min && x <= G.max && y >= G.min && y <= G.max; }
+  function shipAt(fleet, x, y, skip) {
+    for (var id in fleet) {
+      var s = fleet[id];
+      if (!s.placed || id === skip) continue;
+      var c = cellsOf(s);
+      for (var i = 0; i < c.length; i++) if (c[i][0] === x && c[i][1] === y) return id;
+    }
+    return null;
+  }
+  // can ship `id` sit at (x, y) facing dir? {ok, why, cells, at}
+  function check(fleet, id, x, y, dir) {
+    var c = cellsOf({ id: id, x: x, y: y, dir: dir });
+    for (var i = 0; i < c.length; i++) if (!onBoard(c[i][0], c[i][1])) return { ok: false, why: 'off', cells: c };
+    for (i = 0; i < c.length; i++) {
+      var o = shipAt(fleet, c[i][0], c[i][1], id);
+      if (o) return { ok: false, why: 'overlap', other: o, at: c[i], cells: c };
+    }
+    return { ok: true, cells: c };
+  }
+  function randomFleet() {
+    var f = { buddy: { id: 'buddy', placed: false }, galley: { id: 'galley', placed: false } };
+    ['galley', 'buddy'].forEach(function (id) {
+      for (var n = 0; n < 500; n++) {
+        var dir = Math.random() < 0.5 ? 'h' : 'v';
+        var x = G.min + rnd(G.max - G.min + 1), y = G.min + rnd(G.max - G.min + 1);
+        if (check(f, id, x, y, dir).ok) { f[id] = { id: id, x: x, y: y, dir: dir, placed: true }; break; }
+      }
+    });
+    return f;
+  }
+
+  // ---------------------------------------------------------------- sound (short synthesized effects, no music)
+  var Sound = (function () {
+    var ctx = null, master = null, muted = false, noiseBuf = null, hum = null;
+    function ac() {
+      if (!ctx) {
+        try { ctx = (window.SiteSound && SiteSound.context && SiteSound.context()) || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; }
+        if (ctx) { master = ctx.createGain(); master.gain.value = 0.55; master.connect(ctx.destination); }
+      }
+      if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+      return ctx;
+    }
+    function tone(f, d, o) {
+      o = o || {};
+      var c = ac(); if (!c || muted) return;
+      var t = c.currentTime + (o.delay || 0), osc = c.createOscillator(), g = c.createGain();
+      osc.type = o.type || 'sine';
+      osc.frequency.setValueAtTime(f, t);
+      if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + d);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(o.vol || 0.25, t + (o.attack || 0.012));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      osc.connect(g); g.connect(master);
+      osc.start(t); osc.stop(t + d + 0.05);
+    }
+    function noise(d, o) {
+      o = o || {};
+      var c = ac(); if (!c || muted) return;
+      if (!noiseBuf) {
+        noiseBuf = c.createBuffer(1, c.sampleRate * 1.5, c.sampleRate);
+        var data = noiseBuf.getChannelData(0);
+        for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      }
+      var t = c.currentTime + (o.delay || 0), src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = noiseBuf;
+      f.type = o.ft || 'lowpass';
+      f.frequency.setValueAtTime(o.f || 1000, t);
+      if (o.fto) f.frequency.exponentialRampToValueAtTime(o.fto, t + d);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(o.vol || 0.3, t + (o.attack || 0.01));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(t); src.stop(t + d + 0.05);
+    }
+    function stopHum() {
+      if (!hum) return;
+      try { hum.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.06); hum.o.stop(ctx.currentTime + 0.3); hum.l.stop(ctx.currentTime + 0.3); } catch (e) {}
+      hum = null;
+    }
+    var fx = {
+      click: function () { tone(720, 0.06, { type: 'triangle', vol: 0.16 }); },
+      place: function () { tone(240, 0.14, { type: 'triangle', vol: 0.35, to: 150 }); noise(0.08, { f: 900, vol: 0.18 }); },
+      rotate: function () { tone(420, 0.14, { type: 'sine', to: 880, vol: 0.18 }); noise(0.12, { ft: 'bandpass', f: 1500, fto: 3000, vol: 0.08 }); },
+      invalid: function () { tone(170, 0.13, { type: 'square', vol: 0.12 }); tone(125, 0.2, { type: 'square', vol: 0.12, delay: 0.12 }); },
+      fire: function () { tone(260, 0.3, { type: 'sawtooth', to: 820, vol: 0.09 }); tone(520, 0.2, { type: 'triangle', to: 1300, vol: 0.08, delay: 0.08 }); },
+      plane: function () {
+        var c = ac(); if (!c || muted) return;
+        stopHum();
+        var o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain(), l = c.createOscillator(), lg = c.createGain();
+        o.type = 'sawtooth'; o.frequency.value = 95;
+        f.type = 'lowpass'; f.frequency.value = 600;
+        l.frequency.value = 22; lg.gain.value = 0.035;
+        l.connect(lg); lg.connect(g.gain);
+        g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.07, c.currentTime + 0.2);
+        o.connect(f); f.connect(g); g.connect(master);
+        o.start(); l.start();
+        hum = { o: o, l: l, g: g };
+      },
+      planeStop: stopHum,
+      lock: function () { tone(1000, 0.08, { type: 'square', vol: 0.06 }); tone(1400, 0.1, { type: 'square', vol: 0.06, delay: 0.1 }); },
+      hit: function () { noise(1.0, { f: 2200, fto: 120, vol: 0.55 }); tone(110, 0.6, { type: 'sine', to: 38, vol: 0.5 }); tone(660, 0.25, { type: 'triangle', to: 990, vol: 0.12, delay: 0.25 }); },
+      miss: function () { noise(0.7, { ft: 'bandpass', f: 2600, fto: 500, vol: 0.32 }); tone(900, 0.18, { to: 350, vol: 0.07, delay: 0.05 }); },
+      correct: function () { tone(660, 0.12, { type: 'triangle', vol: 0.22 }); tone(990, 0.22, { type: 'triangle', vol: 0.22, delay: 0.1 }); },
+      wrong: function () { tone(330, 0.15, { type: 'triangle', to: 260, vol: 0.22 }); tone(230, 0.26, { type: 'triangle', to: 170, vol: 0.22, delay: 0.14 }); },
+      alarm: function () { tone(560, 0.2, { type: 'square', to: 880, vol: 0.07 }); tone(880, 0.2, { type: 'square', to: 560, vol: 0.07, delay: 0.2 }); tone(560, 0.2, { type: 'square', to: 880, vol: 0.07, delay: 0.4 }); },
+      sink: function () {
+        tone(420, 1.4, { type: 'sine', to: 55, vol: 0.28 });
+        for (var i = 0; i < 9; i++) tone(500 + Math.random() * 700, 0.08, { type: 'sine', to: 1400 + Math.random() * 600, vol: 0.09, delay: 0.5 + i * 0.12 });
+      },
+      victory: function () {
+        [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.22, { type: 'triangle', vol: 0.22, delay: i * 0.13 }); });
+        [523, 659, 784].forEach(function (f) { tone(f, 0.9, { type: 'triangle', vol: 0.14, delay: 0.6 }); });
+        tone(1047, 0.9, { type: 'square', vol: 0.05, delay: 0.6 });
+      },
+      lose: function () { [392, 330, 262].forEach(function (f, i) { tone(f, 0.35, { type: 'triangle', vol: 0.2, delay: i * 0.22 }); }); },
+      timeout: function () { tone(480, 0.22, { type: 'square', vol: 0.09 }); tone(360, 0.4, { type: 'square', vol: 0.09, delay: 0.25 }); },
+      tick: function () { tone(1250, 0.04, { type: 'square', vol: 0.045 }); }
+    };
+    return {
+      play: function (n) { try { if (fx[n]) fx[n](); } catch (e) {} },
+      setMuted: function (m) { muted = m; if (m) stopHum(); },
+      isMuted: function () { return muted; }
+    };
+  })();
+
+  // ---------------------------------------------------------------- ship drawings (top-down, friendly, not military)
+  // Drawn facing right with the first point at (0, 0) and one board unit = 60. Each white peg marks a point the ship covers.
+  var U = 60;
+  function shipArt(id) {
+    var s = '';
+    if (id === 'buddy') {
+      s += '<rect class="sel-ring" x="-40" y="-30" width="210" height="60" rx="30"/>';
+      s += '<path d="M-28 -16 Q-34 0 -28 16 L112 16 Q142 16 158 0 Q142 -16 112 -16 Z" fill="#ff7043" stroke="#8a2b12" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<path d="M-20 -9 L110 -9 Q131 -9 144 0 Q131 9 110 9 L-20 9 Q-23 0 -20 -9 Z" fill="#ffd166"/>';
+      s += '<rect x="14" y="-12" width="32" height="24" rx="9" fill="#fff" stroke="#8a2b12" stroke-width="2.5"/>';
+      s += '<circle cx="30" cy="0" r="5" fill="#4cc9f0" stroke="#8a2b12" stroke-width="1.5"/>';
+      s += '<circle cx="90" cy="0" r="9" fill="none" stroke="#fff" stroke-width="5"/><circle cx="90" cy="0" r="9" fill="none" stroke="#e63946" stroke-width="5" stroke-dasharray="7 7"/>';
+      s += '<path d="M138 0 L150 -8 L150 8 Z" fill="#2b7de9"/>';
+    } else {
+      s += '<rect class="sel-ring" x="-44" y="-34" width="280" height="68" rx="34"/>';
+      s += '<path d="M-32 -20 Q-38 0 -32 20 L172 20 Q206 20 224 0 Q206 -20 172 -20 Z" fill="#1b9aaa" stroke="#0b4f57" stroke-width="3" stroke-linejoin="round"/>';
+      s += '<path d="M-24 -12 L170 -12 Q196 -12 210 0 Q196 12 170 12 L-24 12 Q-28 0 -24 -12 Z" fill="#e9f5f2"/>';
+      s += '<rect x="13" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
+      s += '<circle cx="30" cy="0" r="6" fill="#4cc9f0" stroke="#0b4f57" stroke-width="1.5"/>';
+      s += '<rect x="73" y="-15" width="34" height="30" rx="8" fill="#fff" stroke="#0b4f57" stroke-width="2.5"/>';
+      s += '<circle cx="83" cy="0" r="6" fill="#ff8a1f" stroke="#0b4f57" stroke-width="2"/><circle cx="97" cy="0" r="6" fill="#ff8a1f" stroke="#0b4f57" stroke-width="2"/>';
+      s += '<rect x="136" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="152" y="-12" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/><rect x="144" y="1" width="12" height="11" rx="2" fill="#c98a4b" stroke="#6b4423" stroke-width="1.5"/>';
+      s += '<path d="M200 0 L212 -8 L212 8 Z" fill="#ffd60a"/>';
+    }
+    var len = SHIP[id].len;
+    for (var i = 0; i < len; i++) s += '<circle class="peg" cx="' + i * U + '" cy="0" r="10"/><circle class="pegc" cx="' + i * U + '" cy="0" r="3.5"/>';
+    // the underwater look, shown once the ship is sunk
+    var w = (len - 1) * U;
+    s += '<g class="water"><path d="M-30 -8 q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0' + (len > 3 ? ' t24 0 t24 0' : '') + '"/>' +
+      '<path d="M-24 10 q12 -7 24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0 t24 0' + (len > 3 ? ' t24 0 t24 0 t24 0' : '') + '"/>' +
+      '<circle cx="' + (w * 0.25 + 10) + '" cy="-24" r="5"/><circle cx="' + (w * 0.6) + '" cy="-28" r="7"/><circle cx="' + (w + 20) + '" cy="-22" r="4"/></g>';
+    return s;
+  }
+
+  // ---------------------------------------------------------------- a coordinate-plane board
+  var ML = 58, MT = 30, VB = 510;
+  function Board(svg) { this.svg = svg; this.marks = {}; }
+  Board.prototype.setup = function () {
+    var s = this.svg;
+    s.innerHTML = '';
+    s.setAttribute('viewBox', '0 0 ' + VB + ' ' + VB);
+    this.min = G.min; this.max = G.max; this.easy = G.mode === 'easy';
+    this.marks = {}; this.shipEls = {};
+    this.L = {};
+    var self = this;
+    ['bg', 'grid', 'labels', 'pts', 'ships', 'marks', 'ui', 'fx'].forEach(function (n) { self.L[n] = svgEl('g', { 'class': 'L-' + n }, s); });
+    this.drawGrid();
+  };
+  Board.prototype.sx = function (x) { return ML + (x - this.min + 0.5) * U; };
+  Board.prototype.sy = function (y) { return MT + (this.max + 0.5 - y) * U; };
+  Board.prototype.drawGrid = function () {
+    var min = this.min, max = this.max, L = this.L, i;
+    var x0 = this.sx(min - 0.5), x1 = this.sx(max + 0.5), y0 = this.sy(max + 0.5), y1 = this.sy(min - 0.5);
+    svgEl('rect', { x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 6, 'class': 'plot' }, L.bg);
+    var gx0 = this.easy ? this.sx(0) : x0, gy1 = this.easy ? this.sy(0) : y1;
+    for (i = min; i <= max; i++) {
+      if (i !== 0) {
+        svgEl('line', { x1: this.sx(i), y1: y0, x2: this.sx(i), y2: gy1, 'class': 'gl' }, L.grid);
+        svgEl('line', { x1: gx0, y1: this.sy(i), x2: x1, y2: this.sy(i), 'class': 'gl' }, L.grid);
+      }
+      svgEl('text', { x: this.sx(i), y: y1 + 31, 'class': 'tick' + (i === 0 ? ' zero' : '') }, L.labels).textContent = num(i);
+      svgEl('text', { x: x0 - 10, y: this.sy(i) + 8, 'class': 'tick ty' + (i === 0 ? ' zero' : '') }, L.labels).textContent = num(i);
+    }
+    var ox = this.sx(0), oy = this.sy(0), a = 13;
+    // x-axis and y-axis (arrows at both ends on the full plane; positive ends only in the first quadrant)
+    svgEl('line', { x1: this.easy ? ox : x0 - 4, y1: oy, x2: x1 + 4, y2: oy, 'class': 'axis' }, L.grid);
+    svgEl('line', { x1: ox, y1: this.easy ? oy : y1 + 4, x2: ox, y2: y0 - 4, 'class': 'axis' }, L.grid);
+    svgEl('path', { d: 'M' + (x1 + 4 + a) + ' ' + oy + ' l' + (-a - 2) + ' -9 v18 z', 'class': 'arrow' }, L.grid);
+    svgEl('path', { d: 'M' + ox + ' ' + (y0 - 4 - a) + ' l-9 ' + (a + 2) + ' h18 z', 'class': 'arrow' }, L.grid);
+    if (!this.easy) {
+      svgEl('path', { d: 'M' + (x0 - 4 - a) + ' ' + oy + ' l' + (a + 2) + ' -9 v18 z', 'class': 'arrow' }, L.grid);
+      svgEl('path', { d: 'M' + ox + ' ' + (y1 + 4 + a) + ' l-9 ' + (-a - 2) + ' h18 z', 'class': 'arrow' }, L.grid);
+    }
+    svgEl('text', { x: x1 + 2, y: oy - 14, 'class': 'axname' }, L.labels).textContent = 'x';
+    svgEl('text', { x: ox + 14, y: y0 - 4, 'class': 'axname' }, L.labels).textContent = 'y';
+    svgEl('text', { x: ox + 8, y: oy + 22, 'class': 'olabel' }, L.labels).textContent = '(0, 0)';
+    for (var x = min; x <= max; x++) for (var y = min; y <= max; y++) {
+      var o = x === 0 && y === 0;
+      svgEl('circle', { cx: this.sx(x), cy: this.sy(y), r: o ? 7 : 4.6, 'class': 'pt' + (o ? ' origin' : '') }, L.pts);
+    }
+  };
+  // screen point -> board units (fractional)
+  Board.prototype.toBoard = function (cx, cy) {
+    var m = this.svg.getScreenCTM();
+    if (!m) return { fx: -99, fy: -99 };
+    var p = this.svg.createSVGPoint(); p.x = cx; p.y = cy;
+    var q = p.matrixTransform(m.inverse());
+    return { fx: (q.x - ML) / U - 0.5 + this.min, fy: this.max + 0.5 - (q.y - MT) / U };
+  };
+  Board.prototype.nearest = function (cx, cy, tol) {
+    var p = this.toBoard(cx, cy), x = Math.round(p.fx), y = Math.round(p.fy);
+    if (!onBoard(x, y)) return null;
+    if (Math.abs(p.fx - x) > tol || Math.abs(p.fy - y) > tol) return null;
+    return { x: x, y: y };
+  };
+  Board.prototype.unitPx = function () { return this.svg.getBoundingClientRect().width / VB * U; };
+  Board.prototype.shipTransform = function (x, y, dir) { return 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' + (dir === 'v' ? ' rotate(-90)' : ''); };
+  Board.prototype.drawShip = function (s, cls, layer) {
+    var g = svgEl('g', { 'class': 'ship ship-' + s.id + (cls ? ' ' + cls : ''), transform: this.shipTransform(s.x, s.y, s.dir) }, layer || this.L.ships);
+    var body = svgEl('g', { 'class': 'ship-body' }, g);
+    body.innerHTML = shipArt(s.id);
+    return g;
+  };
+  Board.prototype.clearShips = function () { this.L.ships.innerHTML = ''; this.shipEls = {}; };
+  Board.prototype.ring = function (x, y, cls, r, layer) { return svgEl('circle', { cx: this.sx(x), cy: this.sy(y), r: r || 20, 'class': cls }, layer || this.L.ui); };
+  Board.prototype.coordLabel = function (x, y, text) {
+    var w = 26 + text.length * 13, h = 40;
+    var lx = this.sx(x) + 30, ly = this.sy(y) - 52;
+    if (lx + w > VB - 2) lx = this.sx(x) - 30 - w;
+    if (ly < 2) ly = this.sy(y) + 16;
+    var g = svgEl('g', { 'class': 'clabel mark-in' }, this.L.fx);
+    svgEl('rect', { x: lx, y: ly, width: w, height: h, rx: 12 }, g);
+    svgEl('text', { x: lx + w / 2, y: ly + 30 }, g).textContent = text;
+    return g;
+  };
+  Board.prototype.targetRing = function (x, y) {
+    var g = svgEl('g', { 'class': 'pulse' }, this.L.ui);
+    svgEl('circle', { cx: this.sx(x), cy: this.sy(y), r: 22, 'class': 'tring' }, g);
+    svgEl('circle', { cx: this.sx(x), cy: this.sy(y), r: 22, 'class': 'tring2' }, g);
+    return g;
+  };
+  Board.prototype.addMark = function (x, y, hit) {
+    var k = key(x, y), m = this.marks[k];
+    if (m) {
+      m.count++;
+      if (m.badge) m.badge.remove();
+      var b = svgEl('g', { 'class': 'badge mark-in' }, m.g);
+      svgEl('circle', { cx: 17, cy: -17, r: 10 }, b);
+      svgEl('text', { x: 17, y: -13 }, b).textContent = '×' + m.count;
+      m.badge = b;
+      m.g.classList.remove('mark-in'); void m.g.getBBox(); m.g.classList.add('mark-in');
+      return;
+    }
+    var g = svgEl('g', { transform: 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' }, this.L.marks);
+    var inner = svgEl('g', { 'class': 'mark-in' }, g);
+    if (hit) {
+      inner.innerHTML = '<g class="flame"><ellipse cx="0" cy="11" rx="15" ry="5" fill="rgba(60,20,0,.28)"/>' +
+        '<path class="f1" d="M0 13 C-15 9 -15 -6 -6 -15 C-6 -6 -2 -7 0 -24 C5 -9 15 -9 13 2 C13 9 7 13 0 13 Z" fill="#ff5a1f" stroke="#8a1c00" stroke-width="2"/>' +
+        '<path class="f2" d="M0 11 C-8 9 -8 1 -3 -6 C-2 -1 1 -2 2 -11 C5 -3 9 0 8 4 C7 9 3 11 0 11 Z" fill="#ffd23f"/></g>';
+    } else {
+      inner.classList.add('xmark');
+      inner.innerHTML = '<path class="xo" d="M-14 -14 L14 14 M14 -14 L-14 14"/><path class="xi" d="M-14 -14 L14 14 M14 -14 L-14 14"/>';
+    }
+    this.marks[k] = { g: inner, count: 1, hit: hit };
+  };
+  Board.prototype.explode = function (x, y) {
+    var g = svgEl('g', { transform: 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' }, this.L.fx);
+    svgEl('circle', { r: 46, fill: '#ffd23f', 'class': 'boom' }, g);
+    svgEl('circle', { r: 32, fill: '#ff6b1a', 'class': 'boom b2' }, g);
+    svgEl('path', { d: 'M0 -40 L9 -12 L38 -14 L14 4 L26 32 L0 15 L-26 32 L-14 4 L-38 -14 L-9 -12 Z', fill: '#fff3b0', 'class': 'boom b2' }, g);
+    for (var i = 0; i < 10; i++) {
+      var a = i / 10 * Math.PI * 2, d = 40 + rnd(18);
+      var c = svgEl('circle', { r: 4 + rnd(3), fill: i % 2 ? '#ff8a1f' : '#ffd23f', 'class': 'spark' }, g);
+      c.style.setProperty('--dx', Math.cos(a) * d + 'px'); c.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    }
+    setTimeout(function () { g.remove(); }, 900);
+  };
+  Board.prototype.splash = function (x, y) {
+    var g = svgEl('g', { transform: 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' }, this.L.fx);
+    svgEl('circle', { r: 30, 'class': 'ripple' }, g);
+    svgEl('circle', { r: 44, 'class': 'ripple r2' }, g);
+    for (var i = 0; i < 8; i++) {
+      var a = i / 8 * Math.PI * 2, d = 26 + rnd(10);
+      var c = svgEl('circle', { r: 4.5, 'class': 'drop' }, g);
+      c.style.setProperty('--dx', Math.cos(a) * d + 'px'); c.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    }
+    setTimeout(function () { g.remove(); }, 1200);
+  };
+  Board.prototype.clearFx = function () { this.L.fx.innerHTML = ''; this.L.ui.innerHTML = ''; };
+
+  // the little plane, facing right; its center is the point it is over
+  function planeSVG(layer) {
+    var g = svgEl('g', { 'class': 'plane' }, layer);
+    var r = svgEl('g', {}, g);
+    r.innerHTML = '<ellipse cx="6" cy="9" rx="22" ry="7" fill="rgba(11,37,69,.18)"/>' +
+      '<path d="M-3 -25 L7 -25 L12 -3 L12 3 L7 25 L-3 25 L0 3 L0 -3 Z" fill="#e63946" stroke="#7a1820" stroke-width="1.5"/>' +
+      '<ellipse cx="0" cy="0" rx="24" ry="6.5" fill="#fff" stroke="#1d3557" stroke-width="2.2"/>' +
+      '<path d="M-22 -11 L-16 -11 L-13 0 L-16 11 L-22 11 L-19 0 Z" fill="#e63946" stroke="#7a1820" stroke-width="1.5"/>' +
+      '<ellipse cx="8" cy="0" rx="5.5" ry="3.6" fill="#4cc9f0"/>' +
+      '<ellipse class="prop" cx="25" cy="0" rx="2.4" ry="11" fill="#1d3557"/>';
+    return { g: g, r: r };
+  }
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+  function tween(ms, fn) {
+    return new Promise(function (res) {
+      var t0 = performance.now();
+      (function step(now) {
+        var t = Math.min(1, (now - t0) / ms);
+        fn(ease(t));
+        if (t < 1) requestAnimationFrame(step); else res();
+      })(t0);
+    });
+  }
+  // move label for one leg of the path: "2 right", "3 down"
+  function legText(n, dirWord) { return num(n) + ' ' + dirWord; }
+  function segLabel(b, cx, cy, text, help) {
+    var w = 18 + text.length * 9.2, h = 26;
+    var x = Math.max(4, Math.min(VB - w - 4, cx - w / 2)), y = Math.max(4, Math.min(VB - h - 4, cy - h / 2));
+    var g = svgEl('g', { 'class': 'seglbl mark-in' + (help ? ' help' : '') }, b.L.fx);
+    svgEl('rect', { x: x, y: y, width: w, height: h, rx: 9 }, g);
+    svgEl('text', { x: x + w / 2, y: y + 19 }, g).textContent = text;
+    return g;
+  }
+  function wordX(x) { return x > 0 ? T('right', 'a la derecha') : T('left', 'a la izquierda'); }
+  function wordY(y) { return y > 0 ? T('up', 'hacia arriba') : T('down', 'hacia abajo'); }
+  function WX(x) { return x > 0 ? T('RIGHT', 'a la DERECHA') : T('LEFT', 'a la IZQUIERDA'); }
+  function WY(y) { return y > 0 ? T('UP', 'hacia ARRIBA') : T('DOWN', 'hacia ABAJO'); }
+  function units(n) { n = Math.abs(n); return n === 1 ? T('1 unit', '1 unidad') : T(n + ' units', n + ' unidades'); }
+
+  // Fly from the origin: x first (left/right), turn in place, then y (up/down). Leaves a dashed path with labeled legs.
+  // opts.help: the purple "here's the way" path used for hints; opts.keepPlane: leave the plane at the end
+  function flyPath(b, x, y, opts) {
+    opts = opts || {};
+    var id = G.id;
+    var parts = [];
+    var ox = b.sx(0), oy = b.sy(0), tx = b.sx(x), ty = b.sy(y);
+    var trail = svgEl('polyline', { 'class': 'trail' + (opts.help ? ' help' : ''), points: ox + ',' + oy + ' ' + ox + ',' + oy }, b.L.fx);
+    parts.push(trail);
+    var pl = planeSVG(b.L.fx); parts.push(pl.g);
+    var ang = x > 0 ? 0 : x < 0 ? 180 : (y > 0 ? -90 : 90);
+    function put(px, py, a) { pl.g.setAttribute('transform', 'translate(' + px + ',' + py + ') rotate(' + a + ')'); }
+    put(ox, oy, ang);
+    pl.g.style.opacity = 0;
+    var speed = opts.help ? 300 : 340;
+    if (!opts.silent) Sound.play('plane');
+    return tween(250, function (t) { pl.g.style.opacity = t; }).then(function () {
+      if (x === 0) return;
+      return tween(320 + Math.abs(x) * speed, function (t) {
+        var px = ox + (tx - ox) * t; put(px, oy, ang);
+        trail.setAttribute('points', ox + ',' + oy + ' ' + px + ',' + oy);
+      }).then(function () {
+        var below = b.easy ? -26 : (y > 0 ? 24 : -26);
+        parts.push(segLabel(b, (ox + tx) / 2, oy + below, legText(Math.abs(x), wordX(x)), opts.help));
+      });
+    }).then(function () {
+      if (y === 0 || G.id !== id) return;
+      var a0 = ang, a1 = y > 0 ? -90 : 90;
+      if (x < 0) a1 = y > 0 ? -90 : 90;
+      // turn the short way round
+      var d = ((a1 - a0 + 540) % 360) - 180;
+      return wait(120).then(function () {
+        return tween(380, function (t) { put(tx, oy, a0 + d * t); });
+      }).then(function () {
+        ang = a0 + d;
+        return wait(100);
+      }).then(function () {
+        return tween(320 + Math.abs(y) * speed, function (t) {
+          var py = oy + (ty - oy) * t; put(tx, py, ang);
+          trail.setAttribute('points', ox + ',' + oy + ' ' + tx + ',' + oy + ' ' + tx + ',' + py);
+        });
+      }).then(function () {
+        var side = x >= 0 ? 1 : -1;
+        var t = legText(Math.abs(y), wordY(y));
+        parts.push(segLabel(b, tx + side * (24 + t.length * 4.6), (oy + ty) / 2, t, opts.help));
+      });
+    }).then(function () {
+      Sound.play('planeStop');
+      return { parts: parts, plane: pl, angle: ang };
+    });
+  }
+
+  // ---------------------------------------------------------------- game state
+  var G = {
+    id: 0, mode: 'standard', min: -3, max: 3, hard: false, screen: 'title',
+    my: null, foe: null, myHits: {}, foeHits: {}, shots: [], ai: null,
+    phase: '', onFire: null, onPick: null, paused: false, timer: null, sinceQuiz: 0, round: 0
+  };
+  var B = { place: new Board($('#board-place')), me: new Board($('#board-me')), foe: new Board($('#board-foe')) };
+
+  function show(name) {
+    ['title', 'modes', 'instr', 'place', 'battle'].forEach(function (n) { $('#scr-' + n).hidden = n !== name; });
+    G.screen = name;
+    $('#btn-menu').hidden = !(name === 'battle' || name === 'place');
+    hideOverlay();
+    layout();
+  }
+  function hideOverlay() { $('#scr-pause').hidden = true; $('#scr-end').hidden = true; $('#confetti').innerHTML = ''; }
+  function focusLater(el) { if (el) setTimeout(function () { try { el.focus({ preventScroll: false }); } catch (e) { el.focus(); } }, 40); }
+
+  // ---------------------------------------------------------------- title and mode menu
+  (function bunting() {
+    var g = $('#bunting'), cols = ['#e63946', '#ffd60a', '#2b7de9', '#ffffff', '#19a463', '#ff8a1f'];
+    var html = '';
+    for (var i = 0; i < 24; i++) {
+      var x = 20 + i * 50, t = x / 1200, y = 18 + 4 * t * (1 - t) * 102 * 0.98;
+      var c = cols[i % cols.length];
+      html += '<path d="M' + (x - 16) + ' ' + y + ' L' + (x + 16) + ' ' + y + ' L' + x + ' ' + (y + 38) + ' Z" fill="' + c + '" stroke="#33506e" stroke-width="2"/>';
+      if (c === '#ffffff') html += '<circle cx="' + x + '" cy="' + (y + 12) + '" r="6" fill="#2b7de9"/>';
+    }
+    g.innerHTML = html;
+  })();
+
+  $('#btn-play').addEventListener('click', function () { Sound.play('click'); show('modes'); focusLater($('.mode.easy')); });
+  $('#modes-back').addEventListener('click', function () { Sound.play('click'); show('title'); focusLater($('#btn-play')); });
+  Array.prototype.forEach.call(document.querySelectorAll('.mode'), function (b, i, all) {
+    b.addEventListener('click', function () { Sound.play('click'); chooseMode(b.getAttribute('data-mode')); });
+    b.addEventListener('keydown', function (e) {
+      var d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      all[(i + d + all.length) % all.length].focus();
+    });
+  });
+
+  function chooseMode(m) {
+    G.mode = m; G.min = MODES[m].min; G.max = MODES[m].max; G.hard = !!MODES[m].hard;
+    showInstructions(false);
+  }
+
+  // ---------------------------------------------------------------- instructions
+  function showInstructions(fromPause) {
+    var m = MODES[G.mode], easy = G.mode === 'easy';
+    var steps = [
+      ['&#9875;', T('Place your two ships: <b>Boat Buddy</b> (3 points) and <b>Giant Galley</b> (4 points).', 'Ubica tus dos barcos: <b>Barquito Amigo</b> (3 puntos) y <b>Galeón Gigante</b> (4 puntos).')],
+      ['&#8596;', T('Ships face <b>horizontally or vertically</b>, never diagonally.', 'Los barcos van en <b>horizontal o vertical</b>, nunca en diagonal.')],
+      ['&#128683;', T('Ships <b>cannot overlap</b>.', 'Los barcos <b>no pueden encimarse</b>.')],
+      ['&#8635;', T('<b>Click a ship</b> on the board to rotate it (or press <kbd>R</kbd>).', '<b>Haz clic en un barco</b> del tablero para girarlo (o pulsa <kbd>R</kbd>).')],
+      ['&#9654;', T('Press <b>START GAME</b> when your fleet is ready.', 'Pulsa <b>EMPEZAR</b> cuando tu flota esté lista.')],
+      ['&#127919;', G.hard ? T('On your turn, <b>type the whole ordered pair</b>, like (2, &minus;3), and fire.', 'En tu turno, <b>escribe el par ordenado completo</b>, como (2, &minus;3), y dispara.') : T('On your turn, <b>enter a coordinate</b> and fire.', 'En tu turno, <b>escribe una coordenada</b> y dispara.')],
+      ['&#128680;', T('On the computer&rsquo;s turn, it gives you a coordinate. <b>Find that point on your own board.</b>', 'En el turno de la computadora, te da una coordenada. <b>Encuentra ese punto en tu propio tablero.</b>')],
+      ['&#127942;', T('<b>Sink both enemy ships</b> to win!', '<b>¡Hunde los dos barcos enemigos</b> para ganar!')]
+    ];
+    var noteMode = easy
+      ? T('<b>Easy mode:</b> every coordinate is in the <b>first quadrant</b>. x and y go from 0 to 6, and the origin (0, 0) is in the bottom-left corner.', '<b>Modo fácil:</b> todas las coordenadas están en el <b>primer cuadrante</b>. x y y van de 0 a 6, y el origen (0, 0) está en la esquina inferior izquierda.')
+      : T('<b>' + (G.hard ? 'Hard' : 'Standard') + ' mode:</b> coordinates can be <b>negative</b>. x and y go from &minus;3 to 3, and the origin (0, 0) is in the center. Negative x is <b>left</b>; negative y is <b>down</b>.', '<b>Modo ' + (G.hard ? 'difícil' : 'estándar') + ':</b> las coordenadas pueden ser <b>negativas</b>. x y y van de &minus;3 a 3, y el origen (0, 0) está en el centro. x negativa es a la <b>izquierda</b>; y negativa es <b>hacia abajo</b>.');
+    var hardNote = G.hard ? '<div class="note hard">' + T('&#9201; <b>Timer:</b> ' + TIME.fire + ' seconds for each task. Out of time on your shot? You lose that shot. On the enemy&rsquo;s shot, the game shows you where it lands. &#128225; <b>Radar Checks</b> pop up between turns: answer them to keep going. Read carefully: the enemy may give <b>y before x</b>!',
+      '&#9201; <b>Cronómetro:</b> ' + TIME.fire + ' segundos para cada tarea. ¿Se acaba el tiempo en tu disparo? Pierdes ese disparo. En el disparo enemigo, el juego te muestra dónde cae. &#128225; Entre turnos aparecen <b>Revisiones de radar</b>: respóndelas para seguir. ¡Lee con cuidado: el enemigo puede dar <b>y antes que x</b>!') + '</div>' : '';
+    var exPt = easy ? [2, 3] : [2, -3];
+    var html = '<div class="scr-head"><h1 id="instr-h">' + T('HOW TO PLAY', 'CÓMO JUGAR') + '</h1><p>' + m.label + ': ' + m.name + '</p></div>' +
+      '<div class="instr"><div class="card"><ol class="steps">' +
+      steps.map(function (s) { return '<li><span class="si" aria-hidden="true">' + s[0] + '</span><span>' + s[1] + '</span></li>'; }).join('') +
+      '</ol></div><div class="card xy-card">' +
+      '<div class="xy-big" aria-label="(x, y)">( <span class="vx">x</span> , <span class="vy">y</span> )</div>' +
+      '<div class="xy-rule"><span class="chip cx">x</span><span>' + T('comes <b>first</b>: move <b>left or right</b>', 'va <b>primero</b>: muévete a la <b>izquierda o derecha</b>') + '</span>' +
+      '<span class="chip cy">y</span><span>' + T('comes <b>second</b>: move <b>up or down</b>', 'va <b>segundo</b>: muévete <b>arriba o abajo</b>') + '</span></div>' +
+      exampleSVG(exPt[0], exPt[1], easy) +
+      '<div class="note">' + noteMode + '</div>' + hardNote + '</div></div>' +
+      '<div class="row"><button type="button" class="btn ghost" id="instr-back">' + (fromPause ? T('&larr; Back to the game', '&larr; Volver al juego') : T('&larr; Back', '&larr; Atrás')) + '</button>' +
+      (fromPause ? '' : '<button type="button" class="btn orange big" id="instr-go">' + T('CONTINUE &#9654;', 'CONTINUAR &#9654;') + '</button>') + '</div>';
+    var body = $('#instr-body');
+    body.innerHTML = html;
+    if (fromPause) {
+      $('#scr-instr').hidden = false; $('#scr-instr').style.zIndex = 46;
+      $('#instr-back').addEventListener('click', function () { $('#scr-instr').hidden = true; $('#scr-instr').style.zIndex = ''; openPause(); });
+      focusLater($('#instr-back'));
+      return;
+    }
+    show('instr');
+    $('#instr-back').addEventListener('click', function () { Sound.play('click'); show('modes'); focusLater($('.mode[data-mode="' + G.mode + '"]')); });
+    $('#instr-go').addEventListener('click', function () { Sound.play('click'); startPlacement(); });
+    focusLater($('#instr-go'));
+  }
+  // a tiny picture: from the origin, x first (orange, sideways), then y (blue, up/down)
+  function exampleSVG(x, y, easy) {
+    var u = 22, ox = easy ? 30 : 96, oy = easy ? 150 : 80;
+    var px = ox + x * u, py = oy - y * u;
+    var s = '<svg viewBox="0 0 220 184" style="width:100%;max-width:270px;height:auto;margin:0 auto;display:block" aria-hidden="true">';
+    s += '<rect x="4" y="4" width="212" height="176" rx="12" fill="#f6fbff" stroke="#c4d7ea"/>';
+    s += '<line x1="' + (easy ? ox : 14) + '" y1="' + oy + '" x2="206" y2="' + oy + '" stroke="#0b2545" stroke-width="3"/>';
+    s += '<line x1="' + ox + '" y1="' + (easy ? oy : 168) + '" x2="' + ox + '" y2="12" stroke="#0b2545" stroke-width="3"/>';
+    s += '<circle cx="' + ox + '" cy="' + oy + '" r="5" fill="#c2410c"/>';
+    s += '<path d="M' + ox + ' ' + oy + ' H' + px + '" stroke="#d9600a" stroke-width="5" stroke-linecap="round"/>';
+    s += '<path d="M' + px + ' ' + oy + ' V' + py + '" stroke="#1a5bb8" stroke-width="5" stroke-linecap="round" stroke-dasharray="8 5"/>';
+    s += '<circle cx="' + px + '" cy="' + py + '" r="8" fill="#ffd60a" stroke="#0b2545" stroke-width="3"/>';
+    s += '<text x="' + (ox + px) / 2 + '" y="' + (oy + (y > 0 ? 20 : -8)) + '" text-anchor="middle" font-weight="900" font-size="14" fill="#d9600a">x = ' + num(x) + ' &#8594;</text>';
+    s += '<text x="' + (px + 10) + '" y="' + (oy + py) / 2 + '" font-weight="900" font-size="14" fill="#1a5bb8">y = ' + num(y) + '</text>';
+    s += '<text x="' + (px + 12) + '" y="' + (py + (y > 0 ? -4 : 18)) + '" font-weight="900" font-size="15" fill="#0b2545">' + pair(x, y) + '</text>';
+    return s + '</svg>';
+  }
+
+  // ---------------------------------------------------------------- ship placement
+  var drag = null, selId = null, ghostEl = null, msgTimer = null;
+
+  function startPlacement() {
+    G.id++;
+    stopTimer();
+    G.my = { buddy: { id: 'buddy', placed: false }, galley: { id: 'galley', placed: false } };
+    selId = null;
+    show('place');
+    B.place.setup();
+    buildDock();
+    renderPlace();
+    placeMsg(T('Drag a ship onto the board, or press Enter on a ship to put it on the board.', 'Arrastra un barco al tablero, o pulsa Enter en un barco para ponerlo en el tablero.'));
+    focusLater($('.ship-pick'));
+  }
+  function buildDock() {
+    var box = $('#dock-cards');
+    box.innerHTML = '';
+    SHIPS.forEach(function (sh) {
+      var card = document.createElement('div');
+      card.className = 'ship-card'; card.setAttribute('data-id', sh.id);
+      var w = (sh.len - 1) * U;
+      card.innerHTML = '<div class="sc-top"><div><div class="sc-name">' + sh.name + '</div><div class="sc-len">' + T(sh.len + ' points long', sh.len + ' puntos de largo') + '</div></div><span class="sc-status"></span></div>' +
+        '<button type="button" class="ship-pick"><svg viewBox="-48 -36 ' + (w + 110) + ' 72"><g class="ship ship-' + sh.id + '"><g class="ship-body">' + shipArt(sh.id) + '</g></g></svg></button>' +
+        '<div class="sc-pts" aria-live="polite"></div>';
+      box.appendChild(card);
+      var btn = card.querySelector('.ship-pick');
+      btn.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        var svg = btn.querySelector('svg'), r = svg.getBoundingClientRect();
+        var vbW = w + 110, lx = (e.clientX - r.left) / r.width * vbW - 48;
+        var idx = Math.max(0, Math.min(sh.len - 1, Math.round(lx / U)));
+        beginDrag(e, sh.id, true, idx);
+      });
+      btn.addEventListener('click', function (e) {
+        if (e.detail !== 0) return;          // mouse clicks are handled by the drag code; this is Enter / Space
+        dockActivate(sh.id);
+      });
+    });
+  }
+  function dockActivate(id) {
+    var s = G.my[id];
+    if (!s.placed) {
+      var spot = findSpot(id);
+      if (!spot) { Sound.play('invalid'); placeMsg(T('There is no room for this ship. Move the other ship first.', 'No hay espacio para este barco. Mueve primero el otro barco.'), 'bad'); return; }
+      G.my[id] = { id: id, x: spot.x, y: spot.y, dir: spot.dir, placed: true };
+      Sound.play('place');
+    } else Sound.play('click');
+    selId = id;
+    renderPlace();
+    placeMsg(T('Arrow keys move ' + SHIP[id].name + '. R rotates it. Tab to the next control when you are done.', 'Las flechas mueven el ' + SHIP[id].name + '. R lo gira. Pulsa Tab para seguir cuando termines.'), 'good');
+    focusLater(B.place.shipEls[id]);
+  }
+  function findSpot(id) {
+    var c = (G.min + G.max) / 2, list = [];
+    for (var x = G.min; x <= G.max; x++) for (var y = G.min; y <= G.max; y++) ['h', 'v'].forEach(function (d) { list.push({ x: x, y: y, dir: d }); });
+    list.sort(function (a, b) {
+      var la = SHIP[id].len - 1;
+      var da = Math.abs(a.x + (a.dir === 'h' ? la / 2 : 0) - c) + Math.abs(a.y + (a.dir === 'v' ? la / 2 : 0) - c) + (a.dir === 'v' ? 0.01 : 0);
+      var db = Math.abs(b.x + (b.dir === 'h' ? la / 2 : 0) - c) + Math.abs(b.y + (b.dir === 'v' ? la / 2 : 0) - c) + (b.dir === 'v' ? 0.01 : 0);
+      return da - db;
+    });
+    for (var i = 0; i < list.length; i++) if (check(G.my, id, list[i].x, list[i].y, list[i].dir).ok) return list[i];
+    return null;
+  }
+  function placeMsg(text, kind) {
+    var m = $('#place-msg');
+    m.className = 'pmsg' + (kind ? ' ' + kind : '');
+    m.textContent = text;
+  }
+  function badWhy(r) {
+    if (r.why === 'off') return T('Not allowed: ships must stay on the coordinate plane.', 'No se puede: los barcos deben quedarse en el plano cartesiano.');
+    return T('Not allowed: ships can’t overlap. ' + SHIP[r.other].name + ' is already on ' + pair(r.at[0], r.at[1]) + '.', 'No se puede: los barcos no pueden encimarse. El ' + SHIP[r.other].name + ' ya está en ' + pair(r.at[0], r.at[1]) + '.');
+  }
+  function shipLabel(s) {
+    var c = cellsOf(s);
+    return SHIP[s.id].name + ', ' + (s.dir === 'h' ? T('horizontal', 'horizontal') : T('vertical', 'vertical')) + ', ' + T('on', 'en') + ' ' + c.map(function (p) { return pair(p[0], p[1]); }).join(', ') +
+      '. ' + T('Arrow keys move it, R or Enter rotates it.', 'Las flechas lo mueven; R o Enter lo gira.');
+  }
+  function renderPlace() {
+    var b = B.place;
+    b.clearShips(); b.L.ui.innerHTML = '';
+    SHIPS.forEach(function (sh) {
+      var s = G.my[sh.id];
+      var card = $('.ship-card[data-id="' + sh.id + '"]');
+      card.classList.toggle('placed', !!s.placed);
+      card.classList.toggle('sel', selId === sh.id);
+      card.querySelector('.sc-status').textContent = s.placed ? T('✓ On the board', '✓ En el tablero') : T('Not placed', 'Sin ubicar');
+      card.querySelector('.sc-pts').innerHTML = s.placed ? cellsOf(s).map(function (p) { return '<b>' + pair(p[0], p[1]) + '</b>'; }).join(' ') : '&nbsp;';
+      card.querySelector('.ship-pick').setAttribute('aria-label', s.placed
+        ? T(sh.name + ' is on the board. Press Enter to select it.', 'El ' + sh.name + ' está en el tablero. Pulsa Enter para seleccionarlo.')
+        : T(sh.name + ', ' + sh.len + ' points long. Press Enter to put it on the board, or drag it.', sh.name + ', ' + sh.len + ' puntos de largo. Pulsa Enter para ponerlo en el tablero, o arrástralo.'));
+      if (!s.placed) return;
+      var g = b.drawShip(s, (selId === sh.id ? 'sel' : '') + (drag && drag.id === sh.id && drag.moved ? ' drag-src' : ''));
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', shipLabel(s));
+      b.shipEls[sh.id] = g;
+      g.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        var p = b.toBoard(e.clientX, e.clientY);
+        var idx = s.dir === 'h' ? Math.round(p.fx) - s.x : Math.round(p.fy) - s.y;
+        beginDrag(e, sh.id, false, Math.max(0, Math.min(sh.len - 1, idx)));
+      });
+      g.addEventListener('keydown', function (e) { shipKey(e, sh.id); });
+      g.addEventListener('focus', function () { if (selId !== sh.id) { selId = sh.id; markSel(); } });
+      if (selId === sh.id) cellsOf(s).forEach(function (p) { b.ring(p[0], p[1], 'occ ok', 17); });
+    });
+    $('#btn-start').disabled = !(G.my.buddy.placed && G.my.galley.placed);
+  }
+  function markSel() {
+    SHIPS.forEach(function (sh) {
+      var g = B.place.shipEls[sh.id];
+      if (g) g.classList.toggle('sel', selId === sh.id);
+      $('.ship-card[data-id="' + sh.id + '"]').classList.toggle('sel', selId === sh.id);
+    });
+    B.place.L.ui.innerHTML = '';
+    if (selId && G.my[selId].placed) cellsOf(G.my[selId]).forEach(function (p) { B.place.ring(p[0], p[1], 'occ ok', 17); });
+  }
+  function refocusShip(id) { var g = B.place.shipEls[id]; if (g) g.focus(); }
+
+  function shipKey(e, id) {
+    var k = e.key, s = G.my[id];
+    var d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[k];
+    if (d) {
+      e.preventDefault();
+      // slide one point; hop over the other ship if it is in the way; stop at the edge of the board
+      for (var n = 1; n <= 8; n++) {
+        var nx = s.x + d[0] * n, ny = s.y + d[1] * n;
+        var r = check(G.my, id, nx, ny, s.dir);
+        if (r.ok) { s.x = nx; s.y = ny; Sound.play('place'); renderPlace(); refocusShip(id); placeMsg(T(SHIP[id].name + ' is on ', 'El ' + SHIP[id].name + ' está en ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.', 'good'); return; }
+        if (r.why === 'off') { flashBad(id, s.x + d[0], s.y + d[1], s.dir, check(G.my, id, s.x + d[0], s.y + d[1], s.dir)); return; }
+      }
+      return;
+    }
+    if (k === 'r' || k === 'R' || k === 'Enter' || k === ' ') { e.preventDefault(); rotateShip(id, Math.floor(SHIP[id].len / 2)); refocusShip(id); return; }
+    if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); selId = null; markSel(); $('.ship-card[data-id="' + id + '"] .ship-pick').focus(); }
+  }
+  function rotateShip(id, pivot) {
+    var s = G.my[id], nd = s.dir === 'h' ? 'v' : 'h', len = SHIP[id].len;
+    var order = [pivot];
+    for (var i = 0; i < len; i++) if (i !== pivot) order.push(i);
+    var first = null;
+    for (i = 0; i < order.length; i++) {
+      var k = order[i], c = cellsOf(s)[k];
+      var nx = nd === 'h' ? c[0] - k : c[0], ny = nd === 'v' ? c[1] - k : c[1];
+      var r = check(G.my, id, nx, ny, nd);
+      if (!first) first = { x: nx, y: ny, r: r };
+      if (r.ok) {
+        s.x = nx; s.y = ny; s.dir = nd; selId = id;
+        Sound.play('rotate'); renderPlace();
+        placeMsg(T(SHIP[id].name + ' is now ' + (nd === 'h' ? 'horizontal' : 'vertical') + ': ', 'El ' + SHIP[id].name + ' ahora está en ' + (nd === 'h' ? 'horizontal' : 'vertical') + ': ') + cellsOf(s).map(function (p) { return pair(p[0], p[1]); }).join(', ') + '.', 'good');
+        say(shipLabel(s));
+        return true;
+      }
+    }
+    flashBad(id, first.x, first.y, nd, first.r);
+    placeMsg(T('No room to rotate ' + SHIP[id].name + ' here. ', 'No hay espacio para girar el ' + SHIP[id].name + ' aquí. ') + badWhy(first.r), 'bad');
+    return false;
+  }
+  // show a red "can't go here" ghost for a moment
+  function flashBad(id, x, y, dir, r) {
+    Sound.play('invalid');
+    var b = B.place;
+    var g = b.drawShip({ id: id, x: x, y: y, dir: dir }, 'ghost badpos', b.L.ui);
+    var marks = [];
+    (r.cells || []).forEach(function (p) {
+      if (onBoard(p[0], p[1])) marks.push(b.ring(p[0], p[1], 'occ bad', 17));
+    });
+    placeMsg(badWhy(r), 'bad');
+    say(badWhy(r), true);
+    setTimeout(function () { g.remove(); marks.forEach(function (m) { m.remove(); }); }, 700);
+  }
+
+  // ---- dragging with a mouse, pen or finger
+  function beginDrag(e, id, fromDock, idx) {
+    e.preventDefault();
+    var s = G.my[id];
+    drag = { id: id, fromDock: fromDock && !s.placed, dockSrc: fromDock, idx: idx, x0: e.clientX, y0: e.clientY, moved: false, dir: s.placed ? s.dir : 'h', over: false, spot: null };
+    window.addEventListener('pointermove', dragMove);
+    window.addEventListener('pointerup', dragEnd);
+    window.addEventListener('pointercancel', dragCancel);
+  }
+  function dragMove(e) {
+    if (!drag) return;
+    if (!drag.moved) {
+      if (Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) < 7) return;
+      drag.moved = true;
+      selId = drag.id;
+      renderPlace();
+    }
+    var b = B.place, p = b.toBoard(e.clientX, e.clientY);
+    var over = p.fx > G.min - 1.2 && p.fx < G.max + 1.2 && p.fy > G.min - 1.2 && p.fy < G.max + 1.2;
+    drag.over = over;
+    b.L.ui.innerHTML = '';
+    if (over) {
+      hideGhost();
+      var ax = Math.round(p.fx) - (drag.dir === 'h' ? drag.idx : 0), ay = Math.round(p.fy) - (drag.dir === 'v' ? drag.idx : 0);
+      var r = check(G.my, drag.id, ax, ay, drag.dir);
+      drag.spot = { x: ax, y: ay, r: r };
+      b.drawShip({ id: drag.id, x: ax, y: ay, dir: drag.dir }, 'ghost' + (r.ok ? '' : ' badpos'), b.L.ui);
+      r.cells.forEach(function (c) {
+        if (!onBoard(c[0], c[1])) return;
+        if (r.ok) b.ring(c[0], c[1], 'occ ok', 17);
+        else b.ring(c[0], c[1], 'occ bad', 17);
+      });
+      if (r.ok) placeMsg(T('Drop to place on ', 'Suelta para ubicarlo en ') + r.cells.map(function (c) { return pair(c[0], c[1]); }).join(', '), 'good');
+      else placeMsg(badWhy(r), 'bad');
+    } else {
+      drag.spot = null;
+      showGhost(e.clientX, e.clientY);
+      placeMsg(T('Bring the ship over the board.', 'Lleva el barco sobre el tablero.'));
+    }
+  }
+  function showGhost(cx, cy) {
+    var b = B.place, upx = b.unitPx(), len = SHIP[drag.id].len, w = (len - 1) * U;
+    if (!ghostEl) {
+      ghostEl = document.createElement('div');
+      ghostEl.className = 'drag-ghost';
+      ghostEl.innerHTML = '<svg viewBox="-48 -36 ' + (w + 110) + ' 72" style="display:block;width:' + ((w + 110) / U * upx) + 'px;overflow:visible"><g class="ship ship-' + drag.id + '"><g class="ship-body">' + shipArt(drag.id) + '</g></g></svg>';
+      app.appendChild(ghostEl);
+    }
+    var ar = app.getBoundingClientRect(), sc = upx / U;
+    var gx = (48 + drag.idx * U) * sc, gy = 36 * sc;
+    ghostEl.style.left = (cx - ar.left - gx) + 'px';
+    ghostEl.style.top = (cy - ar.top - gy) + 'px';
+    ghostEl.style.transformOrigin = gx + 'px ' + gy + 'px';
+    ghostEl.style.transform = drag.dir === 'v' ? 'rotate(-90deg)' : '';
+  }
+  function hideGhost() { if (ghostEl) { ghostEl.remove(); ghostEl = null; } }
+  function dragDone() {
+    window.removeEventListener('pointermove', dragMove);
+    window.removeEventListener('pointerup', dragEnd);
+    window.removeEventListener('pointercancel', dragCancel);
+    hideGhost();
+  }
+  function dragCancel() { dragDone(); drag = null; renderPlace(); }
+  function dragEnd() {
+    var d = drag; dragDone(); drag = null;
+    if (!d) return;
+    if (!d.moved) {
+      if (d.dockSrc) { dockActivate(d.id); return; }
+      selId = d.id;
+      rotateShip(d.id, d.idx);
+      refocusShip(d.id);
+      return;
+    }
+    if (d.over && d.spot) {
+      if (d.spot.r.ok) {
+        G.my[d.id] = { id: d.id, x: d.spot.x, y: d.spot.y, dir: d.dir, placed: true };
+        selId = d.id;
+        Sound.play('place');
+        renderPlace();
+        placeMsg(T(SHIP[d.id].name + ' placed on ', SHIP[d.id].name + ' ubicado en ') + cellsOf(G.my[d.id]).map(function (c) { return pair(c[0], c[1]); }).join(', ') + '.', 'good');
+        if (G.my.buddy.placed && G.my.galley.placed) setTimeout(function () { placeMsg(T('Fleet ready! Rotate or move ships, or press START GAME.', '¡Flota lista! Gira o mueve los barcos, o pulsa EMPEZAR.'), 'good'); }, 1400);
+        return;
+      }
+      Sound.play('invalid');
+      renderPlace();
+      placeMsg(badWhy(d.spot.r) + ' ' + T('The ship went back.', 'El barco regresó.'), 'bad');
+      say(badWhy(d.spot.r), true);
+      return;
+    }
+    renderPlace();
+    placeMsg(T('Drop the ship on the board’s points to place it.', 'Suelta el barco sobre los puntos del tablero para ubicarlo.'));
+  }
+
+  $('#btn-random').addEventListener('click', function () {
+    G.my = randomFleet(); selId = null;
+    Sound.play('rotate'); renderPlace();
+    placeMsg(T('Random fleet placed. Move or rotate the ships if you like, then press START GAME.', 'Flota ubicada al azar. Mueve o gira los barcos si quieres, y pulsa EMPEZAR.'), 'good');
+  });
+  $('#place-back').addEventListener('click', function () { Sound.play('click'); showInstructions(false); });
+  $('#btn-start').addEventListener('click', function () {
+    if (!(G.my.buddy.placed && G.my.galley.placed)) return;
+    Sound.play('click');
+    startBattle();
+  });
+
+  // ---------------------------------------------------------------- battle
+  function startBattle() {
+    G.id++;
+    var id = G.id;
+    selId = null;
+    G.foe = randomFleet();
+    G.myHits = {}; G.foeHits = {}; G.shots = [];
+    G.ai = { tried: {}, open: [] };
+    G.sinceQuiz = 0; G.round = 0;
+    G.sunkMe = {}; G.sunkFoe = {};
+    show('battle');
+    B.me.setup(); B.foe.setup();
+    SHIPS.forEach(function (sh) { B.me.shipEls[sh.id] = B.me.drawShip(G.my[sh.id]); });
+    $('#timer').hidden = !G.hard;
+    updateFleets();
+    layout();
+    battleLoop(id);
+  }
+  function alive(id) { return G.id === id && G.screen === 'battle'; }
+
+  function battleLoop(id) {
+    (function round() {
+      if (!alive(id)) return;
+      G.round++;
+      var pre = Promise.resolve();
+      if (G.hard && G.round > 1 && (G.sinceQuiz >= 2 || Math.random() < 0.45)) { G.sinceQuiz = 0; pre = radarCheck(id); }
+      else G.sinceQuiz++;
+      pre.then(function () { return alive(id) && playerTurn(id); })
+        .then(function () {
+          if (!alive(id)) return;
+          if (allSunk(G.foe, G.foeHits)) return endGame(id, true);
+          return wait(500).then(function () { return alive(id) && enemyTurn(id); }).then(function () {
+            if (!alive(id)) return;
+            if (allSunk(G.my, G.myHits)) return endGame(id, false);
+            return wait(400).then(round);
+          });
+        });
+    })();
+  }
+  function isSunk(fleet, hits, sid) { return cellsOf(fleet[sid]).every(function (c) { return hits[key(c[0], c[1])]; }); }
+  function allSunk(fleet, hits) { return SHIPS.every(function (sh) { return isSunk(fleet, hits, sh.id); }); }
+
+  function setTurn(kind, text, icon) {
+    var t = $('#turn');
+    t.className = 'turn anim' + (kind === 'foe' ? ' foe' : kind === 'radar' ? ' radar' : '');
+    $('#turn-txt').textContent = text;
+    $('#turn-ico').innerHTML = icon;
+    void t.offsetWidth;
+  }
+  function updateFleets() {
+    function row(fleet, hits, mine) {
+      return SHIPS.map(function (sh) {
+        var sunk = isSunk(fleet, hits, sh.id);
+        var pegs = '';
+        if (mine) cellsOf(fleet[sh.id]).forEach(function (c) { pegs += '<i class="' + (hits[key(c[0], c[1])] ? 'h' : '') + '"></i>'; });
+        else for (var i = 0; i < sh.len; i++) pegs += '<i class="' + (sunk ? 'h' : '') + '"></i>';
+        var hitN = mine ? cellsOf(fleet[sh.id]).filter(function (c) { return hits[key(c[0], c[1])]; }).length : 0;
+        return '<span class="fs' + (sunk ? ' sunk' : '') + '" aria-label="' + esc(sh.name + ': ' + (sunk ? T('sunk', 'hundido') : mine ? T(hitN + ' of ' + sh.len + ' points hit', hitN + ' de ' + sh.len + ' puntos con impacto') : T('afloat', 'a flote'))) + '">' +
+          sh.name + ' <span class="pegs" aria-hidden="true">' + pegs + '</span>' + (sunk ? ' <span class="tag">' + T('SUNK', 'HUNDIDO') + '</span>' : '') + '</span>';
+      }).join('');
+    }
+    $('#fleet-me').innerHTML = '<span class="fl-t">' + T('YOUR FLEET', 'TU FLOTA') + '</span>' + row(G.my, G.myHits, true);
+    $('#fleet-foe').innerHTML = '<span class="fl-t">' + T('ENEMY FLEET', 'FLOTA ENEMIGA') + '</span>' + row(G.foe, G.foeHits, false);
+  }
+  function activeZone(which, tag) {
+    ['me', 'foe'].forEach(function (w) {
+      var z = $('#zone-' + w);
+      z.classList.toggle('active', w === which);
+      var t = z.querySelector('.ztag');
+      if (t) t.remove();
+      if (w === which && tag) { t = document.createElement('div'); t.className = 'ztag'; t.textContent = tag; z.appendChild(t); }
+    });
+    if (which && $('#arena').classList.contains('lay-stack')) {
+      var z = $('#zone-' + which);
+      setTimeout(function () { z.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60);
+    }
+  }
+  function banner(kind, title, sub, ms) {
+    var b = $('#banner');
+    b.className = kind;
+    b.innerHTML = '<div class="bn"><div class="bn-t">' + title + '</div>' + (sub ? '<div class="bn-s">' + sub + '</div>' : '') + '</div>';
+    b.hidden = false;
+    say(title.replace(/<[^>]+>/g, '') + '. ' + (sub || '').replace(/<[^>]+>/g, ''), true);
+    return wait(ms || 1300).then(function () { b.hidden = true; });
+  }
+  function shotLog() {
+    var items = G.shots.slice().reverse().map(function (s) {
+      return '<li class="' + (s.hit ? 'hit' : '') + '">' + pair(s.x, s.y) + ' ' + (s.hit ? '&#128293; ' + T('HIT', 'IMPACTO') : '&#10006; ' + T('MISS', 'AGUA')) + '</li>';
+    });
+    return '<div class="log"><h3>' + T('YOUR SHOTS', 'TUS DISPAROS') + '</h3><ol>' + (items.join('') || '<li class="none">' + T('No shots yet', 'Aún no hay disparos') + '</li>') + '</ol></div>';
+  }
+  function panel(html) { $('#panel').innerHTML = '<div class="task fade-in">' + html + '</div>' + shotLog(); }
+
+  // ---------------- the student's shot
+  function playerTurn(id) {
+    return new Promise(function (resolve) {
+      setTurn('me', T('YOUR TURN', 'TU TURNO'), '&#127919;');
+      activeZone('foe', T('Fire here!', '¡Dispara aquí!'));
+      renderFire();
+      G.onFire = function (x, y) {
+        G.onFire = null; stopTimer();
+        fireAt(id, x, y).then(resolve);
+      };
+      if (G.hard) startTimer(TIME.fire, function () {
+        if (!G.onFire) return;
+        G.onFire = null;
+        Sound.play('timeout');
+        lockEntry();
+        banner('time', '&#9200; ' + T('TIME’S UP!', '¡SE ACABÓ EL TIEMPO!'), T('You lose this shot. Next time, type the ordered pair a little faster.', 'Pierdes este disparo. La próxima vez, escribe el par ordenado un poco más rápido.'), 2200).then(resolve);
+      });
+    });
+  }
+  function padKeys() {
+    if (G.mode === 'easy') return ['0', '1', '2', '3', '4', '5', '6', 'back'];
+    if (G.hard) return ['(', '-', '0', '1', '2', '3', ',', ')', 'back'];
+    return ['-', '0', '1', '2', '3', 'back'];
+  }
+  function padHTML() {
+    return '<div class="pad" aria-hidden="true">' + padKeys().map(function (k) {
+      var lbl = k === 'back' ? '&#9003;' : k === '-' ? '&minus;' : k;
+      return '<button type="button" tabindex="-1" data-k="' + esc(k) + '">' + lbl + '</button>';
+    }).join('') + '</div>';
+  }
+  function renderFire() {
+    var lo = num(G.min), hi = num(G.max);
+    var html = '<h2 class="me">' + T('YOUR TURN: FIRE!', 'TU TURNO: ¡DISPARA!') + '</h2>';
+    if (G.hard) {
+      html += '<p>' + T('Type the <b>whole ordered pair</b> to fire at the opponent&rsquo;s board.', 'Escribe el <b>par ordenado completo</b> para disparar al tablero del oponente.') + '</p>' +
+        '<div class="entry"><input type="text" id="in-pair" class="wide" autocomplete="off" spellcheck="false" maxlength="14" placeholder="( ? , ? )" aria-label="' + esc(T('Ordered pair, like (2, -3)', 'Par ordenado, como (2, -3)')) + '"></div>';
+    } else {
+      html += '<p>' + T('Enter a coordinate on the <b>opponent&rsquo;s board</b>.', 'Escribe una coordenada del <b>tablero del oponente</b>.') + '</p>' +
+        '<div class="entry" role="group" aria-label="' + esc(T('Coordinate to fire at', 'Coordenada para disparar')) + '">(<input type="text" id="in-x" class="ix" autocomplete="off" maxlength="2" aria-label="' + esc(T('x-coordinate, from ' + lo + ' to ' + hi, 'coordenada x, de ' + lo + ' a ' + hi)) + '">,<input type="text" id="in-y" class="iy" autocomplete="off" maxlength="2" aria-label="' + esc(T('y-coordinate, from ' + lo + ' to ' + hi, 'coordenada y, de ' + lo + ' a ' + hi)) + '">)</div>' +
+        '<div class="entry-lbl" aria-hidden="true"><span class="lx">x</span><span class="ly">y</span></div>';
+    }
+    html += '<p class="err" id="fire-err" role="alert"></p>' + padHTML() +
+      '<div class="fire-row"><button type="button" class="btn red" id="btn-fire">&#128165; ' + T('FIRE', 'FUEGO') + '</button></div>' +
+      '<div class="reminder">' + T('<b class="cx">x</b> first: left/right &middot; <b class="cy">y</b> second: up/down', '<b class="cx">x</b> primero: izquierda/derecha &middot; <b class="cy">y</b> segundo: arriba/abajo') + '</div>';
+    panel(html);
+    var inputs = G.hard ? [$('#in-pair')] : [$('#in-x'), $('#in-y')];
+    var active = inputs[0];
+    inputs.forEach(function (inp, i) {
+      if (TOUCH) inp.setAttribute('inputmode', 'none');
+      else inp.setAttribute('inputmode', G.hard ? 'text' : G.mode === 'easy' ? 'numeric' : 'text');
+      inp.addEventListener('focus', function () { active = inp; });
+      inp.addEventListener('input', function () { cleanInput(inp, i, inputs); });
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); tryFire(); }
+        else if (e.key === 'Backspace' && i === 1 && !inp.value) { e.preventDefault(); inputs[0].focus(); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#panel .pad button'), function (b) {
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      b.addEventListener('click', function () {
+        var k = b.getAttribute('data-k');
+        Sound.play('click');
+        if (k === 'back') {
+          if (!active.value && active === inputs[1]) { active = inputs[0]; }
+          active.value = active.value.slice(0, -1);
+        } else active.value += k;
+        cleanInput(active, inputs.indexOf(active), inputs);
+        if (!TOUCH) active.focus();
+        if (inputs.length === 2 && inputs.indexOf(active) === 0 && /^-?\d$/.test(inputs[0].value) && inRange(+inputs[0].value)) active = inputs[1];
+      });
+    });
+    $('#btn-fire').addEventListener('click', tryFire);
+    focusLater(inputs[0]);
+  }
+  function inRange(v) { return v >= G.min && v <= G.max; }
+  function rangeMsg() { return T('Keep each coordinate between ' + num(G.min) + ' and ' + num(G.max) + '.', 'Cada coordenada debe estar entre ' + num(G.min) + ' y ' + num(G.max) + '.'); }
+  function fireErr(msg, inp) {
+    var e = $('#fire-err'); if (!e) return;
+    e.textContent = msg || '';
+    if (inp) { inp.classList.remove('bad'); void inp.offsetWidth; inp.classList.add('bad'); }
+  }
+  // only whole numbers in range; no letters, no decimals
+  function cleanInput(inp, i, inputs) {
+    var v = inp.value.replace(/−/g, '-'), msg = '';
+    if (G.hard) {
+      if (/[.]/.test(v)) msg = T('Coordinates on this board are whole numbers (no decimals).', 'Las coordenadas de este tablero son números enteros (sin decimales).');
+      else if (/[^()\-,\d\s]/.test(v)) msg = T('Use only numbers, a minus sign, parentheses ( ) and a comma.', 'Usa solo números, el signo menos, paréntesis ( ) y una coma.');
+      inp.value = v.replace(/[^()\-,\d\s]/g, '');
+      fireErr(msg, msg ? inp : null);
+      if (!msg) inp.classList.remove('bad');
+      return;
+    }
+    // both numbers typed (or pasted) into the x box at once, like "2-3" or "2,-3": x keeps the first, y gets the second
+    var both = i === 0 && inputs[1] && v.match(/^\s*\(?\s*(-?\d)\s*[,\s]?\s*(-?\d)\s*\)?\s*$/);
+    if (both) { v = both[1]; inputs[1].value = both[2]; cleanInput(inputs[1], 1, inputs); inp.value = v; if (document.activeElement === inp) inputs[1].focus(); return; }
+    if (/[.]/.test(v)) msg = T('Coordinates on this board are whole numbers (no decimals).', 'Las coordenadas de este tablero son números enteros (sin decimales).');
+    else if (/[^\-\d]/.test(v)) msg = T('Type a number.', 'Escribe un número.');
+    v = v.replace(/[^\-\d]/g, '');
+    if (G.mode === 'easy' && v.indexOf('-') >= 0) { v = v.replace(/-/g, ''); msg = T('Easy mode has no negative numbers. ', 'El modo fácil no tiene números negativos. ') + rangeMsg(); }
+    v = v.replace(/(?!^)-/g, '');
+    if (v.length > 2 || (v.length === 2 && v[0] !== '-')) { v = v.slice(-1); }
+    inp.value = v;
+    if (/^-?\d$/.test(v) && !inRange(+v)) msg = rangeMsg();
+    fireErr(msg, msg ? inp : null);
+    if (!msg) inp.classList.remove('bad');
+    if (!msg && i === 0 && /^-?\d$/.test(v) && inputs[1] && document.activeElement === inp) inputs[1].focus();
+  }
+  function parsePair(raw) {
+    var v = raw.replace(/−/g, '-').replace(/\s+/g, '');
+    if (!v) return { err: T('Type an ordered pair, like (2,-3).', 'Escribe un par ordenado, como (2,-3).') };
+    if (v[0] !== '(') return { err: T('An ordered pair starts with an opening parenthesis: (', 'Un par ordenado empieza con un paréntesis de apertura: (') };
+    if (v[v.length - 1] !== ')') return { err: T('Close the ordered pair with a parenthesis: )', 'Cierra el par ordenado con un paréntesis: )') };
+    var inner = v.slice(1, -1);
+    if (inner.indexOf(',') < 0) return { err: T('Separate x and y with a comma: (x, y)', 'Separa x y y con una coma: (x, y)') };
+    var parts = inner.split(',');
+    if (parts.length !== 2 || /[()]/.test(inner)) return { err: T('An ordered pair has exactly two numbers: (x, y)', 'Un par ordenado tiene exactamente dos números: (x, y)') };
+    if (!/^-?\d+$/.test(parts[0]) || !/^-?\d+$/.test(parts[1])) return { err: T('Each coordinate must be a whole number, like (2,-3).', 'Cada coordenada debe ser un número entero, como (2,-3).') };
+    var x = parseInt(parts[0], 10), y = parseInt(parts[1], 10);
+    if (!inRange(x) || !inRange(y)) return { err: rangeMsg() };
+    return { x: x, y: y };
+  }
+  function tryFire() {
+    if (!G.onFire) return;
+    var x, y;
+    if (G.hard) {
+      var r = parsePair($('#in-pair').value);
+      if (r.err) { Sound.play('invalid'); fireErr(r.err, $('#in-pair')); $('#in-pair').focus(); return; }
+      x = r.x; y = r.y;
+    } else {
+      var ix = $('#in-x'), iy = $('#in-y');
+      var vx = ix.value.replace(/−/g, '-'), vy = iy.value.replace(/−/g, '-');
+      if (!/^-?\d$/.test(vx)) { Sound.play('invalid'); fireErr(T('Enter the x-coordinate first.', 'Escribe primero la coordenada x.'), ix); ix.focus(); return; }
+      if (!/^-?\d$/.test(vy)) { Sound.play('invalid'); fireErr(T('Now enter the y-coordinate.', 'Ahora escribe la coordenada y.'), iy); iy.focus(); return; }
+      x = +vx; y = +vy;
+      if (!inRange(x)) { Sound.play('invalid'); fireErr(rangeMsg(), ix); ix.focus(); return; }
+      if (!inRange(y)) { Sound.play('invalid'); fireErr(rangeMsg(), iy); iy.focus(); return; }
+    }
+    G.onFire(x, y);
+  }
+  function lockEntry() {
+    Array.prototype.forEach.call(document.querySelectorAll('#panel input, #panel button'), function (el) { el.disabled = true; });
+  }
+
+  function fireAt(id, x, y) {
+    var b = B.foe;
+    lockEntry();
+    panel('<h2 class="me">' + T('FIRING AT', 'DISPARANDO A') + ' ' + pair(x, y) + '</h2>' +
+      '<p>' + T('Watch the plane: <b>x first</b> (' + (x === 0 ? 'x = 0, so no left or right' : units(x) + ' ' + wordX(x)) + '), then <b>y</b> (' + (y === 0 ? 'y = 0, so no up or down' : units(y) + ' ' + wordY(y)) + ').',
+        'Mira el avión: <b>primero x</b> (' + (x === 0 ? 'x = 0, sin moverse a los lados' : units(x) + ' ' + wordX(x)) + '), luego <b>y</b> (' + (y === 0 ? 'y = 0, sin subir ni bajar' : units(y) + ' ' + wordY(y)) + ').') + '</p>');
+    say(T('Firing at ', 'Disparando a ') + pair(x, y));
+    var ring = b.targetRing(x, y), lbl = b.coordLabel(x, y, pair(x, y));
+    Sound.play('fire');
+    var flight;
+    return wait(800).then(function () {
+      if (!alive(id)) return;
+      return flyPath(b, x, y).then(function (f) { flight = f; });
+    }).then(function () {
+      if (!alive(id)) return;
+      // lock on (a shrinking ring), the plane climbs away, then the burst at the point
+      var ret = svgEl('g', { transform: 'translate(' + b.sx(x) + ',' + b.sy(y) + ')' }, b.L.fx);
+      ret.innerHTML = '<g class="reticle"><circle r="20"/><path d="M0 -28 V-14 M0 14 V28 M-28 0 H-14 M14 0 H28" stroke="#e2541a" stroke-width="3"/></g>';
+      Sound.play('lock');
+      var a = flight.angle * Math.PI / 180, sx0 = b.sx(x), sy0 = b.sy(y);
+      return wait(420).then(function () {
+        ret.remove();
+        return tween(420, function (t) {
+          flight.plane.g.setAttribute('transform', 'translate(' + (sx0 + Math.cos(a) * 40 * t) + ',' + (sy0 + Math.sin(a) * 40 * t) + ') rotate(' + flight.angle + ') scale(' + (1 + t * 0.4) + ')');
+          flight.plane.g.style.opacity = 1 - t;
+        });
+      });
+    }).then(function () {
+      if (!alive(id)) return;
+      var sid = shipAt(G.foe, x, y), hit = !!sid, k = key(x, y), already = !!G.foeHits[k];
+      if (hit) { b.explode(x, y); Sound.play('hit'); } else { b.splash(x, y); Sound.play('miss'); }
+      return wait(600).then(function () {
+        if (!alive(id)) return;
+        b.addMark(x, y, hit);
+        if (hit) G.foeHits[k] = true;
+        G.shots.push({ x: x, y: y, hit: hit });
+        return wait(450).then(function () {
+          ring.remove(); lbl.remove();
+          flight.parts.forEach(function (p) { p.remove(); });
+          updateFleets();
+          if (!hit) return banner('miss', '&#10006; ' + T('MISS', 'AGUA'), pair(x, y) + T(' is empty water.', ' es agua vacía.'), 1300);
+          return banner('hit', '&#128293; ' + T('HIT!', '¡IMPACTO!'), already ? pair(x, y) + T(' was already hit.', ' ya tenía un impacto.') : pair(x, y) + T(' hit an enemy ship!', ' le dio a un barco enemigo!'), 1300).then(function () {
+            if (already || !alive(id) || !isSunk(G.foe, G.foeHits, sid)) return;
+            return sinkShip(b, G.foe[sid], true).then(function () {
+              return banner('sunk', SHIP[sid].up + ' ' + T('SUNK!', '¡HUNDIDO!'), T('You sank the enemy’s ' + SHIP[sid].name + '!', '¡Hundiste el ' + SHIP[sid].name + ' enemigo!'), 1800);
+            });
+          });
+        });
+      });
+    });
+  }
+  function sinkShip(b, s, reveal) {
+    Sound.play('sink');
+    var g = reveal ? b.drawShip(s, 'sinking') : b.shipEls[s.id];
+    if (!reveal) g.classList.add('sinking');
+    var c = cellsOf(s);
+    c.forEach(function (p, i) { setTimeout(function () { b.splash(p[0], p[1]); }, 300 + i * 220); });
+    return wait(1900).then(function () { g.classList.remove('sinking'); g.classList.add('sunk'); updateFleets(); });
+  }
+
+  // ---------------- the computer's shot
+  function aiPick() {
+    var ai = G.ai, tried = ai.tried;
+    function free(x, y) { return onBoard(x, y) && !tried[key(x, y)]; }
+    var open = ai.open, cand = [];
+    if (open.length >= 2) {
+      var sameY = open.every(function (p) { return p[1] === open[0][1]; }), sameX = open.every(function (p) { return p[0] === open[0][0]; });
+      if (sameY || sameX) {
+        var vals = open.map(function (p) { return sameY ? p[0] : p[1]; });
+        var lo = Math.min.apply(null, vals) - 1, hi = Math.max.apply(null, vals) + 1;
+        for (var v = lo; v <= hi; v++) {
+          var cx = sameY ? v : open[0][0], cy = sameY ? open[0][1] : v;
+          if (free(cx, cy)) cand.push([cx, cy]);
+        }
+        // try the ends first (that's how a ship continues), gaps after
+        var ends = cand.filter(function (c) { var w = sameY ? c[0] : c[1]; return w === lo || w === hi; });
+        if (ends.length) cand = ends;
+      }
+    }
+    if (!cand.length && open.length) {
+      open.forEach(function (p) {
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { if (free(p[0] + d[0], p[1] + d[1])) cand.push([p[0] + d[0], p[1] + d[1]]); });
+      });
+    }
+    if (!cand.length) {
+      for (var x = G.min; x <= G.max; x++) for (var y = G.min; y <= G.max; y++) if (free(x, y)) cand.push([x, y]);
+    }
+    var c = pick(cand);
+    return { x: c[0], y: c[1] };
+  }
+  function aiRecord(x, y, sid) {
+    var ai = G.ai;
+    ai.tried[key(x, y)] = true;
+    ai.lastShot = { x: x, y: y };
+    if (!sid) return;
+    ai.open.push([x, y]);
+    if (isSunk(G.my, G.myHits, sid)) {
+      var cs = cellsOf(G.my[sid]).map(function (c) { return key(c[0], c[1]); });
+      ai.open = ai.open.filter(function (p) { return cs.indexOf(key(p[0], p[1])) < 0; });
+    }
+  }
+
+  function enemyTurn(id) {
+    var t = aiPick();
+    setTurn('foe', T('ENEMY’S TURN', 'TURNO ENEMIGO'), '&#128680;');
+    activeZone(null);
+    panel('<h2 class="foe">' + T('ENEMY FIRE!', '¡FUEGO ENEMIGO!') + '</h2><p>' + T('The computer is choosing a target&hellip;', 'La computadora está eligiendo un objetivo&hellip;') + '</p>');
+    Sound.play('alarm');
+    return banner('enemy', '&#128680; ' + T('ENEMY FIRE!', '¡FUEGO ENEMIGO!'), G.hard ? T('Read the enemy’s target carefully.', 'Lee con cuidado el objetivo del enemigo.') : T('The computer is firing at ', 'La computadora dispara a ') + pair(t.x, t.y), 1300).then(function () {
+      if (!alive(id)) return;
+      return locate(id, t.x, t.y);
+    }).then(function (how) {
+      if (!alive(id)) return;
+      return resolveEnemy(id, t.x, t.y, how);
+    });
+  }
+
+  // the student must find the computer's point on their own board
+  function locate(id, tx, ty) {
+    return new Promise(function (resolve) {
+      var b = B.me, tries = 0, words = G.hard ? describe(tx, ty) : null, helpParts = null, done = false;
+      activeZone('me', T('Find the point here!', '¡Busca el punto aquí!'));
+      var head = '<h2 class="foe">' + T('ENEMY FIRE!', '¡FUEGO ENEMIGO!') + '</h2>' +
+        (G.hard ? '<p>' + T('The computer&rsquo;s target:', 'El objetivo de la computadora:') + '</p><div class="words" id="enemy-words">' + words + '</div>'
+          : '<p>' + T('The computer is firing at:', 'La computadora dispara a:') + '</p><div class="target-big" id="enemy-pair">' + pair(tx, ty) + '</div>') +
+        '<p>' + T('Find this point on <b>YOUR BOARD</b> and click it. Keyboard: arrow keys, then <kbd>Enter</kbd>.', 'Busca este punto en <b>TU TABLERO</b> y haz clic. Teclado: flechas y luego <kbd>Enter</kbd>.') + '</p>';
+      panel(head + '<div id="loc-fb" aria-live="polite"></div>');
+      var cur = { x: G.mode === 'easy' ? 0 : 0, y: 0 }, hover = null;
+      var curG = svgEl('g', { 'class': 'kcur-g' }, b.L.ui);
+      function drawCur(show) {
+        curG.innerHTML = '';
+        if (!show) return;
+        svgEl('circle', { cx: b.sx(cur.x), cy: b.sy(cur.y), r: 21, 'class': 'kcur' }, curG);
+        svgEl('circle', { cx: b.sx(cur.x), cy: b.sy(cur.y), r: 27, 'class': 'kcur2' }, curG);
+      }
+      var hoverEl = null;
+      function onMove(e) {
+        var p = b.nearest(e.clientX, e.clientY, 0.48);
+        if (hoverEl) { hoverEl.remove(); hoverEl = null; }
+        if (p) hoverEl = b.ring(p.x, p.y, 'hover-ring', 20);
+        b.svg.style.cursor = p ? 'pointer' : 'default';
+      }
+      function onLeave() { if (hoverEl) { hoverEl.remove(); hoverEl = null; } }
+      function onClick(e) {
+        var p = b.nearest(e.clientX, e.clientY, 0.48);
+        if (p) { cur = p; choose(p.x, p.y); }
+      }
+      function onKey(e) {
+        var d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+        if (d) {
+          e.preventDefault();
+          cur = { x: Math.max(G.min, Math.min(G.max, cur.x + d[0])), y: Math.max(G.min, Math.min(G.max, cur.y + d[1])) };
+          drawCur(true);
+          say(pair(cur.x, cur.y));
+          return;
+        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); drawCur(true); choose(cur.x, cur.y); }
+      }
+      function onFocus() { drawCur(true); }
+      function onBlur() { drawCur(false); }
+      b.svg.setAttribute('tabindex', '0');
+      b.svg.setAttribute('aria-label', T('Your board. Use the arrow keys to move from point to point, then press Enter to choose the computer’s target. The cursor starts at the origin.', 'Tu tablero. Usa las flechas para moverte de punto en punto y pulsa Enter para elegir el objetivo de la computadora. El cursor empieza en el origen.'));
+      b.svg.addEventListener('pointermove', onMove);
+      b.svg.addEventListener('pointerleave', onLeave);
+      b.svg.addEventListener('click', onClick);
+      b.svg.addEventListener('keydown', onKey);
+      b.svg.addEventListener('focus', onFocus);
+      b.svg.addEventListener('blur', onBlur);
+      focusLater(b.svg);
+      function cleanup() {
+        done = true;
+        stopTimer();
+        b.svg.removeEventListener('pointermove', onMove);
+        b.svg.removeEventListener('pointerleave', onLeave);
+        b.svg.removeEventListener('click', onClick);
+        b.svg.removeEventListener('keydown', onKey);
+        b.svg.removeEventListener('focus', onFocus);
+        b.svg.removeEventListener('blur', onBlur);
+        b.svg.removeAttribute('tabindex');
+        b.svg.style.cursor = '';
+        onLeave(); curG.remove();
+        if (helpParts) helpParts.forEach(function (p) { p.remove(); });
+      }
+      function choose(px, py) {
+        if (done || !alive(id)) return;
+        if (px === tx && py === ty) {
+          Sound.play('correct');
+          b.ring(px, py, 'okpick', 22);
+          $('#loc-fb').innerHTML = '<div class="fb good">&#10004; ' + T('Correct! That&rsquo;s ', '¡Correcto! Es ') + '<b>' + pair(tx, ty) + '</b>.</div>';
+          cleanup();
+          resolve('found');
+          return;
+        }
+        tries++;
+        Sound.play('wrong');
+        var r = b.ring(px, py, 'wrongpick', 21);
+        var xg = svgEl('path', { d: 'M' + (b.sx(px) - 9) + ' ' + (b.sy(py) - 9) + ' l18 18 m0 -18 l-18 18', 'class': 'wrongx' }, b.L.ui);
+        setTimeout(function () { r.remove(); xg.remove(); }, 1700);
+        $('#loc-fb').innerHTML = '<div class="fb bad"><b class="nq">' + T('NOT QUITE! Try again.', '¡CASI! Inténtalo de nuevo.') + '</b>' +
+          T('You picked ', 'Elegiste ') + pair(px, py) + '. ' + analyze(tx, ty, px, py) + '<span class="hint">' + hintFor(tx, ty, tries) + '</span></div>';
+        say(T('Not quite. ', 'Casi. ') + $('#loc-fb').textContent);
+        if (tries >= 4 && !helpParts) {
+          helpParts = [];
+          flyPath(b, tx, ty, { help: true, silent: true }).then(function (f) {
+            if (done) { f.parts.forEach(function (p) { p.remove(); }); return; }
+            f.plane.g.remove();
+            helpParts = f.parts.concat([b.targetRing(tx, ty)]);
+          });
+        }
+      }
+      if (G.hard) startTimer(TIME.locate, function () {
+        if (done || !alive(id)) return;
+        Sound.play('timeout');
+        $('#loc-fb').innerHTML = '<div class="fb info">&#9200; ' + T('Time&rsquo;s up! Watch where ', '¡Se acabó el tiempo! Mira dónde está ') + '<b>' + pair(tx, ty) + '</b>' +
+          T(' is: x = ' + num(tx) + ' first (left/right), then y = ' + num(ty) + ' (up/down).', ': primero x = ' + num(tx) + ' (izquierda/derecha), luego y = ' + num(ty) + ' (arriba/abajo).') + '</div>';
+        var keep = helpParts; helpParts = null;
+        cleanup();
+        if (keep) keep.forEach(function (p) { p.remove(); });
+        flyPath(b, tx, ty, { help: true }).then(function (f) {
+          var tr = b.targetRing(tx, ty);
+          return wait(1400).then(function () { f.parts.forEach(function (p) { p.remove(); }); tr.remove(); resolve('timeout'); });
+        });
+      });
+    });
+  }
+  function resolveEnemy(id, x, y, how) {
+    var b = B.me, sid = shipAt(G.my, x, y), k = key(x, y);
+    if (sid) { G.myHits[k] = true; b.explode(x, y); Sound.play('hit'); } else { b.splash(x, y); Sound.play('miss'); }
+    aiRecord(x, y, sid);
+    activeZone(null);
+    return wait(600).then(function () {
+      if (!alive(id)) return;
+      b.addMark(x, y, !!sid);
+      updateFleets();
+      var sub = (how === 'timeout' ? '' : '') + pair(x, y) + (sid ? T(' hit your ' + SHIP[sid].name + '!', ' le dio a tu ' + SHIP[sid].name + '!') : T(' landed in the water.', ' cayó al agua.'));
+      return banner(sid ? 'hit' : 'miss', sid ? '&#128293; ' + T('HIT!', '¡IMPACTO!') : '&#10006; ' + T('MISS', 'AGUA'), sub, 1400).then(function () {
+        if (!sid || !alive(id) || !isSunk(G.my, G.myHits, sid) || G.sunkMe[sid]) return;
+        G.sunkMe[sid] = true;
+        return sinkShip(b, G.my[sid], false).then(function () {
+          return banner('sunk', SHIP[sid].up + ' ' + T('SUNK!', '¡HUNDIDO!'), T('The computer sank your ' + SHIP[sid].name + '.', 'La computadora hundió tu ' + SHIP[sid].name + '.'), 1800);
+        });
+      });
+    });
+  }
+
+  // feedback that names the mistake
+  function analyze(tx, ty, px, py) {
+    if (px === ty && py === tx && tx !== ty)
+      return T('Check the order! Look carefully: the first number is x (left/right). The second number is y (up/down).', '¡Revisa el orden! Fíjate bien: el primer número es x (izquierda/derecha). El segundo número es y (arriba/abajo).');
+    if (py === ty && px === -tx && tx !== 0)
+      return T('Your y-coordinate is correct, but your x-coordinate should move ' + WX(tx) + ', not ' + WX(-tx) + '.', 'Tu coordenada y es correcta, pero tu coordenada x debe moverse ' + WX(tx) + ', no ' + WX(-tx) + '.');
+    if (px === tx && py === -ty && ty !== 0)
+      return T('Your x-coordinate is correct. Your y-coordinate should move ' + WY(ty) + ', not ' + WY(-ty) + '.', 'Tu coordenada x es correcta. Tu coordenada y debe moverse ' + WY(ty) + ', no ' + WY(-ty) + '.');
+    if (px === -tx && py === -ty)
+      return T('Both directions are flipped. Positive x moves RIGHT, negative x moves LEFT. Positive y moves UP, negative y moves DOWN.', 'Las dos direcciones están al revés. x positiva va a la DERECHA, x negativa a la IZQUIERDA. y positiva va hacia ARRIBA, y negativa hacia ABAJO.');
+    if (Math.abs(px) === Math.abs(ty) && Math.abs(py) === Math.abs(tx) && Math.abs(tx) !== Math.abs(ty))
+      return T('Check the order! The x-coordinate comes first, then the y-coordinate.', '¡Revisa el orden! Primero va la coordenada x y luego la coordenada y.');
+    if (py === ty)
+      return T('Your y-coordinate is correct. Check your x-coordinate: how far LEFT or RIGHT?', 'Tu coordenada y es correcta. Revisa tu coordenada x: ¿cuánto a la IZQUIERDA o a la DERECHA?');
+    if (px === tx)
+      return T('Your x-coordinate is correct. Check your y-coordinate: how far UP or DOWN?', 'Tu coordenada x es correcta. Revisa tu coordenada y: ¿cuánto hacia ARRIBA o hacia ABAJO?');
+    return T('That point isn’t the target.', 'Ese punto no es el objetivo.');
+  }
+  function moveSentence(x, y) {
+    var a = x === 0 ? T('Do not move left or right (x is 0).', 'No te muevas a los lados (x es 0).') : T('Move ' + units(x) + ' ' + WX(x) + '.', 'Muévete ' + units(x) + ' ' + WX(x) + '.');
+    var b = y === 0 ? T('Then do not move up or down (y is 0).', 'Luego no subas ni bajes (y es 0).') : T('Then move ' + units(y) + ' ' + WY(y) + '.', 'Luego muévete ' + units(y) + ' ' + WY(y) + '.');
+    return a + ' ' + b;
+  }
+  function hintFor(tx, ty, n) {
+    if (n === 1) return T('Hint: Remember, x comes first.', 'Pista: recuerda, x va primero.');
+    if (n === 2) return G.mode === 'easy' ? T('Hint: Start at (0, 0). Move RIGHT first, then UP.', 'Pista: empieza en (0, 0). Muévete primero a la DERECHA y luego hacia ARRIBA.')
+      : T('Hint: Start at (0, 0). Move LEFT or RIGHT first.', 'Pista: empieza en (0, 0). Muévete primero a la IZQUIERDA o a la DERECHA.');
+    if (n === 3) return T('Hint: Start at (0, 0). ', 'Pista: empieza en (0, 0). ') + moveSentence(tx, ty);
+    return T('Watch the purple path on your board, then click the point where it ends. ', 'Mira el camino morado en tu tablero y haz clic en el punto donde termina. ') + moveSentence(tx, ty);
+  }
+
+  // Hard mode: the same point, said many ways (sometimes y first). The meaning never changes.
+  function describe(x, y) {
+    var opts = [];
+    var xs = num(x), ys = num(y);
+    var side = x > 0 ? T('to the right of', 'a la derecha del') : T('to the left of', 'a la izquierda del');
+    var vert = y > 0 ? T('above', 'arriba del') : T('below', 'abajo del');
+    opts.push(T('The x-coordinate is <b>' + xs + '</b> and the y-coordinate is <b>' + ys + '</b>.', 'La coordenada x es <b>' + xs + '</b> y la coordenada y es <b>' + ys + '</b>.'));
+    opts.push(T('The y-coordinate is <b>' + ys + '</b> and the x-coordinate is <b>' + xs + '</b>.', 'La coordenada y es <b>' + ys + '</b> y la coordenada x es <b>' + xs + '</b>.'));
+    opts.push(T('The y-coordinate is <b>' + ys + '</b> and the x-coordinate is <b>' + xs + '</b>.', 'La coordenada y es <b>' + ys + '</b> y la coordenada x es <b>' + xs + '</b>.'));
+    if (x === 0 && y === 0) {
+      opts.push(T('The target is the <b>origin</b>, where the x-axis and y-axis cross.', 'El objetivo es el <b>origen</b>, donde se cruzan el eje x y el eje y.'));
+    } else if (x === 0) {
+      opts.push(T('Stay on the y-axis and move <b>' + units(y) + ' ' + wordY(y) + '</b> from the origin.', 'Quédate en el eje y y muévete <b>' + units(y) + ' ' + wordY(y) + '</b> desde el origen.'));
+      opts.push(T('Your target is on the <b>y-axis</b>, <b>' + units(y) + ' ' + vert + '</b> the x-axis.', 'Tu objetivo está en el <b>eje y</b>, <b>' + units(y) + ' ' + vert + '</b> eje x.'));
+    } else if (y === 0) {
+      opts.push(T('Move <b>' + units(x) + ' ' + wordX(x) + '</b> along the x-axis from the origin.', 'Muévete <b>' + units(x) + ' ' + wordX(x) + '</b> por el eje x desde el origen.'));
+      opts.push(T('Your target is on the <b>x-axis</b>, <b>' + units(x) + ' ' + side + '</b> the y-axis.', 'Tu objetivo está en el <b>eje x</b>, <b>' + units(x) + ' ' + side + '</b> eje y.'));
+    } else {
+      opts.push(T('Move <b>' + units(y) + ' ' + wordY(y) + '</b> and <b>' + units(x) + ' ' + wordX(x) + '</b>.', 'Muévete <b>' + units(y) + ' ' + wordY(y) + '</b> y <b>' + units(x) + ' ' + wordX(x) + '</b>.'));
+      opts.push(T('From the origin, move <b>' + units(x) + ' ' + wordX(x) + '</b>, then <b>' + units(y) + ' ' + wordY(y) + '</b>.', 'Desde el origen, muévete <b>' + units(x) + ' ' + wordX(x) + '</b> y luego <b>' + units(y) + ' ' + wordY(y) + '</b>.'));
+      opts.push(T('Your target is <b>' + units(x) + ' ' + side + '</b> the y-axis and <b>' + units(y) + ' ' + vert + '</b> the x-axis.', 'Tu objetivo está <b>' + units(x) + ' ' + side + '</b> eje y y <b>' + units(y) + ' ' + vert + '</b> eje x.'));
+      opts.push(T('Your target is <b>' + units(y) + ' ' + vert + '</b> the x-axis and <b>' + units(x) + ' ' + side + '</b> the y-axis.', 'Tu objetivo está <b>' + units(y) + ' ' + vert + '</b> eje x y <b>' + units(x) + ' ' + side + '</b> eje y.'));
+    }
+    opts.push(T('Target: <b>' + pair(x, y) + '</b>', 'Objetivo: <b>' + pair(x, y) + '</b>'));
+    return pick(opts);
+  }
+
+  // ---------------- Hard mode: Radar Checks between turns
+  function quad(x, y) { if (x === 0 || y === 0) return 0; if (x > 0) return y > 0 ? 1 : 4; return y > 0 ? 2 : 3; }
+  var QN = ['', 'I', 'II', 'III', 'IV'];
+  function signWord(v, axis) {
+    if (v === 0) return axis === 'x' ? T('x = 0 (no left or right)', 'x = 0 (ni izquierda ni derecha)') : T('y = 0 (no up or down)', 'y = 0 (ni arriba ni abajo)');
+    return axis === 'x' ? T('x = ' + num(v) + ' is ' + (v > 0 ? 'positive (RIGHT)' : 'negative (LEFT)'), 'x = ' + num(v) + ' es ' + (v > 0 ? 'positiva (DERECHA)' : 'negativa (IZQUIERDA)'))
+      : T('y = ' + num(v) + ' is ' + (v > 0 ? 'positive (UP)' : 'negative (DOWN)'), 'y = ' + num(v) + ' es ' + (v > 0 ? 'positiva (ARRIBA)' : 'negativa (ABAJO)'));
+  }
+  function quadExplain(x, y) {
+    var q = quad(x, y);
+    if (!q) {
+      if (x === 0 && y === 0) return T(pair(x, y) + ' is the origin. It is on both axes, so it is not in any quadrant.', pair(x, y) + ' es el origen. Está en los dos ejes, así que no está en ningún cuadrante.');
+      return T(pair(x, y) + ': ' + (x === 0 ? 'x = 0, so the point is ON the y-axis' : 'y = 0, so the point is ON the x-axis') + '. Points on an axis are not in any quadrant.',
+        pair(x, y) + ': ' + (x === 0 ? 'x = 0, así que el punto está SOBRE el eje y' : 'y = 0, así que el punto está SOBRE el eje x') + '. Los puntos sobre un eje no están en ningún cuadrante.');
+    }
+    return pair(x, y) + ': ' + signWord(x, 'x') + T(' and ', ' y ') + signWord(y, 'y') + '. ' + T('That is Quadrant ' + QN[q] + '.', 'Eso es el cuadrante ' + QN[q] + '.') +
+      ' ' + T('(I: +,+ &nbsp; II: &minus;,+ &nbsp; III: &minus;,&minus; &nbsp; IV: +,&minus;)', '(I: +,+ &nbsp; II: &minus;,+ &nbsp; III: &minus;,&minus; &nbsp; IV: +,&minus;)');
+  }
+  function randPt(nonzero) {
+    var x, y;
+    do { x = G.min + rnd(G.max - G.min + 1); y = G.min + rnd(G.max - G.min + 1); } while (nonzero && (x === 0 || y === 0));
+    return { x: x, y: y };
+  }
+  function blipPoint() {
+    // an empty spot on the opponent's board, so the blip is easy to see
+    for (var n = 0; n < 60; n++) {
+      var p = randPt(Math.random() < 0.75);
+      if (!B.foe.marks[key(p.x, p.y)]) return p;
+    }
+    return randPt(true);
+  }
+  function makeQuiz() {
+    var kinds = ['quad', 'quad', 'reverse', 'reverse', 'which', 'first', 'sign', 'right', 'uppy', 'inq', 'negx'];
+    var k = pick(kinds), q = { kind: k };
+    var P, i;
+    if (k === 'quad') {
+      var last = G.ai && G.ai.lastShot;
+      P = Math.random() < 0.3 ? (Math.random() < 0.5 ? { x: 0, y: pick([-3, -2, -1, 1, 2, 3]) } : { x: pick([-3, -2, -1, 1, 2, 3]), y: 0 }) : randPt(true);
+      if (last && Math.random() < 0.4) P = last;
+      var a = quad(P.x, P.y);
+      q.prompt = pick([
+        T('Your opponent&rsquo;s coordinate is <b>' + pair(P.x, P.y) + '</b>. Which quadrant is the point in? (Or is it on an axis?)', 'La coordenada de tu oponente es <b>' + pair(P.x, P.y) + '</b>. ¿En qué cuadrante está el punto? (¿O está sobre un eje?)'),
+        T('Is <b>' + pair(P.x, P.y) + '</b> in a quadrant or on an axis? If it&rsquo;s in a quadrant, which one?', '¿<b>' + pair(P.x, P.y) + '</b> está en un cuadrante o sobre un eje? Si está en un cuadrante, ¿en cuál?')
+      ]);
+      q.choices = [1, 2, 3, 4, 0].map(function (n) { return { label: n ? T('Quadrant ' + QN[n], 'Cuadrante ' + QN[n]) : T('On an axis', 'Sobre un eje'), ok: n === a }; });
+      q.explain = quadExplain(P.x, P.y);
+      q.hint = T('Look at the signs. Is x positive or negative? Is y positive or negative? Is either one 0?', 'Mira los signos. ¿x es positiva o negativa? ¿y es positiva o negativa? ¿Alguna es 0?');
+    } else if (k === 'reverse') {
+      P = blipPoint();
+      q.blip = P;
+      q.prompt = T('A radar blip appeared on the <b>OPPONENT&rsquo;S BOARD</b> (the purple point). What is its coordinate? Type the ordered pair.', 'Apareció una señal de radar en el <b>TABLERO DEL OPONENTE</b> (el punto morado). ¿Cuál es su coordenada? Escribe el par ordenado.');
+      q.answer = P;
+      q.explain = T('The blip is ' + (P.x === 0 ? 'on the y-axis (x = 0)' : units(P.x) + ' ' + wordX(P.x)) + ' and ' + (P.y === 0 ? 'on the x-axis (y = 0)' : units(P.y) + ' ' + wordY(P.y)) + ' from the origin, so it is <b>' + pair(P.x, P.y) + '</b>.',
+        'La señal está ' + (P.x === 0 ? 'sobre el eje y (x = 0)' : units(P.x) + ' ' + wordX(P.x)) + ' y ' + (P.y === 0 ? 'sobre el eje x (y = 0)' : units(P.y) + ' ' + wordY(P.y)) + ' del origen, así que es <b>' + pair(P.x, P.y) + '</b>.');
+    } else if (k === 'which') {
+      do { P = randPt(false); } while (P.x === P.y);
+      var askX = Math.random() < 0.5;
+      q.prompt = T('In the ordered pair <b>' + pair(P.x, P.y) + '</b>, which number is the <b>' + (askX ? 'x' : 'y') + '-coordinate</b>?', 'En el par ordenado <b>' + pair(P.x, P.y) + '</b>, ¿qué número es la <b>coordenada ' + (askX ? 'x' : 'y') + '</b>?');
+      q.choices = shuffle([{ label: num(P.x), ok: askX }, { label: num(P.y), ok: !askX }]);
+      q.explain = T('In (x, y), the <b>first</b> number is always x and the <b>second</b> is always y. So the ' + (askX ? 'x' : 'y') + '-coordinate is <b>' + num(askX ? P.x : P.y) + '</b>.', 'En (x, y), el <b>primer</b> número siempre es x y el <b>segundo</b> siempre es y. Así que la coordenada ' + (askX ? 'x' : 'y') + ' es <b>' + num(askX ? P.x : P.y) + '</b>.');
+      q.hint = T('Which comes first in (x, y)?', '¿Qué va primero en (x, y)?');
+    } else if (k === 'first') {
+      do { P = randPt(true); } while (Math.abs(P.x) === Math.abs(P.y) && Math.random() < 0.5);
+      q.prompt = T('To plot <b>' + pair(P.x, P.y) + '</b> starting at the origin, which way do you move <b>first</b>?', 'Para ubicar <b>' + pair(P.x, P.y) + '</b> empezando en el origen, ¿hacia dónde te mueves <b>primero</b>?');
+      var right = P.x > 0 ? 'R' : 'L';
+      q.choices = [['L', T('Left', 'Izquierda')], ['R', T('Right', 'Derecha')], ['U', T('Up', 'Arriba')], ['D', T('Down', 'Abajo')]].map(function (c) { return { label: c[1], ok: c[0] === right }; });
+      q.explain = T('x comes first, so move left or right first. x = ' + num(P.x) + ' is ' + (P.x > 0 ? 'positive, so move <b>RIGHT</b>' : 'negative, so move <b>LEFT</b>') + '. Then y = ' + num(P.y) + ' moves you ' + wordY(P.y) + '.',
+        'x va primero, así que primero te mueves a la izquierda o a la derecha. x = ' + num(P.x) + ' es ' + (P.x > 0 ? 'positiva, así que vas a la <b>DERECHA</b>' : 'negativa, así que vas a la <b>IZQUIERDA</b>') + '. Luego y = ' + num(P.y) + ' te mueve ' + wordY(P.y) + '.');
+      q.hint = T('The first number tells you the first move. Is it x or y?', 'El primer número te dice el primer movimiento. ¿Es x o y?');
+    } else if (k === 'sign') {
+      P = blipPoint();
+      q.blip = P;
+      var ax = Math.random() < 0.5 ? 'x' : 'y', v = ax === 'x' ? P.x : P.y;
+      q.prompt = T('Look at the purple radar blip on the <b>OPPONENT&rsquo;S BOARD</b>. Is its <b>' + ax + '-coordinate</b> positive, negative, or zero?', 'Mira la señal morada en el <b>TABLERO DEL OPONENTE</b>. ¿Su <b>coordenada ' + ax + '</b> es positiva, negativa o cero?');
+      q.choices = [[1, T('Positive', 'Positiva')], [-1, T('Negative', 'Negativa')], [0, T('Zero', 'Cero')]].map(function (c) { return { label: c[1], ok: c[0] === Math.sign(v) }; });
+      q.explain = ax === 'x'
+        ? T('The blip is ' + (v > 0 ? '<b>right</b> of the y-axis, so x is positive' : v < 0 ? '<b>left</b> of the y-axis, so x is negative' : '<b>on</b> the y-axis, so x is 0') + '. It is ' + pair(P.x, P.y) + '.', 'La señal está ' + (v > 0 ? 'a la <b>derecha</b> del eje y, así que x es positiva' : v < 0 ? 'a la <b>izquierda</b> del eje y, así que x es negativa' : '<b>sobre</b> el eje y, así que x es 0') + '. Es ' + pair(P.x, P.y) + '.')
+        : T('The blip is ' + (v > 0 ? '<b>above</b> the x-axis, so y is positive' : v < 0 ? '<b>below</b> the x-axis, so y is negative' : '<b>on</b> the x-axis, so y is 0') + '. It is ' + pair(P.x, P.y) + '.', 'La señal está ' + (v > 0 ? '<b>arriba</b> del eje x, así que y es positiva' : v < 0 ? '<b>abajo</b> del eje x, así que y es negativa' : '<b>sobre</b> el eje x, así que y es 0') + '. Es ' + pair(P.x, P.y) + '.');
+      q.hint = ax === 'x' ? T('x is about left and right of the y-axis.', 'x tiene que ver con la izquierda y la derecha del eje y.') : T('y is about above and below the x-axis.', 'y tiene que ver con arriba y abajo del eje x.');
+    } else if (k === 'right' || k === 'uppy') {
+      var isX = k === 'right', pts = [];
+      // three points with different x (or y); one is the swap of another to test order
+      var A; do { A = randPt(true); } while (A.x === A.y || A.x === -A.y);
+      pts.push(A, { x: A.y, y: A.x });
+      for (i = 0; i < 40 && pts.length < 3; i++) {
+        var C = randPt(false);
+        if (pts.every(function (p) { return (isX ? p.x !== C.x : p.y !== C.y) && !(p.x === C.x && p.y === C.y); })) pts.push(C);
+      }
+      var best = pts.reduce(function (m, p) { return (isX ? p.x > m.x : p.y > m.y) ? p : m; });
+      q.prompt = isX ? T('Which point is <b>farther right</b>?', '¿Qué punto está <b>más a la derecha</b>?') : T('Which point has the <b>greater y-coordinate</b>?', '¿Qué punto tiene la <b>coordenada y mayor</b>?');
+      q.choices = shuffle(pts.map(function (p) { return { label: pair(p.x, p.y), ok: p === best }; }));
+      q.explain = isX ? T('Farther right means the greatest <b>x-coordinate</b>, the <b>first</b> number. ' + pair(best.x, best.y) + ' has x = ' + num(best.x) + '.', 'Más a la derecha significa la <b>coordenada x</b> mayor, el <b>primer</b> número. ' + pair(best.x, best.y) + ' tiene x = ' + num(best.x) + '.')
+        : T('The y-coordinate is the <b>second</b> number. ' + pair(best.x, best.y) + ' has the greatest y: ' + num(best.y) + '.', 'La coordenada y es el <b>segundo</b> número. ' + pair(best.x, best.y) + ' tiene la y mayor: ' + num(best.y) + '.');
+      q.hint = isX ? T('Right and left are about x, the first number.', 'Derecha e izquierda tienen que ver con x, el primer número.') : T('y is the second number in (x, y).', 'y es el segundo número en (x, y).');
+    } else if (k === 'inq') {
+      var tq = 1 + rnd(4);
+      var sx = tq === 1 || tq === 4 ? 1 : -1, sy = tq === 1 || tq === 2 ? 1 : -1;
+      var ans = { x: sx * (1 + rnd(3)), y: sy * (1 + rnd(3)) };
+      var list = [ans];
+      if (Math.abs(ans.x) !== Math.abs(ans.y) || ans.x !== ans.y) list.push({ x: ans.y, y: ans.x });
+      var tries2 = 0;
+      while (list.length < 4 && tries2++ < 80) {
+        var D = Math.random() < 0.25 ? (Math.random() < 0.5 ? { x: 0, y: sy * (1 + rnd(3)) } : { x: sx * (1 + rnd(3)), y: 0 }) : randPt(true);
+        if (quad(D.x, D.y) === tq) continue;
+        if (list.some(function (p) { return p.x === D.x && p.y === D.y; })) continue;
+        list.push(D);
+      }
+      list = list.filter(function (p, j) { return j === 0 || quad(p.x, p.y) !== tq; });
+      q.prompt = T('Which point is in <b>Quadrant ' + QN[tq] + '</b>?', '¿Qué punto está en el <b>cuadrante ' + QN[tq] + '</b>?');
+      q.choices = shuffle(list.map(function (p) { return { label: pair(p.x, p.y), ok: p === ans }; }));
+      q.explain = quadExplain(ans.x, ans.y);
+      q.hint = T('Quadrant I: (+,+). II: (&minus;,+). III: (&minus;,&minus;). IV: (+,&minus;). Check x first, then y.', 'Cuadrante I: (+,+). II: (&minus;,+). III: (&minus;,&minus;). IV: (+,&minus;). Revisa primero x, luego y.');
+    } else {   // negx
+      var a1 = { x: -(1 + rnd(3)), y: (Math.random() < 0.5 ? 1 : -1) * (1 + rnd(3)) };
+      var opts2 = [a1, { x: 1 + rnd(3), y: -(1 + rnd(3)) }, { x: Math.abs(a1.y), y: a1.x }, { x: rnd(4), y: -(1 + rnd(3)) }];
+      var uniq = [];
+      opts2.forEach(function (p) { if (!uniq.some(function (u) { return u.x === p.x && u.y === p.y; }) && (p === a1 || p.x >= 0)) uniq.push(p); });
+      q.prompt = T('Which ordered pair has a <b>negative x-coordinate</b>?', '¿Qué par ordenado tiene una <b>coordenada x negativa</b>?');
+      q.choices = shuffle(uniq.map(function (p) { return { label: pair(p.x, p.y), ok: p === a1 }; }));
+      q.explain = T('The x-coordinate is the <b>first</b> number. Only ' + pair(a1.x, a1.y) + ' starts with a negative number, so that point is left of the y-axis.', 'La coordenada x es el <b>primer</b> número. Solo ' + pair(a1.x, a1.y) + ' empieza con un número negativo, así que ese punto está a la izquierda del eje y.');
+      q.hint = T('Look only at the first number in each pair.', 'Mira solo el primer número de cada par.');
+    }
+    return q;
+  }
+
+  function radarCheck(id) {
+    return new Promise(function (resolve) {
+      var q = makeQuiz(), done = false, blip = null, wrongs = 0;
+      setTurn('radar', T('RADAR CHECK', 'REVISIÓN DE RADAR'), '&#128225;');
+      activeZone(q.blip ? 'foe' : null, q.blip ? T('Radar blip!', '¡Señal de radar!') : null);
+      if (q.blip) {
+        var b = B.foe;
+        blip = svgEl('g', { transform: 'translate(' + b.sx(q.blip.x) + ',' + b.sy(q.blip.y) + ')' }, b.L.ui);
+        blip.innerHTML = '<circle r="16" class="blipring"/><path d="M0 -15 L15 0 L0 15 L-15 0 Z" class="blip"/>';
+      }
+      var html = '<h2 class="radar">&#128225; ' + T('RADAR CHECK', 'REVISIÓN DE RADAR') + '</h2><p class="sub">' + T('Answer correctly to unlock your next shot.', 'Responde bien para desbloquear tu siguiente disparo.') + '</p>' +
+        '<p style="font-size:18px">' + q.prompt + '</p>';
+      if (q.choices) {
+        html += '<div class="choices" role="group">' + q.choices.map(function (c, i) { return '<button type="button" class="btn" data-i="' + i + '"><span aria-hidden="true" style="opacity:.6;font-size:.8em">' + (i + 1) + '</span> ' + c.label + '</button>'; }).join('') + '</div>';
+      } else {
+        html += '<div class="entry"><input type="text" id="in-pair" class="wide" autocomplete="off" spellcheck="false" maxlength="14" placeholder="( ? , ? )" aria-label="' + esc(T('Ordered pair', 'Par ordenado')) + '"></div><p class="err" id="fire-err" role="alert"></p>' + padHTML() +
+          '<div class="fire-row"><button type="button" class="btn" id="btn-check">' + T('CHECK', 'COMPROBAR') + '</button></div>';
+      }
+      html += '<div id="quiz-fb" aria-live="polite"></div>';
+      panel(html);
+      say(T('Radar check. ', 'Revisión de radar. ') + $('#panel .task p:nth-of-type(2)').textContent);
+      function finish(ok, timedOut) {
+        if (done) return;
+        done = true; stopTimer();
+        Array.prototype.forEach.call(document.querySelectorAll('#panel .choices .btn, #panel input, #btn-check, #panel .pad button'), function (e) { e.disabled = true; });
+        if (q.choices) q.choices.forEach(function (c, i) { if (c.ok) $('#panel .choices .btn[data-i="' + i + '"]').classList.add('right'); });
+        var fb = $('#quiz-fb');
+        fb.innerHTML = '<div class="fb ' + (ok ? 'good' : 'info') + '">' + (ok ? '&#10004; ' + T('<b>Correct!</b> ', '<b>¡Correcto!</b> ') : '&#9200; ' + T('<b>Time&rsquo;s up.</b> Here&rsquo;s the answer: ', '<b>Se acabó el tiempo.</b> Esta es la respuesta: ')) + q.explain + '</div>' +
+          '<div class="fire-row" style="margin-top:8px"><button type="button" class="btn green" id="quiz-go">' + T('CONTINUE &#9654;', 'CONTINUAR &#9654;') + '</button></div>';
+        if (q.answer && !ok) { var inp = $('#in-pair'); if (inp) inp.value = pair(q.answer.x, q.answer.y); }
+        say((ok ? T('Correct. ', 'Correcto. ') : T('Time is up. ', 'Se acabó el tiempo. ')) + fb.textContent);
+        $('#quiz-go').addEventListener('click', function () { Sound.play('click'); if (blip) blip.remove(); activeZone(null); resolve(); });
+        focusLater($('#quiz-go'));
+      }
+      function wrong(msg) {
+        wrongs++;
+        Sound.play('wrong');
+        $('#quiz-fb').innerHTML = '<div class="fb bad"><b class="nq">' + T('NOT QUITE! Try again.', '¡CASI! Inténtalo de nuevo.') + '</b>' + msg + '</div>';
+        say(T('Not quite. ', 'Casi. ') + $('#quiz-fb').textContent);
+      }
+      if (q.choices) {
+        Array.prototype.forEach.call(document.querySelectorAll('#panel .choices .btn'), function (btn) {
+          btn.addEventListener('click', function () {
+            if (done || btn.classList.contains('wrong')) return;
+            var c = q.choices[+btn.getAttribute('data-i')];
+            if (c.ok) { Sound.play('correct'); finish(true); }
+            else { btn.classList.add('wrong'); btn.setAttribute('aria-disabled', 'true'); wrong(q.hint + (wrongs >= 1 ? ' ' : '')); }
+          });
+        });
+        G.quizKeys = function (e) {
+          if (done) return false;
+          var n = parseInt(e.key, 10);
+          if (n >= 1 && n <= q.choices.length) { e.preventDefault(); $('#panel .choices .btn[data-i="' + (n - 1) + '"]').click(); return true; }
+          return false;
+        };
+        focusLater($('#panel .choices .btn'));
+      } else {
+        var inp = $('#in-pair'), active = inp;
+        if (TOUCH) inp.setAttribute('inputmode', 'none');
+        inp.addEventListener('input', function () { cleanInput(inp, 0, [inp]); });
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); check(); } });
+        Array.prototype.forEach.call(document.querySelectorAll('#panel .pad button'), function (b2) {
+          b2.addEventListener('mousedown', function (e) { e.preventDefault(); });
+          b2.addEventListener('click', function () {
+            var k = b2.getAttribute('data-k');
+            Sound.play('click');
+            if (k === 'back') active.value = active.value.slice(0, -1); else active.value += k;
+            cleanInput(active, 0, [active]);
+            if (!TOUCH) active.focus();
+          });
+        });
+        $('#btn-check').addEventListener('click', check);
+        focusLater(inp);
+      }
+      function check() {
+        if (done) return;
+        var r = parsePair($('#in-pair').value);
+        if (r.err) { Sound.play('invalid'); fireErr(r.err, $('#in-pair')); return; }
+        fireErr('');
+        if (r.x === q.answer.x && r.y === q.answer.y) { Sound.play('correct'); finish(true); return; }
+        var tx = q.answer.x, ty = q.answer.y;
+        wrong(T('You typed ', 'Escribiste ') + pair(r.x, r.y) + '. ' + analyze(tx, ty, r.x, r.y) + (wrongs >= 1 ? '<span class="hint">' + hintFor(tx, ty, Math.min(3, wrongs + 1)) + '</span>' : ''));
+      }
+      startTimer(q.answer ? TIME.quiz + 5 : TIME.quiz, function () {
+        if (done || !alive(id)) return;
+        Sound.play('timeout');
+        banner('time', '&#9200; ' + T('TIME’S UP!', '¡SE ACABÓ EL TIEMPO!'), '', 1100);
+        finish(false, true);
+      });
+    }).then(function () { G.quizKeys = null; });
+  }
+
+  // ---------------- timer (Hard mode)
+  function startTimer(sec, onExpire) {
+    stopTimer();
+    var el = $('#timer');
+    el.hidden = false;
+    var t = { left: sec * 1000, total: sec * 1000, last: performance.now(), onExpire: onExpire, lastSec: sec };
+    G.timer = t;
+    function draw() {
+      var s = Math.ceil(t.left / 1000);
+      $('#timer-n').textContent = s;
+      el.style.setProperty('--p', Math.max(0, t.left / t.total));
+      el.classList.toggle('mid', s <= 15 && s > 6);
+      el.classList.toggle('low', s <= 6);
+      el.setAttribute('aria-label', T(s + ' seconds left', 'Quedan ' + s + ' segundos'));
+    }
+    draw();
+    t.iv = setInterval(function () {
+      var now = performance.now(), dt = now - t.last; t.last = now;
+      el.classList.toggle('paused', G.paused);
+      if (G.paused) return;
+      t.left -= dt;
+      var s = Math.ceil(t.left / 1000);
+      if (s !== t.lastSec) { t.lastSec = s; if (s <= 5 && s > 0) Sound.play('tick'); if (s === 10) say(T('10 seconds left', 'Quedan 10 segundos')); }
+      draw();
+      if (t.left <= 0) { stopTimer(); el.style.setProperty('--p', 0); onExpire(); }
+    }, 100);
+  }
+  function stopTimer() {
+    if (G.timer) { clearInterval(G.timer.iv); G.timer = null; }
+    var el = $('#timer');
+    if (el) { el.classList.remove('low', 'mid'); if (G.hard) { $('#timer-n').textContent = '–'; el.style.setProperty('--p', 1); } }
+  }
+
+  // ---------------- end of the battle
+  function endGame(id, win) {
+    if (!alive(id)) return;
+    stopTimer();
+    activeZone(null);
+    G.screen = 'over';
+    if (!win) {
+      SHIPS.forEach(function (sh) { if (!isSunk(G.foe, G.foeHits, sh.id)) { var g = B.foe.drawShip(G.foe[sh.id]); g.style.opacity = 0.45; } });
+    }
+    setTurn(win ? 'me' : 'foe', win ? T('VICTORY!', '¡VICTORIA!') : T('BATTLE OVER', 'FIN DE LA BATALLA'), win ? '&#127942;' : '&#9875;');
+    panel(win ? '<h2 class="me">' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') + '</h2>' : '<h2 class="foe">' + T('BATTLE OVER', 'FIN DE LA BATALLA') + '</h2><p>' + T('The enemy ships that were still hiding are shown faintly on the opponent&rsquo;s board.', 'Los barcos enemigos que seguían escondidos se ven tenues en el tablero del oponente.') + '</p>');
+    return wait(win ? 600 : 1500).then(function () {
+      if (G.id !== id) return;
+      var card = $('#end-card');
+      card.className = 'card ' + (win ? 'end-win' : 'end-lose');
+      $('#end-h').innerHTML = win ? '&#127942; ' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') : '&#9875; ' + T('BATTLE OVER', 'FIN DE LA BATALLA');
+      $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
+      $('#scr-end').hidden = false;
+      Sound.play(win ? 'victory' : 'lose');
+      say($('#end-h').textContent + '. ' + $('#end-p').textContent, true);
+      if (win) confetti();
+      focusLater($('#end-again'));
+    });
+  }
+  function confetti() {
+    var box = $('#confetti'), cols = ['#e63946', '#ffd60a', '#2b7de9', '#19a463', '#ff8a1f', '#7c3aed', '#ffffff'];
+    box.innerHTML = '';
+    for (var i = 0; i < 70; i++) {
+      var c = document.createElement('i');
+      c.style.left = Math.random() * 100 + '%';
+      c.style.background = cols[i % cols.length];
+      c.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px');
+      c.style.setProperty('--r', (Math.random() * 900 - 450) + 'deg');
+      c.style.animationDuration = (2.4 + Math.random() * 2.2) + 's';
+      c.style.animationDelay = (Math.random() * 1.2) + 's';
+      box.appendChild(c);
+    }
+  }
+  $('#end-again').addEventListener('click', function () { Sound.play('click'); hideOverlay(); startPlacement(); });
+  $('#end-menu').addEventListener('click', function () { Sound.play('click'); goMenu(); });
+  function goMenu() { G.id++; stopTimer(); hideOverlay(); $('#banner').hidden = true; show('modes'); focusLater($('.mode[data-mode="' + G.mode + '"]')); }
+
+  // ---------------- pause menu
+  var pauseReturn = null;
+  function openPause() {
+    if (!$('#scr-end').hidden) return;
+    G.paused = true;
+    if (!pauseReturn) pauseReturn = document.activeElement;
+    $('#scr-pause').hidden = false;
+    focusLater($('#pause-resume'));
+  }
+  function closePause() {
+    G.paused = false;
+    $('#scr-pause').hidden = true;
+    var r = pauseReturn; pauseReturn = null;
+    if (r && document.body.contains(r) && r !== document.body) focusLater(r);
+  }
+  $('#btn-menu').addEventListener('click', function () { Sound.play('click'); openPause(); });
+  $('#pause-resume').addEventListener('click', function () { Sound.play('click'); closePause(); });
+  $('#pause-restart').addEventListener('click', function () { Sound.play('click'); G.paused = false; pauseReturn = null; $('#banner').hidden = true; startPlacement(); });
+  $('#pause-menu').addEventListener('click', function () { Sound.play('click'); G.paused = false; pauseReturn = null; goMenu(); });
+  $('#pause-help').addEventListener('click', function () { Sound.play('click'); $('#scr-pause').hidden = true; showInstructions(true); });
+
+  // ---------------- sound toggle
+  function setSoundBtn() {
+    var m = Sound.isMuted(), b = $('#btn-sound');
+    b.setAttribute('aria-pressed', String(!m));
+    b.querySelector('.ic').innerHTML = m ? '&#128263;' : '&#128266;';
+    $('#snd-lbl').textContent = m ? T('Sound off', 'Sonido apagado') : T('Sound on', 'Sonido encendido');
+  }
+  $('#btn-sound').addEventListener('click', function () { Sound.setMuted(!Sound.isMuted()); setSoundBtn(); if (!Sound.isMuted()) Sound.play('click'); });
+  setSoundBtn();
+
+  // ---------------- keyboard: Esc = back / menu, number keys in Radar Checks
+  document.addEventListener('keydown', function (e) {
+    if (window.isPageControlKey && isPageControlKey(e)) return;
+    if (e.key === 'Escape') {
+      if (!$('#scr-instr').hidden && $('#scr-instr').style.zIndex) { e.preventDefault(); $('#instr-back').click(); return; }
+      if (!$('#scr-pause').hidden) { e.preventDefault(); closePause(); return; }
+      if (!$('#scr-end').hidden) return;
+      if (drag) { dragCancel(); return; }
+      if (G.screen === 'modes') { e.preventDefault(); $('#modes-back').click(); }
+      else if (G.screen === 'instr') { e.preventDefault(); $('#instr-back').click(); }
+      else if (G.screen === 'battle' || G.screen === 'place') { e.preventDefault(); openPause(); }
+      return;
+    }
+    if (G.screen === 'title' && (e.key === 'Enter' || e.key === ' ') && (e.target === document.body || !e.target.closest || !e.target.closest('button, a, input'))) {
+      e.preventDefault(); $('#btn-play').click(); return;
+    }
+    if (G.quizKeys && $('#scr-pause').hidden && !(e.target && e.target.tagName === 'INPUT')) G.quizKeys(e);
+    if (G.screen === 'place' && (e.key === 'r' || e.key === 'R') && selId && !(e.target && e.target.closest && e.target.closest('.ship')) && $('#scr-pause').hidden) {
+      if (G.my[selId].placed) { e.preventDefault(); rotateShip(selId, Math.floor(SHIP[selId].len / 2)); refocusShip(selId); }
+    }
+  });
+
+  // ---------------- layout: the biggest boards that fit, side by side when there's room
+  function layout() {
+    var r = app.getBoundingClientRect(), W = r.width, H = r.height;
+    if (G.screen === 'battle' || G.screen === 'over') {
+      var arena = $('#arena'), hudH = ($('.hud').offsetHeight || 54), title = 40, gap = 12;
+      var pw = Math.max(270, Math.min(340, W * 0.24));
+      var side = Math.min((W - pw - 4 * gap - 20) / 2, H - hudH - title - 3 * gap - 16);
+      var below = Math.min((W - 3 * gap - 20) / 2, H - hudH - title - 250 - 3 * gap - 16);
+      var mode, size;
+      if (side >= below && side >= 250) { mode = 'lay-side'; size = side; }
+      else if (below >= 250) { mode = 'lay-below'; size = below; }
+      else { mode = 'lay-stack'; size = Math.min(W - 40, 560); }
+      size = Math.floor(Math.min(size, 700));
+      arena.className = 'arena ' + mode;
+      arena.style.setProperty('--bsz', size + 'px');
+      arena.style.setProperty('--pw', Math.floor(pw) + 'px');
+    }
+    if (G.screen === 'place') {
+      var wrap = $('#place-wrap'), dockW = 330;
+      var s1 = Math.min(W - dockW - 60, H - 52 - 70);
+      var s2 = Math.min(W - 44, 620, Math.max(300, H - 430));   // board on top, ships underneath
+      var stack = s1 < 300 || s2 > s1 * 1.25;
+      wrap.classList.toggle('stack', stack);
+      var bs = stack ? s2 : Math.min(s1, 680);
+      $('#place-zone').style.setProperty('--bsz', Math.floor(bs) + 'px');
+    }
+  }
+  window.addEventListener('resize', layout);
+  if (window.ResizeObserver) new ResizeObserver(layout).observe(app);
+
+  // for testing only (add ?debug to the address)
+  if (/[?&]debug(=|&|$)/.test(location.search)) window.__bc = { G: G, B: B, aiPick: aiPick, aiRecord: aiRecord, analyze: analyze, describe: describe, makeQuiz: makeQuiz, check: check, randomFleet: randomFleet, isSunk: isSunk };
+
+  show('title');
+  focusLater($('#btn-play'));
+})();

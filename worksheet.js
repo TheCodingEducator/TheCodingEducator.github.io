@@ -77,20 +77,39 @@
   };
 
   // coordinate grid from -r to r, with optional points: data-pts="A:2,-1;B:-3,4"
+  // data-step="1" labels every number (default every 2nd); data-q1 draws only the first quadrant, 0 to r
   draw.grid = function (s, d) {
-    var r = +(d.r || 6), u = +(d.u || 14), W = 2 * r * u + 30, o = W / 2, h = '';
+    var r = +(d.r || 6), u = +(d.u || 14), step = +(d.step || 2), q1 = 'q1' in d;
+    if (q1) return gridQ1(s, d, r, u, step);
+    var W = 2 * r * u + 30, o = W / 2, h = '';
     size(s, W, W);
     for (var i = -r; i <= r; i++) {
       h += line(o + i * u, 15, o + i * u, W - 15, '#dde2ec', 1) + line(15, o + i * u, W - 15, o + i * u, '#dde2ec', 1);
-      if (i && i % 2 === 0) h += txt(o + i * u, o + 12, i, MUTED, 'middle', 9) + txt(o - 4, o - i * u + 3, i, MUTED, 'end', 9);
+      if (i && i % step === 0) h += txt(o + i * u, o + 12, i, MUTED, 'middle', 9) + txt(o - 4, o - i * u + 3, i, MUTED, 'end', 9);
     }
     h += line(15, o, W - 15, o, INK, 1.5) + line(o, 15, o, W - 15, INK, 1.5) + txt(W - 10, o - 4, 'x', INK, 'middle', 11) + txt(o + 7, 12, 'y', INK, 'start', 11);
-    (d.pts || '').split(';').filter(Boolean).forEach(function (p) {
-      var m = p.split(':'), xy = m[1].split(','), px = o + xy[0] * u, py = o - xy[1] * u;
-      h += '<circle cx="' + px + '" cy="' + py + '" r="3.5" fill="' + C + '"/>' + txt(px + 5, py - 5, m[0], C, 'start', 11);
-    });
+    h += gridPts(d, function (x, y) { return [o + x * u, o - y * u]; });
     s.innerHTML = h;
   };
+  function gridPts(d, at) {
+    var h = '';
+    (d.pts || '').split(';').filter(Boolean).forEach(function (p) {
+      var m = p.split(':'), xy = m[1].split(','), q = at(+xy[0], +xy[1]);
+      h += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="3.5" fill="' + C + '"/>' + txt(q[0] + 5, q[1] - 5, m[0], C, 'start', 11);
+    });
+    return h;
+  }
+  function gridQ1(s, d, r, u, step) {
+    var L = 26, T = 15, W = L + r * u + 18, H = T + r * u + 24, oy = T + r * u, h = '';
+    size(s, W, H);
+    for (var i = 0; i <= r; i++) {
+      h += line(L + i * u, T, L + i * u, oy, '#dde2ec', 1) + line(L, oy - i * u, L + r * u, oy - i * u, '#dde2ec', 1);
+      if (i % step === 0) h += txt(L + i * u, oy + 13, i, MUTED, 'middle', 9) + (i ? txt(L - 5, oy - i * u + 3, i, MUTED, 'end', 9) : '');
+    }
+    h += line(L, oy, L + r * u + 10, oy, INK, 1.5) + line(L, oy, L, T - 8, INK, 1.5) + txt(L + r * u + 13, oy - 4, 'x', INK, 'middle', 11) + txt(L + 6, T - 4, 'y', INK, 'start', 11);
+    h += gridPts(d, function (x, y) { return [L + x * u, oy - y * u]; });
+    s.innerHTML = h;
+  }
 
   // a row of coins: data-coins="Q,Q,D,N,P"
   draw.coins = function (s, d) {
