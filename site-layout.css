@@ -48,6 +48,8 @@ html .sb-panel .standards-panel, html .sb-panel .teaching-notes, html .sb-panel 
 }
 html .sb-panel .reset-progress { margin-top: 0 !important; }
 html .sb-panel .teaching-notes h2, html .sb-panel .standards-panel h2 { margin-top: 0 !important; }
+/* Quick Teacher Tips: the section headings (Key vocabulary, Tips for using the game) sit under the panel title */
+html .sb-panel .teaching-notes h3 { font-size: 13px !important; margin: 18px 0 6px !important; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; }
 
 /* The game fills the page under the bar, on a computer and on a phone or tablet (where the page never scrolls) */
 @media all {
