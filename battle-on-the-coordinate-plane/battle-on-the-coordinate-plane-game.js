@@ -483,6 +483,8 @@
     G.screen = name;
     app.setAttribute('data-screen', name);
     Storm.set(name === 'title' || name === 'modes' || G.mode !== 'easy');
+    app.classList.toggle('rank2', G.mode === 'standard');   // each rank has its own board frames (CSS)
+    app.classList.toggle('rank3', G.mode === 'hard');
     $('#btn-menu').hidden = !(name === 'battle' || name === 'place');
     hideOverlay();
     layout();
@@ -1949,6 +1951,7 @@
       if (side >= below && side >= 250) { mode = 'lay-side'; size = side; }
       else if (below >= 250) { mode = 'lay-below'; size = below; }
       else { mode = 'lay-stack'; size = Math.min(W - 40, 560); }
+      size -= app.classList.contains('rank3') ? 14 : app.classList.contains('rank2') ? 10 : 0;   // the thicker rank frames
       size = Math.floor(Math.min(size, 700));
       arena.className = 'arena ' + mode;
       $('#scr-battle').classList.toggle('stacked', mode === 'lay-stack');
@@ -1957,7 +1960,8 @@
     }
     if (G.screen === 'place') {
       var wrap = $('#place-wrap'), dockW = 330;
-      var s1 = Math.min(W - dockW - 60, H - 52 - 70);
+      var frame = app.classList.contains('rank3') ? 14 : app.classList.contains('rank2') ? 10 : 0;   // the thicker rank frames
+      var s1 = Math.min(W - dockW - 60, H - 52 - 70) - frame;
       var s2 = Math.min(W - 44, 620, Math.max(300, H - 430));   // board on top, ships underneath
       var stack = s1 < 300 || s2 > s1 * 1.25;
       wrap.classList.toggle('stack', stack);
