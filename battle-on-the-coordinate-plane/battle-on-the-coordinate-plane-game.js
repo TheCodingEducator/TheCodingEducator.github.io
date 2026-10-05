@@ -445,13 +445,10 @@
   function WY(y) { return y > 0 ? T('UP', 'hacia ARRIBA') : T('DOWN', 'hacia ABAJO'); }
   function units(n) { n = Math.abs(n); return n === 1 ? T('1 unit', '1 unidad') : T(n + ' units', n + ' unidades'); }
 
-  // Plane speed: after three right answers in a row (finding the enemy's shot on the first try, a Radar Check, or a
-  // turn prediction) every flight is 50% faster from then on, except the one flight right after a wrong answer.
-  function planeMult() { return G.planeFast && !G.slowNext ? 2 / 3 : 1; }
-  function noteAnswer(ok) {
-    if (ok) { G.streak = (G.streak || 0) + 1; if (G.streak >= 3) G.planeFast = true; }
-    else { G.streak = 0; if (G.planeFast) G.slowNext = true; }
-  }
+  // Plane speed: after the player's first three shots, every flight is 50% faster, except the one flight right after a
+  // wrong answer (missing the enemy's shot on the first try, a Radar Check, or a turn prediction)
+  function planeMult() { return G.shots.length >= 3 && !G.slowNext ? 2 / 3 : 1; }
+  function noteAnswer(ok) { if (!ok) G.slowNext = true; }
   // Fly from the origin: x first (left/right), turn in place, then y (up/down). Leaves a dashed path with labeled legs.
   // opts.help: the purple "here's the way" path used for hints; opts.keepPlane: leave the plane at the end
   function flyPath(b, x, y, opts) {
@@ -1043,8 +1040,8 @@
     G.myHits = {}; G.foeHits = {}; G.shots = [];
     G.ai = { tried: {}, open: [] };
     G.sinceQuiz = 0; G.round = 0;
-    G.sunkMe = {}; G.sunkFoe = {}; G.shown = {};
-    G.streak = 0; G.planeFast = false; G.slowNext = false;   // ships the fleet bar may call SUNK (only after their sinking has played)
+    G.sunkMe = {}; G.sunkFoe = {}; G.shown = {};   // ships the fleet bar may call SUNK (only after their sinking has played)
+    G.slowNext = false;
     show('battle');
     B.me.setup(); B.foe.setup();
     SHIPS.forEach(function (sh) { B.me.shipEls[sh.id] = B.me.drawShip(G.my[sh.id]); });
