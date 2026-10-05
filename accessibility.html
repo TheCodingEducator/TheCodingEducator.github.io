@@ -123,7 +123,7 @@
 
 <header>
   <h1>Accessibility Statement</h1>
-  <p class="muted">Last updated: September 2026</p>
+  <p class="muted">Last updated: October 2026</p>
 </header>
 
 <main>
@@ -139,11 +139,23 @@
       <li>The homepage, this page, and our Privacy Policy, Terms of Service, and Contact pages are built with plain, semantic HTML, are navigable by keyboard, and have visible focus indicators for keyboard users.</li>
       <li>These pages work with screen readers and respect your browser's zoom and text-size settings.</li>
       <li>Each game page includes a text title and description for screen reader users, and a clear link back to the full list of games.</li>
-      <li>In-game controls can be operated by keyboard (arrow keys or WASD to move, space or enter to confirm), in addition to mouse/touch.</li>
+      <li>Every game can be played with the keyboard alone (arrow keys or WASD to move, Space or Enter to confirm), as well as with a mouse or touch. Pressing Esc opens the game menu, and the arrow keys move between its options.</li>
     </ul>
 
+    <h2>Screen readers in the games</h2>
+    <p>A screen reader is a program that reads the screen aloud, used by many blind and low-vision students (for example NVDA or JAWS on Windows, VoiceOver on Mac, iPhone, and iPad, and ChromeVox, which is built into many student devices). In every game:</p>
+    <ul>
+      <li>Questions, answer choices, hints, feedback ("Correct!", "Not quite"), and results are read aloud as they appear.</li>
+      <li>In games that draw their words as part of the picture, those words are passed on to the screen reader, and a hidden "On screen now" summary lists everything currently showing. Timers and other numbers that change many times a second are left out of the spoken messages so they don't talk over the questions.</li>
+      <li>Math is read the way a teacher would say it: for example, 3<sup>4</sup> is read as "3 to the power of 4."</li>
+      <li>Buttons that show only an icon have spoken names (for example "Add x on both sides" in Tip the Scales).</li>
+      <li>In Battle on the Coordinate Plane, each board has a hidden list of every shot (hit or miss) and where your ships are, and the arrow keys read out each point as you move across the board.</li>
+      <li>Games with a Spanish version also speak in Spanish.</li>
+    </ul>
+    <p>Sighted players see no change: all of this is hidden from view and only reaches screen readers.</p>
+
     <h2>Known limitations</h2>
-    <p>The games themselves are rendered on an HTML canvas - a single graphic that, like a photo, cannot currently be read or navigated by screen readers. Most in-game menu buttons still require a mouse or touch to select, though a few games (like Let's Get to the Point) now also let you move between menu options with the arrow keys. This means the games are not yet fully accessible to blind or low-vision players, or to players who cannot use a mouse. We recognize this is a real limitation, not a minor one, and it's something we're aware of rather than something we consider solved.</p>
+    <p>Some games depend on seeing a picture or on timing: aiming a shot, judging an angle, or following a moving player or car. In those parts, a screen reader user hears the questions, choices, and results, but not a full description of the picture or the motion. This means the games are not yet fully accessible to every blind or low-vision player. Screen reader support has been tested in Chrome, but not yet with every screen reader on every device. We recognize these are real limitations, not minor ones, and we keep working on them.</p>
 
     <h2>Feedback</h2>
     <p>If you run into an accessibility barrier anywhere on this site, or have a suggestion, please tell us - see our <a href="contact.html">Contact page</a>. Reports like this directly shape what we prioritize improving.</p>

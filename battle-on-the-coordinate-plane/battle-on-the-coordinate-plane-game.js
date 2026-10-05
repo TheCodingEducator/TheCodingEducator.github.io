@@ -1397,11 +1397,13 @@
   function aiPick() {
     var ai = G.ai, tried = ai.tried;
     function free(x, y) { return onBoard(x, y) && !tried[key(x, y)]; }
-    // how hard the computer hunts depends on the rank: 1-Star often ignores its own hits and fires at random;
-    // 2-Star tries the points around a hit; 3-Star also works out which way the ship runs and follows it
-    var level = G.mode === 'easy' ? 1 : G.hard ? 3 : 2;
+    // how hard the computer hunts depends on the rank: 1-Star and 2-Star try the points around a hit;
+    // 3-Star also works out which way the ship runs and follows it
+    var level = G.hard ? 3 : 2;
+    // a 1-Star general sometimes forgets and fires at a point it already tried (a wasted shot)
+    var old = Object.keys(tried);
+    if (G.mode === 'easy' && old.length && Math.random() < 0.15) { var o = pick(old).split(','); return { x: +o[0], y: +o[1], again: true }; }
     var open = ai.open, cand = [];
-    if (level === 1 && open.length && Math.random() < 0.6) open = [];
     if (open.length >= 2 && level === 3) {
       var sameY = open.every(function (p) { return p[1] === open[0][1]; }), sameX = open.every(function (p) { return p[0] === open[0][0]; });
       if (sameY || sameX) {
@@ -1569,6 +1571,14 @@
   }
   function resolveEnemy(id, x, y, how) {
     var b = B.me, sid = shipAt(G.my, x, y), k = key(x, y);
+    if (G.ai.tried[k]) {
+      // the 1-Star computer fired at a point it already tried: nothing new happens
+      b.splash(x, y); Sound.play('miss');
+      return wait(600).then(function () {
+        if (!alive(id)) return;
+        return banner('miss', '&#10006; ' + T('WASTED SHOT', 'TIRO PERDIDO'), pair(x, y) + T(': the computer already fired there!', ': ¡la computadora ya había disparado ahí!'), 1600);
+      });
+    }
     if (sid) { G.myHits[k] = true; b.explode(x, y); Sound.play('hit'); } else { b.splash(x, y); Sound.play('miss'); }
     aiRecord(x, y, sid);
     return wait(600).then(function () {

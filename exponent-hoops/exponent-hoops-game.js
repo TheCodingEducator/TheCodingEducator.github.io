@@ -731,6 +731,11 @@ function formatPower(v, exp) { if (exp === 0) return "1"; return v + toSuperscri
 var SUP_TO_NORMAL = {"⁻":"-", "⁰":"0", "¹":"1", "²":"2", "³":"3", "⁴":"4", "⁵":"5", "⁶":"6", "⁷":"7", "⁸":"8", "⁹":"9"};
 
 function drawSupText(str, x, y, hAlign, vAlign) {
+  // screen readers get the whole power ("3 to the power of 4"), not the separate pieces drawn below
+  if (window.SiteSR) { SiteSR.line(str); return SiteSR.quiet(function () { drawSupPieces(str, x, y, hAlign, vAlign); }); }
+  drawSupPieces(str, x, y, hAlign, vAlign);
+}
+function drawSupPieces(str, x, y, hAlign, vAlign) {
   if (hAlign === undefined) hAlign = CENTER;
   if (vAlign === undefined) vAlign = CENTER;
 
@@ -917,7 +922,10 @@ function renderMathUI_1P() {
     else if (dir === "left") { arrowX = bx - bw / 2 + 15; textX = bx + 10; }
     else if (dir === "right") { arrowX = bx + bw / 2 - 15; textX = bx - 10; }
 
-    fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD); drawSupText(options[i].text, textX, textY); textStyle(NORMAL);
+    if (window.SiteSR) SiteSR.line(tl({ up: "Up", down: "Down", left: "Left", right: "Right" }[dir], { up: "Arriba", down: "Abajo", left: "Izquierda", right: "Derecha" }[dir]) + ": " + options[i].text);
+    fill(hover ? "white" : "#111111"); textSize(24); textStyle(BOLD);
+    if (window.SiteSR) SiteSR.quiet(function () { drawSupText(options[i].text, textX, textY); }); else drawSupText(options[i].text, textX, textY);
+    textStyle(NORMAL);
 
     fill(hover ? "white" : "#111111"); noStroke(); drawArrowShape(dir, arrowX, arrowY, 8);
 

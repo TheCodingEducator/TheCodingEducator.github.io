@@ -200,6 +200,11 @@ var DIGIT_INK_HEIGHT_RATIO = 0.68;
 var TOP_ALIGN_CENTER_OFFSET_RATIO = 0.35;
 
 function drawSupText(str, x, y, hAlign, vAlign, circleType, circleStroke, circleStrokeWeight) {
+  // screen readers get the whole power ("3 to the power of 4"), not the separate pieces drawn below
+  if (window.SiteSR) { SiteSR.line(str); return SiteSR.quiet(function () { drawSupPieces(str, x, y, hAlign, vAlign, circleType, circleStroke, circleStrokeWeight); }); }
+  drawSupPieces(str, x, y, hAlign, vAlign, circleType, circleStroke, circleStrokeWeight);
+}
+function drawSupPieces(str, x, y, hAlign, vAlign, circleType, circleStroke, circleStrokeWeight) {
   if (hAlign === undefined) hAlign = CENTER;
   if (vAlign === undefined) vAlign = CENTER;
   if (circleStroke === undefined) circleStroke = "blue";

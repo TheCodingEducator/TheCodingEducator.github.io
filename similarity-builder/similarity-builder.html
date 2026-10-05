@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-langs="en es">
+<html lang="en" data-langs="en es" data-sr-canvas>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -402,6 +402,7 @@
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=92be3a90"></script>
@@ -434,7 +435,7 @@
       <div id="stageRow">
       <div id="stage">
         <canvas id="c" width="960" height="540"></canvas>
-        <div id="toast"></div>
+        <div id="toast" role="status" aria-live="polite"></div>
       </div>
       <button id="jumpBtn" data-es="SALTA">JUMP</button>
       </div>
@@ -534,7 +535,7 @@
       <!-- Wrong-answer explanation -->
       <div id="feedback" class="overlay hidden"><div class="card">
         <h2 id="fbTitle" data-es="&#128165; ¡El puente falló!">&#128165; The bridge failed!</h2>
-        <div id="fbBody"></div>
+        <div id="fbBody" aria-live="polite"></div>
         <p id="fbStorm" style="font-weight:700"></p>
         <div class="center"><button class="btn alt" id="btnNext" data-es="Prueba otro puente">Try a new bridge</button><p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para continuar">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
       </div></div>

@@ -666,6 +666,7 @@
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=92be3a90"></script>
@@ -799,7 +800,7 @@
     </div>
 
     <!-- Math Stack: Main Equation & Expanded Equation -->
-    <div class="eq-panel">
+    <div class="eq-panel" aria-live="polite" aria-atomic="true">
       <div id="eq-left" class="eq-left eq-main">0</div>
       <div id="eq-sign" class="eq-sign eq-main">=</div>
       <div id="eq-right" class="eq-right eq-main">0</div>
@@ -813,7 +814,7 @@
     <div class="msg-wrapper">
       <div id="msg-box" class="msg-box hidden">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
-        <span id="msg-text"></span>
+        <span id="msg-text" role="status" aria-live="polite"></span>
       </div>
     </div>
 
@@ -2282,6 +2283,19 @@
     if (!el) return;
     e.preventDefault();
     el.click();
+  });
+  // names for the buttons that only show an icon, so screen readers can say what they do
+  Array.prototype.forEach.call(document.querySelectorAll('button[data-action]'), function (b) {
+    if (b.getAttribute('aria-label') || b.textContent.trim()) return;
+    var a = b.getAttribute('data-action'), g = []; try { g = JSON.parse(b.getAttribute('data-args') || '[]'); } catch (e) {}
+    var what = function (op, kind) {
+      return (op === 'add' ? tl('Add ', 'Sumar ') : tl('Take away ', 'Quitar ')) + (kind === 'var' ? 'x' : '1');
+    };
+    var label = a === 'handleOp' ? what(g[0], g[1]) + tl(' on both sides', ' en ambos lados')
+      : a === 'handleSandboxOp' ? what(g[1], g[2]) + (g[0] === 'left' ? tl(' on the left side', ' en el lado izquierdo') : tl(' on the right side', ' en el lado derecho'))
+      : a === 'setMode' ? (g[0] === 'title' ? tl('Home', 'Inicio') : tl('Choose a level', 'Elegir nivel'))
+      : a === 'startSandbox' ? tl('Sandbox', 'Modo libre') : '';
+    if (label) b.setAttribute('aria-label', label);
   });
   </script>
 </body>
