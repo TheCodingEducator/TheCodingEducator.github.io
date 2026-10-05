@@ -1072,7 +1072,13 @@
       if (!alive(id)) return;
       G.round++;
       var pre = Promise.resolve();
-      if (G.hard && G.round > 1 && (G.sinceQuiz >= 2 || Math.random() < 0.45)) { G.sinceQuiz = 0; pre = radarCheck(id); }
+      // 3-Star: some turns start with one question of its own (a Radar Check or a Turn Check); a turn never asks more
+      // than one question before the shot, so a turn with one of these never also gets Orders from HQ
+      G.askedPre = false;
+      if (G.hard && G.round > 1 && (G.sinceQuiz >= 2 || Math.random() < 0.45)) {
+        G.sinceQuiz = 0; G.askedPre = true;
+        pre = Math.random() < 0.35 ? turnCheck(id) : radarCheck(id);
+      }
       else G.sinceQuiz++;
       pre.then(function () { return alive(id) && playerTurn(id); })
         .then(function () {
@@ -1148,7 +1154,7 @@
       setPin(null);
       activeZone('foe', T('Fire here!', '¡Dispara aquí!'));
       // 3-Star, now and then: HQ describes the target in words and the student must type its ordered pair
-      var orders = G.hard && G.round > 1 && Math.random() < 0.3 ? ordersTarget() : null;
+      var orders = G.hard && G.round > 1 && !G.askedPre && Math.random() < 0.4 ? ordersTarget() : null;
       renderFire(orders);
       G.onFire = function (x, y) {
         if (orders && (x !== orders.x || y !== orders.y)) {
@@ -1377,10 +1383,9 @@
     say(T('Firing at ', 'Disparando a ') + pair(x, y) + (note ? '. ' + note : ''));
     var ring = b.targetRing(x, y), lbl = b.coordLabel(x, y, pair(x, y));
     setPin('&#127919; ' + T('Firing at ', 'Disparando a ') + pair(x, y));
-    // Hard (3-star general) sometimes asks for the turn first
-    var ask = G.hard && x !== 0 && y !== 0 && Math.random() < 0.4;
     var flight, turn = null;
-    return (ask ? predictTurn(id, x, y, head).then(function (tw) { turn = tw; panel(info + '<div class="fb info">' + tw.why + '</div>'); }) : (panel(info), wait(0))).then(function () {
+    panel(info);
+    return wait(0).then(function () {
       Sound.play('fire');
       return wait(800);
     }).then(function () {
@@ -1846,6 +1851,18 @@
     return q;
   }
 
+  // 3-Star: a question of its own about a plane flying to a point (not the player's shot): which way does it turn?
+  function turnCheck(id) {
+    var vals = [];
+    for (var v = G.min; v <= G.max; v++) if (v) vals.push(v);
+    var x = pick(vals), y = pick(vals);
+    setTurn('radar', T('TURN CHECK', 'REVISIÓN DE GIRO'), '&#8635;');
+    setPin(null);
+    activeZone(null, null);
+    var head = '<h2 class="radar">&#8635; ' + T('TURN CHECK', 'REVISIÓN DE GIRO') + '</h2><p class="sub">' + T('A scout plane is flying to ', 'Un avión explorador vuela hacia ') + '<b>' + pair(x, y) + '</b>.</p>';
+    say(T('Turn check. A scout plane is flying to ', 'Revisión de giro. Un avión explorador vuela hacia ') + pair(x, y));
+    return predictTurn(id, x, y, head);
+  }
   function radarCheck(id) {
     return new Promise(function (resolve) {
       var q = makeQuiz(), done = false, blip = null, wrongs = 0;
