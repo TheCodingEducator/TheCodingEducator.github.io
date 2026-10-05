@@ -672,6 +672,7 @@
     body.innerHTML = html;
     if (fromPause) {
       $('#scr-instr').hidden = false; $('#scr-instr').style.zIndex = 46;
+      fitScreen();
       $('#instr-back').addEventListener('click', function () { $('#scr-instr').hidden = true; $('#scr-instr').style.zIndex = ''; openPause(); });
       focusLater($('#instr-back'));
       return;
@@ -711,6 +712,7 @@
     B.place.setup();
     buildDock();
     renderPlace();
+    layout();   // size the board around the ship dock now that the dock is built
     placeMsg(T('Drag a ship onto the board, or press Enter on a ship to put it on the board.', 'Arrastra un barco al tablero, o pulsa Enter en un barco para ponerlo en el tablero.'));
     focusLater($('.ship-pick'));
   }
@@ -1101,7 +1103,7 @@
     return '<div class="log"><h3>' + T('YOUR SHOTS', 'TUS DISPAROS') + '</h3><ol>' + (items.join('') || '<li class="none">' + T('No shots yet', 'Aún no hay disparos') + '</li>') + '</ol></div>';
   }
   function setPin(html) { var p = $('#pin'); p.innerHTML = html || ''; p.hidden = !html; }
-  function panel(html) { $('#panel').innerHTML = '<div class="task fade-in">' + html + '</div>' + shotLog(); }
+  function panel(html) { $('#panel').innerHTML = '<div class="pfit"><div class="task fade-in">' + html + '</div>' + shotLog() + '</div>'; fitPanel(); }
 
   // ---------------- the student's shot
   function playerTurn(id) {
@@ -1123,10 +1125,13 @@
       });
     });
   }
+  // the on-screen keypad offers only the digits that are on this board
   function padKeys() {
-    if (G.mode === 'easy') return ['0', '1', '2', '3', '4', '5', '6', 'back'];
-    if (G.hard) return ['(', '-', '0', '1', '2', '3', ',', ')', 'back'];
-    return ['-', '0', '1', '2', '3', 'back'];
+    var digits = [];
+    for (var d = 0; d <= G.max; d++) digits.push(String(d));
+    if (G.mode === 'easy') return digits.concat(['back']);
+    if (G.hard) return ['(', '-'].concat(digits, [',', ')', 'back']);
+    return ['-'].concat(digits, ['back']);
   }
   function padHTML() {
     return '<div class="pad" aria-hidden="true">' + padKeys().map(function (k) {
@@ -1875,6 +1880,7 @@
       $('#end-h').innerHTML = win ? '&#127942; ' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') : '&#9875; ' + T('BATTLE OVER', 'FIN DE LA BATALLA');
       $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
       $('#scr-end').hidden = false;
+      fitScreen();
       Sound.play(win ? 'victory' : 'lose');
       say($('#end-h').textContent + '. ' + $('#end-p').textContent, true);
       if (win) confetti();
@@ -1913,6 +1919,7 @@
     setPaused(true);
     if (!pauseReturn) pauseReturn = document.activeElement;
     $('#scr-pause').hidden = false;
+    fitScreen();
     focusLater($('#pause-resume'));
   }
   function closePause() {
@@ -1960,37 +1967,64 @@
   });
 
   // ---------------- layout: the biggest boards that fit, side by side when there's room
+  // Everything fits on one screen, at any window size: nothing in the game ever scrolls.
+  // The boards are sized to fit, and any content that is still too tall (a long question, the instructions on a phone)
+  // is shrunk with CSS zoom until it fits its box.
+  function fitTo(el, box) {
+    if (!el || !box || el.offsetParent === null) return;
+    el.style.zoom = '';
+    var cs = getComputedStyle(box);
+    var availH = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    var availW = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var h = el.scrollHeight, w = el.scrollWidth;
+    var s = Math.min(1, availH / h, availW / w);
+    if (s < 0.999) el.style.zoom = Math.max(0.3, Math.floor(s * 100) / 100);
+  }
+  function fitScreen() {
+    var map = { title: '#scr-title .t-wrap', modes: '#scr-modes .menu-wrap', instr: '#instr-body', place: '#place-wrap' };
+    var sel = map[G.screen];
+    if (sel) fitTo($(sel), $(sel).closest('.scr'));
+    if (!$('#scr-instr').hidden && $('#scr-instr').style.zIndex) fitTo($('#instr-body'), $('#scr-instr'));   // How to play, from the pause menu
+    ['#scr-pause', '#scr-end'].forEach(function (id) { if (!$(id).hidden) fitTo($(id + ' .card'), $(id)); });
+    fitPanel();
+  }
+  function fitPanel() { var p = $('#panel .pfit'); if (p) fitTo(p, $('#panel')); }
+
   function layout() {
     var r = app.getBoundingClientRect(), W = r.width, H = r.height;
+    var frame = app.classList.contains('rank3') ? 14 : app.classList.contains('rank2') ? 10 : 0;   // the thicker rank frames
     if (G.screen === 'battle' || G.screen === 'over') {
+      // two boards side by side, with the task panel either between them or underneath (never stacked to scroll)
       var arena = $('#arena'), hudH = ($('.hud').offsetHeight || 54), title = 40, gap = 12;
-      var pw = Math.max(270, Math.min(340, W * 0.24));
+      var pw = Math.max(250, Math.min(340, W * 0.24));
+      var panelMin = Math.max(170, Math.min(250, H * 0.3));
       var side = Math.min((W - pw - 4 * gap - 20) / 2, H - hudH - title - 3 * gap - 16);
-      var below = Math.min((W - 3 * gap - 20) / 2, H - hudH - title - 250 - 3 * gap - 16);
-      var mode, size;
-      if (side >= below && side >= 250) { mode = 'lay-side'; size = side; }
-      else if (below >= 250) { mode = 'lay-below'; size = below; }
-      else { mode = 'lay-stack'; size = Math.min(W - 40, 560); }
-      size -= app.classList.contains('rank3') ? 14 : app.classList.contains('rank2') ? 10 : 0;   // the thicker rank frames
-      size = Math.floor(Math.min(size, 700));
+      var below = Math.min((W - 3 * gap - 20) / 2, H - hudH - title - panelMin - 3 * gap - 16);
+      var mode = side >= below ? 'lay-side' : 'lay-below', size = Math.max(side, below);
+      size = Math.floor(Math.max(120, Math.min(size - frame, 700)));
       arena.className = 'arena ' + mode;
-      $('#scr-battle').classList.toggle('stacked', mode === 'lay-stack');
       arena.style.setProperty('--bsz', size + 'px');
       arena.style.setProperty('--pw', Math.floor(pw) + 'px');
     }
     if (G.screen === 'place') {
-      var wrap = $('#place-wrap'), dockW = 330;
-      var frame = app.classList.contains('rank3') ? 14 : app.classList.contains('rank2') ? 10 : 0;   // the thicker rank frames
-      var s1 = Math.min(W - dockW - 60, H - 52 - 70) - frame;
-      var s2 = Math.min(W - 44, 620, Math.max(300, H - 430));   // board on top, ships underneath
-      var stack = s1 < 300 || s2 > s1 * 1.25;
+      // the board beside the ship dock, or (on a narrow screen) above it; the board gets whatever room the dock leaves
+      var wrap = $('#place-wrap'), dock = $('#place-wrap .dock'), dockW = 330;
+      wrap.style.zoom = '';
+      var s1 = Math.min(W - dockW - 60, H - 52 - 40) - frame;
+      wrap.classList.add('stack');
+      var dockH = dock.offsetHeight;
+      var s2 = Math.min(W - 44, H - 52 - 24 - dockH - 40) - frame;
+      var stack = s2 > s1;
       wrap.classList.toggle('stack', stack);
-      var bs = stack ? s2 : Math.min(s1, 680);
+      var bs = Math.max(140, Math.min(stack ? s2 : s1, 680));
       $('#place-zone').style.setProperty('--bsz', Math.floor(bs) + 'px');
     }
+    fitScreen();
   }
   window.addEventListener('resize', layout);
   if (window.ResizeObserver) new ResizeObserver(layout).observe(app);
+  // the task panel's content changes all the time (questions, hints, feedback): keep it fitting
+  if (window.MutationObserver) new MutationObserver(function () { requestAnimationFrame(fitPanel); }).observe($('#panel'), { childList: true, subtree: true, characterData: true });
 
   show('title');
   focusLater($('#btn-play'));

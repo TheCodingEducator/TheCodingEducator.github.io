@@ -96,7 +96,7 @@
   #bc .cbtn:hover { background: #fff; border-color: rgba(11,37,69,0.4); }
   #bc .cbtn .ic { font-size: 18px; line-height: 1; }
 
-  #bc .scr { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; z-index: 5; }
+  #bc .scr { position: absolute; inset: 0; overflow: hidden; z-index: 5; }   /* nothing scrolls: content that is too tall is shrunk to fit (fitScreen) */
   #bc .scr.center { display: flex; align-items: center; justify-content: center; padding: 56px 16px 20px; }
   #bc .fade-in { animation: bc-fade 0.35s ease-out both; }
   @keyframes bc-fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -203,6 +203,8 @@
   /* ===== Instructions ===== */
   #bc .instr { width: min(100%, 1060px); display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(12px, 2.4cqmin, 24px); }
   @container (max-width: 800px) { #bc .instr { grid-template-columns: 1fr; } }
+  /* short screens (a phone on its side): instructions side by side and tighter, so they fit without scrolling */
+  @container (max-height: 600px) { #bc .instr { grid-template-columns: 1.35fr 1fr; } #bc .steps { gap: 4px; } #bc .steps li { padding: 3px 10px; font-size: 14px; } #bc .xy-card svg { max-height: 150px; } #bc .scr.center { padding-top: 48px; padding-bottom: 8px; } }
   #bc .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; counter-reset: st; }
   #bc .steps li { display: grid; grid-template-columns: 36px 30px 1fr; align-items: center; gap: 8px; background: #f2f8ff; border-radius: 14px; padding: 6px 12px; font-size: clamp(14px, 2.1cqmin, 18px); line-height: 1.25; }
   #bc .steps li::before { counter-increment: st; content: counter(st); width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font: 800 17px 'Baloo 2', sans-serif; }
@@ -224,6 +226,9 @@
   #bc .place-wrap.stack .dock { width: min(100%, 620px); }
   #bc .zone { background: rgba(255,255,255,0.55); border-radius: 22px; padding: 8px; box-shadow: 0 8px 24px rgba(11,37,69,0.18), inset 0 0 0 3px rgba(255,255,255,0.8); position: relative;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='24'%3E%3Cpath d='M0 12 Q10 6 20 12 T40 12 T60 12 T80 12' fill='none' stroke='%23ffffff' stroke-opacity='.7' stroke-width='2'/%3E%3C/svg%3E"); }
+  /* a board's nameplate never makes its frame wider than the board itself */
+  #bc .zone { min-width: 0; }
+  #bc .zone-title { max-width: var(--bsz, 420px); box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #bc .zone-title { display: flex; align-items: center; justify-content: center; gap: 8px; font: 800 clamp(16px, 2.4cqmin, 22px)/1.2 'Baloo 2', sans-serif; letter-spacing: 0.06em; color: #fff;
     background: var(--zc, var(--ink)); border-radius: 14px 14px 6px 6px; padding: 4px 12px 2px; margin-bottom: 6px; }
   #bc .zone.mine { --zc: #0f7a8a; } #bc .zone.foe { --zc: #b4372b; }
@@ -285,13 +290,12 @@
   #bc .arena { flex: 1 1 auto; display: grid; gap: 12px; padding: 6px 10px 10px; justify-content: center; align-content: center; min-height: 0; }
   #bc .arena.lay-side { grid-template-columns: auto var(--pw, 300px) auto; grid-template-areas: "mine panel foe"; align-items: start; }
   #bc .arena.lay-below { grid-template-columns: auto auto; grid-template-areas: "mine foe" "panel panel"; align-content: start; grid-template-rows: auto minmax(0, 1fr); }
-  #bc .arena.lay-stack { grid-template-columns: auto; grid-template-areas: "panel" "mine" "foe"; overflow-y: auto; align-content: start; justify-items: center; }
   #bc .arena .zone.mine { grid-area: mine; } #bc .arena .zone.foe { grid-area: foe; }
-  #bc .panel { grid-area: panel; background: #fff; border-radius: 22px; box-shadow: 0 10px 28px rgba(11,37,69,0.2); padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; align-self: stretch; overflow-y: auto; }
-  #bc .lay-below .panel { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  #bc .panel { grid-area: panel; background: #fff; border-radius: 22px; box-shadow: 0 10px 28px rgba(11,37,69,0.2); padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; align-self: stretch; overflow: hidden; }
+  #bc .panel .pfit { display: flex; flex-direction: column; gap: 10px; }
+  #bc .lay-below .panel .pfit { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
   #bc .lay-below .panel .task { flex: 1 1 380px; }
   #bc .lay-below .panel .log { flex: 0 1 260px; }
-  #bc .lay-stack .panel { position: sticky; top: 0; z-index: 3; width: min(100%, 560px); }
   #bc .task { display: flex; flex-direction: column; gap: 8px; }
   #bc .task h2 { margin: 0; font-size: clamp(22px, 3.4cqmin, 30px); line-height: 1; }
   #bc .task h2.foe { color: var(--red-d); } #bc .task h2.me { color: var(--green-d); } #bc .task h2.radar { color: var(--purple); }
@@ -328,7 +332,7 @@
   #bc .log { border-top: 2px solid #e3edf6; padding-top: 8px; }
   #bc .lay-below .log { border-top: 0; border-left: 2px solid #e3edf6; padding: 0 0 0 10px; }
   #bc .log h3 { margin: 0 0 4px; font-size: 15px; letter-spacing: 0.05em; color: var(--ink2); }
-  #bc .log ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; max-height: 92px; overflow-y: auto; }
+  #bc .log ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; max-height: 92px; overflow: hidden; }   /* newest shots first, so the latest always show */
   #bc .log li { font-size: 13px; font-weight: 900; border-radius: 8px; padding: 2px 8px; background: #eef2f6; white-space: nowrap; }
   #bc .log li.hit { background: #ffe2cc; color: #8a3300; }
   #bc .log li.none { background: none; color: var(--ink2); font-weight: 700; }
@@ -336,12 +340,14 @@
   #bc .reminder b.cx { color: var(--orange-d); } #bc .reminder b.cy { color: var(--blue-d); }
 
   @container (max-width: 640px) {
+    #bc .zone-title { font-size: 12px; letter-spacing: 0.02em; gap: 4px; padding-left: 6px !important; padding-right: 6px !important; }
+    #bc.rank2 .zone-title::before, #bc.rank2 .zone-title::after, #bc.rank3 .zone-title::before, #bc.rank3 .zone-title::after { display: none; }
+    #bc.rank2 .zone, #bc.rank3 .zone { padding: 8px; }
     #bc .hud { padding: 6px 8px 2px; gap: 6px; }
     #bc #scr-battle .hud { padding-top: 48px; }
     #bc .turn { font-size: 18px; padding: 5px 12px 3px; }
     #bc .fleet { font-size: 11px; padding: 2px 8px; gap: 5px; }
     #bc .timer { width: 42px; height: 42px; }
-    #bc .lay-stack .panel { position: static; }
     #bc .task h2 { font-size: 22px; }
   }
 
@@ -422,7 +428,7 @@
   @keyframes bc-bn { from { transform: scale(0.3) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
 
   /* Overlays: pause, end */
-  #bc .overlay { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(11,37,69,0.45); overflow-y: auto; }
+  #bc .overlay { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(11,37,69,0.45); overflow: hidden; }
   #bc .overlay .card { width: min(100%, 520px); text-align: center; margin: auto; }
   #bc .overlay h2 { margin: 0; font-size: clamp(36px, 7cqmin, 64px); line-height: 1; }
   #bc .overlay p { font-size: 18px; margin: 8px 0 0; }
@@ -737,7 +743,7 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=e4b3e2f9"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=713f8146"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
