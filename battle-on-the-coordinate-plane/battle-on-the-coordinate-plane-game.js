@@ -381,7 +381,7 @@
   Board.prototype.explode = function (x, y) {
     // Standard and Hard: the whole board jolts with the blast
     var z = this.svg.closest('.zone');
-    if (z && app.classList.contains('storm')) { z.classList.remove('jolt'); void z.offsetWidth; z.classList.add('jolt'); }
+    if (z && app.classList.contains('storm') && !G.calm) { z.classList.remove('jolt'); void z.offsetWidth; z.classList.add('jolt'); }
     var g = svgEl('g', { transform: 'translate(' + this.sx(x) + ',' + this.sy(y) + ')' }, this.L.fx);
     svgEl('circle', { r: 46, fill: '#ffd23f', 'class': 'boom' }, g);
     svgEl('circle', { r: 32, fill: '#ff6b1a', 'class': 'boom b2' }, g);
@@ -448,7 +448,12 @@
   // Plane speed: after the player's first three shots, every flight is 50% faster, except the one flight right after a
   // wrong answer (missing the enemy's shot on the first try, a Radar Check, or a turn prediction)
   function planeMult() { return G.shots.length >= 3 && !G.slowNext ? 2 / 3 : 1; }
-  function noteAnswer(ok) { if (!ok) G.slowNext = true; }
+  // kind: 'find' (the enemy's shot), 'radar', 'orders' or 'turn'; each question is counted once, by its first try
+  function noteAnswer(ok, kind) {
+    if (!ok) G.slowNext = true;
+    var r = G.rep && G.rep[kind];
+    if (r) { r[1]++; if (ok) r[0]++; }
+  }
   // Fly from the origin: x first (left/right), turn in place, then y (up/down). Leaves a dashed path with labeled legs.
   // opts.help: the purple "here's the way" path used for hints; opts.keepPlane: leave the plane at the end
   function flyPath(b, x, y, opts) {
@@ -510,6 +515,9 @@
     my: null, foe: null, myHits: {}, foeHits: {}, shots: [], ai: null,
     phase: '', onFire: null, onPick: null, paused: false, timer: null, sinceQuiz: 0, round: 0
   };
+  // "Less motion": starts on if the device asks for reduced motion; the menu switch changes it for this visit only
+  G.calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  app.classList.toggle('calm', G.calm);
   var B = { place: new Board($('#board-place')), me: new Board($('#board-me')), foe: new Board($('#board-foe')) };
 
   function show(name) {
@@ -531,7 +539,7 @@
   // Dark sky, rain, lightning, crashing waves and a battle on the horizon: water plumes and flashes near ship
   // silhouettes. It is drawn BEHIND every card and board, so the coordinate planes stay clean and easy to read.
   var Storm = (function () {
-    var box = $('#storm'), fx = null, on = false, timers = [], RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var box = $('#storm'), fx = null, on = false, timers = [];
     function wave(y, amp, wl, fill, stroke, dur) {
       var w = 1200 + wl * 2, d = 'M' + (-wl) + ' ' + y;
       for (var x = -wl; x < w; x += wl) d += ' q' + wl / 4 + ' ' + (-amp) + ' ' + wl / 2 + ' 0 t' + wl / 2 + ' 0';
@@ -634,7 +642,12 @@
         timers.forEach(clearTimeout); timers = [];
         if (!on) return;
         if (!fx) build();
-        if (RM) return;          // reduced motion: a still, stormy picture, with no flashes
+        this.motion();
+      },
+      // "Less motion" (the menu switch, or the device's reduced-motion setting): a still, stormy picture, with no flashes
+      motion: function () {
+        timers.forEach(clearTimeout); timers = [];
+        if (!on || G.calm) return;
         later2(600, blast);
         later2(2500, lightning);
       }
@@ -1042,6 +1055,7 @@
     G.sinceQuiz = 0; G.round = 0;
     G.sunkMe = {}; G.sunkFoe = {}; G.shown = {};   // ships the fleet bar may call SUNK (only after their sinking has played)
     G.slowNext = false;
+    G.rep = { find: [0, 0], radar: [0, 0], orders: [0, 0], turn: [0, 0], errs: {} };   // for the end-of-game report
     show('battle');
     B.me.setup(); B.foe.setup();
     SHIPS.forEach(function (sh) { B.me.shipEls[sh.id] = B.me.drawShip(G.my[sh.id]); });
@@ -1133,8 +1147,21 @@
       setTurn('me', T('YOUR TURN', 'TU TURNO'), '&#127919;');
       setPin(null);
       activeZone('foe', T('Fire here!', '¡Dispara aquí!'));
-      renderFire();
+      // 3-Star, now and then: HQ describes the target in words and the student must type its ordered pair
+      var orders = G.hard && G.round > 1 && Math.random() < 0.3 ? ordersTarget() : null;
+      renderFire(orders);
       G.onFire = function (x, y) {
+        if (orders && (x !== orders.x || y !== orders.y)) {
+          orders.tries++;
+          if (orders.tries === 1) noteAnswer(false, 'orders');
+          Sound.play('wrong');
+          $('#orders-fb').innerHTML = '<div class="fb bad"><b class="nq">' + T('NOT QUITE! Try again.', '¡CASI! Inténtalo de nuevo.') + '</b> ' +
+            (orders.tries >= 2 ? T('The point described is <b>' + pair(orders.x, orders.y) + '</b>. Type it to fire.', 'El punto descrito es <b>' + pair(orders.x, orders.y) + '</b>. Escríbelo para disparar.')
+              : esc(analyze(orders.x, orders.y, x, y))) + '</div>';
+          var inp = $('#in-pair'); if (inp) { inp.select(); inp.focus(); }
+          return;
+        }
+        if (orders && !orders.tries) { noteAnswer(true, 'orders'); Sound.play('correct'); }
         G.onFire = null; stopTimer();
         fireAt(id, x, y).then(resolve);
       };
@@ -1161,10 +1188,26 @@
       return '<button type="button" tabindex="-1" data-k="' + esc(k) + '">' + lbl + '</button>';
     }).join('') + '</div>';
   }
-  function renderFire() {
+  // a point the player hasn't fired at yet (with axis points coming up regularly)
+  function ordersTarget() {
+    var cand = [];
+    for (var x = G.min; x <= G.max; x++) for (var y = G.min; y <= G.max; y++)
+      if (!G.shots.some(function (s) { return s.x === x && s.y === y; })) cand.push([x, y]);
+    if (!cand.length) return null;
+    var sinceAxis = 0;
+    for (var i = G.shots.length - 1; i >= 0 && !onAxis(G.shots[i].x, G.shots[i].y); i--) sinceAxis++;
+    var c = pick(axisOften(cand, sinceAxis));
+    return { x: c[0], y: c[1], tries: 0 };
+  }
+  function renderFire(orders) {
     var lo = num(G.min), hi = num(G.max);
     var html = '<h2 class="me">' + T('YOUR TURN: FIRE!', 'TU TURNO: ¡DISPARA!') + '</h2>';
-    if (G.hard) {
+    if (orders) {
+      html += '<p><b>' + T('&#128251; ORDERS FROM HQ:', '&#128251; ÓRDENES DEL CUARTEL:') + '</b> ' + T('fire at this point. Type it as an <b>ordered pair</b>.', 'dispara a este punto. Escríbelo como <b>par ordenado</b>.') + '</p>' +
+        '<div class="words">' + describe(orders.x, orders.y) + '</div>' +
+        '<div class="entry"><input type="text" id="in-pair" class="wide" autocomplete="off" spellcheck="false" maxlength="14" placeholder="( ? , ? )" aria-label="' + esc(T('Ordered pair for the point HQ described', 'Par ordenado del punto que describió el cuartel')) + '"></div>' +
+        '<div id="orders-fb" aria-live="polite"></div>';
+    } else if (G.hard) {
       html += '<p>' + T('Type the <b>whole ordered pair</b> to fire at the opponent&rsquo;s board.', 'Escribe el <b>par ordenado completo</b> para disparar al tablero del oponente.') + '</p>' +
         '<div class="entry"><input type="text" id="in-pair" class="wide" autocomplete="off" spellcheck="false" maxlength="14" placeholder="( ? , ? )" aria-label="' + esc(T('Ordered pair, like (2, -3)', 'Par ordenado, como (2, -3)')) + '"></div>';
     } else {
@@ -1308,7 +1351,7 @@
         if (done || !alive(id)) return;
         done = true; G.quizKeys = null;
         var ok = ccw === tw.ccw;
-        noteAnswer(ok);
+        noteAnswer(ok, 'turn');
         Sound.play(ok ? 'correct' : 'wrong');
         Array.prototype.forEach.call(btns, function (b) {
           b.disabled = true;
@@ -1390,6 +1433,15 @@
     return wait(1900).then(function () { g.classList.remove('sinking'); g.classList.add('sunk'); G.shown[(reveal ? 'foe:' : 'me:') + s.id] = true; updateFleets(); });
   }
 
+  // Points on an axis, like (0, 2) or (−1, 0), are where students mix up x and y most. Random targets land on them
+  // about a third of the time anyway; this makes sure at least one of every three targets is on an axis.
+  function onAxis(x, y) { return x === 0 || y === 0; }
+  function axisOften(cand, sinceAxis) {
+    if (sinceAxis === undefined) sinceAxis = G.ai.sinceAxis || 0;
+    var ax = cand.filter(function (c) { return onAxis(c[0], c[1]); });
+    return ax.length && sinceAxis >= 2 ? ax : cand;
+  }
+
   // ---------------- the computer's shot
   function aiPick() {
     var ai = G.ai, tried = ai.tried;
@@ -1422,6 +1474,7 @@
     }
     if (!cand.length) {
       for (var x = G.min; x <= G.max; x++) for (var y = G.min; y <= G.max; y++) if (free(x, y)) cand.push([x, y]);
+      cand = axisOften(cand);
     }
     var c = pick(cand);
     return { x: c[0], y: c[1] };
@@ -1429,6 +1482,7 @@
   function aiRecord(x, y, sid) {
     var ai = G.ai;
     ai.tried[key(x, y)] = true;
+    ai.sinceAxis = onAxis(x, y) ? 0 : (ai.sinceAxis || 0) + 1;
     ai.lastShot = { x: x, y: y };
     if (!sid) return;
     ai.open.push([x, y]);
@@ -1523,7 +1577,7 @@
       function choose(px, py) {
         if (done || !alive(id)) return;
         if (px === tx && py === ty) {
-          if (!tries) noteAnswer(true);
+          if (!tries) noteAnswer(true, 'find');
           Sound.play('correct');
           b.ring(px, py, 'okpick', 22);
           $('#loc-fb').innerHTML = '<div class="fb good">&#10004; ' + T('Correct! That&rsquo;s ', '¡Correcto! Es ') + '<b>' + pair(tx, ty) + '</b>.</div>';
@@ -1533,7 +1587,7 @@
           return;
         }
         tries++;
-        if (tries === 1) noteAnswer(false);
+        if (tries === 1) noteAnswer(false, 'find');
         Sound.play('wrong');
         var r = b.ring(px, py, 'wrongpick', 21);
         var xg = svgEl('path', { d: 'M' + (b.sx(px) - 9) + ' ' + (b.sy(py) - 9) + ' l18 18 m0 -18 l-18 18', 'class': 'wrongx' }, b.L.ui);
@@ -1552,7 +1606,7 @@
       }
       if (G.hard) startTimer(TIME.locate, function () {
         if (done || !alive(id)) return;
-        if (!tries) noteAnswer(false);
+        if (!tries) noteAnswer(false, 'find');
         Sound.play('timeout');
         $('#loc-fb').innerHTML = '<div class="fb info">&#9200; ' + T('Time&rsquo;s up! Watch where ', '¡Se acabó el tiempo! Mira dónde está ') + '<b>' + pair(tx, ty) + '</b>' +
           T(' is: x = ' + num(tx) + ' first (left/right), then y = ' + num(ty) + ' (up/down).', ': primero x = ' + num(tx) + ' (izquierda/derecha), luego y = ' + num(ty) + ' (arriba/abajo).') + '</div>';
@@ -1594,7 +1648,19 @@
   }
 
   // feedback that names the mistake
+  // the kind of mistake, for the end-of-game report (same order of checks as analyze below)
+  function mistakeKind(tx, ty, px, py) {
+    if (px === ty && py === tx && tx !== ty) return 'order';
+    if (py === ty && px === -tx && tx !== 0) return 'signx';
+    if (px === tx && py === -ty && ty !== 0) return 'signy';
+    if (px === -tx && py === -ty) return 'signs';
+    if (Math.abs(px) === Math.abs(ty) && Math.abs(py) === Math.abs(tx) && Math.abs(tx) !== Math.abs(ty)) return 'order';
+    if (py === ty) return 'countx';
+    if (px === tx) return 'county';
+    return 'other';
+  }
   function analyze(tx, ty, px, py) {
+    if (G.rep) { var mk = mistakeKind(tx, ty, px, py); G.rep.errs[mk] = (G.rep.errs[mk] || 0) + 1; }
     if (px === ty && py === tx && tx !== ty)
       return T('Check the order! Look carefully: the first number is x (left/right). The second number is y (up/down).', '¡Revisa el orden! Fíjate bien: el primer número es x (izquierda/derecha). El segundo número es y (arriba/abajo).');
     if (py === ty && px === -tx && tx !== 0)
@@ -1804,7 +1870,7 @@
       say(T('Radar check. ', 'Revisión de radar. ') + $('#panel .task p:nth-of-type(2)').textContent);
       function finish(ok, timedOut) {
         if (done) return;
-        if (!wrongs) noteAnswer(ok);   // a Radar Check counts as right only on the first try
+        if (!wrongs) noteAnswer(ok, 'radar');   // a Radar Check counts as right only on the first try
         done = true; stopTimer();
         Array.prototype.forEach.call(document.querySelectorAll('#panel .choices .btn, #panel input, #btn-check, #panel .pad button'), function (e) { e.disabled = true; });
         if (q.choices) q.choices.forEach(function (c, i) { if (c.ok) $('#panel .choices .btn[data-i="' + i + '"]').classList.add('right'); });
@@ -1818,7 +1884,7 @@
       }
       function wrong(msg) {
         wrongs++;
-        if (wrongs === 1) noteAnswer(false);
+        if (wrongs === 1) noteAnswer(false, 'radar');
         Sound.play('wrong');
         $('#quiz-fb').innerHTML = '<div class="fb bad"><b class="nq">' + T('NOT QUITE! Try again.', '¡CASI! Inténtalo de nuevo.') + '</b>' + msg + '</div>';
         say(T('Not quite. ', 'Casi. ') + $('#quiz-fb').textContent);
@@ -1909,6 +1975,31 @@
   }
 
   // ---------------- end of the battle
+  // End-of-game report: how often each kind of question was right on the first try, the most common mistake, and a tip
+  function reportHTML() {
+    var r = G.rep; if (!r) return '';
+    var rows = [], hits = G.shots.filter(function (s) { return s.hit; }).length;
+    function row(label, v) { if (v[1]) rows.push('<li>' + label + ': <b>' + v[0] + ' ' + T('of', 'de') + ' ' + v[1] + '</b></li>'); }
+    rows.push('<li>' + T('Shots fired', 'Disparos') + ': <b>' + G.shots.length + '</b> (' + hits + ' ' + T(hits === 1 ? 'hit' : 'hits', hits === 1 ? 'impacto' : 'impactos') + ')</li>');
+    row(T('Enemy shots found on the first try', 'Disparos enemigos encontrados al primer intento'), r.find);
+    row(T('Radar Checks right on the first try', 'Revisiones de radar correctas al primer intento'), r.radar);
+    row(T('Orders from HQ right on the first try', 'Órdenes del cuartel correctas al primer intento'), r.orders);
+    row(T('Turns predicted correctly', 'Giros predichos correctamente'), r.turn);
+    var top = null, n = 0;
+    Object.keys(r.errs).forEach(function (k) { if (r.errs[k] > n) { n = r.errs[k]; top = k; } });
+    var TIPS = {
+      order: [T('Mixing up the order of x and y', 'Confundir el orden de x y y'), T('x always comes first: move left or right, then up or down.', 'x siempre va primero: muévete a la izquierda o a la derecha, y luego arriba o abajo.')],
+      signx: [T('The sign of x', 'El signo de x'), T('Positive x moves right; negative x moves left.', 'x positiva va a la derecha; x negativa va a la izquierda.')],
+      signy: [T('The sign of y', 'El signo de y'), T('Positive y moves up; negative y moves down.', 'y positiva va hacia arriba; y negativa va hacia abajo.')],
+      signs: [T('Both signs flipped', 'Los dos signos al revés'), T('Check each sign: right and up are positive, left and down are negative.', 'Revisa cada signo: derecha y arriba son positivos; izquierda y abajo son negativos.')],
+      countx: [T('Counting the x-distance', 'Contar la distancia en x'), T('Start at the origin and count each step left or right carefully.', 'Empieza en el origen y cuenta con cuidado cada paso a la izquierda o a la derecha.')],
+      county: [T('Counting the y-distance', 'Contar la distancia en y'), T('After moving for x, count each step up or down carefully.', 'Después de moverte en x, cuenta con cuidado cada paso hacia arriba o hacia abajo.')],
+      other: [T('Finding the point', 'Encontrar el punto'), T('Say the point aloud: "x first, then y," and trace the path with your finger.', 'Di el punto en voz alta: "primero x, luego y", y sigue el camino con el dedo.')]
+    };
+    var tip = top ? '<p class="rep-tip"><b>' + T('Most common mistake', 'Error más común') + ':</b> ' + TIPS[top][0] + ' (' + n + '&times;). <b>' + T('Tip', 'Consejo') + ':</b> ' + TIPS[top][1] + '</p>'
+      : '<p class="rep-tip"><b>' + T('No mistakes this battle!', '¡Ningún error en esta batalla!') + '</b> ' + (G.hard ? T('You are ready for anything, General.', 'Nada te detiene, General.') : T('Try the next rank for a bigger challenge.', 'Prueba el siguiente rango para un reto mayor.')) + '</p>';
+    return '<h3>' + T('Battle report', 'Informe de batalla') + '</h3><ul>' + rows.join('') + '</ul>' + tip;
+  }
   function endGame(id, win) {
     if (!alive(id)) return;
     stopTimer();
@@ -1925,10 +2016,11 @@
       card.className = 'card ' + (win ? 'end-win' : 'end-lose');
       $('#end-h').innerHTML = win ? '&#127942; ' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') : '&#9875; ' + T('BATTLE OVER', 'FIN DE LA BATALLA');
       $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
+      $('#end-report').innerHTML = reportHTML();
       $('#scr-end').hidden = false;
       fitScreen();
       Sound.play(win ? 'victory' : 'lose');
-      say($('#end-h').textContent + '. ' + $('#end-p').textContent, true);
+      say($('#end-h').textContent + '. ' + $('#end-p').textContent + ' ' + $('#end-report').textContent, true);
       if (win) confetti();
       focusLater($('#end-again'));
     });
@@ -1979,6 +2071,15 @@
   $('#pause-restart').addEventListener('click', function () { Sound.play('click'); setPaused(false); pauseReturn = null; $('#banner').hidden = true; startPlacement(); });
   $('#pause-menu').addEventListener('click', function () { Sound.play('click'); setPaused(false); pauseReturn = null; goMenu(); });
   $('#pause-help').addEventListener('click', function () { Sound.play('click'); $('#scr-pause').hidden = true; showInstructions(true); });
+  function setCalm(on) {
+    G.calm = on;
+    app.classList.toggle('calm', on);
+    Storm.motion();
+    $('#pause-motion').setAttribute('aria-pressed', String(on));
+    $('#motion-lbl').textContent = on ? T('LESS MOTION: ON', 'MENOS MOVIMIENTO: SÍ') : T('LESS MOTION: OFF', 'MENOS MOVIMIENTO: NO');
+  }
+  $('#pause-motion').addEventListener('click', function () { Sound.play('click'); setCalm(!G.calm); });
+  setCalm(G.calm);
 
   // ---------------- sound toggle
   function setSoundBtn() {
