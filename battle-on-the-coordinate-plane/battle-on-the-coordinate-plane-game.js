@@ -2098,12 +2098,11 @@
   $('#pause-motion').addEventListener('click', function () { Sound.play('click'); setCalm(!G.calm); });
   setCalm(G.calm);
 
-  // ---------------- sound toggle
+  // ---------------- sound switch (in the Esc menu, beside Less Motion)
   function setSoundBtn() {
     var m = Sound.isMuted(), b = $('#btn-sound');
     b.setAttribute('aria-pressed', String(!m));
-    b.querySelector('.ic').innerHTML = m ? '&#128263;' : '&#128266;';
-    $('#snd-lbl').textContent = m ? T('Sound off', 'Sonido apagado') : T('Sound on', 'Sonido encendido');
+    $('#snd-lbl').textContent = m ? T('SOUND: OFF', 'SONIDO: NO') : T('SOUND: ON', 'SONIDO: SÍ');
   }
   $('#btn-sound').addEventListener('click', function () { Sound.setMuted(!Sound.isMuted()); setSoundBtn(); if (!Sound.isMuted()) Sound.play('click'); });
   setSoundBtn();
