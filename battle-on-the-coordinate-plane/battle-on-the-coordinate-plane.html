@@ -403,7 +403,7 @@
       linear-gradient(#ffb020, #ffb020) top right / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) top right / 3px 26px no-repeat,
       linear-gradient(#ffb020, #ffb020) bottom left / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) bottom left / 3px 26px no-repeat,
       linear-gradient(#ffb020, #ffb020) bottom right / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) bottom right / 3px 26px no-repeat; }
-  #bc.rank3 .zone > *:not(.ztag) { position: relative; z-index: 1; }
+  #bc.rank3 .zone > *:not(.ztag):not(.sr-only) { position: relative; z-index: 1; }
   #bc.rank3 .zone svg.board { background: #eef3f7; border: 2px solid #ffb020; border-radius: 8px; box-shadow: 0 0 12px rgba(255,176,32,0.45); }
   #bc.rank3 .zone-title { background: #0c1218 !important; color: #ffd27a; border: 2px solid #ffb020; border-radius: 8px; letter-spacing: 0.12em;
     text-shadow: 0 0 8px rgba(255,176,32,0.8); position: relative; overflow: hidden; padding-left: 34px; padding-right: 34px; }
@@ -654,12 +654,14 @@
         <div class="arena" id="arena">
           <div class="zone mine" id="zone-me">
             <div class="zone-title"><span aria-hidden="true">&#9875;</span> <span data-es="TU TABLERO">YOUR BOARD</span></div>
-            <svg class="board" id="board-me" role="application" aria-label="Your board" data-es-aria="Tu tablero"></svg>
+            <svg class="board" id="board-me" role="application" aria-label="Your board" data-es-aria="Tu tablero" aria-describedby="hist-me"></svg>
+            <p class="sr-only" id="hist-me" aria-live="off"></p>
           </div>
           <div class="panel" id="panel"></div>
           <div class="zone foe" id="zone-foe">
             <div class="zone-title"><span aria-hidden="true">&#127919;</span> <span data-es="TABLERO DEL OPONENTE">OPPONENT'S BOARD</span></div>
-            <svg class="board" id="board-foe" role="img" aria-label="Opponent's board" data-es-aria="Tablero del oponente"></svg>
+            <svg class="board" id="board-foe" role="img" aria-label="Opponent's board" data-es-aria="Tablero del oponente" aria-describedby="hist-foe"></svg>
+            <p class="sr-only" id="hist-foe" aria-live="off"></p>
           </div>
         </div>
       </section>
@@ -735,15 +737,16 @@
   <ul>
     <li><strong>Three modes:</strong> 1-Star General uses the first quadrant (0 to 4, origin in the bottom-left). 2-Star General uses all four quadrants (&minus;2 to 2, origin in the center). 3-Star General (Coordinate Commander) uses all four quadrants with a timer, typed ordered pairs, and short Radar Check questions.</li>
     <li><strong>Ships sit on points, not in squares:</strong> Boat Buddy covers 4 points and Giant Galley 5, horizontal or vertical, and they can lie on an axis or across the origin.</li>
-    <li><strong>The plane shows x first, then y:</strong> after every shot a plane starts at the origin, flies left or right for x, turns, then flies up or down for y, with the moves labeled ("2 right", "3 down").</li>
+    <li><strong>The plane shows x first, then y:</strong> after every shot a plane starts at the origin, flies left or right for x, turns, then flies up or down for y, with the moves labeled ("2 right", "3 down"). After three right answers in a row it flies 50% faster (normal speed again for one flight after a wrong answer).</li>
     <li><strong>Repeated shots are allowed on purpose:</strong> a student who keeps reversing x and y sees the plane land somewhere else and the miss stay on the board. The shot log lists every shot.</li>
+    <li><strong>The computer gets sharper with each rank:</strong> mostly random shots at 1-Star, it checks around its hits at 2-Star, and follows a ship's direction at 3-Star.</li>
     <li><strong>Finding the enemy's shots:</strong> the computer names a coordinate and the student must select it on their own board. Wrong picks get feedback about the specific mistake (x and y swapped, wrong direction for x or y) and stronger hints each time; on the fourth try the path is drawn on the board.</li>
     <li><strong>3-Star General mode:</strong> the computer's shots are given in words, often with y first ("The y-coordinate is &minus;2 and the x-coordinate is 1", "Move 2 units down and 1 unit right"). Students type full ordered pairs with parentheses and a comma. Radar Checks ask about quadrants, points on an axis, reading a highlighted point, and comparing points. Running out of time skips your shot, shows where the enemy's shot landed, or reveals the Radar Check answer.</li>
     <li><strong>Nothing is saved:</strong> no accounts, no scores kept, no data stored. Every game starts fresh.</li>
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=713f8146"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=e4d22a5c"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
