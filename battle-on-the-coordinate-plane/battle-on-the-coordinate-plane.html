@@ -528,6 +528,8 @@
   #bc .reticle { fill: none; stroke: #e2541a; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: bc-ret 0.45s ease-in forwards; }
   @keyframes bc-ret { from { transform: scale(2.4) rotate(0deg); opacity: 0.2; } to { transform: scale(0.6) rotate(90deg); opacity: 1; } }
   #bc.paused *, #bc.paused *::before, #bc.paused *::after { animation-play-state: paused !important; }
+  /* the screens opened from the pause menu (How to play, the menu itself) still animate in */
+  #bc.paused #scr-instr *, #bc.paused #scr-pause * { animation-play-state: running !important; }
   @media (prefers-reduced-motion: reduce) {
     #bc .sea i, #bc .st-clouds g, #bc .st-rain, #bc .st-wave, #bc .st-bob, #bc .st-smoke, #bc .st-crash, #bc .st-spray circle, #bc .st-plane, #bc .st-beam, #bc .t-play, #bc .tring2, #bc .ztag { animation: none !important; }
   }
