@@ -6,7 +6,10 @@
 <title>My Stats - Free Online Math Games for Students &amp; Teachers</title>
 <meta name="description" content="See your personal best times, coins, unlocks, and achievement badges across every game - saved only in your own browser.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#111318">
+<meta name="theme-color" content="#fffaf0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght;700;800;900&display=swap" rel="stylesheet">
 <meta property="og:title" content="My Stats - Free Online Math Games for Students &amp; Teachers">
 <meta property="og:description" content="Your personal best times, coins, unlocks, and achievement badges across every game - saved only in your own browser.">
 <meta property="og:type" content="website">
@@ -18,12 +21,12 @@
 <meta name="twitter:image" content="https://studentmathgames.com/og/site.png">
 <style>
   :root {
-    --bg: #111318;
-    --panel: #1b1e27;
-    --text: #f2f3f7;
-    --muted: #9aa0ae;
-    --accent: #5b8cff;
-    --good: #3ea158;
+    --bg: #fffaf0;
+    --panel: #ffffff;
+    --text: #2b2b2b;
+    --muted: #5f5a52;
+    --accent: #c2471b;
+    --good: #2f7d46;
   }
 
   * { box-sizing: border-box; }
@@ -32,7 +35,7 @@
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Nunito", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
   header {
@@ -91,7 +94,7 @@
     border-radius: 14px;
     padding: 16px 12px 14px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid #f0e2c8;
   }
   .badge.earned {
     border-color: rgba(62,161,88,0.55);
@@ -112,7 +115,7 @@
   .game-card {
     background: var(--panel);
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid #f0e2c8;
     padding: 18px 20px 20px;
   }
   .game-card h3 {
@@ -127,7 +130,7 @@
     justify-content: space-between;
     font-size: 13.5px;
     padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid #f0e2c8;
   }
   .game-card .stat-row:last-child { border-bottom: none; }
   .game-card .stat-label { color: var(--muted); }
@@ -157,18 +160,18 @@
   .reset-section {
     text-align: center;
     padding: 24px 0 8px;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid #f0e2c8;
   }
   button.reset-btn {
     background: transparent;
-    border: 1px solid rgba(255,90,90,0.5);
-    color: #ff8080;
+    border: 1px solid rgba(180,35,24,0.5);
+    color: #b42318;
     padding: 10px 18px;
     border-radius: 10px;
     font-size: 13px;
     cursor: pointer;
   }
-  button.reset-btn:hover { background: rgba(255,90,90,0.1); }
+  button.reset-btn:hover { background: rgba(180,35,24,0.08); }
 
   footer {
     text-align: center;
@@ -185,6 +188,15 @@
     text-decoration: none;
     font-size: 14px;
   }
+  /* the stat cards (shared with the dark pop-out in each game), in this page's light colors */
+  body .ss-tile { background: #fff; border-color: #f0e2c8; box-shadow: 0 2px 0 #f0e2c8; }
+  body .ss-tile b, body .ss-bname, body .ss-game h3, body .ss-row b { color: #2b2b2b; }
+  body .ss-tile span, body .ss-bdesc, body .ss-row span, body .ss-empty, body .ss-sub { color: #5f5a52; }
+  body .ss-badge { background: #fff; border-color: #f0e2c8; }
+  body .ss-badge.earned { border-color: rgba(47,125,70,0.6); background: linear-gradient(180deg, rgba(47,125,70,0.12), #fff 60%); }
+  body .ss-game { background: #fff; border-color: #f0e2c8; box-shadow: 0 2px 0 #f0e2c8; }
+  body .ss-row { border-bottom-color: #f0e2c8; }
+  body .ss-play, body .ss-all { color: #c2471b; }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>

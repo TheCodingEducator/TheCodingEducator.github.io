@@ -1,8 +1,8 @@
 /* Shared look for the printable worksheets and exit tickets (one of each per game). White paper on screen, clean
    letter-size pages when printed; the toolbar and note never print. */
-:root { --ink: #1b2130; --muted: #5d6475; --line: #cfd5e2; --a: #e0674f; --b: #3a9a5b; --c: #2f6fd6; --accent: #2f6fd6; }
+:root { --ink: #1b2130; --muted: #5d6475; --line: #cfd5e2; --a: #e0674f; --b: #3a9a5b; --c: #2f6fd6; --accent: #c2471b; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #e9ecf2; color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { margin: 0; background: #fffaf0; color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 a { color: var(--accent); }
 .toolbar { max-width: 8.5in; margin: 0 auto; padding: 16px 16px 0; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 14px; }
 .toolbar .home { font-weight: 800; color: var(--ink); text-decoration: none; margin-right: auto; }
