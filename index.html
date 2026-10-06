@@ -6,7 +6,7 @@
 <title>Student Math Games - Free Math Practice for Grades 2-8</title>
 <meta name="description" content="Free math practice games for grades 2-8, each built around a Common Core standard by an 8th grade math teacher, with teacher guides and printable worksheets. No accounts, no logins, no student data.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#111318">
+<meta name="theme-color" content="#fffaf0">
 <meta property="og:title" content="Student Math Games - Free Math Practice for Grades 2-8">
 <meta property="og:description" content="Free math practice games for grades 2-8, each built around a Common Core standard by an 8th grade math teacher, with teacher guides and printable worksheets. No accounts, no logins, no student data.">
 <meta property="og:type" content="website">
@@ -18,13 +18,23 @@
 <meta name="twitter:image" content="https://studentmathgames.com/og/site.png">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893"
      crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
+  /* A bright, warm classroom look: cream paper, white cards, and one color per grade band */
   :root {
-    --bg: #111318;
-    --panel: #1b1e27;
-    --text: #f2f3f7;
-    --muted: #9aa0ae;
-    --accent: #5b8cff;
+    --bg: #fffaf0;
+    --panel: #ffffff;
+    --line: #f0e2c8;
+    --text: #2b2b2b;
+    --muted: #5f5a52;
+    --accent: #c2471b;
+    --sun: #ffe3b3;
+    --g25: #c2471b;   /* grades 2-5 */
+    --g6: #1f7a70;
+    --g7: #4b4bc4;
+    --g8: #b83a66;
   }
 
   * { box-sizing: border-box; }
@@ -33,117 +43,88 @@
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Nunito", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
-  header {
-    padding: 64px 24px 32px;
-    text-align: center;
+  .topbar {
+    max-width: 1080px; margin: 0 auto; padding: 18px 24px 0;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px;
   }
+  .brand { font-weight: 900; font-size: 20px; color: var(--accent); text-decoration: none; letter-spacing: -0.2px; }
+  .site-nav { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; }
+  .site-nav a { color: var(--muted); text-decoration: none; font-weight: 700; }
+  .site-nav a:hover { color: var(--accent); }
 
-  header h1 {
-    margin: 0 0 8px;
-    font-size: clamp(28px, 5vw, 44px);
+  .hero {
+    max-width: 1080px; margin: 0 auto; padding: 36px 24px 28px;
+    display: grid; grid-template-columns: 1.35fr 1fr; gap: 32px; align-items: center;
   }
-
-  header p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 18px;
+  .hero h1 { margin: 0 0 10px; font-size: 17px; font-weight: 800; color: var(--accent); }
+  .hero .big { margin: 0 0 14px; font-size: clamp(32px, 5.2vw, 54px); font-weight: 900; line-height: 1.08; letter-spacing: -0.5px; }
+  .hero .lede { margin: 0 0 22px; font-size: 18px; line-height: 1.55; color: var(--muted); max-width: 560px; }
+  .hero-art {
+    aspect-ratio: 4 / 3; border-radius: 28px; background: var(--sun);
+    display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 18px;
+    font-size: clamp(44px, 7vw, 80px); font-weight: 900; color: #b7651c; line-height: 1;
   }
+  .hero-art span:nth-child(2) { color: var(--g6); } .hero-art span:nth-child(3) { color: var(--g7); } .hero-art span:nth-child(4) { color: var(--g8); }
 
-  main {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 8px 24px 80px;
+  .grades { display: flex; flex-wrap: wrap; gap: 10px; }
+  .grades button {
+    font: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
+    padding: 10px 18px; border-radius: 999px; border: 2px solid var(--c); background: #fff; color: var(--c);
+    transition: transform 0.12s ease;
   }
+  .grades button:hover { transform: translateY(-2px); }
+  .grades button[aria-pressed="true"] { background: var(--c); color: #fff; }
+  .grades .all { --c: var(--text); }
+  .grades-note { margin: 10px 0 0; font-size: 14px; color: var(--muted); min-height: 1.4em; }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 24px;
+  .facts {
+    max-width: 1080px; margin: 0 auto; padding: 0 24px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;
   }
+  .fact { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+  .fact b { display: block; color: var(--text); font-size: 16px; margin-bottom: 2px; }
+  .fact a { color: var(--accent); }
+  .latest { max-width: 1080px; margin: 14px auto 0; padding: 0 24px; font-size: 15px; color: var(--muted); }
+  .latest a { color: var(--accent); }
 
-  h2.topic { font-size: 22px; margin: 40px 0 14px; }
-  h2.topic span { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 8px; }
+  main { max-width: 1080px; margin: 0 auto; padding: 8px 24px 80px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 22px; }
+
+  h2.topic { font-size: 24px; font-weight: 900; margin: 44px 0 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+  h2.topic span { font-size: 13px; font-weight: 800; color: #fff; background: var(--c, var(--accent)); padding: 4px 10px; border-radius: 999px; }
 
   .card {
-    display: flex;
-    flex-direction: column;
-    background: var(--panel);
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.06);
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    display: flex; flex-direction: column; background: var(--panel); border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--line); box-shadow: 0 2px 0 var(--line);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(120, 80, 20, 0.14); }
+  .card[hidden], section.topic-group[hidden] { display: none; }
   .card-main { display: block; flex: 1; text-decoration: none; color: inherit; }
+  .thumb { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; object-fit: cover; background: var(--sun); }
+  .card-body { padding: 14px 18px 12px; }
+  .card-body h3 { margin: 0 0 6px; font-size: 20px; font-weight: 900; }
+  .card-body p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .card-links { display: flex; gap: 10px; padding: 4px 18px 18px; font-size: 14px; font-weight: 800; flex-wrap: wrap; }
+  .card-links a { text-decoration: none; padding: 7px 14px; border-radius: 999px; }
+  .card-links a:first-child { background: var(--accent); color: #fff; }
+  .card-links a:last-child { color: var(--accent); border: 2px solid var(--line); }
+  .card-links a:hover { filter: brightness(0.92); }
 
-  .card:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent);
+  a:focus-visible, button:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 28px 24px 36px; border-top: 1px solid var(--line); }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; padding-top: 24px; gap: 20px; }
+    .hero-art { display: none; }
   }
-
-  .card-links { display: flex; gap: 16px; padding: 0 18px 16px; font-size: 14px; font-weight: 700; }
-  .card-links a { color: var(--accent); text-decoration: none; }
-  .card-links a:hover { text-decoration: underline; }
-
-  .intro { max-width: 760px; margin: 0 auto; padding: 0 24px; color: var(--text); font-size: 16px; line-height: 1.65; }
-  .intro p { margin: 0 0 12px; }
-  .intro a { color: var(--accent); }
-  .intro .latest { background: var(--panel); border-radius: 12px; padding: 10px 14px; font-size: 14px; color: var(--muted); }
-  .intro .latest a { color: var(--accent); }
-  .site-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: 15px; }
-  .site-nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
-  .site-nav a:hover { text-decoration: underline; }
-
-  .card-main:focus-visible, .card-links a:focus-visible, .site-nav a:focus-visible, .intro a:focus-visible,
-  footer a:focus-visible {
-    outline: 3px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .thumb {
-    height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-  }
-
-  .card-body {
-    padding: 16px 18px 20px;
-  }
-
-  .card-body h3 {
-    margin: 0 0 6px;
-    font-size: 20px;
-  }
-
-  .card-body p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 14px;
-    line-height: 1.4;
-  }
-
-  .card.placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 180px;
-    border: 1px dashed rgba(255,255,255,0.15);
-    color: var(--muted);
-    font-size: 14px;
-    text-align: center;
-    padding: 20px;
-  }
-
-  footer {
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-    padding: 24px;
-  }
+  @media (prefers-reduced-motion: reduce) { .card, .grades button { transition: none; } .card:hover, .grades button:hover { transform: none; } }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
@@ -151,30 +132,50 @@
 <body>
 
 <header>
-  <h1>Free Online Math Games for Students &amp; Teachers</h1>
-  <p>Games for grades 2&ndash;8, designed by a math teacher</p>
-  <nav class="site-nav" aria-label="Site">
-    <a href="teachers.html">&#127822; For teachers</a>
-    <a href="whats-new.html">&#10024; What's new</a>
-    <a href="my-stats.html">&#128202; My Stats &amp; Badges</a>
-    <a href="about.html">About</a>
-  </nav>
+  <div class="topbar">
+    <a class="brand" href="index.html">studentmathgames</a>
+    <nav class="site-nav" aria-label="Site">
+      <a href="teachers.html">&#127822; For teachers</a>
+      <a href="whats-new.html">&#10024; What's new</a>
+      <a href="my-stats.html">&#128202; My Stats &amp; Badges</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+
+  <div class="hero">
+    <div>
+      <h1>Free Online Math Games for Students &amp; Teachers</h1>
+      <p class="big">Math is more fun when you play it.</p>
+      <p class="lede">Free games for grades 2&ndash;8, designed by a math teacher. No accounts, no logins, nothing to install. Pick your grade and press play.</p>
+      <div class="grades" role="group" aria-label="Show games for a grade">
+        <button type="button" style="--c: var(--g25)" data-g="2 3 4 5" aria-pressed="false">Grades 2&ndash;5</button>
+        <button type="button" style="--c: var(--g6)" data-g="6" aria-pressed="false">Grade 6</button>
+        <button type="button" style="--c: var(--g7)" data-g="7" aria-pressed="false">Grade 7</button>
+        <button type="button" style="--c: var(--g8)" data-g="8" aria-pressed="false">Grade 8</button>
+        <button type="button" class="all" data-g="" aria-pressed="true">All games</button>
+      </div>
+      <p class="grades-note" id="grades-note" aria-live="polite"></p>
+    </div>
+    <div class="hero-art" aria-hidden="true"><span>+</span><span>&minus;</span><span>&times;</span><span>&divide;</span></div>
+  </div>
 </header>
 
-<section class="intro" aria-label="About these games">
-  <p>These are free math games for the classroom and for home. <strong>I'm an 8th grade math teacher, and I design every one of them</strong> around a specific Common Core standard, from counting coins in 2nd grade to the Pythagorean theorem in 8th. Each game turns practice into something students want to keep playing: racing, shooting hoops, running a diner, swinging across a jungle.</p>
-  <p>There are no accounts, no logins and no student data, so the games work on student devices and projectors. Every game can be played with just the keyboard, and each one has a <a href="teachers.html">teacher guide</a> with the math, worked examples, common mistakes and classroom ideas.</p>
-  <p class="latest"><strong style="color: var(--text);">Latest update, October 4:</strong> Every game now works with screen readers, and Battle on the Coordinate Plane has an end-of-game battle report. <a href="whats-new.html">See everything that's new &rarr;</a></p>
+<section class="facts" aria-label="About these games">
+  <p class="fact"><b>Made by a math teacher</b>I'm an 8th grade math teacher, and I design every game around a Common Core standard, from counting coins to the Pythagorean theorem.</p>
+  <p class="fact"><b>Safe for school</b>No accounts, no logins and no student data. The games run on student devices and projectors.</p>
+  <p class="fact"><b>Ready to teach</b>Every game has a <a href="teachers.html">teacher guide</a>, a worksheet and an exit ticket. All games work with the keyboard and screen readers.</p>
 </section>
+<p class="latest"><strong style="color: var(--text);">Latest update, October 5:</strong> A brighter home page, with grade buttons that show just the games for your grade. <a href="whats-new.html">See everything that's new &rarr;</a></p>
 
 <main>
 
-  <h2 class="topic">Lines and Slope <span>Grade 8</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">Lines and Slope <span style="--c: var(--g8)">Grade 8</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="linear-world-cup/linear-world-cup.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #0a0a1e, #c9a227);">⚽</div>
+      <img class="thumb" src="og/linear-world-cup.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Linear World Cup</h3>
         <p>Score goals and complete passes by writing the slope-intercept equation of the line to your target.</p>
@@ -183,13 +184,15 @@
     <div class="card-links"><a href="linear-world-cup/linear-world-cup.html">&#9654; Play</a><a href="linear-world-cup/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
-  <h2 class="topic">Geometry <span>Grades 7&ndash;8</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">Geometry <span style="--c: var(--g7)">Grades 7&ndash;8</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="pythagorean-platforms/pythagorean-platforms.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #2e6b3f, #f2b530);">🧗</div>
+      <img class="thumb" src="og/pythagorean-platforms.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Pythagorean Platforms</h3>
         <p>Swing through the jungle with the Pythagorean theorem: find the length of your rope or the distance to the next platform, one step per swing, then watch the missing side land in slow motion.</p>
@@ -198,9 +201,9 @@
     <div class="card-links"><a href="pythagorean-platforms/pythagorean-platforms.html">&#9654; Play</a><a href="pythagorean-platforms/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="similarity-builder/similarity-builder.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #2f80ed, #ff7a1a);">📐</div>
+      <img class="thumb" src="og/similarity-builder.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Similarity Builder</h3>
         <p>Run, jump, and dodge obstacles, then build a bridge across each gap by finding scale factors and missing sides of similar figures - or practice just the question types you choose.</p>
@@ -209,9 +212,9 @@
     <div class="card-links"><a href="similarity-builder/similarity-builder.html">&#9654; Play</a><a href="similarity-builder/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="lets-get-to-the-point/lets-get-to-the-point.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #0f2f6b, #00c2ff);">🎯</div>
+      <img class="thumb" src="og/lets-get-to-the-point.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Let's Get to the Point</h3>
         <p>Slide, spin, and flip a point on the coordinate grid to master translations, rotations, and reflections.</p>
@@ -220,9 +223,9 @@
     <div class="card-links"><a href="lets-get-to-the-point/lets-get-to-the-point.html">&#9654; Play</a><a href="lets-get-to-the-point/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="7 8">
     <a class="card-main" href="laser-heist-angle-breaker/laser-heist-angle-breaker.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #0d0f1a, #ff2d3c);">🔦</div>
+      <img class="thumb" src="og/laser-heist-angle-breaker.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Laser Heist: Angle Breaker</h3>
         <p>Crack a vault by solving supplementary, complementary, vertical, and parallel-lines angle puzzles, then sneak past the guards.</p>
@@ -231,9 +234,9 @@
     <div class="card-links"><a href="laser-heist-angle-breaker/laser-heist-angle-breaker.html">&#9654; Play</a><a href="laser-heist-angle-breaker/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="7 8">
     <a class="card-main" href="bank-shot-angle-golf/bank-shot-angle-golf.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #1f6b34, #3ea158);">⛳</div>
+      <img class="thumb" src="og/bank-shot-angle-golf.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Bank Shot: Angle Golf</h3>
         <p>Solve complementary and supplementary bank-shot angles, then aim and putt your way around a 9-hole mini golf course.</p>
@@ -242,13 +245,15 @@
     <div class="card-links"><a href="bank-shot-angle-golf/bank-shot-angle-golf.html">&#9654; Play</a><a href="bank-shot-angle-golf/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
-  <h2 class="topic">Expressions and Equations <span>Grades 6&ndash;8</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">Expressions and Equations <span style="--c: var(--g6)">Grades 6&ndash;8</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="6 7 8">
     <a class="card-main" href="tip-the-scales/tip-the-scales.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #3b82f6, #4f46e5);">⚖️</div>
+      <img class="thumb" src="og/tip-the-scales.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Tip the Scales</h3>
         <p>Balance a literal scale to solve linear equations, from one-step basics to distributing and combining like terms.</p>
@@ -257,9 +262,9 @@
     <div class="card-links"><a href="tip-the-scales/tip-the-scales.html">&#9654; Play</a><a href="tip-the-scales/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="exponent-racer/exponent-racer.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #e74c3c, #f1c40f);">🏎️</div>
+      <img class="thumb" src="og/exponent-racer.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Exponent Racer</h3>
         <p>Race down the road answering exponent questions to keep your fuel up and dodge traffic.</p>
@@ -268,9 +273,9 @@
     <div class="card-links"><a href="exponent-racer/exponent-racer.html">&#9654; Play</a><a href="exponent-racer/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="exponent-hoops/exponent-hoops.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #1d428a, #ce1141);">🏀</div>
+      <img class="thumb" src="og/exponent-hoops.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Exponent Hoops</h3>
         <p>Shoot hoops by solving exponent rules - play solo or head-to-head with a friend.</p>
@@ -279,9 +284,9 @@
     <div class="card-links"><a href="exponent-hoops/exponent-hoops.html">&#9654; Play</a><a href="exponent-hoops/guide.html">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-grades="8">
     <a class="card-main" href="rooted-to-the-spot/rooted-to-the-spot.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #15803d, #1e3a8a);">⚽</div>
+      <img class="thumb" src="og/rooted-to-the-spot.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Rooted to the Spot</h3>
         <p>Square roots, cube roots and estimating square roots earn your penalty kicks - then aim for the top corner in a 3D stadium.</p>
@@ -290,13 +295,15 @@
     <div class="card-links"><a href="rooted-to-the-spot/rooted-to-the-spot.html">&#9654; Play</a><a href="rooted-to-the-spot/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
-  <h2 class="topic">Ratios and Proportions <span>Grades 6&ndash;7</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">Ratios and Proportions <span style="--c: var(--g6)">Grades 6&ndash;7</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="6 7">
     <a class="card-main" href="proportional-plates/proportional-plates.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #d9432f, #ffc83d);">🍳</div>
+      <img class="thumb" src="og/proportional-plates.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Proportional Plates</h3>
         <p>Run a diner as the chef: take orders, scale recipes and prices with proportions, and serve every plate before your customers' smiles turn into scowls - or practice just the skills you choose.</p>
@@ -305,13 +312,15 @@
     <div class="card-links"><a href="proportional-plates/proportional-plates.html">&#9654; Play</a><a href="proportional-plates/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
-  <h2 class="topic">The Coordinate Plane <span>Grades 5&ndash;6</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">The Coordinate Plane <span style="--c: var(--g25)">Grades 5&ndash;6</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="5 6">
     <a class="card-main" href="battle-on-the-coordinate-plane/battle-on-the-coordinate-plane.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #2b93cc, #8fd3f6);">&#9875;</div>
+      <img class="thumb" src="og/battle-on-the-coordinate-plane.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Battle on the Coordinate Plane</h3>
         <p>Hide your fleet, fire with ordered pairs, and watch a plane fly x first, then y. Find the enemy's shots on your own board and sink both ships - first quadrant, all four quadrants, or a timed Coordinate Commander mode.</p>
@@ -320,13 +329,15 @@
     <div class="card-links"><a href="battle-on-the-coordinate-plane/battle-on-the-coordinate-plane.html">&#9654; Play</a><a href="battle-on-the-coordinate-plane/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
-  <h2 class="topic">Multiplication and Area <span>Grade 3</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">Multiplication and Area <span style="--c: var(--g25)">Grade 3</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="3">
     <a class="card-main" href="area-artist/area-artist.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #ff6b6b, #ffc93c);">🎨</div>
+      <img class="thumb" src="og/area-artist.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Area Artist</h3>
         <p>Multiply to paint a hidden pixel-art masterpiece one rectangle at a time - pick animals, pets, space, sports, fashion and more - or design your own art in the studio.</p>
@@ -335,13 +346,15 @@
     <div class="card-links"><a href="area-artist/area-artist.html">&#9654; Play</a><a href="area-artist/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
-  <h2 class="topic">Money <span>Grade 2</span></h2>
+  <section class="topic-group">
+  <h2 class="topic">Money <span style="--c: var(--g25)">Grade 2</span></h2>
   <div class="grid">
 
-  <div class="card">
+  <div class="card" data-grades="2">
     <a class="card-main" href="piggy-bank-math/piggy-bank-math.html">
-      <div class="thumb" aria-hidden="true" style="background: linear-gradient(135deg, #ff9a8b, #ffc785);">🐷</div>
+      <img class="thumb" src="og/piggy-bank-math.png" alt="" loading="lazy" width="1200" height="630">
       <div class="card-body">
         <h3>Piggy Bank Math</h3>
         <p>Click pennies, nickels, dimes, and quarters to match a target amount before time runs out.</p>
@@ -350,12 +363,36 @@
     <div class="card-links"><a href="piggy-bank-math/piggy-bank-math.html">&#9654; Play</a><a href="piggy-bank-math/guide.html">Full Teacher Guide</a></div>
   </div>
   </div>
+  </section>
 
 </main>
 
 <footer>
   &copy; 2026 Mr. H. All Rights Reserved. &middot; <a href="teachers.html" style="color: var(--muted);">For teachers</a> &middot; <a href="whats-new.html" style="color: var(--muted);">What's new</a> &middot; <a href="about.html" style="color: var(--muted);">About</a> &middot; <a href="privacy-policy.html" style="color: var(--muted);">Privacy Policy</a> &middot; <a href="terms.html" style="color: var(--muted);">Terms of Service</a> &middot; <a href="accessibility.html" style="color: var(--muted);">Accessibility</a> &middot; <a href="contact.html" style="color: var(--muted);">Contact</a>
 </footer>
+
+<script>
+// The grade buttons show only the games for that grade (every game shows when scripts are off)
+(function () {
+  var btns = document.querySelectorAll('.grades button'), note = document.getElementById('grades-note');
+  function show(btn) {
+    var want = btn.getAttribute('data-g').split(' ').filter(Boolean), n = 0;
+    btns.forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+    document.querySelectorAll('.card[data-grades]').forEach(function (c) {
+      var ok = !want.length || c.getAttribute('data-grades').split(' ').some(function (g) { return want.indexOf(g) >= 0; });
+      c.hidden = !ok; if (ok) n++;
+    });
+    document.querySelectorAll('.topic-group').forEach(function (s) { s.hidden = !s.querySelector('.card:not([hidden])'); });
+    note.textContent = want.length ? n + (n === 1 ? ' game' : ' games') + ' for ' + btn.textContent + '.' : '';
+  }
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      show(b);
+      if (b.getAttribute('data-g')) document.querySelector('main').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    });
+  });
+})();
+</script>
 
 </body>
 </html>
