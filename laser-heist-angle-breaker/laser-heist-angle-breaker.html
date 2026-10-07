@@ -101,6 +101,12 @@
   #qpanel .panels span.now { box-shadow: 0 0 0 2px #4fe3ff; }
   #qpanel .panels small { display: block; margin-top: 2px; font: 700 13px 'Nunito', sans-serif; letter-spacing: 0; opacity: 0.85; }
   #qpanel .easier { margin: 10px 0 0; font-size: 15px; color: #9fb3d6; }
+  #qpanel .check { margin: 4px 0 6px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,209,102,0.45); background: rgba(40,30,5,0.35); }
+  #qpanel .check .cq { margin: 0 0 10px; font-size: 19px; }
+  #qpanel .check .cb { display: flex; gap: 10px; }
+  #qpanel .check .bt { flex: 1; font-size: 20px; padding: 10px 12px; }
+  #qpanel .check .bt span { opacity: 0.6; font-size: 15px; margin-right: 4px; }
+  #qpanel .check .cfb { margin: 8px 0 0; font-size: 17px; min-height: 0; } #qpanel .check .cfb.good { color: #7dffb0; } #qpanel .check .cfb.bad { color: #ff9ad0; }
   #qpanel .err { color: #ffd166; font-size: 16px; min-height: 1.2em; margin-top: 6px; }
   #qpanel .work { margin-top: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(5,11,24,0.7); border: 1px solid rgba(125,255,176,0.35); }
   #qpanel .work .wt { font: 700 16px 'Rajdhani', sans-serif; letter-spacing: 2px; color: #7dffb0; text-transform: uppercase; }
@@ -232,6 +238,22 @@
   .calm .title-logo .cut::after { display: none; }
   .win-card .prism-big { width: 96px; height: 96px; margin: 0 auto 10px; clip-path: polygon(0 100%, 100% 100%, 100% 82%, 30% 82%, 92% 8%, 78% 0, 0 100%); background: linear-gradient(135deg, #fff3c4, #ffd166 50%, #b8862b); filter: drop-shadow(0 0 30px #ffd166); animation: lh-prism 3s linear infinite; }
   .calm .card, .calm .stars i.on { animation: none !important; }
+  .rotate-prompt {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: #050b18; color: #f1f5f9;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-tilt 1.6s ease-in-out infinite; }
+  @keyframes rotate-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+  .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
+  .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
+  .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
+    .rotate-prompt { display: flex; }
+  }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
@@ -246,6 +268,12 @@
 <a class="back-link" href="../index.html">&larr; All games</a>
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
+<div class="rotate-prompt" id="rotate-prompt" role="alert">
+  <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
+  <h2 data-es="Gira tu dispositivo">Rotate Your Device</h2>
+  <p data-es="Laser Heist funciona mejor en horizontal. Gira tu teléfono para jugar.">Laser Heist works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../index.html">&larr; All games</a>
+</div>
 <h1 class="sr-only">Laser Heist: Angle Breaker</h1>
 <p class="sr-only">A spy game about angle relationships. In each room, type the missing angle to aim a laser at a security panel: the laser fires at exactly the angle you type. Every panel you hit switches off part of the room's security (the cameras, the guards' radios, or the locked shortcut doors). Then sneak past the guards to the exit, collecting diamonds. Controls: type a number and press Enter to fire; arrow keys or WASD to move; 1 for a smoke bomb, 2 for a decoy; Escape opens the menu.</p>
 
@@ -295,7 +323,7 @@
     <li><strong>The answer aims the laser:</strong> the laser fires at exactly the angle a student types, so a wrong answer visibly misses, and the steps to solve it are shown.</li>
     <li><strong>The math changes the sneak:</strong> each missed panel adds trouble (an extra camera, sharper guards, darkness, tripwires, more guards and an alarm clock). Students can redo missed questions any time with the R key, three catches after a miss sends them back to the questions, and 0 of 3 right means redoing all three before the sneak.</li>
     <li><strong>Stars measure the math:</strong> one star for each panel answered right on the first try.</li>
-    <li><strong>Practice</strong> drills any mix of relationships with no guards or timer; <strong>Challenge</strong> is an endless run for a best score.</li>
+    <li><strong>Practice</strong> drills any mix of relationships with no guards or timer.</li>
   </ul>
 </section>
 
@@ -305,7 +333,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="laser-heist-game.js?v=e18c2988"></script>
+<script src="laser-heist-game.js?v=6668a97b"></script>
 <script src="../site-controls.js?v=27028c32"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>

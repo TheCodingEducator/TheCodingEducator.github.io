@@ -24,7 +24,6 @@
       localStorage.setItem(SAVE_KEY, JSON.stringify(save));
       localStorage.setItem('laserheist_unlocked_skins', JSON.stringify(save.owned));   // read by My Stats
       localStorage.setItem('laserheist_best_streak', String(save.bestStreak));
-      if (save.highScore) localStorage.setItem('laserheist_high_score', String(save.highScore));   // the best Challenge score, also read by My Stats
     } catch (e) {}
   }
   var reset = $('#reset-progress-btn');
@@ -111,6 +110,10 @@
       star: function (i) { tone('sine', [988, 1319, 1760][i] || 1760, 0, 0.5, 0.18); tone('triangle', ([988, 1319, 1760][i] || 1760) * 2, 0, 0.3, 0.05); },
       win: function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone('triangle', f, 0, 0.32, 0.14, i * 0.09); }); },
       tick: function () { tone("square", 1700, 0, 0.04, 0.07); tone("sine", 850, 0, 0.06, 0.06, 0.01); },
+      step: function () { noise(0.06, 0.05, 900, 1.5, 0, "lowpass"); },
+      heart: function () { tone("sine", 70, 45, 0.16, 0.22); tone("sine", 62, 40, 0.14, 0.16, 0.16); },
+      hum: function () { tone("sawtooth", 110, 0, 0.35, 0.025); tone("square", 220, 0, 0.35, 0.012); },
+      huh: function () { tone("sine", 620, 520, 0.12, 0.07); tone("sine", 700, 820, 0.14, 0.07, 0.13); },
       exit: function () { tone('sine', 440, 880, 0.35, 0.15); tone('sine', 660, 1320, 0.35, 0.1, 0.1); }
     };
     return { play: function (n, a) { try { if (fx[n]) fx[n](a); } catch (e) {} }, unlock: ctxA };
@@ -174,27 +177,23 @@
   // Cameras: on a wall tile, facing dir (degrees, 0 = east, 90 = south), sweeping +/- sweep.
   var ROOMS = {
     1: [
-      { name: T('The Lobby', 'El vestíbulo'),
+      { name: T('The Lobby', 'El vestíbulo'),   // small: 22 x 12
         map: [
-          '################################',
-          '#P.....s.....#.................#',
-          '#......s.....#..d..............#',
-          '#..cc..s.....#.........cc......#',
-          '#..cc........D.........cc......#',
-          '#............#.................#',
-          '#............#.................#',
-          '######..######.....d...........#',
-          '#............########...########',
-          '#..d.........#.................#',
-          '#.....cc.....#.................#',
-          '#.....cc.....#.......cc....ss..#',
-          '#............#.......cc....ssE.#',
-          '#............#.............ss..#',
-          '#ssss.........................d#',
-          '################################'],
-        guards: [{ path: [[16, 9], [27, 9], [27, 13], [16, 13]], loop: true }],
-        cams: [{ c: 0, r: 11, dir: 0, sweep: 45 }],
-        lamps: [[6, 4], [20, 4], [6, 11], [22, 10]] },
+          '######################',
+          '#P....#.........#...d#',
+          '#.....#..cc.....#....#',
+          '#..cc.D..cc.....D..cc#',
+          '#..cc.#.........#..cc#',
+          '#.....#.........#....#',
+          '###..####..##..###..##',
+          '#....................#',
+          '#..cc......cc.....cc.#',
+          '#..d...........cc....#',
+          '#.........cc........E#',
+          '######################'],
+        guards: [{ path: [[1, 7], [20, 7]], loop: false }],
+        cams: [{ c: 21, r: 8, dir: 180, sweep: 30 }],
+        lamps: [[5, 3], [12, 3], [18, 3], [6, 8], [15, 8]] },
       { name: T('Sculpture Hall', 'Sala de esculturas'),
         map: [
           '################################',
@@ -243,29 +242,28 @@
     ],
     // Floor 2: the Server Room (supplementary angles). c = server racks.
     2: [
-      { name: T('Cooling Bay', 'Zona de enfriamiento'),
+      { name: T('Cooling Bay', 'Zona de enfriamiento'),   // 26 x 14
         map: [
-          '################################',
-          '#P..s....#..........#.........d#',
-          '#...s....#..cc..cc..#..........#',
-          '#........#..cc..cc..#....cc....#',
-          '#........D..........D....cc....#',
-          '#..cc....#..........#..........#',
-          '#..cc....#..cc..cc..#..........#',
-          '#........#..cc..cc..####..######',
-          '#####..###..........#..........#',
-          '#........#####..#####..........#',
-          '#..d.....................cc....#',
-          '#.....cc.............ss.cc.....#',
-          '#.....cc.....cc......ss........#',
-          '#............cc..........ssss..#',
-          '#sss.....................ssssE.#',
-          '################################'],
-        guards: [{ path: [[11, 1], [18, 1], [18, 8], [11, 8]], loop: true },
-                 { path: [[2, 10], [23, 10]], loop: false }],
-        cams: [{ c: 31, r: 11, dir: 180, sweep: 30 }],
-        lamps: [[5, 4], [14, 4], [26, 5], [8, 11], [20, 12]] },
-      { name: T('Data Hall', 'Sala de datos'), noExitGuard: true,   // its exit is in a tight corner
+          '##########################',
+          '#P...#..........#.......d#',
+          '#....#..cc..cc..#..cc....#',
+          '#....D..........D..cc....#',
+          '#....#..cc..cc..#........#',
+          '#....#..........#........#',
+          '##..#####..######..#######',
+          '#........................#',
+          '#..cc....cc......cc......#',
+          '#..cc....cc......cc..cc..#',
+          '#.....................cc.#',
+          '#..d..........cc.........#',
+          '#............cc.........E#',
+          '##########################'],
+        guards: [{ path: [[7, 1], [15, 1], [15, 5], [7, 5]], loop: true },
+                 { path: [[1, 7], [24, 7]], loop: false },
+                 { path: [[20, 10], [1, 10]], loop: false }],
+        cams: [{ c: 25, r: 8, dir: 180, sweep: 30 }],
+        lamps: [[3, 3], [11, 3], [20, 3], [6, 8], [14, 9], [21, 11]] },
+      { name: T('Data Hall', 'Sala de datos'), noExitGuard: true, badFlips: ['10'],   // mirrored left-right, a missed-panel guard blocks every route   // its exit is in a tight corner
         map: [
           '################################',
           '#P.......#.............#......d#',
@@ -314,30 +312,28 @@
     ],
     // Floor 3: the Laser Lab (vertical angles). c = lab benches.
     3: [
-      { name: T('Prism Workshop', 'Taller de prismas'),
+      { name: T('Prism Workshop', 'Taller de prismas'),   // 24 x 14
         map: [
-          '################################',
-          '#P.........#..........#.......d#',
-          '#..cc..ss..#..c....c..#..cc....#',
-          '#..cc..ss..#..........#..cc....#',
-          '#..........D..c....c..D........#',
-          '#..........#..........#........#',
-          '######..####..c....c..####..####',
-          '#..............................#',
-          '#....cc.........ss.........cc..#',
-          '#....cc.........ss.........cc..#',
-          '#..............................#',
-          '###..######..#######..######..##',
-          '#........#..........#..........#',
-          '#..d.....#....cc....#....ss....#',
-          '#ss.................#....ssE...#',
-          '################################'],
-        guards: [{ path: [[1, 7], [30, 7]], loop: false },
-                 { path: [[30, 10], [1, 10]], loop: false },
-                 { path: [[12, 1], [20, 1], [20, 5], [12, 5]], loop: true }],
-        cams: [{ c: 31, r: 8, dir: 180, sweep: 30 }],
-        lamps: [[5, 4], [16, 3], [27, 4], [10, 8], [22, 8], [26, 13]] },
-      { name: T('Mirror Maze', 'Laberinto de espejos'), noExitGuard: true,
+          '########################',
+          '#P..#.......#.........d#',
+          '#...#..cc...#...cc.....#',
+          '#...D..cc...D...cc.....#',
+          '#...#.......#..........#',
+          '#...####..#####..#######',
+          '#......................#',
+          '#..cc..........cc......#',
+          '#..cc....##....cc......#',
+          '#........##............#',
+          '######..######..########',
+          '#..d.....#.....cc.....E#',
+          '#........#.............#',
+          '########################'],
+        guards: [{ path: [[1, 6], [22, 6]], loop: false },
+                 { path: [[22, 9], [11, 9]], loop: false },
+                 { path: [[13, 1], [21, 1], [21, 4], [13, 4]], loop: true }],
+        cams: [{ c: 0, r: 8, dir: 0, sweep: 30 }],
+        lamps: [[2, 3], [8, 3], [18, 3], [6, 7], [17, 8], [5, 11], [18, 11]] },
+      { name: T('Mirror Maze', 'Laberinto de espejos'), noExitGuard: true, badFlips: ['11'],
         map: [
           '################################',
           '#P..#......#......#......#....d#',
@@ -387,29 +383,25 @@
     ],
     // Floor 4: the Rail Yard (corresponding and alternate angles). c = shipping containers, t = train tracks.
     4: [
-      { name: T('Freight Platform', 'Andén de carga'), rels: ['corr'],
+      { name: T('Freight Platform', 'Andén de carga'), rels: ['corr'],   // wide and short: 30 x 12
         map: [
-          '################################',
-          '#P.....................#......d#',
-          '#..cccc....cccc....s...#.......#',
-          '#..cccc....cccc....s...D..ccc..#',
-          '#..................s...#..ccc..#',
-          '#tttttttttttttttttttttttttttttt#',
-          '#..............................#',
-          '#####..#########..#####..#######',
-          '#..............................#',
-          '#tttttttttttttttttttttttttttttt#',
-          '#...cccc.....cccc.....cccc.....#',
-          '#...cccc.....cccc.....cccc.....#',
-          '#..............................#',
-          '#..d.....ss..........ss........#',
-          '#........ss..........ss......E.#',
-          '################################'],
-        guards: [{ path: [[1, 5], [30, 5]], loop: false },
-                 { path: [[30, 9], [1, 9]], loop: false },
-                 { path: [[1, 12], [30, 12]], loop: false }],
-        cams: [{ c: 31, r: 8, dir: 180, sweep: 30 }],
-        lamps: [[8, 3], [26, 3], [12, 8], [24, 8], [8, 13], [24, 13]] },
+          '##############################',
+          '#P.......................#..d#',
+          '#..cccc....cccc....cccc..D...#',
+          '#..cccc....cccc....cccc..#...#',
+          '#tttttttttttttttttttttttt#...#',
+          '#........................#...#',
+          '#####..######..######..###..##',
+          '#............................#',
+          '#tttttttttttttttttttttttttttt#',
+          '#...cccc.....cccc.....cccc...#',
+          '#..d.......................E.#',
+          '##############################'],
+        guards: [{ path: [[1, 4], [24, 4]], loop: false },
+                 { path: [[28, 8], [1, 8]], loop: false },
+                 { path: [[26, 1], [28, 1], [28, 5], [26, 5]], loop: true }],
+        cams: [{ c: 0, r: 7, dir: 0, sweep: 25 }],
+        lamps: [[8, 2], [20, 2], [27, 3], [8, 7], [20, 7], [14, 10]] },
       { name: T('Signal Box', 'Caseta de señales'), rels: ['alt'],
         map: [
           '################################',
@@ -460,30 +452,28 @@
     ],
     // Floor 5: the Penthouse (co-interior angles; the last room mixes everything). c = statues and planters.
     5: [
-      { name: T('Grand Foyer', 'Gran vestíbulo'),
+      { name: T('Grand Foyer', 'Gran vestíbulo'),   // 28 x 15
         map: [
-          '################################',
-          '#P....s.....#.........#.......d#',
-          '#.....s..c..#..c...c..#..c..c..#',
-          '#.....s.....#.........#........#',
-          '#..c.....c..D..c...c..D..c..c..#',
-          '#...........#.........#........#',
-          '#####..######...ss....######..##',
-          '#...............ss.............#',
-          '#..cc......cc.......cc......cc.#',
-          '#..cc......cc.......cc......cc.#',
-          '#..............................#',
-          '###..######..########..#####..##',
-          '#.........#............#.......#',
-          '#..d..c...#....c..c....#...ss..#',
-          '#ss.......#............#...ssE.#',
-          '################################'],
-        guards: [{ path: [[1, 7], [30, 7]], loop: false },
-                 { path: [[30, 10], [1, 10]], loop: false },
-                 { path: [[13, 1], [21, 1], [21, 5], [13, 5]], loop: true },
-                 { path: [[24, 12], [30, 12]], loop: false }],
-        cams: [{ c: 31, r: 8, dir: 180, sweep: 30 }],
-        lamps: [[6, 3], [17, 3], [27, 3], [8, 8], [24, 8], [15, 13], [27, 13]] },
+          '############################',
+          '#P....#..............#....d#',
+          '#.....#..c...c...c...#.....#',
+          '#.....D..............D..c..#',
+          '#..c..#..c...c...c...#.....#',
+          '#.....#..............#..c..#',
+          '###..####...cc...#####..####',
+          '#..........................#',
+          '#..cc....c.......c....cc...#',
+          '#..cc......................#',
+          '#.......c....cc....c.......#',
+          '######..########..#####..###',
+          '#..d......#.......#.......E#',
+          '#.........#...c...#........#',
+          '############################'],
+        guards: [{ path: [[8, 1], [20, 1], [20, 5], [8, 5]], loop: true },
+                 { path: [[1, 7], [26, 7]], loop: false },
+                 { path: [[26, 9], [5, 9]], loop: false }],
+        cams: [{ c: 0, r: 8, dir: 0, sweep: 30 }],
+        lamps: [[3, 3], [14, 3], [24, 3], [8, 8], [20, 8], [5, 12], [22, 12]] },
       { name: T('The Art Vault', 'La bóveda de arte'), noExitGuard: true,
         map: [
           '################################',
@@ -613,6 +603,7 @@
       sc.segs.push([pol(V, 180, ARM + 40), pol(V, 0, ARM + 40)], [pol(V, k + 180, ARM + 40), pol(V, k, ARM + 40)]);
       sc.arcs.push({ v: V, a0: 0, sw: k, r: 70, lr: 122, known: true }, { v: V, a0: 180, sw: k, r: 70, lr: 122 });
       sc.turret = { v: V, rest: 180 };
+      sc.all = { t: k, verts: [V] };   // all four angles, after a hit
     } else {   // parallel lines cut by a transversal: the given angle at the top crossing, x at the bottom one (the turret)
       var t; do { t = rnd(40, 140); } while (t > 80 && t < 100);
       // x never ends on the crossing line toward the top crossing, so the panel can't cover the given angle
@@ -621,6 +612,7 @@
       q.known = sec[pr[0]][1]; q.trueAngle = sec[pr[1]][1];
       sc.segs.push([pol(V2, 180, LL), pol(V2, 0, LL)], [pol(V1, 180, LL), pol(V1, 0, LL)], [pol(V2, t + 180, 90), pol(V1, t, 90)]);
       sc.par = [V1, V2, LL];   // little arrow marks show the lines are parallel
+      sc.all = { t: t, verts: [V1, V2] };   // for labeling all eight angles after a hit
       sc.arcs.push({ v: V1, a0: sec[pr[0]][0], sw: sec[pr[0]][1], r: 58, lr: 98, known: true }, { v: V2, a0: sec[pr[1]][0], sw: sec[pr[1]][1], r: 76, lr: 116 });
       sc.turret = { v: V2, rest: sec[pr[1]][0] }; sc.panelR = 150;
       q.base = pick([-20, -15, -10, -5, 0, 5, 10, 15, 20]) + (Math.random() < 0.5 ? 0 : 180);   // the parallel lines stay roughly level
@@ -666,7 +658,18 @@
       if (v === q.known) return T('That’s the same as the given angle. These two angles add to <b>' + R.sum + '°</b>; they aren’t equal.', 'Es igual al ángulo dado. Estos dos ángulos suman <b>' + R.sum + '°</b>; no son iguales.');
     } else if (v === 180 - q.known - q.offset) {
       return T('That’s 180° − ' + q.known + '°. ' + R.name + ' are <b>equal</b>; they don’t add to 180°.', 'Eso es 180° − ' + q.known + '°. Los ' + R.name.toLowerCase() + ' son <b>iguales</b>; no suman 180°.');
+    } else if (v === 90 - q.known - q.offset) {
+      return T('That’s 90° − ' + q.known + '°. ' + R.name + ' are <b>equal</b>; they don’t add to 90°.', 'Eso es 90° − ' + q.known + '°. Los ' + R.name.toLowerCase() + ' son <b>iguales</b>; no suman 90°.');
     }
+    // an "x + 3" angle undone the wrong way: adding the 3 instead of taking it away (or the other way round)
+    if (q.offset && v === q.trueAngle + q.offset) return q.offset > 0
+      ? T('To undo <b>+ ' + q.offset + '</b>, take ' + q.offset + ' away; don’t add it.', 'Para deshacer <b>+ ' + q.offset + '</b>, resta ' + q.offset + '; no lo sumes.')
+      : T('To undo <b>− ' + (-q.offset) + '</b>, add ' + (-q.offset) + '; don’t take it away.', 'Para deshacer <b>− ' + (-q.offset) + '</b>, suma ' + (-q.offset) + '; no lo restes.');
+    if (R.sum) {
+      if (v >= R.sum) return T('x has to be less than ' + R.sum + '°: together the two angles only make ' + R.sum + '°.', 'x tiene que ser menor que ' + R.sum + '°: juntos, los dos ángulos solo forman ' + R.sum + '°.');
+      if (Math.abs(v - q.answer) <= 10) return T('Close! Check your subtraction: ' + R.sum + '° − ' + q.known + '° = ' + (R.sum - q.known) + '°.', '¡Casi! Revisa tu resta: ' + R.sum + '° − ' + q.known + '° = ' + (R.sum - q.known) + '°.');
+    }
+    if (R.eq && !q.offset && Math.abs(v - q.known) > 0 && Math.abs(v - q.known) <= 3) return T('So close. ' + R.name + ' are exactly equal: x is the same as the given angle.', 'Muy cerca. Los ' + R.name.toLowerCase() + ' son exactamente iguales: x es igual al ángulo dado.');
     return '';
   }
 
@@ -674,7 +677,7 @@
   var G = {
     screen: 'title', vault: 1, room: 0, paused: false, t: 0,
     streak: 0, smoke: 0, decoy: 0,
-    mode: 'story', prac: null, ch: null,
+    mode: 'story', prac: null,
     puzzle: null, sneak: null, calm: matchMedia('(prefers-reduced-motion: reduce)').matches
   };
   app.classList.toggle('calm', G.calm);
@@ -726,12 +729,12 @@
       '<p class="pitch">' + T('Vertex Victor stole the <b>Golden Angle of Angels</b>. It’s locked at the top of his tower. Aim your laser with angles, knock out the security, and sneak past the guards to get it back.',
         'Vertex Victor robó el <b>Ángulo Dorado de los Ángeles</b>. Está encerrado en lo alto de su torre. Apunta tu láser con ángulos, apaga la seguridad y pasa sin que te vean los guardias para recuperarlo.') + '</p>' +
       '<div class="tbtns"><button class="bt primary big" id="b-play">&#9654; ' + (total ? T('CONTINUE MISSION', 'CONTINUAR MISIÓN') : T('START MISSION', 'EMPEZAR MISIÓN')) + '</button>' +
-      '<span class="brk"></span><button class="bt" id="b-prac">' + T('PRACTICE', 'PRÁCTICA') + '</button><button class="bt" id="b-chal">' + T('CHALLENGE', 'DESAFÍO') + '</button>' +
+      '<span class="brk"></span><button class="bt" id="b-prac">' + T('PRACTICE', 'PRÁCTICA') + '</button>' +
       '<button class="bt" id="b-shop">&#9670; ' + T('SHOP', 'TIENDA') + '</button><button class="bt" id="b-how">' + T('HOW TO PLAY', 'CÓMO JUGAR') + '</button></div>' +
       '<div class="tstats"><span>&#9733; ' + total + ' ' + (total === 1 ? T('star', 'estrella') : T('stars', 'estrellas')) + '</span><span>&#9670; ' + save.diamonds + ' ' + (save.diamonds === 1 ? T('diamond', 'diamante') : T('diamonds', 'diamantes')) + '</span>' +
-      (save.highScore ? '<span>' + T('Best challenge: ', 'Récord del desafío: ') + save.highScore + '</span>' : '') + '</div></div>');
+      '</div></div>');
     on('b-play', showMap); on('b-shop', function () { showShop(showTitle); }); on('b-how', function () { showHow(showTitle); });
-    on('b-prac', showPracticeSetup); on('b-chal', startChallenge);
+    on('b-prac', showPracticeSetup);
     cv.setAttribute('aria-label', T('Vertex Tower at night, with the Golden Angle glowing at the top', 'La Torre Vértice de noche, con el Ángulo Dorado brillando en lo alto'));
   }
   function showHow(back) {
@@ -827,9 +830,8 @@
   function hud() {
     var h = $('#hud'), rm = ROOMS[G.vault][G.room];
     var where = G.mode === 'practice' ? T('Practice', 'Práctica') + ' · ' + (G.prac.rels.length > 2 ? G.prac.rels.length + T(' angle types', ' tipos de ángulos') : G.prac.rels.map(function (r) { return RELS[r].name; }).join(' + '))
-      : (G.mode === 'challenge' ? T('Challenge', 'Desafío') + ' · ' : '') + T('Floor ', 'Piso ') + G.vault + ' · ' + (rm.boss ? T('Algebra: ', 'Álgebra: ') : T('Room ', 'Sala ') + (G.room + 1) + ': ') + rm.name;
+      : T('Floor ', 'Piso ') + G.vault + ' · ' + (rm.boss ? T('Algebra: ', 'Álgebra: ') : T('Room ', 'Sala ') + (G.room + 1) + ': ') + rm.name;
     var html = '<span class="where">' + where + '</span><span class="grow"></span>';
-    if (G.mode === 'challenge') html += '<span class="chip">' + T('SCORE ', 'PUNTOS ') + '<b id="score">' + G.ch.score + '</b></span><span class="chip" aria-label="' + G.ch.lives + T(' lives', ' vidas') + '">' + hearts() + '</span>';
     if (G.screen === 'sneak') {
       var S = G.sneak;
       html += '<span class="chip' + (S.camOff ? ' off' : '') + '" title="' + T('Cameras', 'Cámaras') + '">&#128249; ' + (S.camOff ? T('OFF', 'NO') : T('ON', 'SÍ')) + '</span>' +
@@ -859,6 +861,11 @@
     { id: 'radio', name: T('Guard radios', 'Radios'), icon: '&#128225;', short: 'RADIO', tip: T('Slower guards', 'Guardias lentos'), effect: T('Radios jammed: the guards are slower and can’t see as far.', 'Radios bloqueadas: los guardias son más lentos y no ven tan lejos.') },
     { id: 'map', name: T('Blueprints', 'Planos'), icon: '&#128506;', short: 'MAP', tip: T('Doors open', 'Puertas abiertas'), effect: T('Blueprints stolen: the shortcut doors are open and the guards’ routes are shown.', 'Planos robados: las puertas de atajo están abiertas y se ven las rutas de los guardias.') }
   ];
+  // a random mirroring for this play of the room, leaving out any that were checked and found unbeatable
+  function pickFlip(rm) {
+    var ok = ['00', '10', '01', '11'].filter(function (f) { return (rm.badFlips || []).indexOf(f) < 0; }), f = pick(ok);
+    return [f[0] === '1', f[1] === '1'];
+  }
   function startRoom(r) {
     G.room = r; G.screen = 'puzzle'; G.paused = false; hideOv();
     $("#gadgets").hidden = true;
@@ -866,7 +873,7 @@
     // three questions; in a room with more than one relationship, each one comes up before any repeats
     var order = rels.slice().sort(function () { return Math.random() - 0.5; });
     var qs = [0, 1, 2].map(function (i) { return makeQuestion(order[i % order.length], rm.boss); });
-    G.puzzle = { i: 0, hits: [false, false, false], first: [false, false, false], rels: rels, boss: rm.boss, firstTry: true, qs: qs, phase: 'ask', anim: 0, typed: null, aim: null };
+    G.puzzle = { i: 0, order: [0, 1, 2].sort(function () { return Math.random() - 0.5; }), flip: pickFlip(rm), hits: [false, false, false], first: [false, false, false], rels: rels, boss: rm.boss, firstTry: true, qs: qs, phase: 'ask', anim: 0, typed: null, aim: null };
     G.puzzle.aim = wa(qs[0], qs[0].scene.turret.rest);
     placeDiagram(qs[0]);
     hud(); renderQ();
@@ -880,7 +887,7 @@
     if (h > room) box.style.zoom = Math.max(0.6, Math.floor(room / h * 100) / 100);
   }
   function renderQ() {
-    var P = G.puzzle, q = P.qs[P.i], pn = PANELS[P.i], last = P.i === 2;
+    var P = G.puzzle, q = P.qs[P.i], pn = PANELS[(P.order || [0, 1, 2])[P.i]], last = P.i === 2;
     var box = $('#qpanel');
     box.innerHTML = '<div class="tag">' + (P.practice ? T('Practice · ', 'Práctica · ') + G.prac.right + T(' of ', ' de ') + G.prac.total + T(' right', ' bien')
         : T('Panel ', 'Panel ') + (P.i + 1) + T(' of 3', ' de 3') + ' · ' + pn.icon + ' ' + pn.name) + '</div>' +
@@ -889,7 +896,7 @@
       '<div class="row"><label class="sr-only" for="ans">' + T('x in degrees', 'x en grados') + '</label><span style="font-size:28px;font-weight:900">x =</span><input id="ans" inputmode="numeric" autocomplete="off" maxlength="5"><span class="deg">°</span>' +
       '<button class="fire" id="b-fire">' + T('FIRE', 'DISPARAR') + '</button></div><div class="err" id="err" role="alert"></div>' +
       '<div class="fb" id="fb" aria-live="polite"></div>' +
-      (P.practice ? '' : '<div class="panels">' + PANELS.map(function (p, i) {
+      (P.practice ? '' : '<div class="panels">' + P.order.map(function (k, i) { var p = PANELS[k];
         return '<span class="' + (i < P.i ? (P.hits[i] ? 'hit' : 'miss') : i === P.i ? 'now' : '') + '">' + p.icon + ' ' + p.short + (i < P.i ? (P.hits[i] ? ' &#10003;' : ' &#10007;') : '') + '<small>' + p.tip + '</small></span>';
       }).join('') + '</div><p class="easier">&#128161; ' + T('Every right answer switches off security and makes the sneak easier.', 'Cada respuesta correcta apaga la seguridad y hace el escape más fácil.') + '</p>');
     box.hidden = false; fitQ();
@@ -897,11 +904,37 @@
     inp.addEventListener('input', function () { inp.value = inp.value.replace(/[^0-9.]/g, ''); $('#err').textContent = ''; Sound.play('type'); });
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); fire(); } });
     $('#b-fire').addEventListener('click', fire);
-    setTimeout(function () { inp.focus(); }, 30);
     say((P.practice ? '' : T('Panel ', 'Panel ') + (P.i + 1) + ', ' + pn.name + '. ') + q.sr);
+    // crossing lines and parallel lines: first decide whether the two angles are equal or add to 180°, then type x
+    if (RELS[q.rel].eq || q.rel === 'coint') {
+      var row = $('#qpanel .row'); row.style.display = 'none'; P.checking = true;
+      var ck = document.createElement('div'); ck.className = 'check';
+      ck.innerHTML = '<p class="cq">' + T('First: are the two marked angles <b>equal</b>, or do they <b>add to 180°</b>?', 'Primero: ¿los dos ángulos marcados son <b>iguales</b> o <b>suman 180°</b>?') + '</p>' +
+        '<div class="cb"><button class="bt" data-eq="1"><span aria-hidden="true">1</span> ' + T('Equal', 'Iguales') + '</button><button class="bt" data-eq="0"><span aria-hidden="true">2</span> ' + T('Add to 180°', 'Suman 180°') + '</button></div><p class="cfb" aria-live="polite"></p>';
+      row.before(ck);
+      var choose = function (eq) {
+        if (!P.checking) return;
+        P.checking = false;
+        var right = eq === !!RELS[q.rel].eq;
+        Sound.play(right ? 'click' : 'miss');
+        [].forEach.call(ck.querySelectorAll('button'), function (b) { b.disabled = true; if ((b.getAttribute('data-eq') === '1') === !!RELS[q.rel].eq) b.classList.add('primary'); });
+        var fbk = ck.querySelector('.cfb');
+        fbk.className = 'cfb ' + (right ? 'good' : 'bad');
+        fbk.innerHTML = (right ? '&#10003; ' : '&#10007; ') + (RELS[q.rel].eq ? T(RELS[q.rel].name + ' are equal. So x is the same as the given angle.', 'Los ' + RELS[q.rel].name.toLowerCase() + ' son iguales. Así que x es igual al ángulo dado.')
+          : T('Co-interior angles add to 180°. So x is 180° minus the given angle.', 'Los ángulos colaterales internos suman 180°. Así que x es 180° menos el ángulo dado.'));
+        say(fbk.textContent);
+        row.style.display = ''; fitQ();
+        setTimeout(function () { inp.focus(); }, 30);
+      };
+      [].forEach.call(ck.querySelectorAll('button'), function (b) { b.addEventListener('click', function () { choose(b.getAttribute('data-eq') === '1'); }); });
+      P.checkKeys = function (k) { if (k === '1' || k === '2') { choose(k === '1'); return true; } return false; };
+      fitQ();
+      setTimeout(function () { var b = ck.querySelector('button'); if (b) b.focus(); }, 30);
+    } else { P.checking = false; setTimeout(function () { inp.focus(); }, 30); }
   }
   function fire() {
     var P = G.puzzle; if (!P || P.phase !== 'ask') return;
+    if (P.checking) return;   // the equal-or-180 question comes first
     var inp = $('#ans'), v = parseFloat(inp.value);
     if (inp.value === '' || isNaN(v)) { $('#err').textContent = T('Type an angle first.', 'Escribe primero un ángulo.'); inp.focus(); return; }
     if (v < 0 || v > 180) { $('#err').textContent = T('This turret turns from 0° to 180°.', 'Esta torreta gira de 0° a 180°.'); inp.focus(); return; }
@@ -912,7 +945,7 @@
     Sound.play('servo');
   }
   function puzzleResult() {
-    var P = G.puzzle, q = P.qs[P.i], pn = PANELS[P.i];
+    var P = G.puzzle, q = P.qs[P.i], pn = PANELS[(P.order || [0, 1, 2])[P.i]];
     P.hits[P.i] = P.hit;
     if (!P.redo && P.first) P.first[P.i] = P.hit;   // stars count the panels hit on the first try
     if (P.practice) { G.prac.total++; if (P.hit) G.prac.right++; }
@@ -920,11 +953,10 @@
     if (P.hit) {
       G.streak++; save.bestStreak = Math.max(save.bestStreak, G.streak); store();
       var bonus = '';
-      if (!P.redo) addScore(100);   // (no points for a redo)
       if (!P.practice && G.streak % 5 === 0) { G.decoy++; bonus = T(' Streak of ' + G.streak + ': you earned a decoy!', ' ¡Racha de ' + G.streak + ': ganaste un señuelo!'); }
       else if (!P.practice && G.streak % 3 === 0) { G.smoke++; bonus = T(' Streak of ' + G.streak + ': you earned a smoke bomb!', ' ¡Racha de ' + G.streak + ': ganaste una bomba de humo!'); }
       fb.className = 'fb good';
-      fb.innerHTML = '&#10003; ' + T('Direct hit! ', '¡Impacto directo! ') + (P.practice ? T('That’s right: x = ', 'Correcto: x = ') + q.answer + '°.' : pn.effect + (G.mode === 'challenge' ? ' +100' : '') + bonus);
+      fb.innerHTML = '&#10003; ' + T('Direct hit! ', '¡Impacto directo! ') + (P.practice ? T('That’s right: x = ', 'Correcto: x = ') + q.answer + '°.' : pn.effect + bonus);
     } else {
       G.streak = 0; P.firstTry = false;
       var note = mistakeNote(q, P.typed);
@@ -1003,6 +1035,28 @@
   // ------------------------------------------------------------------ the sneak
   var TS = 36, OX = 64, OY = 82, COLS = 32, ROWS = 16;   // the room, centered below the top bar with room for the gadget buttons underneath
   var RING = 1.25 * 36;   // a guard's red ring: step inside it and they notice you at once
+  // Rooms come in different sizes: the tiles grow to fill the screen for a small room, and the room is centered.
+  function setGrid(map) {
+    ROWS = map.length; COLS = map[0].length;
+    TS = Math.min(44, Math.floor(1180 / COLS), Math.floor(590 / ROWS));
+    OX = Math.round((W - COLS * TS) / 2); OY = 74 + Math.round((590 - ROWS * TS) / 2);
+    RING = 1.25 * TS;
+  }
+  // Each time a room is played it may be mirrored left-right and/or top-bottom, so replays look different.
+  function flipRoom(rm, f) {
+    var w = rm.map[0].length, h = rm.map.length, fx = f[0], fy = f[1];
+    var pt = function (p) { return [fx ? w - 1 - p[0] : p[0], fy ? h - 1 - p[1] : p[1]]; };
+    var rows = rm.map.slice(); if (fy) rows.reverse();
+    var out = Object.assign({}, rm);
+    out.map = rows.map(function (s) { return fx ? s.split('').reverse().join('') : s; });
+    out.guards = rm.guards.map(function (g) { return Object.assign({}, g, { path: g.path.map(pt) }); });
+    out.cams = rm.cams.map(function (c) {
+      var p = pt([c.c, c.r]), d = c.dir; if (fx) d = 180 - d; if (fy) d = -d;
+      return { c: p[0], r: p[1], dir: ((d % 360) + 360) % 360, sweep: c.sweep };
+    });
+    out.lamps = (rm.lamps || []).map(pt);
+    return out;
+  }
   var GUARD_FOV = 45 * D2R;   // half of a guard's cone of vision (90 degrees across)
   function tileAt(S, c, r) { if (!(r >= 0) || !(c >= 0)) return "#"; if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '#'; return S.grid[r][c]; }
   function solid(S, ch) { return ch === '#' || ch === 'c' || (ch === 'D' && !S.mapOn); }
@@ -1010,9 +1064,11 @@
   function cpx(c) { return OX + (c + 0.5) * TS; } function rpx(r) { return OY + (r + 0.5) * TS; }
 
   function startSneak() {
-    var P = G.puzzle, rm = ROOMS[G.vault][G.room];
+    var P = G.puzzle, rm = flipRoom(ROOMS[G.vault][G.room], P.flip || [false, false]);
+    setGrid(rm.map);
     G.screen = 'sneak'; $('#qpanel').hidden = true; $('#qpanel').innerHTML = '';
-    var S = G.sneak = { camOff: P.hits[0], radioOff: P.hits[1], mapOn: P.hits[2], allHit: P.firstTry && P.hits.every(Boolean),
+    var hitPanel = function (k) { return P.hits[P.order.indexOf(k)]; };   // the panels come in a different order each room
+    var S = G.sneak = { camOff: hitPanel(0), room: rm, radioOff: hitPanel(1), mapOn: hitPanel(2), allHit: P.firstTry && P.hits.every(Boolean),
       grid: rm.map.map(function (row) { return row.split(''); }), got: 0, gems: [], meter: 0, spotted: false, caught: 0, t: 0, smokeT: 0, smokeAt: null, decoyT: 0, decoyAt: null, intro: 1.6 };
     S.miss = P.hits.filter(function (h) { return !h; }).length;
     S.grid.forEach(function (row, r) { row.forEach(function (ch, c) {
@@ -1035,7 +1091,7 @@
       T('Reach the exit. ', 'Llega a la salida. ') + S.guards.length + T(' guards.', ' guardias.'));
     cv.setAttribute('aria-label', T('Top-down map of the room: reach the exit without being seen', 'Mapa de la sala visto desde arriba: llega a la salida sin que te vean'));
     cv.focus();
-    if (S.miss && G.mode !== 'challenge') setTimeout(function () {   // the reminder: right answers make this easier
+    if (S.miss) setTimeout(function () {   // the reminder: right answers make this easier
       if (G.screen === 'sneak' && G.sneak === S) toast(T('TIP: RIGHT ANSWERS MAKE THE SNEAK EASIER. PRESS R TO REDO THE MISSED ONES', 'CONSEJO: LAS RESPUESTAS CORRECTAS FACILITAN EL ESCAPE. PULSA R PARA REPETIR LAS FALLADAS'), '#ffd166');
     }, 2200);
   }
@@ -1129,7 +1185,7 @@
     return plan;
   }
   function resetSneak(S) {
-    var rm = ROOMS[G.vault][G.room];
+    var rm = S.room;
     S.px = S.start[0]; S.py = S.start[1]; S.face = 0; S.meter = 0; S.seenBy = null; S.smokeT = 0; S.decoyT = 0; S.chase = 0; S.alarm = false;
     // one diamond per run, in one of the room's diamond spots; and a 30-second clock
     S.got = 0; S.gems.forEach(function (g) { g.got = false; g.on = false; });
@@ -1154,6 +1210,8 @@
     return true;
   }
   function angDiff(a, b) { var d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; }
+  // guards turn smoothly at a steady speed (radians a second) instead of snapping round
+  function turnToward(g, want, dt, speed) { var d = angDiff(want, g.face), m = speed * dt; g.face += Math.max(-m, Math.min(m, d)); }
   function canSee(S, ex, ey, face, half, range) {
     if (S.smokeT > 0 && Math.hypot(S.px - S.smokeAt[0], S.py - S.smokeAt[1]) < 70) return false;
     var dx = S.px - ex, dy = S.py - ey, d = Math.sqrt(dx * dx + dy * dy);
@@ -1195,6 +1253,7 @@
       if (!solidPx(S, S.px - R, ny - R) && !solidPx(S, S.px + R, ny - R) && !solidPx(S, S.px - R, ny + R) && !solidPx(S, S.px + R, ny + R)) S.py = ny;
       S.face = Math.atan2(my, mx);
       if (!G.calm && Math.random() < dt * 10) parts.push({ x: S.px - mx * 10, y: S.py - my * 10, vx: 0, vy: 0, life: 0.5, max: 0.5, col: 'rgba(120,170,255,', size: 3 });
+      S.stepT = (S.stepT || 0) - dt; if (S.stepT <= 0) { S.stepT = 0.3; Sound.play('step'); }   // soft footsteps
     }
     if (S.smokeT > 0) S.smokeT -= dt;
     if (S.decoyT > 0) S.decoyT -= dt;
@@ -1211,7 +1270,7 @@
       g.sees = looking;
       if (looking) {
         seen = true; feel(g.x, g.y, g.range, S.radioOff ? 1 : 1.5);
-        g.state = 'alert'; g.face += angDiff(Math.atan2(S.py - g.y, S.px - g.x), g.face) * Math.min(1, dt * 5);
+        g.state = 'alert'; turnToward(g, Math.atan2(S.py - g.y, S.px - g.x), dt, 5);
         return;
       }
       if (S.alarm && S.hunt) {   // follow the corridors downhill toward the agent
@@ -1227,11 +1286,11 @@
       if (S.decoyT > 0 && Math.hypot(S.decoyAt[0] - g.x, S.decoyAt[1] - g.y) < 8 * TS) {
         g.state = 'decoy'; g.face += angDiff(Math.atan2(S.decoyAt[1] - g.y, S.decoyAt[0] - g.x), g.face) * Math.min(1, dt * 4); return;
       }
-      if (g.state === 'alert') { g.state = 'wait'; g.wait = 1.2; }
+      if (g.state === 'alert') { g.state = 'wait'; g.wait = 1.2; g.lostT = 1.2; Sound.play('huh'); }   // lost sight: "huh?" and a look around
       if (g.wait > 0) { g.wait -= dt; g.face += Math.sin(S.t * 2.2) * dt * 1.2; if (g.wait <= 0) g.state = 'walk'; return; }
       g.state = 'walk';
       var tx = g.pts[g.i][0], ty = g.pts[g.i][1], dx = tx - g.x, dy = ty - g.y, d = Math.sqrt(dx * dx + dy * dy), want = Math.atan2(dy, dx);
-      g.face += angDiff(want, g.face) * Math.min(1, dt * 6);
+      turnToward(g, want, dt, 3.2);
       if (Math.abs(angDiff(want, g.face)) > 0.6) return;   // turn before walking on
       var step = g.spd * dt;
       if (d <= step) {
@@ -1262,6 +1321,10 @@
       return;
     }
     var m = $('#meter'); if (m) m.style.width = Math.round(S.meter * 100) + '%';
+    // a heartbeat that speeds up as the alert rises, and the buzz of a lit tripwire close by
+    if (S.meter > 0.15) { S.heartT = (S.heartT || 0) - dt; if (S.heartT <= 0) { S.heartT = 0.85 - S.meter * 0.5; Sound.play('heart'); } }
+    S.humT = (S.humT || 0) - dt;
+    if (S.humT <= 0 && S.wires.some(function (w) { return wireOn(S, w) && w.cells.some(function (k) { return Math.abs(k[0] - pc) + Math.abs(k[1] - pr) <= 2; }); })) { S.humT = 0.4; Sound.play('hum'); }
     // diamonds
     S.gems.forEach(function (g) {
       if (g.on && !g.got && Math.hypot(g.x - S.px, g.y - S.py) < 24) {
@@ -1306,10 +1369,6 @@
   }
   function caught(tooClose) {
     var S = G.sneak; S.caught++;
-    if (G.mode === 'challenge') {
-      G.ch.lives--;
-      if (G.ch.lives <= 0) { Sound.play('caught'); return challengeOver(); }
-    }
     // in the story, after a missed panel: three catches and it's back to the lasers for another try at the missed panels
     if (G.mode === 'story' && S.miss && S.caught >= 3) {
       Sound.play('caught');
@@ -1322,8 +1381,7 @@
     toast(tooClose ? T("TOO CLOSE! STAY OUT OF THE RED RING", "¡MUY CERCA! NO ENTRES AL ANILLO ROJO") : T("CAUGHT! TRY THE SNEAK AGAIN", "¡TE ATRAPARON! INTENTA DE NUEVO"), "#ff4fa3");
     say(T('Caught! The sneak starts over. Your security panels stay off.', '¡Te atraparon! El escape empieza de nuevo. Tus paneles siguen apagados.'));
     resetSneak(S); S.intro = 1.2;
-    if (G.mode === 'challenge') { hud(); toast(T('CAUGHT! ', '¡ATRAPADO! ') + G.ch.lives + (G.ch.lives === 1 ? T(' LIFE LEFT', ' VIDA') : T(' LIVES LEFT', ' VIDAS')), '#ff4fa3'); }
-    else if (S.miss) toast(T('CAUGHT! ', '¡ATRAPADO! ') + S.caught + T(' OF 3: THEN BACK TO THE QUESTIONS', ' DE 3: LUEGO, DE VUELTA A LAS PREGUNTAS'), '#ff4fa3');
+    if (S.miss) toast(T('CAUGHT! ', '¡ATRAPADO! ') + S.caught + T(' OF 3: THEN BACK TO THE QUESTIONS', ' DE 3: LUEGO, DE VUELTA A LAS PREGUNTAS'), '#ff4fa3');
     var e = $('#gems'); if (e) e.textContent = save.diamonds;
   }
   function useSmoke() {
@@ -1337,7 +1395,6 @@
     say(T('Decoy dropped. Nearby guards look at it for 5 seconds. Move away!', 'Señuelo listo. Los guardias cercanos lo miran por 5 segundos. ¡Aléjate!'));
   }
   function roomDone() {
-    if (G.mode === 'challenge') return challengeRoomDone();
     var S = G.sneak, key = G.vault + '-' + G.room, rm = ROOMS[G.vault][G.room];
     G.screen = 'result'; $('#gadgets').hidden = true;
     // one star for each panel answered right on the first try (the sneak doesn't change the stars)
@@ -1345,7 +1402,7 @@
     save.stars[key] = Math.max(prev, n); save.cleared = save.cleared || {}; save.cleared[key] = true; save.diamonds += S.got; store();
     Sound.play('exit');
     var last = G.room === ROOMS[G.vault].length - 1;
-    var lines = PANELS.map(function (p) { return p.name + T(': right on the first try', ': correcto al primer intento'); });
+    var lines = G.puzzle.order.map(function (k) { return PANELS[k].name + T(': right on the first try', ': correcto al primer intento'); });
     showOv(ovMain, '<div class="card"><div class="tag">' + (rm.boss ? T('Algebra room cleared', 'Sala de álgebra superada') : T('Room cleared', 'Sala superada')) + '</div><h2>' + rm.name + '</h2>' +
       '<div class="stars" aria-hidden="true">' + earned.map(function (e, i) { return '<i class="' + (e ? 'on' : '') + '" style="animation-delay:' + (0.2 + i * 0.35) + 's">&#9733;</i>'; }).join('') + '</div>' +
       '<ul class="starlist">' + lines.map(function (l, i) { return '<li class="' + (earned[i] ? 'on' : '') + '">' + l + '</li>'; }).join('') + '</ul>' +
@@ -1354,7 +1411,7 @@
       '<button class="bt" id="b-again">' + T('REPLAY', 'REPETIR') + '</button><button class="bt" id="b-map">' + T('FLOOR MAP', 'MAPA') + '</button></div></div>');
     earned.forEach(function (e, i) { if (e) setTimeout(function () { Sound.play('star', i); }, 250 + i * 350); });
     say(T('Room cleared. ', 'Sala superada. ') + n + T(' of 3 stars. ', ' de 3 estrellas. ') + S.got + T(' diamonds.', ' diamantes.'));
-    on('b-next', function () { if (last) floorDone(); else startRoom(G.room + 1); });
+    on('b-next', function () { if (last && G.vault === 5) { G.cutDone = false; playEnding(); } else if (last) floorDone(); else startRoom(G.room + 1); });
     on('b-again', function () { startRoom(G.room); });
     on('b-map', showMap);
     hud();
@@ -1373,7 +1430,7 @@
     } else if (v === 6) {   // the bonus Algebra Vault on the roof
       showOv(ovMain, '<div class="card"><div class="tag">' + T('Algebra Vault cracked', 'Bóveda de álgebra abierta') + '</div><h2>' + T('Equation master!', '¡Maestro de ecuaciones!') + '</h2>' +
         '<p>' + T('You solved equations with every kind of angle: find the whole angle, then undo the + or − to get x.', 'Resolviste ecuaciones con todo tipo de ángulos: halla el ángulo completo y luego deshaz el + o el − para obtener x.') + '</p>' +
-        '<p>' + T('Replay it any time for more stars, or try the Challenge for a high score.', 'Repítela cuando quieras para ganar más estrellas, o prueba el Desafío para lograr un récord.') + '</p>' +
+        '<p>' + T('Replay it any time for more stars to earn more stars.', 'Repítela cuando quieras para ganar más estrellas para ganar más estrellas.') + '</p>' +
         '<div class="btns"><button class="bt primary" id="b-map">' + T('TOWER', 'TORRE') + '</button><button class="bt" id="b-shop">' + T('SHOP', 'TIENDA') + '</button></div></div>');
     } else {
       // the top of the tower: the Golden Angle is back
@@ -1434,50 +1491,6 @@
     cv.setAttribute('aria-label', T('A laser turret on a hologram of the angle diagram', 'Una torreta láser sobre un holograma del diagrama de ángulos'));
   }
 
-  // ------------------------------------------------------------------ Challenge: random rooms from the whole tower, 3 lives, the best score is saved
-  function startChallenge() {
-    G.mode = 'challenge'; G.ch = { score: 0, lives: 3, rooms: 0, last: '' };
-    G.streak = 0; G.smoke = 0; G.decoy = 0;
-    challengeRoom();
-  }
-  function challengeRoom() {
-    var v, r;
-    do { v = rnd(1, VAULTS.length); r = rnd(0, ROOMS[v].length - 1); } while (v + '-' + r === G.ch.last);
-    G.ch.last = v + '-' + r; G.vault = v;
-    startRoom(r);
-  }
-  function addScore(n) { if (G.mode === 'challenge') { G.ch.score += n; var e = $('#score'); if (e) e.textContent = G.ch.score; } }
-  function challengeRoomDone() {
-    var S = G.sneak, bonus = 200 + (S.spotted ? 0 : 100) + S.got * 50;
-    G.screen = 'result'; $('#gadgets').hidden = true;
-    addScore(bonus); G.ch.rooms++;
-    save.diamonds += S.got; store();
-    Sound.play('exit');
-    showOv(ovMain, '<div class="card"><div class="tag">' + T('Challenge · room ', 'Desafío · sala ') + G.ch.rooms + T(' cleared', ' superada') + '</div><h2>+' + bonus + '</h2>' +
-      '<ul class="starlist">' +
-      '<li class="on">' + T('Reached the exit: +200', 'Llegaste a la salida: +200') + '</li>' +
-      '<li class="' + (S.spotted ? '' : 'on') + '">' + T('Never spotted: +100', 'Nunca te vieron: +100') + '</li>' +
-      '<li class="' + (S.got ? 'on' : '') + '">' + T('Diamond: +50', 'Diamante: +50') + '</li></ul>' +
-      '<p style="font-size:26px">' + T('Score ', 'Puntos ') + '<b>' + G.ch.score + '</b> &nbsp; ' + hearts() + '</p>' +
-      '<div class="btns"><button class="bt primary" id="b-next">' + T('NEXT ROOM', 'SIGUIENTE SALA') + ' &#9656;</button><button class="bt" id="b-end">' + T('END RUN', 'TERMINAR') + '</button></div></div>');
-    say(T('Room cleared. Plus ', 'Sala superada. Más ') + bonus + T('. Score ', '. Puntos ') + G.ch.score + '.');
-    on('b-next', challengeRoom); on('b-end', challengeOver);
-    hud();
-  }
-  function hearts() { var s = ''; for (var i = 0; i < 3; i++) s += '<span style="color:' + (i < G.ch.lives ? '#ff4fa3' : '#2a3a5e') + '">&#9829;</span>'; return s; }
-  function challengeOver() {
-    G.screen = 'result'; G.paused = false; $('#gadgets').hidden = true; $('#qpanel').hidden = true;
-    var best = save.highScore || 0, isBest = G.ch.score > best;
-    if (isBest) save.highScore = G.ch.score;
-    store();
-    Sound.play(isBest ? 'win' : 'caught');
-    showOv(ovMain, '<div class="card"><div class="tag">' + T('Challenge over', 'Fin del desafío') + '</div><h2>' + (isBest ? T('New best score!', '¡Nuevo récord!') : T('Run complete', 'Fin de la partida')) + '</h2>' +
-      '<p style="font-size:48px;font-weight:900;color:#ffd166;margin:4px 0">' + G.ch.score + '</p>' +
-      '<p>' + G.ch.rooms + (G.ch.rooms === 1 ? T(' room cleared', ' sala superada') : T(' rooms cleared', ' salas superadas')) + ' · ' + T('best ', 'récord ') + Math.max(best, G.ch.score) + '</p>' +
-      '<div class="btns"><button class="bt primary" id="b-again">' + T('PLAY AGAIN', 'JUGAR OTRA VEZ') + '</button><button class="bt" id="b-home">' + T('TITLE', 'INICIO') + '</button></div></div>');
-    say(T('Challenge over. Score ', 'Fin del desafío. Puntos ') + G.ch.score + '.');
-    on('b-again', startChallenge); on('b-home', showTitle);
-  }
 
   // ------------------------------------------------------------------ pause menu
   function openPause() {
@@ -1485,12 +1498,12 @@
     G.paused = true;
     showOv(ovMain, '<div class="card" style="width:520px"><div class="tag">' + T('Paused', 'Pausa') + '</div><h2>' + T('Mission on hold', 'Misión en pausa') + '</h2><div class="btns" style="flex-direction:column">' +
       '<button class="bt primary" id="p-resume">' + T('RESUME', 'CONTINUAR') + '</button>' +
-      '<button class="bt" id="p-restart">' + (G.mode === 'practice' ? T('CHANGE ANGLES', 'CAMBIAR ÁNGULOS') : G.mode === 'challenge' ? T('END RUN', 'TERMINAR') : T('RESTART ROOM', 'REINICIAR SALA')) + '</button>' +
+      '<button class="bt" id="p-restart">' + (G.mode === 'practice' ? T('CHANGE ANGLES', 'CAMBIAR ÁNGULOS') : T('RESTART ROOM', 'REINICIAR SALA')) + '</button>' +
       '<button class="bt" id="p-how">' + T('HOW TO PLAY', 'CÓMO JUGAR') + '</button>' +
       '<button class="bt" id="p-sound" aria-pressed="' + save.sound + '">' + (save.sound ? T('SOUND: ON', 'SONIDO: SÍ') : T('SOUND: OFF', 'SONIDO: NO')) + '</button>' +
       '<button class="bt" id="p-map">' + T('MENU', 'MENÚ') + '</button></div><p style="margin-top:14px;font-size:17px">' + T('Press Esc to resume.', 'Pulsa Esc para continuar.') + '</p></div>', '#p-resume');
     on('p-resume', closePause);
-    on('p-restart', function () { G.paused = false; if (G.mode === 'practice') showPracticeSetup(); else if (G.mode === 'challenge') challengeOver(); else startRoom(G.room); });
+    on('p-restart', function () { G.paused = false; if (G.mode === 'practice') showPracticeSetup(); else startRoom(G.room); });
     on('p-how', function () { showHow(openPauseAgain); });
     on('p-sound', function () { save.sound = !save.sound; store(); openPauseAgain(); setTimeout(function () { $('#p-sound').focus(); }, 40); });
     on('p-map', function () { G.paused = false; if (G.mode === 'story') showMap(); else showTitle(); });
@@ -1506,11 +1519,13 @@
   var KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
   document.addEventListener('keydown', function (e) {
     if (window.isPageControlKey && isPageControlKey(e)) return;
+    if (G.screen === 'cutscene' && (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); endCutscene(); return; }
     if (e.key === 'Escape') {
       if (G.paused) { e.preventDefault(); closePause(); return; }
       if (G.screen === 'puzzle' || G.screen === 'sneak') { e.preventDefault(); openPause(); }
       return;
     }
+    if (!G.paused && G.screen === 'puzzle' && G.puzzle && G.puzzle.checking && G.puzzle.checkKeys && G.puzzle.checkKeys(e.key)) { e.preventDefault(); return; }
     if (G.paused || G.screen !== 'sneak') return;
     var k = KEYMAP[e.code];
     if (k) { keys[k] = true; e.preventDefault(); }
@@ -1579,15 +1594,80 @@
     ctx.moveTo(-8, -8); ctx.lineTo(2, 0); ctx.lineTo(-8, 8); ctx.stroke(); ctx.restore();
   }
 
+  // What the laser is aimed at, by panel: a security camera, a radio mast sending signal waves, or a blueprint terminal
+  // with a door lock (Practice: a plain target). face: the direction (radians, screen) from the target toward the turret.
+  function drawTarget(p, kind, down, t, face) {
+    var on = down ? '#7dffb0' : '#ff4fa3';
+    ctx.save(); ctx.translate(p[0], p[1]);
+    if (kind === 'cam') {
+      ctx.rotate(face);
+      ctx.shadowColor = on; ctx.shadowBlur = down ? 4 : 16;
+      ctx.fillStyle = down ? '#1b2235' : '#2b3d66'; ctx.strokeStyle = on; ctx.lineWidth = 3;
+      roundRect(-34, -18, 52, 36, 7); ctx.fill(); ctx.stroke();                         // the camera body
+      ctx.fillRect(-46, -6, 14, 12);                                                     // its wall mount
+      ctx.shadowBlur = 0; ctx.fillStyle = '#0b1630'; ctx.beginPath(); ctx.arc(22, 0, 13, 0, TAU); ctx.fill(); ctx.stroke();   // the lens, toward the turret
+      if (down) {   // static on a dead lens
+        ctx.strokeStyle = 'rgba(160,170,190,0.6)'; ctx.lineWidth = 1;
+        for (var s = -10; s <= 10; s += 4) { ctx.beginPath(); ctx.moveTo(14, s); ctx.lineTo(30 - Math.random() * 6 * (G.calm ? 0 : 1), s); ctx.stroke(); }
+      } else { ctx.fillStyle = '#4fe3ff'; ctx.beginPath(); ctx.arc(22, 0, 5, 0, TAU); ctx.fill(); ctx.fillStyle = G.calm || Math.floor(t * 3) % 2 ? '#ff4fa3' : '#5a1838'; ctx.beginPath(); ctx.arc(-24, -9, 4, 0, TAU); ctx.fill(); }
+    } else if (kind === 'radio') {
+      ctx.strokeStyle = on; ctx.lineWidth = 3; ctx.shadowColor = on; ctx.shadowBlur = down ? 4 : 14;
+      ctx.beginPath(); ctx.moveTo(-18, 30); ctx.lineTo(0, -26); ctx.lineTo(18, 30); ctx.moveTo(-11, 8); ctx.lineTo(11, 8); ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.stroke();   // the mast
+      ctx.fillStyle = on; ctx.beginPath(); ctx.arc(0, -30, 6, 0, TAU); ctx.fill();
+      if (!down) {   // signal waves rippling out
+        for (var w = 0; w < 3; w++) {
+          var r = 12 + ((G.calm ? w * 10 : (t * 26 + w * 10) % 30));
+          ctx.globalAlpha = 1 - r / 44; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(0, -30, r, -2.4, -0.7); ctx.stroke(); ctx.beginPath(); ctx.arc(0, -30, r, -5.6, -3.9 + 1.6); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      } else { ctx.font = '700 13px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(T('JAMMED', 'BLOQUEADA'), 0, 46); }
+    } else if (kind === 'map') {
+      ctx.shadowColor = on; ctx.shadowBlur = down ? 4 : 16;
+      ctx.fillStyle = down ? '#0f2a3f' : '#10224a'; ctx.strokeStyle = on; ctx.lineWidth = 3;
+      roundRect(-40, -30, 80, 56, 7); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;     // the terminal
+      ctx.strokeStyle = 'rgba(120,190,255,0.5)'; ctx.lineWidth = 1;                      // a blueprint on its screen
+      for (var gx = -32; gx <= 32; gx += 8) { ctx.beginPath(); ctx.moveTo(gx, -24); ctx.lineTo(gx, 18); ctx.stroke(); }
+      for (var gy = -24; gy <= 18; gy += 8) { ctx.beginPath(); ctx.moveTo(-34, gy); ctx.lineTo(34, gy); ctx.stroke(); }
+      ctx.strokeStyle = on; ctx.lineWidth = 3;                                           // the padlock: shut, or sprung open
+      ctx.beginPath(); ctx.arc(0, -4, 8, Math.PI, down ? -0.6 : 0); ctx.stroke();
+      ctx.fillStyle = on; ctx.fillRect(-11, -4, 22, 16);
+    } else {   // practice: a plain target
+      [26, 17, 8].forEach(function (r, i) { ctx.fillStyle = i % 2 ? '#0b1630' : on; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill(); });
+    }
+    ctx.restore();
+  }
+  // each panel's beam looks different: a plain laser for the camera, a jamming wave for the radio, data for the terminal
+  function beamExtras(kind, x0, y0, x1, y1, t) {
+    var dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy), ux = dx / (L || 1), uy = dy / (L || 1);
+    ctx.save();
+    if (kind === 'radio') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.beginPath();
+      for (var s = 0; s <= L; s += 4) { var a = Math.sin(s / 7 - (G.calm ? 0 : t * 20)) * 9; ctx.lineTo(x0 + ux * s - uy * a, y0 + uy * s + ux * a); }
+      ctx.stroke();
+    } else if (kind === 'map') {
+      ctx.fillStyle = '#e6f4ff';
+      for (var d = (G.calm ? 0 : (t * 220) % 22); d < L; d += 22) ctx.fillRect(x0 + ux * d - 3, y0 + uy * d - 3, 6, 6);
+    }
+    ctx.restore();
+  }
+  // after a hit on crossing or parallel lines: every angle labeled, so the whole pattern shows
+  function labelAll(q) {
+    var sc = q.scene, t = sc.all.t;
+    sc.all.verts.forEach(function (v) {
+      SEC(t).forEach(function (s) { tag(Math.round(s[1]) + '°', wpol(q, v, s[0] + s[1] / 2, 132), 'rgba(200,225,255,0.85)', 16); });
+    });
+  }
   function drawPuzzle(t, dt) {
     var Pz = G.puzzle, q = Pz.qs[Pz.i], sc = q.scene, tv = wp(q, sc.turret.v);
     backdrop();
     // the hologram plate under the turret
     ctx.save();
     var hg = ctx.createRadialGradient(tv[0], tv[1], 10, tv[0], tv[1], 330);
-    hg.addColorStop(0, 'rgba(79,227,255,0.16)'); hg.addColorStop(1, 'rgba(79,227,255,0)');
+    var tint = Pz.practice ? '79,227,255' : VAULTS[G.vault - 1].theme.edge;   // each floor's own color
+    hg.addColorStop(0, 'rgba(' + tint + ',0.18)'); hg.addColorStop(1, 'rgba(' + tint + ',0)');
     ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(tv[0], tv[1], 330, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(79,227,255,0.18)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(' + tint + ',0.22)'; ctx.lineWidth = 1;
     [120, 200, 290].forEach(function (r, i) { ctx.setLineDash([4, 10 + i * 4]); ctx.lineDashOffset = (G.calm ? 0 : t * (i % 2 ? -20 : 14)); ctx.beginPath(); ctx.arc(tv[0], tv[1], r, 0, TAU); ctx.stroke(); });
     ctx.setLineDash([]); ctx.restore();
 
@@ -1609,15 +1689,9 @@
       tag(a.lab, wpol(q, a.v, a.a0 + a.sw / 2, a.lr), col, a.known ? 26 : 28);
     });
     // the panel, where the right angle ends
-    var pp = wpol(q, sc.panel.v, sc.panel.dir, sc.panel.r), pn = Pz.practice ? { short: T('TARGET', 'BLANCO') } : PANELS[Pz.i], down = Pz.hit && (Pz.phase === 'done' || (Pz.phase === 'beam' && Pz.anim > 0.18));   // green the moment the beam reaches it
-    ctx.save(); ctx.translate(pp[0], pp[1]);
-    ctx.shadowColor = down ? '#7dffb0' : '#ff4fa3'; ctx.shadowBlur = down ? 6 : 18 + (G.calm ? 0 : Math.sin(t * 6) * 6);
-    ctx.fillStyle = down ? '#12301f' : '#2a0f2a'; ctx.strokeStyle = down ? '#7dffb0' : '#ff4fa3'; ctx.lineWidth = 3;
-    roundRect(-38, -30, 76, 60, 10); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
-    ctx.fillStyle = down ? '#7dffb0' : '#ff9ad0'; ctx.font = '700 ' + (down ? 14 : 18) + 'px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(down ? 'OFFLINE' : pn.short, 0, -6);
-    ctx.fillStyle = down ? '#3a6' : (G.calm || Math.floor(t * 3) % 2 ? '#ff4fa3' : '#5a1838'); ctx.beginPath(); ctx.arc(0, 14, 5, 0, TAU); ctx.fill();
-    ctx.restore();
+    var pp = wpol(q, sc.panel.v, sc.panel.dir, sc.panel.r), pn = Pz.practice ? { short: T('TARGET', 'BLANCO') } : PANELS[Pz.order[Pz.i]], down = Pz.hit && (Pz.phase === 'done' || (Pz.phase === 'beam' && Pz.anim > 0.18));   // green the moment the beam reaches it
+    var kind = Pz.practice ? 'target' : pn.id, tvp = wp(q, sc.turret.v);
+    drawTarget(pp, kind, down, t, Math.atan2(tvp[1] - pp[1], tvp[0] - pp[0]));
 
     // the turret: turning, then firing
     if (Pz.phase === 'turn') {
@@ -1633,12 +1707,14 @@
       var fl = G.calm ? 1 : 0.85 + Math.random() * 0.15;
       glowLine(tv[0], tv[1], end[0], end[1], lc, 12 * fl, 30);
       glowLine(tv[0], tv[1], end[0], end[1], '#ffffff', 3.5, 6);
+      beamExtras(Pz.practice ? 'target' : PANELS[Pz.order[Pz.i]].id, tv[0], tv[1], end[0], end[1], t);
       if (Pz.phase === 'beam' && Pz.anim > 0.18 && !Pz.boom) {
         Pz.boom = true;
         if (Pz.hit) { burst(end[0], end[1], lc, G.calm ? 10 : 40); Sound.play("hit"); shake = G.calm ? 0 : 0.25; }
         else { burst(end[0], end[1], '#ffd166', 12); Sound.play('miss'); }
       }
       if (Pz.phase === 'beam' && Pz.anim > 1.0) { Pz.phase = 'done'; Pz.boom = false; puzzleResult(); }
+      if (Pz.phase === 'done' && Pz.hit && q.scene.all) labelAll(q);
       if (Pz.phase === 'done' && !Pz.hit) {   // the right line, so the miss can be compared
         var ga = wa(q, sc.panel.dir), good = [tv[0] + Math.cos(ga * D2R) * (dist - 34), tv[1] - Math.sin(ga * D2R) * (dist - 34)];
         ctx.save(); ctx.setLineDash([6, 8]); glowLine(tv[0], tv[1], good[0], good[1], 'rgba(125,255,176,0.8)', 3, 8); ctx.restore();
@@ -1662,7 +1738,7 @@
 
   // the room's walls, floor, crates and shadows: drawn once per room into a layer
   function buildStatic(S) {
-    var L = layer(), x = L.x, rm = ROOMS[G.vault][G.room], th = VAULTS[G.vault - 1].theme;
+    var L = layer(), x = L.x, rm = S.room, th = VAULTS[G.vault - 1].theme;
     x.fillStyle = '#050b18'; x.fillRect(0, 0, W, H);
     for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
       var ch = S.grid[r][c], X = OX + c * TS, Y = OY + r * TS;
@@ -1840,9 +1916,14 @@
       ctx.fillStyle = '#ffd166'; ctx.fillRect(10, 9, 8, 4);                                           // flashlight
       ctx.restore();
       if (g.state === 'alert' || g.state === 'wait' || g.state === 'decoy') {
-        ctx.save(); ctx.font = '800 22px Nunito, sans-serif'; ctx.textAlign = 'center';
+        // a speech bubble that pops in: "!" while they can see you, "?" once they've lost you
+        if (g.lostT > 0) g.lostT -= 1 / 60;
+        var pop = g.lostT > 0.9 && !G.calm ? 1 + (g.lostT - 0.9) * 2 : 1;
+        ctx.save(); ctx.translate(g.x, g.y - 30); ctx.scale(pop, pop);
+        ctx.fillStyle = 'rgba(5,11,24,0.85)'; ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU); ctx.fill(); ctx.stroke();
+        ctx.font = '800 18px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = g.state === 'alert' ? (S.meter > 0.55 ? '#ff4fa3' : '#ffd166') : '#ffd166';
-        ctx.fillText(g.state === 'alert' && S.meter > 0.55 ? '!' : '?', g.x, g.y - 24); ctx.restore();
+        ctx.fillText(g.state === 'alert' && S.meter > 0.55 ? '!' : '?', 0, 1); ctx.restore();
       }
     });
     // the agent
@@ -1928,7 +2009,7 @@
       ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(s[0], H);
       ctx.lineTo(s[0] + Math.cos(a - spread) * len, H + Math.sin(a - spread) * len); ctx.lineTo(s[0] + Math.cos(a + spread) * len, H + Math.sin(a + spread) * len); ctx.closePath(); ctx.fill();
     });
-    if (mode === 'title') {
+    if (mode === 'title' || mode === 'cut') {   // (the ending cutscene draws its own agent and Golden Angle)
       // Vertex Tower: a tall, tapering spire with neon edges and lit floors
       var top = 120, base = H;
       ctx.save();
@@ -1949,6 +2030,7 @@
       // a red laser scan running down the tower
       var sy = top + 60 + ((calm ? 0.4 : (t * 0.22) % 1) * (base - top - 60)), sh = 62 + (sy - top - 60) / (base - top - 60) * 48;
       glowLine(tx - sh, sy, tx + sh, sy, '#ff3b6b', 2.5, 16);
+      if (mode === 'title') {
       // the Golden Angle, spinning at the top
       var pa = calm ? 0 : t * 1.4, py = top - 34;
       ctx.save(); ctx.translate(tx, py);
@@ -1964,6 +2046,8 @@
       var halo = ctx.createRadialGradient(tx, py, 4, tx, py, 120);
       halo.addColorStop(0, 'rgba(255,209,102,0.3)'); halo.addColorStop(1, 'rgba(255,209,102,0)');
       ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(tx, py, 120, 0, TAU); ctx.fill();
+      }
+      if (mode === 'title') {
       // the agent on a zipline, from a rooftop on the left to the tower
       var z0 = [560, 330], z1 = [tx - 70, 250];
       ctx.strokeStyle = 'rgba(200,220,255,0.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(z0[0], z0[1]); ctx.lineTo(z1[0], z1[1]); ctx.stroke();
@@ -1973,6 +2057,7 @@
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay + 6); ctx.stroke();                      // hand on the line
       ctx.fillRect(ax - 4, ay + 13, 8, 14);                                                          // body
       ctx.beginPath(); ctx.moveTo(ax - 2, ay + 27); ctx.lineTo(ax - 7, ay + 38); ctx.moveTo(ax + 2, ay + 27); ctx.lineTo(ax + 6, ay + 37); ctx.stroke();
+      }
       ctx.restore();
     }
     // a soft fog over the street, and a darker wash behind the menus
@@ -1983,7 +2068,73 @@
       var lw = ctx.createLinearGradient(0, 0, 720, 0);
       lw.addColorStop(0, 'rgba(2,4,12,0.7)'); lw.addColorStop(1, 'rgba(2,4,12,0)');
       ctx.fillStyle = lw; ctx.fillRect(0, 0, 720, H);
-    } else { ctx.fillStyle = 'rgba(2,4,12,0.45)'; ctx.fillRect(0, 0, W, H); }
+    } else if (mode === 'map') { ctx.fillStyle = 'rgba(2,4,12,0.45)'; ctx.fillRect(0, 0, W, H); }
+  }
+  // ------------------------------------------------------------------ the ending: grab the Golden Angle and get away
+  // About 7.5 seconds, skippable: climb to the top of the tower, grab the Golden Angle, zipline off as the alarms go,
+  // then hold it up on a rooftop under fireworks. The ending card then appears over the last scene.
+  var CUT_LEN = 7.5;
+  function playEnding() {
+    G.screen = 'cutscene'; G.cut = 0; G.cutFx = {};
+    $('#hud').hidden = true; $('#qpanel').hidden = true; $('#gadgets').hidden = true;
+    showOv(ovMain, '<button class="bt" id="b-skip" style="position:absolute;right:24px;bottom:20px">' + T('SKIP', 'SALTAR') + ' &#9656;</button>');
+    ovMain.classList.add('clear');
+    on('b-skip', endCutscene);
+    say(T('You climb to the top of Vertex Tower, grab the Golden Angle of Angels, and zipline away as the alarms go off!', 'Subes a lo alto de la Torre Vértice, tomas el Ángulo Dorado de los Ángeles ¡y escapas en tirolesa mientras suenan las alarmas!'));
+  }
+  function endCutscene() { if (G.cut < CUT_LEN) G.cut = CUT_LEN; if (!G.cutDone) { G.cutDone = true; floorDone(); } }
+  function drawGoldenAngle(x, y, s, spin) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(Math.cos(spin) * s, s);
+    ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 30;
+    var pg = ctx.createLinearGradient(-30, -30, 30, 26); pg.addColorStop(0, '#fff3c4'); pg.addColorStop(0.5, '#ffd166'); pg.addColorStop(1, '#b8862b');
+    ctx.strokeStyle = pg; ctx.lineCap = 'round'; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(30, 22); ctx.lineTo(-26, 22); ctx.lineTo(18, -30); ctx.stroke();
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(-26, 22, 26, -Math.atan2(52, 44), 0); ctx.stroke();
+    ctx.restore();
+  }
+  function drawAgentFigure(x, y, s) {   // the agent seen from the side, in their suit colors
+    var su = suit();
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.fillStyle = '#05070f'; ctx.strokeStyle = su.trim; ctx.lineWidth = 2; ctx.shadowColor = su.trim; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(0, -22, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = su.body; ctx.fillRect(-6, -14, 12, 20); ctx.strokeRect(-6, -14, 12, 20);
+    ctx.beginPath(); ctx.moveTo(-3, 6); ctx.lineTo(-7, 20); ctx.moveTo(3, 6); ctx.lineTo(7, 20); ctx.stroke();
+    ctx.restore();
+  }
+  function drawCutscene(t, dt) {
+    G.cut += dt;
+    var k = G.cut, fx = G.cutFx, top = [930, 112], home = [930, 86], roof = [300, 330];
+    var ease = function (a) { return a < 0.5 ? 2 * a * a : 1 - Math.pow(-2 * a + 2, 2) / 2; };
+    var lerp = function (a, b, u) { return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; };
+    drawCity(t, 'cut');
+    var agent, angle;
+    if (k < 1.6) {                                   // 1. climbing the tower
+      agent = lerp([1010, 560], [952, 120], ease(k / 1.6)); angle = home;
+    } else if (k < 2.4) {                            // 2. the grab
+      agent = [952, 120]; angle = lerp(home, [944, 100], ease((k - 1.6) / 0.8));
+      if (!fx.grab) { fx.grab = true; Sound.play('gem'); burst(home[0], home[1], '#ffd166', G.calm ? 10 : 40); }
+    } else if (k < 5) {                              // 3. alarms, and away on the zipline
+      var u = ease((k - 2.4) / 2.6);
+      agent = lerp([920, 118], roof, u); angle = [agent[0] - 6, agent[1] - 22];
+      if (!fx.alarm) { fx.alarm = true; Sound.play('alarm'); }
+      ctx.strokeStyle = 'rgba(200,220,255,0.45)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(920, 112); ctx.lineTo(roof[0], roof[1] - 30); ctx.stroke();
+      if (!G.calm) { ctx.fillStyle = 'rgba(255,40,80,' + (0.08 + Math.abs(Math.sin(t * 8)) * 0.12) + ')'; ctx.fillRect(0, 0, W, H); }
+      if (!G.calm && Math.random() < 0.5) parts.push({ x: angle[0], y: angle[1], vx: (Math.random() - 0.5) * 30, vy: 20, life: 0.6, max: 0.6, col: '#ffd166', size: 3 });
+    } else {                                         // 4. safe on a rooftop, holding it up
+      agent = roof; angle = [roof[0], roof[1] - 58 - Math.sin(t * 2) * (G.calm ? 0 : 4)];
+      if (!fx.win) { fx.win = true; Sound.play('win'); }
+      fx.fw = (fx.fw || 0) - dt;
+      if (!G.calm && fx.fw <= 0) { fx.fw = 0.45; burst(200 + Math.random() * 880, 90 + Math.random() * 240, pick(['#ffd166', '#4fe3ff', '#ff4fa3', '#7dffb0', '#b57bff']), 34); Sound.play('spark'); }
+      var a = Math.min(1, (k - 5) / 0.8);
+      ctx.save(); ctx.globalAlpha = a; ctx.font = '700 64px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe9a8';
+      ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 26; ctx.fillText(T('MISSION COMPLETE', 'MISIÓN CUMPLIDA'), W / 2, 120); ctx.restore();
+    }
+    var halo = ctx.createRadialGradient(angle[0], angle[1], 4, angle[0], angle[1], 90);
+    halo.addColorStop(0, 'rgba(255,209,102,0.35)'); halo.addColorStop(1, 'rgba(255,209,102,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(angle[0], angle[1], 90, 0, TAU); ctx.fill();
+    drawGoldenAngle(angle[0], angle[1], k < 1.6 ? 1 : 0.7, G.calm ? 0 : t * (k < 1.6 ? 1.4 : 3));
+    drawAgentFigure(agent[0], agent[1], 1.4);
+    if (k >= CUT_LEN && !G.cutDone) endCutscene();
   }
   function burst(x, y, col, n) {
     for (var i = 0; i < n; i++) {
@@ -2014,6 +2165,7 @@
     if (G.screen === 'sneak' && !G.paused) sneakStep(dt);
     if (G.screen === 'puzzle') drawPuzzle(t, G.paused ? 0 : dt);
     else if ((G.screen === 'sneak' || G.screen === 'result') && G.sneak) drawSneak(t);
+    else if (G.screen === 'cutscene') drawCutscene(t, G.paused ? 0 : dt);
     else drawCity(t, G.screen === 'title' ? 'title' : 'map');
     drawParts(G.paused ? 0 : dt);
   }
@@ -2024,6 +2176,7 @@
     SiteControls.create({
       joystick: true, numpad: ['backspace', 'enter'], keys: keys,
       onKey: function (k) {
+        if (G.puzzle && G.puzzle.checking && G.puzzle.checkKeys) { G.puzzle.checkKeys(k); return; }   // the equal-or-180 question first
         var inp = $('#ans');
         if (k === 'enter') { if (G.puzzle && G.puzzle.phase === 'done') nextPanel(); else fire(); return; }
         if (!inp || inp.disabled) return;
