@@ -1058,6 +1058,7 @@
     return out;
   }
   var GUARD_FOV = 45 * D2R;   // half of a guard's cone of vision (90 degrees across)
+  var ZOOM_LEN = 2.2;   // seconds of the opening zoom-out at the start of each sneak
   function tileAt(S, c, r) { if (!(r >= 0) || !(c >= 0)) return "#"; if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '#'; return S.grid[r][c]; }
   function solid(S, ch) { return ch === '#' || ch === 'c' || (ch === 'D' && !S.mapOn); }
   function solidPx(S, x, y) { return solid(S, tileAt(S, Math.floor((x - OX) / TS), Math.floor((y - OY) / TS))); }
@@ -1069,7 +1070,7 @@
     G.screen = 'sneak'; $('#qpanel').hidden = true; $('#qpanel').innerHTML = '';
     var hitPanel = function (k) { return P.hits[P.order.indexOf(k)]; };   // the panels come in a different order each room
     var S = G.sneak = { camOff: hitPanel(0), room: rm, radioOff: hitPanel(1), mapOn: hitPanel(2), allHit: P.firstTry && P.hits.every(Boolean),
-      grid: rm.map.map(function (row) { return row.split(''); }), got: 0, gems: [], meter: 0, spotted: false, caught: 0, t: 0, smokeT: 0, smokeAt: null, decoyT: 0, decoyAt: null, intro: 1.6 };
+      grid: rm.map.map(function (row) { return row.split(''); }), got: 0, gems: [], meter: 0, spotted: false, caught: 0, t: 0, smokeT: 0, smokeAt: null, decoyT: 0, decoyAt: null, intro: 1.6, zoom: ZOOM_LEN };
     S.miss = P.hits.filter(function (h) { return !h; }).length;
     S.grid.forEach(function (row, r) { row.forEach(function (ch, c) {
       if (ch === 'P') { S.start = [cpx(c), rpx(r)]; S.startT = [c, r]; row[c] = '.'; }
@@ -1233,6 +1234,7 @@
   }
   function sneakStep(dt) {
     var S = G.sneak; S.t += dt;
+    if (S.zoom > 0) { S.zoom = Math.max(0, S.zoom - dt); return; }   // the opening zoom-out: everything waits
     if (S.intro > 0) { S.intro -= dt; }
     else if (S.time > 0) {
       S.time = Math.max(0, S.time - dt);
@@ -1855,6 +1857,10 @@
   function drawSneak(t) {
     var S = G.sneak;
     if (!staticLayer) buildStatic(S);
+    // opening zoom: start close on the agent, then pull back to the whole room
+    var zk = S.zoom > 0 ? S.zoom / ZOOM_LEN : 0, ze = zk * zk * (3 - 2 * zk), zs = 1 + 2.4 * ze;
+    ctx.save();
+    if (ze > 0) { ctx.translate(S.px + (W / 2 - S.px) * ze, S.py + (H / 2 - S.py) * ze); ctx.scale(zs, zs); ctx.translate(-S.px, -S.py); }
     ctx.drawImage(staticLayer.c, 0, 0, W, H);
     // guard routes, when the blueprints panel was hit
     if (S.mapOn) S.guards.forEach(function (g) {
@@ -1960,7 +1966,20 @@
       vg.addColorStop(0, 'rgba(255,79,163,0)'); vg.addColorStop(1, 'rgba(255,79,163,' + (S.meter * 0.55 * (G.calm ? 0.7 : 0.8 + Math.sin(t * 10) * 0.2)) + ')');
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     }
-    if (S.intro > 0) {
+    ctx.restore();
+    // "you are here" pulses from the agent while the view pulls back
+    if (S.zoom > 0) {
+      var ax = S.px + (W / 2 - S.px) * ze, ay = S.py + (H / 2 - S.py) * ze, el = ZOOM_LEN - S.zoom;
+      ctx.save(); ctx.shadowColor = '#4fe3ff'; ctx.shadowBlur = 14;
+      for (var pi = 0; pi < 4; pi++) {
+        var ph = el * 1.4 - pi * 0.35; if (ph < 0) continue; ph = ph % 1.4 / 1.4;
+        ctx.strokeStyle = 'rgba(79,227,255,' + (1 - ph) * 0.9 + ')'; ctx.lineWidth = 4 * (1 - ph) + 1;
+        ctx.beginPath(); ctx.arc(ax, ay, 14 + ph * 170, 0, TAU); ctx.stroke();
+      }
+      ctx.globalAlpha = Math.min(1, S.zoom * 2); ctx.font = '700 30px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#e6f0ff';
+      ctx.fillText(T('YOU START HERE', 'EMPIEZAS AQUÍ'), ax, ay - 50 - 30 * ze); ctx.restore();
+    }
+    if (S.intro > 0 && !(S.zoom > 0)) {
       ctx.save(); ctx.globalAlpha = Math.min(1, S.intro); ctx.font = '700 72px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#e6f0ff';
       ctx.shadowColor = '#4fe3ff'; ctx.shadowBlur = 24; ctx.fillText(T('SNEAK!', '¡ESCAPA!'), W / 2, H / 2 + 20); ctx.restore();
     }
