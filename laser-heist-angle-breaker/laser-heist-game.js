@@ -987,6 +987,13 @@
     hud(); renderQ();
     cv.setAttribute('aria-label', T('A laser turret on a hologram of the angle diagram', 'Una torreta láser sobre un holograma del diagrama de ángulos'));
   }
+  // the question box always fits the game: if a long result (worked steps, the lock message) makes it too tall, it
+  // shrinks to fit instead of running off the bottom
+  function fitQ() {
+    var box = $('#qpanel'); box.style.zoom = '';
+    var room = 720 - 84 - 14, h = box.offsetHeight;
+    if (h > room) box.style.zoom = Math.max(0.6, Math.floor(room / h * 100) / 100);
+  }
   function renderQ() {
     var P = G.puzzle, q = P.qs[P.i], pn = PANELS[P.i], last = P.i === 2;
     var box = $('#qpanel');
@@ -1000,7 +1007,7 @@
       (P.practice ? '' : '<div class="panels">' + PANELS.map(function (p, i) {
         return '<span class="' + (i < P.i ? (P.hits[i] ? 'hit' : 'miss') : i === P.i ? 'now' : '') + '">' + p.icon + ' ' + p.short + (i < P.i ? (P.hits[i] ? ' &#10003;' : ' &#10007;') : '') + '<small>' + p.tip + '</small></span>';
       }).join('') + '</div><p class="easier">&#128161; ' + T('Every right answer switches off security and makes the sneak easier.', 'Cada respuesta correcta apaga la seguridad y hace el escape más fácil.') + '</p>');
-    box.hidden = false;
+    box.hidden = false; fitQ();
     var inp = $('#ans');
     inp.addEventListener('input', function () { inp.value = inp.value.replace(/[^0-9.]/g, ''); $('#err').textContent = ''; Sound.play('type'); });
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); fire(); } });
@@ -1058,12 +1065,21 @@
     var row = document.createElement('div'); row.className = 'btns'; row.style.marginTop = '14px';
     row.innerHTML = '<button class="fire" id="b-next">' + (P.practice ? T('NEXT QUESTION', 'SIGUIENTE') : last ? T('START THE SNEAK', 'EMPEZAR EL ESCAPE') : T('NEXT PANEL', 'SIGUIENTE PANEL')) + ' &#9656;</button>';
     fb.after(row);
-    if (!P.practice && last && missed) {   // before the sneak: a second try at the missed panels makes the room easier
+    if (!P.practice && last && missed === 3) {
+      // zero right: the sneak stays locked. All three panels again, with new angles, until at least one is hit.
+      row.innerHTML = '<button class="fire" id="b-next">&#8634; ' + T('TRY ALL 3 AGAIN', 'REPETIR LAS 3') + '</button>';
+      var lock = document.createElement('p'); lock.className = 'fb bad'; lock.style.marginTop = '8px';
+      lock.innerHTML = '&#128274; ' + T('0 of 3 right: the sneak is locked. Try all three again with new angles; hit at least one to get in.', '0 de 3 correctas: el escape está bloqueado. Repite las tres con ángulos nuevos; acierta al menos una para entrar.');
+      row.before(lock);
+      say(lock.textContent);
+    } else if (!P.practice && last && missed) {   // before the sneak: a second try at the missed panels makes the room easier
       var rb = document.createElement('button'); rb.className = 'bt'; rb.id = 'b-redo'; rb.style.fontSize = '18px';
       rb.innerHTML = '&#8634; ' + T('REDO MISSED (', 'REPETIR FALLADAS (') + missed + ')'; row.appendChild(rb);
       rb.addEventListener('click', function () { Sound.play('click'); redoMissed(); });
     }
     $('#b-next').addEventListener('click', nextPanel);
+    var tip = $('#qpanel .easier'); if (tip) tip.style.display = 'none';   // room for the result
+    fitQ();
     setTimeout(function () { var b = $('#b-next'); if (b) b.focus(); }, 30);
   }
   // Redo: back to the laser puzzles for just the panels that were missed, with new questions. A hit now switches that
@@ -1088,6 +1104,8 @@
     var P = G.puzzle; if (!P || P.phase !== 'done') return;
     if (P.practice) { Sound.play('click'); return practiceQuestion(); }
     Sound.play('click');
+    var none = !P.hits.some(Boolean), lastOne = P.redo ? !P.queue.length : P.i === 2;
+    if (lastOne && none) return redoMissed();   // zero right: all three again before the sneak
     if (P.redo) { if (P.queue.length) loadPanel(P.queue.shift()); else startSneak(); return; }
     if (P.i < 2) {
       P.i++; P.phase = 'ask'; P.typed = null; P.hit = false;
