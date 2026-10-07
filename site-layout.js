@@ -177,10 +177,10 @@
     }
     // Standards first, so the two teacher buttons (Full Teacher Guide, Quick Teacher Tips) sit side by side
     if (!tipBar) addPanel(right, 'sb-standards', '&#128207;', T('Standards', 'Estándares'), [standards], false);
-    // a link to this game's teacher guide (guide.html in the game's folder)
+    // a link to this game's teacher guide (guide in the game's folder)
     if (document.getElementById('game-canvas-slot') || tipBar) {
       var guide = document.createElement('a');
-      guide.href = 'guide.html';
+      guide.href = 'guide';
       guide.className = tipBar ? 'ccss-toggle sb-guide' : 'sb-toggle sb-guide';
       guide.innerHTML = '&#128216; <span class="sb-lbl">' + T('Full Teacher Guide', 'Guía docente completa') + '</span>';
       guide.setAttribute('aria-label', T('Full Teacher Guide', 'Guía docente completa'));
@@ -192,12 +192,12 @@
     }
     addPanel(right, 'sb-notes', '&#128221;', T('Quick Teacher Tips', 'Consejos rápidos para docentes'), [notes], !!tipBar);
     // this game's saved stats and badges (site-stats.js), read fresh each time it opens
-    if (window.SiteStats && !/my-stats\.html$/.test(location.pathname)) {
+    if (window.SiteStats && !/my-stats(\.html)?$/.test(location.pathname)) {
       var statsBox = document.createElement('div'), gameKey = SiteStats.keyForPage();
       var fillStats = function () {
         statsBox.innerHTML = (gameKey ? SiteStats.gameHTML(SiteStats.read(), gameKey, '../', false)
           : '<p class="ss-empty">This game doesn\'t save stats - every round starts fresh.</p>') +
-          '<a class="ss-all" href="../my-stats.html">See all my stats and badges &rarr;</a>';
+          '<a class="ss-all" href="../my-stats">See all my stats and badges &rarr;</a>';
       };
       fillStats();
       addPanel(right, 'sb-stats', '&#128202;', T('My Stats', 'Mis estadísticas'), [statsBox], !!tipBar, fillStats);

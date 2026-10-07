@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en" data-langs="en es" data-sr-canvas>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Similarity Builder - Similar Figures and Scale Factor Practice (Grades 7-8)</title>
+<meta name="description" content="Run, jump, and build bridges across canyon gaps by finding scale factors and missing side lengths of similar figures. Free grades 7-8 math practice for similar figures and scale factors (CCSS 7.G.A.1, 8.G.A.4), with a teacher guide and printable worksheet. No accounts or logins.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#111318">
+<meta property="og:title" content="Similarity Builder - Similar Figures and Scale Factor Practice (Grades 7-8)">
+<meta property="og:description" content="Run, jump, and build bridges across canyon gaps by finding scale factors and missing side lengths of similar figures.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://studentmathgames.com/similarity-builder/">
+<meta property="og:image" content="https://studentmathgames.com/og/similarity-builder.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://studentmathgames.com/og/similarity-builder.png">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893"
+     crossorigin="anonymous"></script>
+<style>
+  :root {
+    --panel: #1b1e27;
+    --text: #f2f3f7;
+    --muted: #9aa0ae;
+    --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #12162e;
+    min-height: 100%;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .play-area {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 64px 16px 24px;
+  }
+  .standards-panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 250px;
+    max-width: 90vw;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .standards-panel h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .standards-panel .code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .standards-panel p {
+    margin: 0 0 8px;
+  }
+  .standards-panel .standard-entry {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .standards-panel .standard-entry:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .teaching-notes {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 24px 64px;
+    color: var(--text);
+    width: 100%;
+  }
+  .teaching-notes h2 {
+    font-size: 18px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .teaching-notes p, .teaching-notes li {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .teaching-notes ul {
+    padding-left: 20px;
+  }
+  .teaching-notes li {
+    margin-bottom: 10px;
+  }
+  .teaching-notes li strong {
+    color: var(--text);
+  }
+  .reset-progress {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .reset-progress h2 {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .reset-progress p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .reset-progress-btn {
+    background: transparent;
+    border: 1px solid #7a3030;
+    color: #e0a0a0;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .reset-progress-btn:hover {
+    background: rgba(220,80,80,0.12);
+    border-color: #b04848;
+    color: #ffb3b3;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .back-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover, .back-link:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .fullscreen-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .fullscreen-btn:hover, .fullscreen-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  .pseudo-fullscreen-exit-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10000;
+    display: none;
+    padding: 9px 16px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    cursor: pointer;
+  }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+  .pseudo-fullscreen-exit-btn:hover, .pseudo-fullscreen-exit-btn:focus-visible {
+    background: rgba(0,0,0,0.8);
+    border-color: rgba(255,255,255,0.6);
+  }
+  /* This game is a wide (16:9) scene with a heads-up display above it, so unlike the square-canvas games its
+     fullscreen modes let the whole game box (HUD + scene + pop-up menus) fill the screen and scale the scene to fit. */
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #0c0f24; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #0c0f24; width: 100vw; height: 100vh; }
+  /* Fallback for browsers/devices (e.g. some managed Chromebooks) that block
+     or silently fail the real Fullscreen API - a CSS-only "maximize" mode
+     that mimics it without needing browser permission. */
+  #game-canvas-slot.pseudo-fullscreen {
+    position: fixed; top: 0; left: 0; margin: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: #0c0f24; width: 100vw; height: 100vh;
+  }
+  #game-canvas-slot:fullscreen #sb,
+  #game-canvas-slot.pseudo-fullscreen #sb {
+    width: 100vw; height: 100vh; border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; justify-content: center;
+    --stage-w: min(100vw - 24px, calc((100vh - 84px) * 16 / 9));
+  }
+  #game-canvas-slot:-webkit-full-screen #sb {
+    width: 100vw; height: 100vh; border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; justify-content: center;
+    --stage-w: min(100vw - 24px, calc((100vh - 84px) * 16 / 9));
+  }
+  #game-canvas-slot:fullscreen #sb #hud,
+  #game-canvas-slot.pseudo-fullscreen #sb #hud { padding-left: 160px; }   /* leaves room for the site's Exit Fullscreen button */
+  #game-canvas-slot:-webkit-full-screen #sb #hud { padding-left: 160px; }
+  #game-canvas-slot:fullscreen #sb #help,
+  #game-canvas-slot.pseudo-fullscreen #sb #help { display: none; }
+  #game-canvas-slot:-webkit-full-screen #sb #help { display: none; }
+
+  /* ===== The game itself. Everything is scoped under #sb so none of it can touch the rest of the page. ===== */
+  #sb {
+    --ink:#1d2340; --card:#ffffff; --muted:#5b6485; --accent:#ff7a1a; --accent2:#2f80ed;
+    --good:#1e9e57; --bad:#e04545;
+    --stage-w: min(100%, calc((100vh - 190px) * 16 / 9));
+    position: relative; width: min(94vw, 900px); padding: 10px 12px 12px;
+    background: #12162e; color: #fff; border-radius: 18px; overflow: hidden;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    font-family: "Trebuchet MS","Segoe UI",system-ui,sans-serif; -webkit-tap-highlight-color: transparent;
+  }
+  #sb * { box-sizing: border-box; }
+  #sb .hidden { display: none !important; }
+  #sb #hud { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; padding-right:112px; min-height:40px; }
+  #sb .pill { background:#232a52; border:2px solid #3a4380; border-radius:999px; padding:5px 12px; font-weight:700; font-size:15px; white-space:nowrap; }
+  #sb .pill b { color:#ffd166; }
+  #sb #menuBtn { position:absolute; top:8px; right:10px; z-index:40; cursor:pointer; border:3px solid #fff; background:#ff7a1a; color:#fff; border-radius:999px; padding:7px 15px; font-size:16px; font-weight:900; box-shadow:0 4px 0 #b4530a, 0 6px 16px rgba(0,0,0,.4); font-family:inherit; }
+  #sb #menuBtn:active { transform:translateY(2px); box-shadow:0 2px 0 #b4530a; }
+  #sb #pause { z-index:30; }
+  #sb #pause .btn { display:block; width:100%; margin:10px 0; }
+  #sb #stage { position:relative; width:var(--stage-w); margin:0 auto; border-radius:18px; overflow:hidden; border:3px solid #3a4380; background:#000; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #sb canvas { display:block; width:100%; height:auto; }
+  #sb #toast { position:absolute; left:50%; top:14px; transform:translateX(-50%); padding:8px 16px; border-radius:999px; font-weight:800; font-size:clamp(14px,2.4vw,20px); opacity:0; transition:opacity .25s; pointer-events:none; background:#fff; color:var(--ink); white-space:nowrap; max-width:96%; overflow:hidden; text-overflow:ellipsis; }
+  #sb #toast.show { opacity:1; }
+  #sb #toast.good { background:#c9f7dc; color:#0d6b38; }
+  #sb #toast.bad { background:#ffd6d6; color:#9b1c1c; }
+  #sb #jumpBtn { position:absolute; right:12px; bottom:12px; width:74px; height:74px; border-radius:50%; border:4px solid #fff; background:rgba(255,122,26,.9); color:#fff; font-weight:900; font-size:15px; display:none; touch-action:none; }
+  @media (hover: none) and (pointer: coarse) { #sb #jumpBtn { display:block; } }
+  /* touch screens: the Jump button sits beside the game, never on top of it */
+  #sb #stageRow { position:relative; }
+  @media (hover: none) and (pointer: coarse) { #sb #stage { width:min(var(--stage-w), calc(100% - 180px)); } #sb #jumpBtn { right:4px; bottom:4px; } }
+  #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
+
+  #sb .overlay { position:absolute; inset:0; background:rgba(10,12,30,.74); display:flex; align-items:center; justify-content:center; padding:12px; z-index:10; overflow:hidden; }
+  #sb .card { background:var(--card); color:var(--ink); border-radius:20px; padding:22px 26px; width:100%; max-width:740px; box-shadow:0 12px 40px rgba(0,0,0,.5); overflow:visible; transform-origin:center; }
+  #sb .card h2 { margin:0 0 6px; font-size:clamp(22px,4vw,30px); color:var(--ink); letter-spacing:0; text-transform:none; }
+  #sb .card p { margin:6px 0; line-height:1.4; color:var(--ink); font-size:15px; }
+  #sb .btn { cursor:pointer; border:0; border-radius:14px; padding:11px 20px; font-size:18px; font-weight:800; color:#fff; background:var(--accent); box-shadow:0 4px 0 #b4530a; font-family:inherit; }
+  #sb .btn:active { transform:translateY(2px); box-shadow:0 2px 0 #b4530a; }
+  #sb .btn.alt { background:var(--accent2); box-shadow:0 4px 0 #1b56a8; }
+  #sb .btn.ghost { background:#eef1ff; color:var(--ink); box-shadow:0 3px 0 #c5cbe8; font-size:15px; padding:8px 14px; }
+  #sb .btn:disabled { opacity:.55; cursor:default; }
+  #sb .center { text-align:center; }
+  #sb .skins { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+  #sb .skin { border:3px solid #d4d9f2; background:#f5f7ff; border-radius:12px; padding:6px 10px; font-weight:700; font-size:13px; cursor:pointer; color:var(--ink); font-family:inherit; }
+  #sb .skin.sel { border-color:var(--accent); background:#fff1e4; }
+  #sb .skin.locked { opacity:.45; cursor:not-allowed; }
+
+  #sb .ptop { display:flex; justify-content:space-between; align-items:center; font-weight:800; gap:8px; }
+  #sb .badge { background:#eef1ff; border-radius:999px; padding:3px 10px; font-size:13px; color:var(--ink); }
+  #sb .bar { height:12px; background:#e5e8f7; border-radius:8px; overflow:hidden; margin:8px 0; }
+  #sb .bar i { display:block; height:100%; width:100%; background:var(--good); transition:background .3s; }
+  #sb .arrow { font-size:22px; color:var(--muted); }
+  #sb .answer { display:flex; align-items:center; gap:8px; margin:10px 0 6px; flex-wrap:wrap; color:var(--ink); }
+  #sb .answer label { font-weight:900; font-size:22px; }
+  #sb #ans { width:110px; font-size:26px; font-weight:800; padding:6px 10px; border-radius:12px; border:3px solid #b9c2ec; color:var(--ink); background:#fff; text-align:center; font-family:inherit; }
+  #sb #ans:focus { outline:none; border-color:var(--accent2); }
+  #sb #ans.shake { animation:sbShake .3s; }
+  @keyframes sbShake { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  #sb #keypad { display:none; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0; }
+  #sb #keypad button { font-size:22px; font-weight:800; padding:8px 0; border-radius:10px; border:2px solid #c5cbe8; background:#f5f7ff; color:var(--ink); font-family:inherit; }
+  @media (hover: none) and (pointer: coarse) { #sb #keypad { display:grid; } }
+  #sb .chip { display:inline-block; min-width:44px; text-align:center; border:3px solid; border-radius:12px; padding:2px 10px; font-weight:900; font-size:20px; background:#fff; }
+  #sb .verdict { display:flex; align-items:center; justify-content:center; gap:12px; font-weight:900; font-size:clamp(20px,4vw,28px); margin:4px 0 8px; }
+  #sb .verdict .bad { color:var(--bad); } #sb .verdict .ok { color:var(--good); } #sb .verdict small { font-size:14px; font-weight:700; }
+  #sb .pair { width:100%; height:auto; display:block; }
+  #sb .steps { display:flex; flex-direction:column; gap:8px; align-items:center; margin:10px 0; font-size:20px; color:var(--ink); }
+  #sb #fbStorm { text-align:center; font-size:24px; margin:6px 0; }
+  #sb .review { text-align:left; font-size:14px; background:#f4f7ff; border-radius:12px; padding:8px 12px; margin:8px 0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 12px; color:var(--ink); }
+  #sb .review .miss { margin:0; padding-bottom:4px; border-bottom:1px dashed #c5cbe8; }
+  #sb .review .miss svg { width:100%; height:auto; display:block; }
+  #sb .missLine { text-align:center; font-weight:900; font-size:17px; margin-top:2px; }
+  #sb .missLine .bad { color:var(--bad); } #sb .missLine .ok { color:var(--good); }
+  #sb .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:10px 0; }
+  #sb .stats div { background:#f4f7ff; border-radius:12px; padding:8px; text-align:center; font-size:14px; color:var(--ink); }
+  #sb .stats b { display:block; font-size:24px; color:var(--accent); }
+  #sb .startsHead { font-weight:800; margin:10px 0 6px; font-size:14px; color:var(--ink); }
+  #sb .starts { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:6px; }
+  #sb .start { font-size:15px; padding:8px 13px; border-radius:12px; font-weight:800; font-family:inherit; }
+  #sb #pause .start { display:inline-block; width:auto; margin:0; }
+  #sb .coinDot { display:inline-block; font-size:15px; vertical-align:-2px; filter:drop-shadow(0 0 1px rgba(0,0,0,.25)); }   /* the same star shown on a correctly-built bridge */
+  #sb #shop { z-index:50; }
+  #sb .shopTabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin:4px 0 8px; }
+  #sb .roleTab { cursor:pointer; border:2px solid #c5cbe8; background:#eef1ff; color:var(--ink); border-radius:14px; padding:4px 6px; min-height:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; font-family:inherit; }
+  #sb .roleTab span { font-weight:800; font-size:12.5px; } #sb .roleTab small { font-size:11px; opacity:.8; }
+  #sb .roleTab.on { background:var(--accent2); border-color:var(--accent2); color:#fff; }
+  #sb .shopGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:6px 0 10px; }
+  #sb .shopCard { background:#f4f7ff; border:3px solid #d4d9f2; border-radius:14px; padding:8px; text-align:center; display:flex; flex-direction:column; gap:4px; }
+  #sb .shopCard.eq { border-color:var(--accent); background:#fff1e4; }
+  #sb .shopCard canvas { width:100%; max-width:110px; height:auto; align-self:center; border-radius:10px; }
+  #sb .shopName { font-weight:900; font-size:16px; color:var(--ink); }
+  #sb .shopTag { font-size:12px; color:var(--muted); line-height:1.25; min-height:60px; }
+  #sb .shopName { min-height:40px; display:flex; align-items:center; justify-content:center; line-height:1.1; }
+  #sb .shopBtn { font-size:14px; padding:0 10px; height:44px; margin-top:auto; }
+  #sb #pause .shopBtn { display:block; width:100%; }
+  #sb .start.locked { background:#eef1ff; color:#8c94b8; border:2px dashed #c5cbe8; cursor:help; }
+
+  /* ---- title / menu / practice screens ---- */
+  #sb #hud, #sb #help { visibility:hidden; }
+  #sb.playing #hud, #sb.playing #help { visibility:visible; }
+  #sb #menuBtn { display:none; }
+  #sb.playing #menuBtn { display:block; }
+  #sb #title { padding:0; background:#0e1533; z-index:20; overflow:hidden; align-items:flex-start; }
+  #sb #titleCv { position:absolute; inset:0; width:100%; height:100%; }
+  #sb .titleWrap { position:relative; text-align:center; margin:3.5% auto 0; z-index:2; }
+  #sb .titleKicker { display:inline-block; background:rgba(255,255,255,.14); border:2px solid rgba(255,255,255,.35); border-radius:999px; padding:4px 14px; font-weight:800; font-size:clamp(11px,1.8vw,16px); letter-spacing:.04em; }
+  #sb .titleName { margin:6px 0 8px; font-size:clamp(34px,8.2vw,84px); line-height:1; font-weight:900; color:#fff; text-shadow:0 4px 0 #1b56a8, 0 8px 22px rgba(0,0,0,.55); letter-spacing:.01em; }
+  #sb .titleName .b { color:#ffb347; text-shadow:0 4px 0 #b4530a, 0 8px 22px rgba(0,0,0,.55); }
+  #sb .playBtn { font-size:clamp(20px,3.4vw,32px); padding:10px 44px; border:3px solid #fff; border-radius:999px; animation:sbPulse 1.6s ease-in-out infinite; }
+  @keyframes sbPulse { 50% { transform:scale(1.07); } }
+  #sb #menu, #sb #practice { z-index:15; background:rgba(10,12,30,.86); }
+  #sb .menuCard { max-width:875px; }
+  #sb .menuGrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:12px 0; text-align:center; }
+  #sb .tile { background:#f4f7ff; border:3px solid #d4d9f2; border-radius:16px; padding:10px 12px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  #sb .tile h3 { margin:0; font-size:20px; color:var(--ink); }
+  #sb .tile p { font-size:13.5px; margin:2px 0 6px; }
+  #sb .tile .startsHead { font-size:12.5px; }
+  #sb .tile .start { font-size:13px; padding:6px 9px; }
+  #sb .tile .skin { font-size:12px; padding:4px 8px; }
+  #sb #pPrompt { font-size:clamp(20px,3.6vw,26px); font-weight:800; text-align:center; margin:4px 0 8px; line-height:1.25; }
+  #sb .kbd { display:inline-block; min-width:22px; padding:0 6px; margin-left:6px; border-radius:6px; background:rgba(255,255,255,.28); font-size:.8em; line-height:1.5; }
+  #sb .kbdTip { font-size:12.5px; color:var(--muted); margin:8px 0 0; text-align:center; }
+  #sb button:focus-visible { outline:4px solid #1d2340; outline-offset:2px; box-shadow:0 0 0 7px #ffd23f; }
+  #sb .pbar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; position:sticky; bottom:-16px; background:#fff; padding:8px 0 4px; box-shadow:0 -10px 10px -4px #fff; }
+  #sb .ptypes { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:8px 0 12px; }
+  #sb .ptype { position:relative; text-align:left; display:flex; flex-direction:column; gap:3px; background:#f4f7ff; border:3px solid #d4d9f2; border-radius:14px; padding:9px 11px 8px 40px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  #sb .ptype.on { border-color:var(--accent2); background:#eaf2ff; }
+  #sb .ptype:focus-visible { outline:3px solid var(--accent); }
+  #sb .pcheck { position:absolute; left:10px; top:10px; width:22px; height:22px; border-radius:7px; border:3px solid #b9c2ec; background:#fff; color:#fff; font-weight:900; font-size:15px; line-height:16px; text-align:center; }
+  #sb .ptype.on .pcheck { background:var(--accent2); border-color:var(--accent2); }
+  #sb .plevel { font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+  #sb .pname { font-weight:900; font-size:15.5px; }
+  #sb .pdesc { font-size:13px; color:var(--muted); line-height:1.3; }
+  #sb .psample { display:block; margin-top:4px; background:#fff; border-radius:10px; padding:2px; }
+  #sb .psample svg { width:100%; height:auto; max-height:112px; display:block; }
+
+  /* Teacher view (?levels) - same look as the game, but shown as a normal page */
+  #lv { max-width:1000px; margin:0 auto; padding:64px 16px 32px; color:#1d2340; font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif; }
+
+  /* Rotate-device prompt: small touchscreens held upright only (the scene is wide, so it needs landscape) */
+  .rotate-prompt {
+    display: none;
+    position: fixed; inset: 0; z-index: 500;
+    background: #0f172a; color: #f1f5f9;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; animation: rotate-tilt 1.6s ease-in-out infinite; }
+  @keyframes rotate-tilt { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+  .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
+  .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
+  .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
+    .rotate-prompt { display: flex; }
+  }
+</style>
+<script data-goatcounter="https://studentmathgames.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-sr.js?v=790186e5"></script>
+<script src="../site-keyboard.js?v=e71645cc"></script>
+<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<script src="../site-stats.js?v=b7719b54"></script>
+<script src="../site-layout.js?v=dc3e3464"></script>
+</head>
+<body>
+<div class="rotate-prompt" id="rotate-prompt" role="alert">
+  <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
+  <h2 data-es="Gira tu dispositivo">Rotate Your Device</h2>
+  <p data-es="Similarity Builder funciona mejor en horizontal. Gira tu teléfono para jugar.">Similarity Builder works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../" data-es="&larr; Todos los juegos">&larr; All games</a>
+</div>
+
+<a class="back-link" href="../">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Similarity Builder</h1>
+<p class="sr-only">A runner game about similar figures. You run across a canyon, and at every gap a puzzle shows two similar shapes of different sizes: find the scale factor between them (level 1), or use the scale factor to find a missing side length by multiplying or dividing (levels 2 to 4, where the shapes get turned, flipped, and eventually only label one side out of each group of equal sides). Whatever number you answer is what the bridge gets built with - too small and it buckles, too large and it snaps, and either way you fall and lose a heart. Between puzzles, dodge obstacles that are the real-world reasons a bridge does not get built - protesters, endangered animals, lawyers who need permits, red tape, unstable soil, flooded land, holes, loose pipes, and electrical lines. Each level has its own obstacles, and every one costs a heart if it touches you. Jump the ones on the ground and run under the ones overhead (except a bird, drone or helicopter flying low, near the ground: jump that one), watch for boulders and barrels that roll toward you, and land on floating platforms. Some rows of obstacles come in a steady rhythm, including construction pile drivers that lift and drop: run under one that is up, jump one that is down. A quick correct answer builds a gold-trimmed bridge with fireworks. As you run farther through a level, the sky turns from day to sunset to dusk. Every correct answer earns a coin to spend in the Shop on a bridge-building crew member such as a politician, architect, engineer, electrician, or safety inspector, each in four different looks. Controls: Space, Enter, or the up arrow (or a tap) jumps, and pressing again in the air double jumps. Type whole-number answers and press Enter or the Build button. The Menu button or the Escape key pauses. From the title screen, Play opens the Menu screen, where you can start a Bridge Run, open Practice (no obstacles or hearts, with a choice of question types), or open the Shop.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
+    <div id="sb">
+      <div id="hud">
+        <span class="pill" id="hLives"></span>
+        <span class="pill" id="hCorrectPill" style="display:none">&#9989; <span data-es="Correctas">Correct</span> <b id="hCorrect">0</b></span>
+        <span class="pill">🔥 <span data-es="Racha">Streak</span> <b id="hStreak">0</b></span>
+        <span class="pill" title="1 star for every correct answer - spend them in the Shop" data-es-title="1 estrella por cada respuesta correcta: gástalas en la tienda"><span class="coinDot">&#11088;</span> <b id="hCoins">0</b></span>
+        <span class="pill"><span data-es="Distancia">Distance</span> <b id="hDist">0</b> m</span>
+      </div>
+      <div id="stageRow">
+      <div id="stage">
+        <canvas id="c" width="960" height="540"></canvas>
+        <div id="toast" role="status" aria-live="polite"></div>
+      </div>
+      <button id="jumpBtn" data-es="SALTA">JUMP</button>
+      </div>
+      <div id="help" data-es="Saltar: <b>Espacio</b> / <b>Enter</b> / <b>&uarr;</b> / toca &mdash; otra vez en el aire para un <b>doble salto</b>. Esc o Menú pausa.">Jump: <b>Space</b> / <b>Enter</b> / <b>&uarr;</b> / tap &mdash; again in the air to <b>double jump</b>. Esc or Menu pauses.</div>
+
+      <!-- Always-available menu button + pause menu -->
+      <button id="menuBtn" aria-label="Menu" data-es-aria="Menú" data-es="&#9776; Menú">&#9776; Menu</button>
+      <div id="pause" class="overlay hidden"><div class="card center" style="max-width:440px">
+        <h2 data-es="&#9208; En pausa">&#9208; Paused</h2>
+        <button class="btn" id="btnResume" data-es="&#9654; Continuar">&#9654; Resume</button>
+        <button class="btn alt" id="btnRestart" data-es="&#128260; Reiniciar">&#128260; Restart</button>
+        <button class="btn ghost" id="muteBtn" style="width:100%;margin:10px 0;font-size:18px;padding:11px">&#128266; Sound on</button>
+        <button class="btn ghost" id="btnTitle" style="width:100%;margin:10px 0;font-size:18px;padding:11px" data-es="&#127968; Pantalla de menú">&#127968; Menu screen</button>
+      </div></div>
+      <!-- Shown instead of immediately leaving when "Menu screen" is pressed mid-run,
+           so a misclick can't silently discard the run/practice in progress. -->
+      <div id="exitConfirm" class="overlay hidden"><div class="card center" style="max-width:440px">
+        <h2 data-es="¿Salir al menú?">Exit to Menu?</h2>
+        <p style="margin:0 0 16px" data-es="Tu partida actual se perderá. ¿Seguro?">Your current run will be lost. Are you sure?</p>
+        <button class="btn alt" id="btnExitConfirmYes" style="width:100%;margin:0 0 10px;font-size:18px;padding:11px" data-es="Sí, salir">Yes, Exit</button>
+        <button class="btn ghost" id="btnExitConfirmNo" style="width:100%;font-size:18px;padding:11px" data-es="Seguir jugando">Keep Playing</button>
+      </div></div>
+
+      <!-- Crew Shop -->
+      <div id="shop" class="overlay hidden"><div class="card" style="max-width:800px">
+        <div class="ptop"><h2 style="margin:0" data-es="&#128717; Tienda del equipo">&#128717; Crew Shop</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="shopCoins">0</b> <span data-es="estrellas">stars</span></span></div>
+        <p style="margin:6px 0 8px" data-es="Cada respuesta correcta te da 1 <span class=&quot;coinDot&quot;>&#11088;</span> estrella. Contrata al equipo que construye puentes de verdad &mdash; ¡y corre como ellos!">Every correct answer earns 1 <span class="coinDot">&#11088;</span> star. Hire the crew that builds real bridges &mdash; then run as them!</p>
+        <div id="shopTabs" class="shopTabs"></div>
+        <div id="shopGrid" class="shopGrid"></div>
+        <div class="center"><button class="btn" id="btnShopClose" data-es="Listo">Done</button></div>
+      </div></div>
+
+      <!-- Title screen (the first thing you see) -->
+      <div id="title" class="overlay">
+        <canvas id="titleCv" width="960" height="540" aria-hidden="true"></canvas>
+        <div class="titleWrap">
+          <div class="titleKicker" data-es="&#128208; Un juego de figuras semejantes">&#128208; A game about similar figures</div>
+          <h2 class="titleName"><span>Similarity</span> <span class="b">Builder</span></h2>
+          <button class="btn playBtn" id="btnPlay" data-es="&#9654; Jugar">&#9654; Play</button>
+        </div>
+      </div>
+
+      <!-- Menu screen: the only place to start a game or open the Shop -->
+      <div id="menu" class="overlay hidden"><div class="card center menuCard">
+        <div class="ptop"><h2 style="margin:0" data-es="&#127753; Menú">&#127753; Menu</h2><span class="badge"><span class="coinDot">&#11088;</span> <b id="mCoins">0</b> <span data-es="estrellas">stars</span> &middot; <span data-es="Récord">Best</span> <b id="mBest">0</b> m &middot; <span data-es="Nivel">Level</span> <b id="mBestLevel">1</b></span></div>
+        <div class="menuGrid">
+          <div class="tile">
+            <h3 data-es="&#127939; Carrera de puentes">&#127939; Bridge Run</h3>
+            <p data-es="Corre por el cañón y construye un puente en cada hueco. Esquiva obstáculos, cuida tus &#10084;&#65039; corazones y gana estrellas &mdash; cuanto más lejos, mejor.">Run the canyon and build a bridge at every gap. Dodge obstacles, keep your &#10084;&#65039; hearts, and earn stars &mdash; the farther the better.</p>
+            <button class="btn" id="btnStart">Start Running!</button>
+            <div id="menuStarts"></div>
+          </div>
+          <div class="tile">
+            <h3 data-es="&#127891; Práctica">&#127891; Practice</h3>
+            <p data-es="<b>Sin obstáculos, sin corazones.</b> Elige exactamente qué tipos de preguntas quieres practicar &mdash; todos los que quieras."><b>No obstacles, no hearts.</b> Choose exactly which kinds of questions you want to work on &mdash; as many as you like.</p>
+            <button class="btn alt" id="btnPractice" data-es="Elegir preguntas">Choose questions</button>
+          </div>
+          <div class="tile">
+            <h3 data-es="&#128717; Tienda del equipo">&#128717; Crew Shop</h3>
+            <p data-es="Gasta las estrellas que ganas con respuestas correctas para contratar a un equipo constructor de puentes, y corre como ellos.">Spend the stars you earn from correct answers to hire a bridge-building crew, then run as them.</p>
+            <button class="btn ghost" id="btnShop" style="font-size:17px" data-es="Abrir la tienda">Open the Shop</button>
+          </div>
+        </div>
+        <button class="btn ghost" id="btnMenuBack" data-es="&larr; Pantalla de título">&larr; Title screen</button>
+        <p class="kbdTip" data-es="Teclado: las <b>flechas</b> mueven &middot; <b>Enter</b> elige &middot; <b>Esc</b> regresa">Keyboard: <b>arrow keys</b> move &middot; <b>Enter</b> selects &middot; <b>Esc</b> goes back</p>
+      </div></div>
+
+      <!-- Practice setup -->
+      <div id="practice" class="overlay hidden"><div class="card" style="max-width:875px">
+        <div class="ptop"><h2 style="margin:0" data-es="&#127891; Práctica">&#127891; Practice</h2><span class="badge" data-es="Elige uno o más">Pick one or more</span></div>
+        <div id="ptypes" class="ptypes"></div>
+        <div class="center pbar">
+          <button class="btn ghost" id="btnPracBack" data-es="&larr; Atrás">&larr; Back</button>
+          <button class="btn" id="btnPracStart" data-es="Empezar práctica">Start Practice</button>
+        </div>
+      </div></div>
+
+      <!-- Question -->
+      <div id="problem" class="overlay hidden"><div class="card">
+        <div class="ptop"><span id="pTitle"></span><span class="badge" id="pTimer"></span></div>
+        <div class="bar"><i id="barFill"></i></div>
+        <p id="pPrompt"></p>
+        <div id="pairWrap"></div>
+        <div class="answer" id="ansRow">
+          <label for="ans" id="ansLbl">? =</label>
+          <input id="ans" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="Your answer (whole number)" data-es-aria="Tu respuesta (número entero)">
+          <span style="font-weight:700" id="ansUnit" data-es="pies">ft</span>
+          <button class="btn" id="btnBuild" data-es="¡Construir! &#127753;">Build! &#127753;</button>
+        </div>
+        <div class="answer hidden" id="simRow" style="justify-content:center;gap:14px">
+          <button class="btn" id="btnSimYes" data-es="Semejantes">Similar</button>
+          <button class="btn alt" id="btnSimNo" data-es="No semejantes">Not Similar</button>
+        </div>
+        <div id="keypad"></div>
+      </div></div>
+
+      <!-- Wrong-answer explanation -->
+      <div id="feedback" class="overlay hidden"><div class="card">
+        <h2 id="fbTitle" data-es="&#128165; ¡El puente falló!">&#128165; The bridge failed!</h2>
+        <div id="fbBody" aria-live="polite"></div>
+        <p id="fbStorm" style="font-weight:700"></p>
+        <div class="center"><button class="btn alt" id="btnNext" data-es="Prueba otro puente">Try a new bridge</button><p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para continuar">Press <b>Enter</b> or <b>Space</b> to continue</p></div>
+      </div></div>
+
+      <!-- Run over -->
+      <div id="over" class="overlay hidden"><div class="card center" style="max-width:875px">
+        <h2 id="ovTitle">&#127937; Run over!</h2>
+        <div class="stats" id="ovStats"></div>
+        <div id="ovContinue"></div>
+        <button class="btn" id="btnAgain" data-es="Correr otra vez">Run again</button>
+        <button class="btn ghost" id="btnOverMenu" style="margin-left:6px" data-es="&#127968; Menú">&#127968; Menu</button>
+        <p class="kbdTip" data-es="Presiona <b>Enter</b> o <b>Espacio</b> para jugar otra vez &middot; <b>Esc</b> para el menú">Press <b>Enter</b> or <b>Space</b> to play again &middot; <b>Esc</b> for the Menu</p>
+        <div id="ovReview"></div>
+      </div></div>
+    </div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.4</span>
+      <p>Understand that a two-dimensional figure is similar to another if the second can be obtained from the first by a sequence of rotations, reflections, translations, and dilations; given two similar two-dimensional figures, describe a sequence that exhibits the similarity between them.</p>
+      <p class="applies">Applies to: every level - the two shapes are always dilations of each other; levels 3 and 5 turn and flip the bigger shape.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.7.G.A.1</span>
+      <p>Solve problems involving scale drawings of geometric figures, including computing actual lengths and areas from a scale drawing and reproducing a scale drawing at a different scale.</p>
+      <p class="applies">Applies to: level 1 (find the scale factor) and levels 2-5 (use it to find a missing length).</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Quick Teacher Tips</h2>
+  <h3>Key vocabulary</h3>
+  <ul>
+    <li><strong>similar figures</strong>: figures with the same shape: equal corresponding angles and proportional corresponding sides</li>
+    <li><strong>dilation</strong>: a transformation that enlarges or reduces a figure by a scale factor</li>
+    <li><strong>scale factor (k)</strong>: image side length &divide; pre-image side length (the new figure compared with the original)</li>
+    <li><strong>corresponding sides</strong>: sides in matching positions on the two figures</li>
+    <li><strong>corresponding angles</strong>: angles in matching positions; equal in similar figures</li>
+    <li><strong>proportional</strong>: having the same ratio: every pair of corresponding sides has the same scale factor</li>
+  </ul>
+  <h3>Tips for using the game</h3>
+  <p>Students use the scale factor between two similar figures to find an unknown side length, and the answer they type is the size the bridge is built at.</p>
+  <ul>
+    <li><strong>The math:</strong> in similar figures, corresponding angles are equal and corresponding sides are proportional. The scale factor is k = image side &divide; pre-image side, so k &gt; 1 is an enlargement and k &lt; 1 is a reduction.</li>
+    <li><strong>Five levels:</strong> find the scale factor, use a given factor to multiply or divide, find k from just one matching pair in a turned or flipped figure, work with nested triangles and "Similar or Not Similar?", and finally a mix that adds fractional scale factors and algebra in the sides.</li>
+    <li><strong>Tick marks and colors:</strong> equal sides carry the same tick marks and color, and corresponding sides share a color, so students match by position in the figure instead of by where it sits on the screen.</li>
+    <li><strong>Nested triangles:</strong> a line parallel to one side, or two crossing lines, makes similar triangles, so matching ratios give the missing length (as in shadow and mirror problems).</li>
+    <li><strong>Real life:</strong> blueprints, scale models, maps, photo resizing, and finding a building's height from its shadow all use similar figures.</li>
+    <li><strong>Wrong answers teach:</strong> a bridge that is too small or too big fails to fit its gap, and the missed question returns as a picture with a scale-factor arrow on each side.</li>
+  </ul>
+</section>
+
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases your saved best distance, highest level, level checkpoints, stars, and hired crew for Similarity Builder on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+</section>
+
+<script src="similarity-builder-game.js?v=3ce4398d"></script>
+
+<script src="../site-fullscreen.js?v=00f33012"></script>
+<script>
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    var ok = confirm('Reset your Similarity Builder progress? This erases your saved best distance, highest level, checkpoints, stars, and hired crew on this device. This cannot be undone.');
+    if (!ok) return;
+    // The game also saves on tab-hide/unload as a safety net against losing
+    // progress earned right before closing the tab - reload() triggers that
+    // same unload path, so tell the game to skip that save, otherwise it
+    // would immediately re-save the old values right over the keys just cleared.
+    window.similarityBuilderResetting = true;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('similaritybuilder_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  });
+</script>
+</body>
+</html>

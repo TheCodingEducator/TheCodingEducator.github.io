@@ -168,7 +168,7 @@
         return '<div class="ss-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
       }).join('') + '</div>' : '<p class="ss-empty">No progress saved yet - play a round and it shows up here.</p>') +
       (mine.length ? '<div class="ss-sub">Badges &middot; ' + earned + ' of ' + mine.length + ' earned</div>' + badgesHTML(mine) : '') +
-      (withPlay ? '<a class="ss-play" href="' + prefix + g.folder + '/' + g.folder + '.html">Play &rarr;</a>' : '') + '</section>';
+      (withPlay ? '<a class="ss-play" href="' + prefix + g.folder + '/">Play &rarr;</a>' : '') + '</section>';
   }
   function totalsHTML(data) {
     var t = data.totals;

@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en" data-langs="en es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Area Artist - Multiplication and Area Practice (Grade 3)</title>
+<meta name="description" content="Multiply to paint! Every rectangle you solve fills in part of a hidden pixel-art masterpiece. Product Picasso (1x1 to 5x5), Multiplication Monet (5x5 to 12x12), and a create-your-own art studio. Free grade 3 math practice for multiplication and area (CCSS 3.MD.C.7, 3.OA.C.7), with a teacher guide and printable worksheet. No accounts or logins.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#111318">
+<meta property="og:title" content="Area Artist - Multiplication and Area Practice (Grade 3)">
+<meta property="og:description" content="Multiply to paint! Every rectangle you solve fills in part of a hidden pixel-art masterpiece.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://studentmathgames.com/area-artist/">
+<meta property="og:image" content="https://studentmathgames.com/og/area-artist.png">
+<meta name="twitter:card" content="summary_large_image">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893"
+     crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  :root { --panel: #1b1e27; --text: #f2f3f7; --muted: #9aa0ae; --accent: #ff8a5b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #1d1830; min-height: 100%; }
+  body { min-height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .play-area { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 24px; padding: 64px 16px 24px; }
+  .standards-panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 20px; width: 250px; max-width: 90vw; color: var(--text); font-size: 13px; line-height: 1.55; }
+  .standards-panel h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  .standards-panel .code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+  .standards-panel p { margin: 0 0 8px; }
+  .standards-panel .standard-entry { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .standards-panel .standard-entry:last-of-type { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .teaching-notes { max-width: 720px; margin: 0 auto; padding: 8px 24px 64px; color: var(--text); width: 100%; }
+  .teaching-notes h2 { font-size: 18px; color: var(--accent); margin: 0 0 12px; }
+  .teaching-notes p, .teaching-notes li { font-size: 15px; line-height: 1.6; color: var(--text); }
+  .teaching-notes ul { padding-left: 20px; }
+  .teaching-notes li { margin-bottom: 10px; }
+  .teaching-notes li strong { color: var(--text); }
+  .reset-progress { max-width: 720px; margin: 0 auto; padding: 0 24px 48px; width: 100%; box-sizing: border-box; }
+  .reset-progress h2 { font-size: 16px; color: var(--muted); margin: 0 0 8px; }
+  .reset-progress p { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 0 0 12px; }
+  .reset-progress-btn { background: transparent; border: 1px solid #7a3030; color: #e0a0a0; padding: 10px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .reset-progress-btn:hover { background: rgba(220,80,80,0.12); border-color: #b04848; color: #ffb3b3; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .back-link, .fullscreen-btn { position: fixed; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; color: #fff; font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-decoration: none; z-index: 10; cursor: pointer; }
+  .back-link { left: 12px; } .fullscreen-btn { right: 12px; }
+  .pseudo-fullscreen-exit-btn { position: fixed; top: 12px; left: 12px; z-index: 10000; display: none; padding: 9px 16px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; color: #fff; font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; cursor: pointer; }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* fullscreen: the whole game box fills the screen */
+  #game-canvas-slot:fullscreen { display: flex; background: #1d1830; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; background: #1d1830; width: 100vw; height: 100vh; }
+  #game-canvas-slot.pseudo-fullscreen { position: fixed; inset: 0; margin: 0; z-index: 9999; display: flex; background: #1d1830; width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw !important; height: 100vh !important; border-radius: 0; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw !important; height: 100vh !important; border-radius: 0; }
+  #game-canvas-slot:fullscreen #aa .ptop, #game-canvas-slot.pseudo-fullscreen #aa .ptop { padding-top: 44px; }
+
+  /* ===== The game. Everything is scoped under #aa. ===== */
+  #aa {
+    --ink: #2b2140; --paper: #fffaf0; --muted: #6e6485; --coral: #ff6b6b; --coral-d: #d94c4c; --blue: #4d8dff; --blue-d: #2f66d0;
+    --green: #2fb36b; --green-d: #1f8a50; --gold: #ffc93c; --line: #e8dcc6;
+    position: relative; display: flex; width: min(96vw, 1200px); height: min(82vh, 760px);
+    background: #2a2440; border-radius: 16px; overflow: hidden; color: var(--ink);
+    font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 24px rgba(0,0,0,0.5);
+  }
+  #aa * { box-sizing: border-box; }
+  #aa .hidden { display: none !important; }
+  #aa button { font-family: inherit; }
+  #aa #stage { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #aa #cv { position: absolute; inset: 0; display: block; outline: none; }
+  #aa #cv:focus-visible { box-shadow: inset 0 0 0 3px var(--gold); }
+  #aa #stageMsg { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(255,250,240,0.95); color: var(--ink); padding: 8px 18px; border-radius: 999px; font-weight: 600; font-size: clamp(14px, 2vw, 19px); box-shadow: 0 4px 14px rgba(0,0,0,0.3); pointer-events: none; opacity: 0; transition: opacity .3s; white-space: nowrap; max-width: 94%; overflow: hidden; text-overflow: ellipsis; }
+  #aa #stageMsg.show { opacity: 1; }
+  #aa #side { flex: 0 0 330px; background: var(--paper); display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding: 12px 14px; border-left: 4px solid #c8963e; }
+  #aa .ptop { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  #aa .modeTag { font-family: 'Pacifico', cursive; font-size: 19px; color: var(--coral-d); line-height: 1.2; }
+  #aa .btn { cursor: pointer; border: 0; border-radius: 14px; padding: 10px 18px; font-size: 18px; font-weight: 600; color: #fff; background: var(--coral); box-shadow: 0 4px 0 var(--coral-d); }
+  #aa .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--coral-d); }
+  #aa .btn:disabled { opacity: .5; cursor: default; transform: none; }
+  #aa .btn.blue { background: var(--blue); box-shadow: 0 4px 0 var(--blue-d); }
+  #aa .btn.green { background: var(--green); box-shadow: 0 4px 0 var(--green-d); }
+  #aa .btn.ghost { background: #f1e8d8; color: var(--ink); box-shadow: 0 3px 0 #d8cbb2; font-size: 15px; padding: 7px 12px; }
+  #aa .btn.small { font-size: 14px; padding: 6px 10px; border-radius: 10px; }
+  #aa .btn:focus-visible, #aa .sw:focus-visible, #aa .card:focus-visible, #aa .thumb:focus-visible, #aa .kbtn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  #aa .prog { margin-bottom: 10px; }
+  #aa .progTxt { font-weight: 600; font-size: 15px; color: var(--muted); display: flex; justify-content: space-between; }
+  #aa .bar { height: 12px; background: #eee3cf; border-radius: 8px; overflow: hidden; margin-top: 4px; }
+  #aa .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff6b6b, #ffc93c, #2fb36b, #4d8dff, #9b5de5); transition: width .5s; }
+  #aa .qKind { font-size: 17px; font-weight: 600; color: var(--muted); margin: 6px 0 4px; min-height: 22px; }
+  #aa .qEq { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; font-size: clamp(28px, 4vw, 40px); font-weight: 700; margin: 6px 0 10px; min-height: 58px; }
+  #aa .qEq .num { color: var(--ink); }
+  #aa .qEq .num.r { color: var(--coral-d); } #aa .qEq .num.c { color: var(--blue-d); }
+  #aa .ans { width: 92px; font-size: clamp(26px, 3.6vw, 36px); font-weight: 700; font-family: inherit; text-align: center; padding: 4px 6px; border-radius: 14px; border: 3px solid #d8cbb2; color: var(--ink); background: #fff; }
+  #aa .ans:focus { outline: none; border-color: var(--blue); }
+  #aa .ans.shake { animation: aaShake .35s; border-color: var(--coral); }
+  #aa .ans.good { border-color: var(--green); background: #e6f8ee; }
+  @keyframes aaShake { 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+  #aa .fb { min-height: 48px; font-size: 16px; font-weight: 500; line-height: 1.35; padding: 6px 10px; border-radius: 12px; margin-top: 10px; }
+  #aa .fb:empty { visibility: hidden; }
+  #aa .fb.bad { background: #ffe8e3; color: #a3331f; }
+  #aa .fb.good { background: #e3f7ea; color: #1b6e3f; }
+  #aa .fb.info { background: #eef3ff; color: #2b4a8a; }
+  #aa .checkRow { display: flex; justify-content: center; }
+  #aa .checkRow .btn { min-width: 160px; }
+  #aa .sizeCtl { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+  #aa .stepper { display: flex; align-items: center; gap: 6px; background: #f6efe1; border-radius: 12px; padding: 5px 8px; font-weight: 600; font-size: 15px; }
+  #aa .stepper b { min-width: 30px; text-align: center; font-size: 22px; }
+  #aa .stepper button { width: 34px; height: 34px; border-radius: 10px; border: 2px solid #d8cbb2; background: #fff; font-size: 20px; font-weight: 700; color: var(--ink); cursor: pointer; line-height: 1; }
+  #aa .stepper.r b { color: var(--coral-d); } #aa .stepper.c b { color: var(--blue-d); }
+  #aa .keypad { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+  #aa .keypad .kbtn { font-size: 22px; font-weight: 700; padding: 9px 0; border-radius: 12px; border: 2px solid #e0d3bb; background: #fff; color: var(--ink); cursor: pointer; }
+  #aa .keypad .kbtn.ok { background: var(--green); border-color: var(--green-d); color: #fff; }
+  #aa.touch .keypad { display: grid; }
+  #aa .hint { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
+  #aa.touch .hint.keys { display: none; }
+
+  /* create mode panel */
+  #aa .sec { background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 8px 10px; margin-bottom: 8px; }
+  #aa .sec h4 { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
+  #aa .sec .qEq { font-size: 28px; min-height: 0; margin: 2px 0 6px; }
+  #aa .sec .ans { width: 80px; font-size: 26px; }
+  #aa .sec .fb { min-height: 0; margin-top: 4px; font-size: 14px; }
+  #aa .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  #aa .sw { aspect-ratio: 1; border-radius: 8px; border: 2px solid rgba(0,0,0,0.15); cursor: pointer; padding: 0; min-width: 0; }
+  #aa .sw.on { border: 3px solid var(--ink); box-shadow: 0 0 0 2px #fff inset; transform: scale(1.08); }
+  #aa .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #aa .tools .btn { font-size: 14px; padding: 7px 6px; }
+  #aa .tools .btn.on { background: var(--ink); color: #fff; box-shadow: 0 3px 0 #000; }
+  #aa .ready { font-weight: 600; font-size: 14px; color: var(--green-d); margin-top: 4px; min-height: 18px; }
+
+  /* screens that cover the game */
+  #aa .overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 14px; overflow-y: auto; background: rgba(29,24,48,0.72); }
+  #aa .ovCard { background: var(--paper); border-radius: 22px; padding: 20px 24px; width: 100%; max-width: 760px; box-shadow: 0 16px 50px rgba(0,0,0,0.5); margin: auto; text-align: center; }
+  #aa .ovCard h2 { margin: 0 0 4px; font-size: clamp(24px, 4vw, 34px); font-weight: 700; }
+  #aa .ovCard p { margin: 6px 0; font-size: 16px; line-height: 1.45; color: #4a4060; }
+  #aa #titleOv { background: #1d1830; }
+  #aa #titleArt { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; object-fit: cover; filter: saturate(1.05) brightness(.7); }
+  #aa .titleWrap { position: relative; text-align: center; width: 100%; max-width: 880px; margin: auto; }
+  #aa .titleName { font-family: 'Pacifico', cursive; font-weight: 400; color: #fff; font-size: clamp(44px, 8vw, 88px); margin: 0; line-height: 1.25; text-shadow: 0 4px 0 #c8963e, 0 8px 24px rgba(0,0,0,0.6); }
+  #aa .titleSub { color: #fff; font-size: clamp(16px, 2.4vw, 22px); font-weight: 500; margin: 2px 0 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
+  #aa .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  #aa .card { cursor: pointer; text-align: left; border: 0; border-radius: 18px; padding: 14px 16px; background: var(--paper); color: var(--ink); box-shadow: 0 6px 0 rgba(0,0,0,0.25), 0 10px 24px rgba(0,0,0,0.3); transition: transform .15s; display: flex; gap: 12px; align-items: center; }
+  #aa .card:hover { transform: translateY(-3px); }
+  #aa .card:active { transform: translateY(1px); }
+  #aa .card .ic { font-size: 34px; flex: 0 0 auto; }
+  #aa .card .nm { font-family: 'Pacifico', cursive; font-size: clamp(18px, 2.4vw, 24px); line-height: 1.25; display: block; }
+  #aa .card .nm.plain { font-family: 'Fredoka', sans-serif; font-weight: 700; }
+  #aa .card .ds { font-size: 14px; color: #5a5070; display: block; margin-top: 2px; }
+  #aa .card.e .nm { color: #d94c4c; } #aa .card.h .nm { color: #2f66d0; } #aa .card.c .nm { color: #1f8a50; } #aa .card.g .nm { color: #8a4fc8; }
+  #aa .choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+  #aa .choice { cursor: pointer; border: 3px solid var(--line); background: #fff; border-radius: 16px; padding: 12px 8px; font-size: 16px; color: var(--ink); }
+  #aa .choice b { display: block; font-size: 20px; }
+  #aa .choice small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  #aa .choice.on { border-color: var(--coral); background: #fff1ec; }
+  #aa .choice:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  #aa .choices.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #aa .choices.cats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+  #aa .choices.cats .choice { padding: 8px 4px; min-width: 0; }
+  #aa .choices.cats .choice b { font-size: 15px; line-height: 1.15; overflow-wrap: anywhere; }
+  #aa .choices.cats .choice .ic { display: block; font-size: 26px; line-height: 1.2; }
+  #aa .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+  #aa .lbl { font-weight: 600; color: var(--muted); margin-top: 10px; font-size: 15px; }
+  #aa .tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0 10px; }
+  #aa .tab { cursor: pointer; border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 16px; font-size: 16px; font-weight: 600; color: var(--ink); }
+  #aa .tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  #aa .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 52vh; overflow-y: auto; padding: 4px; }
+  #aa .thumb { cursor: pointer; border: 0; padding: 6px; border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); text-align: center; font-size: 13px; color: var(--ink); }
+  #aa .thumb canvas { width: 100%; height: auto; display: block; image-rendering: pixelated; border-radius: 6px; border: 3px solid #c8963e; aspect-ratio: 3 / 2; background: #fbf6ec; }
+  #aa .thumb span { display: block; margin-top: 4px; font-weight: 600; }
+  #aa .thumb small { color: var(--muted); }
+  #aa .empty { color: var(--muted); padding: 24px 8px; font-size: 16px; }
+  #aa #viewArt { width: min(100%, 75vh); aspect-ratio: 3 / 2; height: auto; image-rendering: pixelated; border: 8px solid #c8963e; border-radius: 6px; background: #fbf6ec; display: block; margin: 8px auto; }
+  #aa #doneOv { background: transparent; align-items: flex-end; pointer-events: none; }
+  #aa #doneOv .ovCard { pointer-events: auto; max-width: 620px; margin: 0 auto; padding: 14px 18px; }
+  #aa #doneOv h2 { font-family: 'Pacifico', cursive; font-weight: 400; color: var(--coral-d); }
+  #aa .confirmBox { background: #fff1ec; border-radius: 14px; padding: 10px; margin-top: 10px; }
+
+  /* narrow or tall screens: the panel goes under the picture */
+  @media (max-aspect-ratio: 1/1), (max-width: 700px) {
+    #aa { flex-direction: column; }
+    #aa #side { flex: 0 0 auto; max-height: 52%; border-left: 0; border-top: 4px solid #c8963e; padding: 8px 10px; }
+    #aa .qEq { min-height: 0; margin: 2px 0 6px; font-size: 28px; }
+    #aa .fb { min-height: 0; margin-top: 6px; }
+    #aa .cards { grid-template-columns: 1fr; }
+    #aa .card { padding: 10px 12px; }
+    #aa .card .ic { font-size: 26px; }
+    #aa .keypad { grid-template-columns: repeat(6, 1fr); }
+    #aa .keypad .kbtn { font-size: 18px; padding: 6px 0; }
+    #aa .choices { grid-template-columns: 1fr; }
+    #aa .choices.cats { grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); }
+  }
+  @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+    #aa #side { flex-basis: 300px; padding: 6px 10px; }
+    #aa .qEq { min-height: 0; font-size: 26px; margin: 0 0 4px; }
+    #aa .keypad { grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 6px; }
+    #aa .keypad .kbtn { font-size: 17px; padding: 4px 0; }
+    #aa .fb { min-height: 0; margin-top: 4px; font-size: 14px; }
+    #aa .titleSub { margin-bottom: 8px; }
+    #aa .card { padding: 8px 12px; }
+  }
+</style>
+<script data-goatcounter="https://studentmathgames.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-keyboard.js?v=e71645cc"></script>
+<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<script src="../site-stats.js?v=b7719b54"></script>
+<script src="../site-layout.js?v=dc3e3464"></script>
+</head>
+<body>
+<a class="back-link" href="../">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Area Artist</h1>
+<p class="sr-only">A multiplication art game. A hidden pixel-art picture is split into rectangles. The game zooms in on one rectangle at a time; find how many squares are in it by multiplying its rows by its columns (or find a missing side), and it fills in with its part of the picture. After each piece the game zooms out so you can see the picture growing. Product Picasso uses 1 by 1 up to 5 by 5 rectangles with every square drawn so it can be counted; Multiplication Monet uses 5 by 5 up to 12 by 12. In the art studio you design your own picture: choose two numbers, solve the multiplication, and place the rectangle anywhere. Finished pictures are kept in your gallery on this device.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
+    <div class="app" id="aa">
+      <div id="stage">
+        <canvas id="cv" tabindex="0" aria-label="The picture" data-es-aria="El cuadro"></canvas>
+        <div id="stageMsg" aria-live="polite"></div>
+      </div>
+
+      <div id="side">
+        <!-- painting a picture -->
+        <div id="playPanel" class="hidden">
+          <div class="ptop"><span class="modeTag" id="pMode"></span><button class="btn ghost" id="menuBtn" data-es="&#9776; Menú">&#9776; Menu</button></div>
+          <div class="prog"><div class="progTxt"><span id="pProg"></span><span id="pStreak"></span></div><div class="bar"><i id="pBar"></i></div></div>
+          <div id="qBox" aria-live="polite">
+            <div class="qKind" id="qKind"></div>
+            <div class="qEq" id="qEq"></div>
+            <div class="checkRow"><button class="btn green" id="checkBtn" data-es="Revisar &#10003;">Check &#10003;</button></div>
+            <div class="fb" id="fb"></div>
+          </div>
+          <div class="keypad" id="keypad"></div>
+          <div class="hint keys" id="pHint"></div>
+        </div>
+
+        <!-- the art studio -->
+        <div id="createPanel" class="hidden">
+          <div class="ptop"><span class="modeTag" data-es="Mi estudio de arte">My Art Studio</span><button class="btn ghost" id="cDone" data-es="&#10004; Listo">&#10004; Done</button></div>
+          <div class="sec">
+            <h4 data-es="1. Elige un rectángulo">1. Pick a rectangle</h4>
+            <div class="sizeCtl" style="margin:0">
+              <div class="stepper r"><span data-es="Filas">Rows</span> <button type="button" id="cRowM" aria-label="One less row" data-es-aria="Una fila menos">&minus;</button><b id="cRows">3</b><button type="button" id="cRowP" aria-label="One more row" data-es-aria="Una fila más">+</button></div>
+              <div class="stepper c"><span data-es="Columnas">Columns</span> <button type="button" id="cColM" aria-label="One less column" data-es-aria="Una columna menos">&minus;</button><b id="cCols">4</b><button type="button" id="cColP" aria-label="One more column" data-es-aria="Una columna más">+</button></div>
+              <button type="button" class="btn ghost small" id="cRot" title="Rotate it (R)" data-es-title="Girarlo (R)" data-es="&#10227; Girar">&#10227; Rotate</button>
+            </div>
+          </div>
+          <div class="sec">
+            <h4 data-es="2. Resuélvelo para pintar">2. Solve it to paint</h4>
+            <div class="qEq" id="cEq"></div>
+            <div class="checkRow"><button class="btn green small" id="cCheck" data-es="Revisar &#10003;">Check &#10003;</button></div>
+            <div class="fb" id="cFb"></div>
+            <div class="ready" id="cReady"></div>
+          </div>
+          <div class="sec">
+            <h4 data-es="3. Elige un color y haz clic en el lienzo">3. Pick a color, then click the canvas</h4>
+            <div class="swatches" id="swatches"></div>
+          </div>
+          <div class="tools">
+            <button class="btn ghost on" id="tBrush" data-es="&#128396;&#65039; Pintar">&#128396;&#65039; Paint</button>
+            <button class="btn ghost" id="tErase" data-es="&#129533; Borrador">&#129533; Eraser</button>
+            <button class="btn ghost" id="tUndo" data-es="&#8630; Deshacer">&#8630; Undo</button>
+            <button class="btn ghost" id="tBg" data-es="&#127912; Fondo de este color">&#127912; Background color</button>
+            <button class="btn ghost" id="tDown" data-es="&#11015;&#65039; Descargar">&#11015;&#65039; Download</button>
+            <button class="btn ghost" id="tClear" data-es="&#128465;&#65039; Borrar todo">&#128465;&#65039; Clear all</button>
+          </div>
+          <div class="confirmBox hidden" id="clearConfirm">
+            <p style="margin:0 0 8px;font-weight:600" data-es="¿Borrar toda la obra?">Clear the whole canvas?</p>
+            <div class="row" style="margin:0"><button class="btn small" id="clearYes" data-es="Sí, borrar">Yes, clear it</button><button class="btn ghost small" id="clearNo" data-es="No">No</button></div>
+          </div>
+          <div class="keypad" id="cKeypad"></div>
+          <div class="hint keys" id="cHint"></div>
+        </div>
+      </div>
+
+      <!-- title -->
+      <div id="titleOv" class="overlay">
+        <canvas id="titleArt" aria-hidden="true"></canvas>
+        <div class="titleWrap">
+          <h2 class="titleName">Area Artist</h2>
+          <div class="titleSub" data-es="Multiplica para pintar una obra maestra escondida">Multiply to paint a hidden masterpiece</div>
+          <div class="cards">
+            <button class="card e" id="goE"><span class="ic">&#127912;</span><span><span class="nm">Product Picasso</span><span class="ds" data-es="Fácil &middot; de 1&times;1 a 5&times;5 &middot; cada cuadrito se puede contar">Easy &middot; 1&times;1 to 5&times;5 &middot; every square can be counted</span></span></button>
+            <button class="card h" id="goH"><span class="ic">&#128396;&#65039;</span><span><span class="nm">Multiplication Monet</span><span class="ds" data-es="Difícil &middot; de 5&times;5 a 12&times;12">Hard &middot; 5&times;5 to 12&times;12</span></span></button>
+            <button class="card c" id="goC"><span class="ic">&#129529;</span><span><span class="nm plain" data-es="Crea tu propia obra">Create My Own Art</span><span class="ds" data-es="Elige dos números, multiplica y coloca tu rectángulo donde quieras">Pick two numbers, multiply, and place your rectangle anywhere</span></span></button>
+            <button class="card g" id="goG"><span class="ic">&#128444;&#65039;</span><span><span class="nm plain" data-es="Mi galería">My Gallery</span><span class="ds" id="gCount"></span></span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- how long a picture -->
+      <div id="lenOv" class="overlay hidden">
+        <div class="ovCard">
+          <h2 id="lenTitle"></h2>
+          <p id="lenSub"></p>
+          <div class="lbl" data-es="¿Qué quieres pintar?">What do you want to paint?</div>
+          <div class="choices cats" id="catChoices"></div>
+          <div class="lbl" data-es="¿Qué tan grande será tu cuadro?">How big a picture?</div>
+          <div class="choices" id="lenChoices"></div>
+          <div class="row"><button class="btn ghost" id="lenBack" data-es="&larr; Atrás">&larr; Back</button><button class="btn" id="lenGo" data-es="&#127912; ¡A pintar!">&#127912; Start painting!</button></div>
+        </div>
+      </div>
+
+      <!-- art studio setup -->
+      <div id="csOv" class="overlay hidden">
+        <div class="ovCard">
+          <h2 data-es="Crea tu propia obra">Create My Own Art</h2>
+          <p data-es="Cada rectángulo que pintes es una multiplicación: filas &times; columnas.">Every rectangle you paint is a multiplication: rows &times; columns.</p>
+          <div class="lbl" data-es="Números">Numbers</div>
+          <div class="choices two" id="csMode"></div>
+          <div class="lbl" data-es="Tamaño del lienzo">Canvas size</div>
+          <div class="choices" id="csSize"></div>
+          <div class="row"><button class="btn ghost" id="csBack" data-es="&larr; Atrás">&larr; Back</button><button class="btn green" id="csGo" data-es="&#129529; Empezar a crear">&#129529; Start creating</button></div>
+        </div>
+      </div>
+
+      <!-- gallery -->
+      <div id="galOv" class="overlay hidden">
+        <div class="ovCard" style="max-width:900px">
+          <h2 data-es="&#128444;&#65039; Mi galería">&#128444;&#65039; My Gallery</h2>
+          <div class="tabs"><button class="tab on" id="tabM" data-es="Obras maestras">Masterpieces</button><button class="tab" id="tabC" data-es="Mis creaciones">My Creations</button></div>
+          <div class="thumbs" id="thumbs"></div>
+          <p style="font-size:13px" data-es="Tu galería se guarda solo en este dispositivo.">Your gallery is saved on this device only.</p>
+          <div class="row"><button class="btn ghost" id="galBack" data-es="&larr; Atrás">&larr; Back</button></div>
+        </div>
+      </div>
+
+      <!-- one picture from the gallery -->
+      <div id="viewOv" class="overlay hidden">
+        <div class="ovCard">
+          <h2 id="viewTitle"></h2>
+          <p id="viewSub" style="font-size:14px"></p>
+          <canvas id="viewArt"></canvas>
+          <div class="row">
+            <button class="btn blue" id="viewDown" data-es="&#11015;&#65039; Descargar">&#11015;&#65039; Download</button>
+            <button class="btn green" id="viewEdit" data-es="&#128396;&#65039; Seguir pintando">&#128396;&#65039; Keep painting</button>
+            <button class="btn ghost" id="viewDel" data-es="&#128465;&#65039; Borrar">&#128465;&#65039; Delete</button>
+            <button class="btn ghost" id="viewBack" data-es="&larr; Galería">&larr; Gallery</button>
+          </div>
+          <div class="confirmBox hidden" id="delConfirm">
+            <p style="margin:0 0 8px;font-weight:600" data-es="¿Borrar este cuadro de tu galería?">Delete this picture from your gallery?</p>
+            <div class="row" style="margin:0"><button class="btn small" id="delYes" data-es="Sí, borrar">Yes, delete</button><button class="btn ghost small" id="delNo" data-es="No">No</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- pause -->
+      <div id="pauseOv" class="overlay hidden">
+        <div class="ovCard" style="max-width:420px">
+          <h2 data-es="&#9208; En pausa">&#9208; Paused</h2>
+          <div class="row" style="flex-direction:column;align-items:stretch">
+            <button class="btn green" id="pResume" data-es="&#9654; Continuar">&#9654; Resume</button>
+            <button class="btn ghost" id="pMute"></button>
+            <button class="btn ghost" id="pQuit" data-es="&#127968; Salir al menú">&#127968; Quit to menu</button>
+          </div>
+          <div class="confirmBox hidden" id="quitConfirm">
+            <p style="margin:0 0 8px;font-weight:600" data-es="Este cuadro no está terminado y se perderá. ¿Salir de todos modos?">This picture isn't finished and will be lost. Quit anyway?</p>
+            <div class="row" style="margin:0"><button class="btn small" id="quitYes" data-es="Sí, salir">Yes, quit</button><button class="btn ghost small" id="quitNo" data-es="Seguir pintando">Keep painting</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- a finished masterpiece -->
+      <div id="doneOv" class="overlay hidden">
+        <div class="ovCard">
+          <h2 id="doneTitle"></h2>
+          <p id="doneSub"></p>
+          <div class="row">
+            <button class="btn blue" id="doneDown" data-es="&#11015;&#65039; Descargar">&#11015;&#65039; Download</button>
+            <button class="btn green" id="doneAgain" data-es="&#127912; Pintar otro">&#127912; Paint another</button>
+            <button class="btn ghost" id="doneGal" data-es="&#128444;&#65039; Galería">&#128444;&#65039; Gallery</button>
+            <button class="btn ghost" id="doneMenu" data-es="&#127968; Menú">&#127968; Menu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.3.MD.C.7</span>
+      <p>Relate area to the operations of multiplication and addition.</p>
+      <p class="applies">Applies to: every piece - the number of squares in a rectangle is its rows times its columns.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.3.MD.C.6</span>
+      <p>Measure areas by counting unit squares.</p>
+      <p class="applies">Applies to: Product Picasso's countable squares, and the counting hint after a wrong answer.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.3.OA.C.7</span>
+      <p>Fluently multiply and divide within 100.</p>
+      <p class="applies">Applies to: every product and missing-factor question.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.3.OA.A.4</span>
+      <p>Determine the unknown whole number in a multiplication equation relating three whole numbers.</p>
+      <p class="applies">Applies to: the missing-side pieces (3 &times; ? = 12).</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Quick Teacher Tips</h2>
+  <h3>Key vocabulary</h3>
+  <ul>
+    <li><strong>area</strong>: the number of unit squares that cover a flat shape</li>
+    <li><strong>unit square</strong>: a square with sides 1 unit long; it covers 1 square unit</li>
+    <li><strong>row</strong>: a line of squares going across</li>
+    <li><strong>column</strong>: a line of squares going up and down</li>
+    <li><strong>array</strong>: objects arranged in equal rows and columns, like 3 rows of 4</li>
+    <li><strong>factor</strong>: a number being multiplied; in 3 &times; 4 = 12, the factors are 3 and 4</li>
+    <li><strong>product</strong>: the answer to a multiplication; in 3 &times; 4 = 12, the product is 12</li>
+  </ul>
+  <h3>Tips for using the game</h3>
+  <p>Students multiply to reveal a hidden pixel-art picture. The picture is cut into rectangles, and each one fills in with its part of the artwork once its multiplication is solved. The game zooms in on a random piece, so the picture stays a mystery until near the end, and zooms back out after each piece to show how it's growing.</p>
+  <ul>
+    <li><strong>Two kinds of pieces:</strong> find the number of squares (3 &times; 4 = ?), or find a missing side (3 &times; ? = 12).</li>
+    <li><strong>Product Picasso (easy):</strong> rectangles from 1 &times; 1 to 5 &times; 5, with every unit square drawn so students can always count to check.</li>
+    <li><strong>Multiplication Monet (hard):</strong> rectangles from 5 &times; 5 to 12 &times; 12. The squares are hidden until a wrong answer, when they appear so the student can count or skip-count.</li>
+    <li><strong>Wrong answers:</strong> the student is reminded that they can count each individual square, the squares are drawn on the rectangle, and they try again. The fill animation counts every square as it paints.</li>
+    <li><strong>Picture size:</strong> every square of the picture is one solid color, so the picture is built from the squares students count. Short, medium and long pictures take roughly 35, 55 and 80 pieces in Product Picasso, and 10, 20 and 40 bigger pieces in Multiplication Monet.</li>
+    <li><strong>Art studio:</strong> students pick rows and columns, solve the multiplication, and place the rectangle anywhere on the canvas. Rotating a rectangle (3 &times; 4 into 4 &times; 3) shows the commutative property. Creations are saved in the gallery on the device and can be downloaded.</li>
+    <li><strong>Discussion:</strong> ask students to find two different rectangles with the same number of squares, or to explain how a 6 &times; 7 rectangle can be split into a 5 &times; 7 and a 1 &times; 7 (the distributive property).</li>
+  </ul>
+</section>
+
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases every finished masterpiece and every creation in your Area Artist gallery on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+</section>
+
+<script src="area-artist-scenes.js?v=ec1f31f2"></script>
+<script src="area-artist-game.js?v=10fd2834"></script>
+
+<script src="../site-fullscreen.js?v=00f33012"></script>
+<script>
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    var ok = confirm('Reset your Area Artist gallery? This erases every finished masterpiece and every creation on this device. This cannot be undone.');
+    if (!ok) return;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('areaartist_') === 0) keys.push(k);
+    }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  });
+</script>
+</body>
+</html>

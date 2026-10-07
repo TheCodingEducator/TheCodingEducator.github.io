@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en" data-langs="en es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battle on the Coordinate Plane - Ordered Pairs and Quadrants Practice (Grades 5-6)</title>
+<meta name="description" content="A sea battle on the coordinate plane. Place your fleet, type ordered pairs to fire, watch a plane fly x first then y, and find the enemy's shots on your own board. First quadrant, all four quadrants and a timed Coordinate Commander mode. Free grades 5-6 math practice for ordered pairs and the coordinate plane (CCSS 5.G.A.1, 6.NS.C.8), with a teacher guide and printable worksheet. No accounts or logins.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#7cc8ef">
+<meta property="og:title" content="Battle on the Coordinate Plane - Ordered Pairs and Quadrants Practice (Grades 5-6)">
+<meta property="og:description" content="A sea battle where every shot is an ordered pair. Plot points, find the enemy's shots, and sink the fleet.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://studentmathgames.com/battle-on-the-coordinate-plane/">
+<meta property="og:image" content="https://studentmathgames.com/og/battle-on-the-coordinate-plane.png">
+<meta name="twitter:card" content="summary_large_image">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893"
+     crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --panel: #10243d; --text: #eef5ff; --muted: #a9b9cf; --accent: #38bdf8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0d2a44; min-height: 100%; }
+  body { min-height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .play-area { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 24px; padding: 64px 16px 24px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .back-link, .fullscreen-btn { position: fixed; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; color: #fff; font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-decoration: none; z-index: 10; cursor: pointer; }
+  .back-link { left: 12px; } .fullscreen-btn { right: 12px; }
+  .pseudo-fullscreen-exit-btn { position: fixed; top: 12px; left: 12px; z-index: 10000; display: none; padding: 9px 16px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; color: #fff; font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; cursor: pointer; }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+
+  .standards-panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 20px; width: 250px; max-width: 90vw; color: var(--text); font-size: 13px; line-height: 1.55; }
+  .standards-panel h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  .standards-panel .code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+  .standards-panel p { margin: 0 0 8px; }
+  .standards-panel .standard-entry { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .standards-panel .standard-entry:last-of-type { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .teaching-notes { max-width: 720px; margin: 0 auto; padding: 8px 24px 64px; color: var(--text); width: 100%; }
+  .teaching-notes h2 { font-size: 18px; color: var(--accent); margin: 0 0 12px; }
+  .teaching-notes p, .teaching-notes li { font-size: 15px; line-height: 1.6; color: var(--text); }
+  .teaching-notes ul { padding-left: 20px; }
+  .teaching-notes li { margin-bottom: 10px; }
+
+  /* fullscreen: the whole game box fills the screen */
+  #game-canvas-slot:fullscreen { display: flex; background: #7cc8ef; width: 100vw; height: 100vh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; background: #7cc8ef; width: 100vw; height: 100vh; }
+  #game-canvas-slot.pseudo-fullscreen { position: fixed; inset: 0; margin: 0; z-index: 9999; display: flex; background: #7cc8ef; width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw !important; height: 100vh !important; border-radius: 0; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw !important; height: 100vh !important; border-radius: 0; }
+
+  /* ===== The game. Everything is scoped under #bc. ===== */
+  #bc {
+    --ink: #0b2545; --ink2: #33506e; --sea1: #c9ecff; --sea2: #8fd3f6; --plot: #fbfeff; --grid: #7d9cb8;
+    --orange: #ff8a1f; --orange-d: #d9600a; --green: #19a463; --green-d: #0f7a48; --blue: #2b7de9; --blue-d: #1a5bb8;
+    --red: #e23d3d; --red-d: #a91f1f; --yellow: #ffd60a; --purple: #7c3aed; --card: #ffffff;
+    position: relative; overflow: hidden; color: var(--ink);
+    width: min(calc(100vw - 16px), 1400px); height: calc(100vh - 80px); border-radius: 14px;
+    background: linear-gradient(180deg, var(--sea1) 0%, var(--sea2) 100%);
+    font-family: 'Nunito', -apple-system, "Segoe UI", Roboto, sans-serif; font-weight: 700;
+    user-select: none; -webkit-user-select: none; container-type: size;
+  }
+  #bc [hidden] { display: none !important; }
+  #bc h1, #bc h2, #bc h3, #bc .bal { font-family: 'Baloo 2', 'Nunito', sans-serif; }
+  #bc button { font-family: inherit; }
+  /* the ocean outside the boards: soft moving wave lines */
+  #bc .sea { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  #bc .sea i { position: absolute; left: -200px; right: -200px; height: 40px; opacity: 0.55;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='40'%3E%3Cpath d='M0 20 Q25 8 50 20 T100 20 T150 20 T200 20' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x;
+    animation: bc-drift 14s linear infinite; }
+  #bc .sea i:nth-child(1) { top: 12%; } #bc .sea i:nth-child(2) { top: 38%; animation-duration: 19s; animation-direction: reverse; opacity: 0.4; }
+  #bc .sea i:nth-child(3) { top: 64%; animation-duration: 16s; } #bc .sea i:nth-child(4) { top: 88%; animation-duration: 22s; animation-direction: reverse; opacity: 0.4; }
+  @keyframes bc-drift { from { transform: translateX(0); } to { transform: translateX(200px); } }
+
+  /* Focus: a dark ring with a bright halo, easy to see on light water and on white cards */
+  #bc :focus { outline: none; }
+  #bc :focus-visible { outline: 4px solid #0b1b33 !important; outline-offset: 3px; box-shadow: 0 0 0 9px var(--yellow) !important; }
+
+  /* Buttons */
+  #bc .btn { --c1: var(--blue); --c2: var(--blue-d); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 16px; cursor: pointer;
+    color: #fff; font: 800 clamp(17px, 2.4cqmin, 22px) 'Baloo 2', 'Nunito', sans-serif; letter-spacing: 0.03em; padding: 10px 24px 8px; line-height: 1.1;
+    background: var(--c1); box-shadow: 0 5px 0 var(--c2), 0 8px 18px rgba(11,37,69,0.25); transition: transform 0.1s, box-shadow 0.1s, filter 0.15s; text-transform: uppercase; }
+  #bc .btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+  #bc .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--c2), 0 3px 8px rgba(11,37,69,0.25); }
+  #bc .btn:disabled, #bc .btn.orange:disabled, #bc .btn.green:disabled, #bc .btn.red:disabled { --c1: #9fb3c8; --c2: #7a8ea4; cursor: not-allowed; color: #eef3f8; }
+  #bc .btn.orange { --c1: var(--orange); --c2: var(--orange-d); }
+  #bc .btn.green { --c1: var(--green); --c2: var(--green-d); }
+  #bc .btn.red { --c1: var(--red); --c2: var(--red-d); }
+  #bc .btn.ghost { --c1: #ffffff; --c2: #9ab6d1; color: var(--ink); }
+  #bc .btn.big { font-size: clamp(24px, 4.4cqmin, 40px); padding: 14px 48px 10px; border-radius: 22px; }
+
+  /* Corner: sound and menu, always reachable */
+  #bc #corner { position: absolute; top: 8px; right: 8px; z-index: 40; display: flex; gap: 6px; }
+  #bc .cbtn { display: inline-flex; align-items: center; gap: 6px; border: 2px solid rgba(11,37,69,0.18); background: rgba(255,255,255,0.92); color: var(--ink); border-radius: 999px;
+    padding: 6px 14px; font: 800 15px 'Nunito', sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(11,37,69,0.15); }
+  #bc .cbtn:hover { background: #fff; border-color: rgba(11,37,69,0.4); }
+  #bc .cbtn .ic { font-size: 18px; line-height: 1; }
+
+  #bc .scr { position: absolute; inset: 0; overflow: hidden; z-index: 5; }   /* nothing scrolls: content that is too tall is shrunk to fit (fitScreen) */
+  #bc .scr.center { display: flex; align-items: center; justify-content: center; padding: 56px 16px 20px; }
+  #bc .fade-in { animation: bc-fade 0.35s ease-out both; }
+  @keyframes bc-fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+  /* ===== Title ===== */
+  #bc .t-wrap { position: relative; z-index: 2; text-align: center; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; animation: bc-rise 0.8s ease-out both; margin-top: -6cqh; }
+  #bc .t-big { margin: 0; font: 400 clamp(72px, 21cqmin, 230px)/0.92 'Anton', 'Impact', sans-serif; letter-spacing: 0.06em; color: #e8eef3;
+    background: linear-gradient(180deg, #ffffff 0%, #dfe7ee 45%, #8fa2b3 52%, #c5d2dc 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 5px 0 #0a131b) drop-shadow(0 0 26px rgba(255, 122, 40, 0.55)); }
+  #bc .t-ribbon { display: inline-block; margin-top: clamp(8px, 1.6cqmin, 16px); background: rgba(8, 16, 24, 0.82); color: #e6edf3; font: 400 clamp(20px, 4.8cqmin, 50px)/1.15 'Anton', 'Impact', sans-serif;
+    letter-spacing: 0.12em; padding: 8px 30px 6px; border-top: 3px solid var(--orange); border-bottom: 3px solid var(--orange); }
+  #bc .t-ribbon b { color: #ffb347; font-weight: 400; }
+  #bc .t-sub { margin: clamp(12px, 2.6cqmin, 24px) 0 clamp(14px, 3cqmin, 30px); font: 800 clamp(15px, 2.6cqmin, 22px) 'Nunito', sans-serif; color: #e6edf3;
+    background: rgba(8, 16, 24, 0.6); padding: 6px 18px; border-radius: 999px; letter-spacing: 0.03em; }
+  #bc .t-play { animation: bc-pulse 1.8s ease-in-out infinite; box-shadow: 0 5px 0 var(--orange-d), 0 0 34px rgba(255, 138, 31, 0.7); }
+  @keyframes bc-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+  @keyframes bc-rise { from { opacity: 0; transform: translateY(30px) scale(0.94); } to { opacity: 1; transform: none; } }
+
+  /* ===== The storm: title, mode menu, and every Standard / Hard screen. It stays BEHIND the boards and cards. ===== */
+  #bc .storm { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; display: none; }
+  #bc.storm .storm { display: block; }
+  #bc.storm { background: #2a3d4f; }
+  #bc.storm .sea { display: none; }
+  #bc .st-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #121b25 0%, #26384a 34%, #4a6074 56%, #2b4558 57%, #142836 100%); }
+  #bc .st-clouds, #bc .st-scene, #bc .st-bolt { position: absolute; left: 0; width: 100%; }
+  #bc .st-clouds { top: 0; height: 60%; }
+  #bc .st-clouds g { animation: bc-stcloud linear infinite; }
+  @keyframes bc-stcloud { from { transform: translateX(-420px); } to { transform: translateX(1300px); } }
+  #bc .st-clouds ellipse { filter: blur(7px); }
+  #bc .st-scene { bottom: 0; height: 100%; }
+  #bc .st-bolt { top: 0; height: 58%; }
+  #bc .st-bolt polyline { fill: none; stroke: #f4f8ff; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 6px #bcd6ff) drop-shadow(0 0 16px #8fb4ff); }
+  #bc .st-flash { position: absolute; inset: 0; background: #dfe9ff; opacity: 0; }
+  #bc .st-flash.go { animation: bc-flash 0.9s ease-out; }
+  @keyframes bc-flash { 0% { opacity: 0; } 6% { opacity: 0.42; } 14% { opacity: 0.05; } 22% { opacity: 0.32; } 100% { opacity: 0; } }
+  #bc .st-rain { position: absolute; inset: -60px; opacity: 0.55; animation: bc-rain 0.45s linear infinite;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='160'%3E%3Cg stroke='%23c9dcf0' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M10 0 l-8 30M48 40 l-8 30M90 10 l-8 30M30 95 l-8 30M75 110 l-8 30M110 70 l-8 30M60 150 l-6 22'/%3E%3C/g%3E%3C/svg%3E"); }
+  #bc .st-rain.r2 { opacity: 0.35; background-size: 70px 94px; animation: bc-rain2 0.32s linear infinite; }
+  @keyframes bc-rain { from { background-position: 0 0; } to { background-position: -40px 160px; } }
+  @keyframes bc-rain2 { from { background-position: 0 0; } to { background-position: -23px 94px; } }
+  #bc .st-wave { animation: bc-stwave linear infinite; }
+  @keyframes bc-stwave { from { transform: translateX(0); } to { transform: translateX(var(--wl)); } }
+  #bc .st-bob { animation: bc-stbob 4.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes bc-stbob { 0%, 100% { transform: translateY(0) rotate(-2.5deg); } 50% { transform: translateY(6px) rotate(2.5deg); } }
+  #bc .st-smoke { animation: bc-stsmoke 3.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes bc-stsmoke { from { transform: translate(0, 0) scale(0.5); opacity: 0.7; } to { transform: translate(-30px, -60px) scale(1.8); opacity: 0; } }
+  #bc .st-crash { animation: bc-crash 7s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  #bc .st-crash.c2 { animation-delay: -3.5s; }
+  @keyframes bc-crash { 0%, 100% { transform: translateY(70px) scaleY(0.7); } 45% { transform: translateY(0) scaleY(1.05); } 55% { transform: translateY(10px) scaleY(0.95); } 75% { transform: translateY(60px) scaleY(0.75); } }
+  #bc .st-spray circle { fill: #e9f2f8; opacity: 0; animation: bc-spray 7s ease-out infinite; transform-box: fill-box; }
+  #bc .st-crash.c2 .st-spray circle { animation-delay: -3.5s; }
+  @keyframes bc-spray { 0%, 40% { opacity: 0; transform: translate(0, 0); } 47% { opacity: 0.95; } 70% { opacity: 0; transform: translate(var(--sx), var(--sy)); } 100% { opacity: 0; } }
+  #bc .st-beam { transform-box: fill-box; transform-origin: 50% 100%; animation: bc-beam 9s ease-in-out infinite alternate; }
+  #bc .st-beam.b2 { animation-duration: 7s; animation-delay: -3s; }
+  @keyframes bc-beam { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+  #bc .st-plane { animation: bc-stplane 19s linear infinite; }
+  @keyframes bc-stplane { 0% { transform: translate(-160px, 120px); } 55%, 100% { transform: translate(1400px, 60px); } }
+  #bc .st-glow { transform-box: fill-box; transform-origin: center; animation: bc-stglow 0.9s ease-out forwards; }
+  @keyframes bc-stglow { 0% { transform: scale(0.2); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+  #bc .st-plume { transform-box: fill-box; transform-origin: 50% 100%; animation: bc-stplume 1.8s ease-out forwards; }
+  @keyframes bc-stplume { 0% { transform: scaleY(0.05); opacity: 0.95; } 35% { transform: scaleY(1); opacity: 0.9; } 100% { transform: scaleY(0.6) translateY(10px); opacity: 0; } }
+  #bc .st-puff { transform-box: fill-box; transform-origin: center; animation: bc-stpuff 3s ease-out forwards; }
+  @keyframes bc-stpuff { from { transform: translate(0, 0) scale(0.6); opacity: 0.75; } to { transform: translate(-18px, -50px) scale(2.2); opacity: 0; } }
+  /* screens on top of the storm: headings turn light, the ship dock gets its own card, boards sit on steel frames with light faces */
+  #bc.storm .scr-head h1 { color: #f1f5f9; text-shadow: 0 3px 0 #0a131b, 0 0 18px rgba(0,0,0,0.6); }
+  #bc.storm .scr-head p { color: #d6e1ea; text-shadow: 0 2px 6px #000; }
+  #bc.storm .dock { background: rgba(240, 245, 249, 0.96); border-radius: 22px; padding: 10px 12px; box-shadow: 0 14px 36px rgba(0,0,0,0.5); }
+  #bc.storm .zone { background: linear-gradient(180deg, #eef3f7, #d7e2ea); box-shadow: 0 0 0 3px #0c1720, 0 18px 40px rgba(0,0,0,0.55); }
+  #bc.storm .zone.active { box-shadow: 0 0 0 3px #0c1720, 0 0 0 7px var(--yellow), 0 0 34px rgba(255,214,10,0.8), 0 18px 40px rgba(0,0,0,0.55); }
+  #bc.storm .zone.jolt { animation: bc-jolt 0.45s ease-out; }
+  @keyframes bc-jolt { 15% { transform: translate(-6px, 3px) rotate(-0.6deg); } 35% { transform: translate(5px, -3px) rotate(0.5deg); } 55% { transform: translate(-3px, 2px); } 75% { transform: translate(2px, -1px); } }
+  @media (prefers-reduced-motion: reduce) { #bc.storm .zone.jolt { animation: none; } }
+  #bc.calm.storm .zone.jolt { animation: none; }
+  #bc.storm .zone.mine { --zc: #0d5f6b; } #bc.storm .zone.foe { --zc: #8f2a20; }
+  #bc.storm .fleet .ico-buddy { background: #a5552e; border-color: #1d262d; } #bc.storm .fleet .ico-galley { background: #2f5f66; border-color: #1d262d; }
+
+  /* ===== Cards used by menus ===== */
+  #bc .card { background: var(--card); border-radius: 24px; box-shadow: 0 14px 40px rgba(11,37,69,0.22); padding: clamp(16px, 3cqmin, 30px); }
+  #bc .scr-head { text-align: center; margin-bottom: clamp(10px, 2.4cqmin, 22px); }
+  #bc .scr-head h1 { margin: 0; font-size: clamp(30px, 6cqmin, 56px); line-height: 1; color: var(--ink); text-shadow: 0 3px 0 rgba(255,255,255,0.7); }
+  #bc .scr-head p { margin: 6px 0 0; font-size: clamp(15px, 2.4cqmin, 20px); color: var(--ink2); }
+
+  /* ===== Mode menu ===== */
+  #bc .modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(10px, 2.2cqmin, 24px); width: min(100%, 1100px); }
+  @container (max-width: 760px) { #bc .modes { grid-template-columns: 1fr; } }
+  #bc .mode { --mc: var(--green); --mc2: var(--green-d); --mbg: #e7f8ef; position: relative; text-align: left; cursor: pointer; border: 4px solid transparent; border-radius: 24px;
+    background: #fff; color: var(--ink); padding: 0 0 16px; box-shadow: 0 8px 0 var(--mc2), 0 14px 30px rgba(11,37,69,0.2); transition: transform 0.15s; overflow: hidden; display: flex; flex-direction: column; }
+  #bc .mode:hover { transform: translateY(-4px); }
+  #bc .mode.std { --mc: var(--blue); --mc2: var(--blue-d); --mbg: #e6f0ff; }
+  #bc .mode.hard { --mc: var(--red); --mc2: var(--red-d); --mbg: #ffeaea; }
+  /* rank: a dark shoulder board with gold trim, the general's silver stars, and the rank name */
+  #bc .mode .m-top { position: relative; background: linear-gradient(180deg, #26324a, #141c2c); color: #fff; padding: 12px 16px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border-bottom: 5px solid var(--mc); box-shadow: inset 0 0 0 3px #c9a227, inset 0 0 0 5px #141c2c; }
+  #bc .mode .m-stars { display: flex; gap: clamp(6px, 1.2cqmin, 12px); min-height: clamp(34px, 6cqmin, 50px); align-items: center; }
+  #bc .mode .gstar { width: clamp(34px, 6cqmin, 50px); height: clamp(34px, 6cqmin, 50px); filter: drop-shadow(0 2px 1px rgba(0,0,0,0.6)) drop-shadow(0 0 6px rgba(255,255,255,0.18)); }
+  #bc .mode .m-lvl { font: 800 clamp(20px, 3.4cqmin, 30px)/1 'Baloo 2', sans-serif; letter-spacing: 0.08em; color: #f3e3a1; text-shadow: 0 2px 0 rgba(0,0,0,0.5); }
+  #bc .mode .m-art { background: var(--mbg); display: flex; justify-content: center; padding: 10px; }
+  #bc .mode .m-art svg { width: clamp(90px, 17cqmin, 150px); height: auto; }
+  #bc .mode .m-name { font: 800 clamp(20px, 3.2cqmin, 28px)/1.1 'Baloo 2', sans-serif; padding: 10px 18px 2px; }
+  #bc .mode .m-desc { font-size: clamp(14px, 2.1cqmin, 17px); padding: 0 18px; color: var(--ink2); line-height: 1.35; }
+  #bc .mode ul { margin: 8px 0 0; padding: 0 18px 0 36px; font-size: clamp(13px, 1.9cqmin, 15px); color: var(--ink2); line-height: 1.4; }
+  #bc .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: clamp(12px, 2.6cqmin, 24px); }
+  #bc .menu-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+  /* ===== Instructions ===== */
+  #bc .instr { width: min(100%, 1060px); display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(12px, 2.4cqmin, 24px); }
+  @container (max-width: 800px) { #bc .instr { grid-template-columns: 1fr; } }
+  /* short screens (a phone on its side): instructions side by side and tighter, so they fit without scrolling */
+  @container (max-height: 600px) { #bc .instr { grid-template-columns: 1.35fr 1fr; } #bc .steps { gap: 4px; } #bc .steps li { padding: 3px 10px; font-size: 14px; } #bc .xy-card svg { max-height: 150px; } #bc .scr.center { padding-top: 48px; padding-bottom: 8px; } }
+  #bc .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; counter-reset: st; }
+  #bc .steps li { display: grid; grid-template-columns: 36px 30px 1fr; align-items: center; gap: 8px; background: #f2f8ff; border-radius: 14px; padding: 6px 12px; font-size: clamp(14px, 2.1cqmin, 18px); line-height: 1.25; }
+  #bc .steps li::before { counter-increment: st; content: counter(st); width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font: 800 17px 'Baloo 2', sans-serif; }
+  #bc .steps .si { font-size: 22px; text-align: center; }
+  #bc .xy-card { display: flex; flex-direction: column; gap: 10px; }
+  #bc .xy-big { text-align: center; font: 800 clamp(40px, 8cqmin, 70px)/1 'Baloo 2', sans-serif; color: var(--ink); }
+  #bc .xy-big .vx { color: var(--orange-d); } #bc .xy-big .vy { color: var(--blue-d); }
+  #bc .xy-rule { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; font-size: clamp(15px, 2.2cqmin, 19px); }
+  #bc .xy-rule .chip { font: 800 20px 'Baloo 2', sans-serif; border-radius: 10px; padding: 2px 12px 0; color: #fff; text-align: center; }
+  #bc .chip.cx { background: var(--orange-d); } #bc .chip.cy { background: var(--blue-d); }
+  #bc .note { border-radius: 14px; padding: 10px 14px; font-size: clamp(14px, 2cqmin, 17px); line-height: 1.35; background: #fff7d6; border: 2px solid #f2cf4a; }
+  #bc .note.hard { background: #ffecec; border-color: #f4a3a3; }
+  #bc .note b { color: var(--ink); }
+
+  /* ===== Ship placement ===== */
+  #bc #scr-place { padding: 52px 12px 12px; }
+  #bc .place-wrap { display: flex; gap: 16px; align-items: flex-start; justify-content: center; min-height: 100%; }
+  #bc .place-wrap.stack { flex-direction: column; align-items: center; }
+  #bc .place-wrap.stack .dock { width: min(100%, 620px); }
+  #bc .zone { background: rgba(255,255,255,0.55); border-radius: 22px; padding: 8px; box-shadow: 0 8px 24px rgba(11,37,69,0.18), inset 0 0 0 3px rgba(255,255,255,0.8); position: relative;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='24'%3E%3Cpath d='M0 12 Q10 6 20 12 T40 12 T60 12 T80 12' fill='none' stroke='%23ffffff' stroke-opacity='.7' stroke-width='2'/%3E%3C/svg%3E"); }
+  /* a board's nameplate never makes its frame wider than the board itself */
+  #bc .zone { min-width: 0; }
+  #bc .zone-title { max-width: var(--bsz, 420px); box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bc .zone-title { display: flex; align-items: center; justify-content: center; gap: 8px; font: 800 clamp(16px, 2.4cqmin, 22px)/1.2 'Baloo 2', sans-serif; letter-spacing: 0.06em; color: #fff;
+    background: var(--zc, var(--ink)); border-radius: 14px 14px 6px 6px; padding: 4px 12px 2px; margin-bottom: 6px; }
+  #bc .zone.mine { --zc: #0f7a8a; } #bc .zone.foe { --zc: #b4372b; }
+  #bc .zone svg.board { display: block; width: var(--bsz, 420px); height: var(--bsz, 420px); overflow: visible; touch-action: none; border-radius: 12px; }
+  #bc .zone.active { box-shadow: 0 0 0 5px var(--yellow), 0 0 30px rgba(255,214,10,0.9), 0 8px 24px rgba(11,37,69,0.18); }
+  #bc .zone .ztag { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--yellow); color: var(--ink); font: 900 14px 'Nunito', sans-serif;
+    border-radius: 999px; padding: 3px 12px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 2; animation: bc-bounce 1s ease-in-out infinite; }
+  @keyframes bc-bounce { 50% { transform: translate(-50%, -3px); } }
+  #bc .dock { width: 330px; max-width: 100%; display: flex; flex-direction: column; gap: 6px; }
+  #bc .dock h2 { margin: 0; font-size: clamp(22px, 3.4cqmin, 30px); line-height: 1; }
+  #bc .dock .dhelp { margin: 0; font-size: 13.5px; color: var(--ink2); line-height: 1.35; }
+  #bc .ship-card { background: #fff; border-radius: 18px; padding: 6px 10px; box-shadow: 0 4px 12px rgba(11,37,69,0.12); border: 3px solid transparent; }
+  #bc .ship-card.sel { border-color: var(--yellow); box-shadow: 0 0 0 3px var(--ink), 0 4px 12px rgba(11,37,69,0.12); }
+  #bc .ship-card .sc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #bc .ship-card .sc-name { font: 800 20px/1.1 'Baloo 2', sans-serif; }
+  #bc .ship-card .sc-len { font-size: 13px; color: var(--ink2); }
+  #bc .ship-card .sc-status { font-size: 13px; font-weight: 900; border-radius: 999px; padding: 2px 10px; background: #e5edf6; color: var(--ink2); white-space: nowrap; }
+  #bc .ship-card.placed .sc-status { background: #dcf5e7; color: var(--green-d); }
+  #bc .ship-pick { display: block; width: 100%; background: #eaf6ff; border: 2px dashed #9cc3e3; border-radius: 14px; padding: 4px; margin-top: 4px; cursor: grab; touch-action: none; }
+  #bc .ship-pick:active { cursor: grabbing; }
+  #bc .ship-card.placed .ship-pick { opacity: 0.55; border-style: solid; }
+  #bc .ship-pick svg { display: block; width: 100%; height: auto; max-height: 42px; margin: 0 auto; overflow: visible; }
+  #bc .ship-card[data-id="buddy"] .ship-pick svg { width: 80%; }
+  /* fixed sizes so moving a ship never changes the panel's height (the board and buttons stay put) */
+  #bc .sc-pts { margin-top: 3px; font-size: 12.5px; color: var(--ink); height: 1.4em; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bc .pmsg { height: calc(3 * 1.3em + 14px); overflow: hidden; border: 2px solid transparent; border-radius: 12px; padding: 7px 12px; font-size: 13px; line-height: 1.3; background: rgba(255,255,255,0.75); }
+  #bc .pmsg.bad { background: #ffe1e1; color: #8f1414; border: 2px solid var(--red); }
+  #bc .pmsg.good { background: #ddf6e8; color: #0d5c37; }
+  #bc .dock .row { margin-top: 0; justify-content: flex-start; }
+  #bc .keys-help { font-size: 12px; color: var(--ink2); line-height: 1.4; margin: 0; }
+  #bc kbd { font: 800 12px 'Nunito', sans-serif; background: #fff; border: 1px solid #9fb3c8; border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; color: var(--ink); }
+  #bc .drag-ghost { position: absolute; z-index: 60; pointer-events: none; opacity: 0.85; filter: drop-shadow(0 8px 10px rgba(11,37,69,0.35)); }
+
+  /* ===== Battle ===== */
+  #bc #scr-battle { display: flex; flex-direction: column; }
+  #bc .hud { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 260px 4px 10px; flex-wrap: wrap; min-height: 50px; }
+  #bc .turn { display: inline-flex; align-items: center; gap: 8px; font: 800 clamp(18px, 2.8cqmin, 26px)/1 'Baloo 2', sans-serif; letter-spacing: 0.05em;
+    background: var(--green); color: #fff; border-radius: 999px; padding: 7px 18px 4px; box-shadow: 0 4px 0 var(--green-d); }
+  #bc .turn.foe { background: var(--red); box-shadow: 0 4px 0 var(--red-d); }
+  #bc .turn.radar { background: var(--purple); box-shadow: 0 4px 0 #5221b5; }
+  #bc .turn.anim { animation: bc-pop 0.4s ease-out; }
+  @keyframes bc-pop { from { transform: scale(0.7); } to { transform: scale(1); } }
+  #bc .fleet { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.85); border-radius: 14px; padding: 4px 10px; font-size: 13px; }
+  #bc .fleet .fl-t { font-weight: 900; letter-spacing: 0.04em; color: var(--ink2); }
+  #bc .fleet .fs { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  #bc .fleet .pegs { display: inline-flex; gap: 2px; }
+  #bc .fleet .pegs i { width: 12px; height: 12px; border-radius: 3px; background: #b6c8da; display: grid; place-items: center; font-size: 9px; font-style: normal; line-height: 1; }
+  #bc .fleet .pegs i.h { background: #ff7a1a; }
+  #bc .fleet .pegs i.h::after { content: "✕"; color: #fff; font-weight: 900; }
+  #bc .fleet .fs.sunk { text-decoration: line-through; color: #8a98a8; }
+  #bc .fleet .fs .tag { font-weight: 900; font-size: 11px; background: var(--ink); color: #fff; border-radius: 6px; padding: 1px 5px; text-decoration: none; display: inline-block; }
+  #bc .timer { --p: 1; --tc: var(--green); position: relative; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; margin-left: auto;
+    background: conic-gradient(var(--tc) calc(var(--p) * 360deg), rgba(255,255,255,0.7) 0); box-shadow: 0 3px 8px rgba(11,37,69,0.25); }
+  #bc .timer::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: #fff; }
+  #bc .timer span { position: relative; font: 800 20px/1 'Baloo 2', sans-serif; }
+  #bc .timer.mid { --tc: #f5a400; } #bc .timer.low { --tc: var(--red); animation: bc-tpulse 0.5s ease-in-out infinite alternate; }
+  #bc .timer.paused { filter: grayscale(1); }
+  @keyframes bc-tpulse { to { transform: scale(1.12); } }
+  #bc .arena { flex: 1 1 auto; display: grid; gap: 12px; padding: 6px 10px 10px; justify-content: center; align-content: center; min-height: 0; }
+  #bc .arena.lay-side { grid-template-columns: auto var(--pw, 300px) auto; grid-template-areas: "mine panel foe"; align-items: start; }
+  #bc .arena.lay-below { grid-template-columns: auto auto; grid-template-areas: "mine foe" "panel panel"; align-content: start; grid-template-rows: auto minmax(0, 1fr); }
+  #bc .arena .zone.mine { grid-area: mine; } #bc .arena .zone.foe { grid-area: foe; }
+  #bc .panel { grid-area: panel; background: #fff; border-radius: 22px; box-shadow: 0 10px 28px rgba(11,37,69,0.2); padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; align-self: stretch; overflow: hidden; }
+  #bc .panel .pfit { display: flex; flex-direction: column; gap: 10px; }
+  #bc .lay-below .panel .pfit { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  #bc .lay-below .panel .task { flex: 1 1 380px; }
+  #bc .lay-below .panel .log { flex: 0 1 260px; }
+  #bc .task { display: flex; flex-direction: column; gap: 8px; }
+  #bc .task h2 { margin: 0; font-size: clamp(22px, 3.4cqmin, 30px); line-height: 1; }
+  #bc .task h2.foe { color: var(--red-d); } #bc .task h2.me { color: var(--green-d); } #bc .task h2.radar { color: var(--purple); }
+  #bc .task p { margin: 0; font-size: 16px; line-height: 1.35; }
+  #bc .task .sub { color: var(--ink2); font-size: 14px; }
+  #bc .entry { display: flex; align-items: center; justify-content: center; gap: 15px; font: 800 44px/1 'Baloo 2', sans-serif; color: var(--ink); }
+  #bc .entry input { width: 64px; height: 60px; text-align: center; font: 800 32px 'Baloo 2', sans-serif; color: var(--ink); border: 3px solid #8fb0cc; border-radius: 14px; background: #f6fbff; padding: 4px 0 0; }
+  #bc .entry input.wide { width: 100%; max-width: 240px; letter-spacing: 0.04em; }
+  #bc .entry input.ix { border-color: var(--orange); } #bc .entry input.iy { border-color: var(--blue); }
+  #bc .entry input.bad { border-color: var(--red); background: #fff0f0; animation: bc-shake 0.3s; }
+  #bc .entry input:focus-visible, #bc .entry input:focus { outline: 4px solid #0b1b33; outline-offset: 2px; box-shadow: 0 0 0 8px var(--yellow); }
+  #bc .entry-lbl { display: flex; justify-content: center; gap: 76px; font-size: 13px; font-weight: 900; color: var(--ink2); margin-top: -4px; }
+  #bc .entry-lbl .lx { color: var(--orange-d); } #bc .entry-lbl .ly { color: var(--blue-d); }
+  @keyframes bc-shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  #bc .fire-row { display: flex; justify-content: center; }
+  #bc .fire-row .btn { min-width: 160px; }
+  #bc .err { min-height: 1.3em; font-size: 15px; font-weight: 900; color: #a31515; text-align: center; margin: 0; }
+  #bc .pad { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  #bc .pad button { min-width: 42px; height: 40px; border-radius: 10px; border: 0; background: #e3eef8; color: var(--ink); font: 800 20px 'Baloo 2', sans-serif; cursor: pointer; box-shadow: 0 3px 0 #b7cbe0; padding: 2px 8px 0; }
+  #bc .pad button:hover { background: #d3e5f6; }
+  #bc .pad button:active { transform: translateY(2px); box-shadow: 0 1px 0 #b7cbe0; }
+  #bc .target-big { text-align: center; font: 800 clamp(38px, 6cqmin, 56px)/1 'Baloo 2', sans-serif; color: var(--red-d); background: #fff1f0; border: 3px dashed #f19a92; border-radius: 16px; padding: 8px 6px 4px; }
+  #bc .words { font: 800 clamp(18px, 2.6cqmin, 22px)/1.3 'Nunito', sans-serif; color: var(--ink); background: #fff1f0; border: 3px dashed #f19a92; border-radius: 16px; padding: 10px 12px; }
+  #bc .fb { border-radius: 14px; padding: 8px 12px; font-size: 15px; line-height: 1.35; }
+  #bc .fb.bad { background: #ffe8e8; border: 2px solid var(--red); color: #6e0d0d; }
+  #bc .fb.bad b.nq { display: block; font: 800 22px/1 'Baloo 2', sans-serif; color: var(--red-d); margin-bottom: 2px; }
+  #bc .fb.good { background: #ddf6e8; border: 2px solid var(--green); color: #0b4a2c; }
+  #bc .fb.info { background: #eef4ff; border: 2px solid #9db8e6; color: var(--ink); }
+  #bc .fb .hint { display: block; margin-top: 4px; font-weight: 900; color: var(--ink); }
+  #bc .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+  #bc .choices .btn { font-size: 18px; padding: 10px 8px 7px; text-transform: none; }
+  #bc .choices .btn.wrong { --c1: #f3c4c4; --c2: #d99b9b; color: #7a1d1d; text-decoration: line-through; cursor: not-allowed; }
+  #bc .choices .btn.right { --c1: var(--green); --c2: var(--green-d); }
+  #bc .log { border-top: 2px solid #e3edf6; padding-top: 8px; }
+  #bc .lay-below .log { border-top: 0; border-left: 2px solid #e3edf6; padding: 0 0 0 10px; }
+  #bc .log h3 { margin: 0 0 4px; font-size: 15px; letter-spacing: 0.05em; color: var(--ink2); }
+  #bc .log ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; max-height: 92px; overflow: hidden; }   /* newest shots first, so the latest always show */
+  #bc .log li { font-size: 13px; font-weight: 900; border-radius: 8px; padding: 2px 8px; background: #eef2f6; white-space: nowrap; }
+  #bc .log li.hit { background: #ffe2cc; color: #8a3300; }
+  #bc .log li.none { background: none; color: var(--ink2); font-weight: 700; }
+  #bc .reminder { font-size: 13px; color: var(--ink2); text-align: center; }
+  #bc .reminder b.cx { color: var(--orange-d); } #bc .reminder b.cy { color: var(--blue-d); }
+
+  @container (max-width: 640px) {
+    #bc .zone-title { font-size: 12px; letter-spacing: 0.02em; gap: 4px; padding-left: 6px !important; padding-right: 6px !important; }
+    #bc.rank2 .zone-title::before, #bc.rank2 .zone-title::after, #bc.rank3 .zone-title::before, #bc.rank3 .zone-title::after { display: none; }
+    #bc.rank2 .zone, #bc.rank3 .zone { padding: 8px; }
+    #bc .hud { padding: 6px 8px 2px; gap: 6px; }
+    #bc #scr-battle .hud { padding-top: 48px; }
+    #bc .turn { font-size: 18px; padding: 5px 12px 3px; }
+    #bc .fleet { font-size: 11px; padding: 2px 8px; gap: 5px; }
+    #bc .timer { width: 42px; height: 42px; }
+    #bc .task h2 { font-size: 22px; }
+  }
+
+  /* Fleet bar: ship names on wide screens; on tablets, small colored ships (the names stay for screen readers) */
+  #bc .fleet .ico { display: none; width: 22px; height: 11px; border-radius: 3px 8px 8px 3px; border: 2px solid; }
+  #bc .fleet .ico-buddy { background: #ff7043; border-color: #8a2b12; width: 24px; }
+  #bc .fleet .ico-galley { background: #1b9aaa; border-color: #0b4f57; width: 30px; }
+  #bc .fleet .fl-t .sh { display: none; }
+  @container (max-width: 1600px) {
+    #bc .fleet .ico { display: inline-block; }
+    #bc .fleet .nm, #bc[data-screen="battle"] .cbtn .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+    #bc .fleet .fl-t .lg { display: none; } #bc .fleet .fl-t .sh { display: inline; }
+    #bc[data-screen="battle"] .hud { padding-right: 112px; }
+    #bc .turn { font-size: clamp(17px, 2.6cqmin, 22px); padding: 6px 14px 3px; }
+  }
+
+  /* On phones the boards are stacked and scroll: the current target stays pinned under the top bar */
+  #bc .predict .choices { grid-template-columns: 1fr; }
+  #bc .predict p { margin: 0 0 8px; }
+  #bc .pin { display: none; }
+  #bc #scr-battle.stacked .pin:not([hidden]) { display: block; flex: none; margin: 0 10px 4px; background: #fff; border: 3px solid var(--red); border-radius: 14px; padding: 6px 12px; font: 800 17px/1.3 'Nunito', sans-serif; text-align: center; box-shadow: 0 4px 12px rgba(11,37,69,0.2); }
+  #bc .pin b { color: var(--red-d); }
+
+  /* ===== Board frames by rank. Only the frame around each coordinate plane changes; the grid stays light and clean. ===== */
+  /* 2-Star General: a ship's deck. Brushed steel frame, rivets along the edges, engraved brass nameplates. */
+  #bc.rank2 .zone { padding: 12px; border-radius: 18px;
+    background:
+      radial-gradient(circle at 8px 8px, #eef2f5 0 2px, #56626e 2.5px 3.5px, transparent 4px) 0 0 / 34px 34px,
+      linear-gradient(135deg, #c9d2da 0%, #8f9ca8 45%, #b9c4ce 55%, #7d8a97 100%);
+    box-shadow: 0 0 0 3px #26313b, inset 0 2px 0 rgba(255,255,255,0.7), inset 0 -3px 0 rgba(0,0,0,0.3), 0 18px 40px rgba(0,0,0,0.55); }
+  #bc.rank2 .zone svg.board { background: #f3f7fa; border: 3px solid #3b4753; border-radius: 10px; box-shadow: inset 0 0 0 2px #dfe6ec; }
+  #bc.rank2 .zone-title { background: linear-gradient(180deg, #f3d57d 0%, #c8962d 55%, #a87a1f 100%) !important; color: #2a1d05;
+    border: 2px solid #6b4c12; border-radius: 10px; text-shadow: 0 1px 0 rgba(255,255,255,0.55); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 3px 6px rgba(0,0,0,0.35); }
+  #bc.rank2 .zone-title::before, #bc.rank2 .zone-title::after { content: "\2605\2605"; color: #eef2f6; letter-spacing: 2px; font-size: 0.9em;
+    text-shadow: 0 0 1px #2a1d05, 0 1px 0 #2a1d05, 0 -1px 0 #2a1d05, 1px 0 0 #2a1d05, -1px 0 0 #2a1d05; }
+  #bc.rank2 .zone.active { box-shadow: 0 0 0 3px #26313b, 0 0 0 8px var(--yellow), 0 0 34px rgba(255,214,10,0.8), 0 18px 40px rgba(0,0,0,0.55); }
+
+  /* 3-Star General: the command center. A dark radar console with glowing edges, targeting brackets in the corners,
+     a slow radar sweep around the frame, and hazard-striped title plates. */
+  @property --sweep { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  #bc.rank3 .zone { padding: 14px; border-radius: 16px; isolation: isolate;
+    background: linear-gradient(160deg, #1b2530 0%, #0c1218 100%);
+    box-shadow: 0 0 0 2px #ffb020, 0 0 18px rgba(255,140,0,0.55), inset 0 0 22px rgba(255,140,0,0.25), 0 18px 40px rgba(0,0,0,0.6);
+    animation: bc-console 3s ease-in-out infinite; }
+  @keyframes bc-console { 50% { box-shadow: 0 0 0 2px #ffcf4d, 0 0 28px rgba(255,160,0,0.8), inset 0 0 26px rgba(255,140,0,0.35), 0 18px 40px rgba(0,0,0,0.6); } }
+  #bc.rank3 .zone::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+    background: conic-gradient(from var(--sweep), transparent 0deg, rgba(255,176,32,0.0) 300deg, rgba(255,176,32,0.45) 350deg, rgba(255,230,150,0.75) 360deg);
+    animation: bc-sweep 6s linear infinite; }
+  @keyframes bc-sweep { to { --sweep: 360deg; } }
+  #bc.rank3 .zone::after { content: ""; position: absolute; inset: 6px; z-index: 0; pointer-events: none;
+    background:
+      linear-gradient(#ffb020, #ffb020) top left / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) top left / 3px 26px no-repeat,
+      linear-gradient(#ffb020, #ffb020) top right / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) top right / 3px 26px no-repeat,
+      linear-gradient(#ffb020, #ffb020) bottom left / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) bottom left / 3px 26px no-repeat,
+      linear-gradient(#ffb020, #ffb020) bottom right / 26px 3px no-repeat, linear-gradient(#ffb020, #ffb020) bottom right / 3px 26px no-repeat; }
+  #bc.rank3 .zone > *:not(.ztag):not(.sr-only) { position: relative; z-index: 1; }
+  #bc.rank3 .zone svg.board { background: #eef3f7; border: 2px solid #ffb020; border-radius: 8px; box-shadow: 0 0 12px rgba(255,176,32,0.45); }
+  #bc.rank3 .zone-title { background: #0c1218 !important; color: #ffd27a; border: 2px solid #ffb020; border-radius: 8px; letter-spacing: 0.12em;
+    text-shadow: 0 0 8px rgba(255,176,32,0.8); position: relative; overflow: hidden; padding-left: 34px; padding-right: 34px; }
+  #bc.rank3 .zone-title::before, #bc.rank3 .zone-title::after { content: ""; position: absolute; top: 0; bottom: 0; width: 24px;
+    background: repeating-linear-gradient(45deg, #ffb020 0 6px, #0c1218 6px 12px); }
+  #bc.rank3 .zone-title::before { left: 0; } #bc.rank3 .zone-title::after { right: 0; }
+  #bc.rank3 .zone.foe .zone-title { color: #ff8f7a; border-color: #ff5a3d; text-shadow: 0 0 8px rgba(255,90,61,0.8); }
+  #bc.rank3 .zone.active { box-shadow: 0 0 0 3px var(--yellow), 0 0 38px rgba(255,214,10,0.95), 0 18px 40px rgba(0,0,0,0.6); }
+  #bc.rank3 .zone .ztag { z-index: 3; }
+  @media (prefers-reduced-motion: reduce) { #bc.rank3 .zone, #bc.rank3 .zone::before { animation: none; } }
+  #bc.calm.rank3 .zone, #bc.calm.rank3 .zone::before { animation: none; }
+
+  /* Big announcements */
+  #bc #banner { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 50; pointer-events: none; text-align: center; width: max-content; max-width: 92%; }
+  #bc #banner .bn { display: inline-block; background: #fff; border-radius: 26px; padding: 14px 34px 12px; box-shadow: 0 16px 50px rgba(11,37,69,0.4); border: 5px solid var(--ink); animation: bc-bn 0.45s cubic-bezier(.2,1.6,.4,1) both; }
+  #bc #banner .bn-t { font: 800 clamp(44px, 10cqmin, 96px)/1 'Baloo 2', sans-serif; letter-spacing: 0.03em; }
+  #bc #banner .bn-s { font-size: clamp(15px, 2.6cqmin, 22px); font-weight: 800; color: var(--ink2); margin-top: 4px; }
+  #bc #banner.hit .bn { border-color: #e2541a; } #bc #banner.hit .bn-t { color: #e2541a; }
+  #bc #banner.miss .bn { border-color: var(--blue-d); } #bc #banner.miss .bn-t { color: var(--blue-d); }
+  #bc #banner.sunk .bn { border-color: var(--purple); background: #fbf8ff; } #bc #banner.sunk .bn-t { color: var(--purple); }
+  #bc #banner.enemy .bn { border-color: var(--red); background: #fff4f4; } #bc #banner.enemy .bn-t { color: var(--red-d); }
+  #bc #banner.time .bn { border-color: #f59e0b; } #bc #banner.time .bn-t { color: #b45309; }
+  @keyframes bc-bn { from { transform: scale(0.3) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* Overlays: pause, end */
+  #bc .overlay { position: absolute; inset: 0; z-index: 45; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(11,37,69,0.45); overflow: hidden; }
+  #bc .overlay .card { width: min(100%, 520px); text-align: center; margin: auto; }
+  #bc .overlay h2 { margin: 0; font-size: clamp(36px, 7cqmin, 64px); line-height: 1; }
+  #bc .overlay p { font-size: 18px; margin: 8px 0 0; }
+  #bc .pause-btns { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  #bc .report { text-align: left; background: rgba(0,0,0,0.05); border-radius: 14px; padding: 8px 14px; margin: 6px 0 12px; font-size: 15px; }
+  #bc .report h3 { margin: 0 0 4px; font-size: 16px; text-align: center; }
+  #bc .report ul { margin: 0; padding-left: 20px; } #bc .report li { margin: 2px 0; }
+  #bc .report .rep-tip { margin: 6px 0 0; }
+  #bc .end-win h2 { color: var(--green-d); } #bc .end-lose h2 { color: var(--red-d); }
+  #bc .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 44; }
+  #bc .confetti i { position: absolute; top: -30px; width: 14px; height: 18px; animation: bc-fall linear forwards; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  @keyframes bc-fall { to { transform: translate(var(--dx), calc(100cqh + 60px)) rotate(var(--r)); } }
+
+  /* ===== SVG board ===== */
+  #bc .plot { fill: var(--plot); stroke: #4d7397; stroke-width: 2; }
+  #bc .gl { stroke: var(--grid); stroke-width: 1.4; }
+  #bc .axis { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+  #bc .arrow { fill: var(--ink); }
+  #bc .axname { font: italic 800 24px 'Nunito', sans-serif; fill: var(--ink); }
+  #bc .tick { font: 800 22px 'Nunito', sans-serif; fill: var(--ink); text-anchor: middle; }
+  #bc .tick.ty { text-anchor: end; }
+  #bc .tick.zero { fill: #c2410c; }
+  #bc .olabel { font: 800 13px 'Nunito', sans-serif; fill: #c2410c; paint-order: stroke; stroke: var(--plot); stroke-width: 4px; }
+  #bc .pt { fill: #1d3b5c; }
+  #bc .pt.origin { fill: #c2410c; stroke: #fff; stroke-width: 2.5; }
+  #bc .sel-ring { fill: none; stroke: var(--yellow); stroke-width: 5; visibility: hidden; }
+  #bc .ship:focus-visible { outline: none !important; box-shadow: none !important; }
+  #bc .ship:focus-visible .sel-ring, #bc .ship.sel .sel-ring { visibility: visible; }
+  #bc .ship:focus-visible .sel-ring { stroke: #0b1b33; stroke-width: 6; stroke-dasharray: none; filter: drop-shadow(0 0 4px var(--yellow)); }
+  #bc .ship.drag-src { opacity: 0.25; }
+  #bc .ship.ghost { opacity: 0.75; pointer-events: none; }
+  #bc .ship.ghost.badpos .ship-body { filter: grayscale(0.6) sepia(1) hue-rotate(-50deg) saturate(3); }
+  /* ships that overlap while being arranged: tinted red until they are moved apart */
+  #bc .ship.overlap .ship-body { filter: grayscale(0.4) sepia(1) hue-rotate(-50deg) saturate(4) brightness(0.92); }
+  #bc .placing .ship { cursor: grab; }
+  #bc .ship .peg { fill: #fff; stroke: #12263f; stroke-width: 2.5; }
+  #bc .ship .pegc { fill: #12263f; }
+  #bc .occ { fill: none; stroke-width: 4; }
+  #bc .occ.ok { stroke: #0e9f5b; } #bc .occ.bad { stroke: var(--red); stroke-dasharray: 6 4; }
+  #bc .occ-x { stroke: var(--red); stroke-width: 4; stroke-linecap: round; }
+  #bc .sinking .ship-body { animation: bc-sink 1.8s ease-in forwards; transform-box: fill-box; transform-origin: 50% 50%; }
+  @keyframes bc-sink { 0% { transform: rotate(0); } 15% { transform: rotate(5deg); } 30% { transform: rotate(-5deg); } 45% { transform: rotate(4deg); }
+    100% { transform: rotate(-2deg) scale(0.9); filter: grayscale(0.7) brightness(0.85); opacity: 0.6; } }
+  #bc .sunk .ship-body { filter: grayscale(0.7) brightness(0.85); opacity: 0.6; transform: scale(0.9); transform-box: fill-box; transform-origin: 50% 50%; }
+  #bc .sunk .water { visibility: visible; }
+  #bc .water { visibility: hidden; }
+  #bc .water path { fill: none; stroke: #2b8fd6; stroke-width: 3; stroke-linecap: round; opacity: 0.85; }
+  #bc .water circle { fill: #e8f6ff; stroke: #2b8fd6; stroke-width: 2; }
+  #bc .sunk .water circle { animation: bc-bubble 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  #bc .sunk .water circle:nth-child(2n) { animation-delay: -1.2s; }
+  @keyframes bc-bubble { 50% { transform: translateY(-4px); } }
+  #bc .xmark .xo { stroke: #fff; stroke-width: 12; stroke-linecap: round; }
+  #bc .xmark .xi { stroke: #1b2a44; stroke-width: 6.5; stroke-linecap: round; }
+  #bc .mark-in { animation: bc-markin 0.35s cubic-bezier(.2,1.6,.4,1) both; transform-box: fill-box; transform-origin: center; }
+  @keyframes bc-markin { from { transform: scale(0.2); opacity: 0; } to { transform: none; opacity: 1; } }
+  #bc .flame .f1, #bc .flame .f2 { transform-box: fill-box; transform-origin: 50% 100%; animation: bc-flick 0.5s ease-in-out infinite alternate; }
+  #bc .flame .f2 { animation-duration: 0.37s; }
+  @keyframes bc-flick { from { transform: scale(1, 1) skewX(-3deg); } to { transform: scale(0.9, 1.12) skewX(4deg); } }
+  #bc .badge circle { fill: var(--ink); stroke: #fff; stroke-width: 2; }
+  #bc .badge text { fill: #fff; font: 900 12px 'Nunito', sans-serif; text-anchor: middle; }
+  #bc .tring { fill: none; stroke: #0b1b33; stroke-width: 4; }
+  #bc .tring2 { fill: none; stroke: var(--yellow); stroke-width: 4; stroke-dasharray: 8 6; animation: bc-spin 2s linear infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes bc-spin { to { transform: rotate(360deg); } }
+  #bc .pulse { animation: bc-pulsering 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes bc-pulsering { 50% { transform: scale(1.18); } }
+  #bc .clabel rect { fill: #fff; stroke: var(--ink); stroke-width: 3; }
+  #bc .clabel text { font: 800 26px 'Baloo 2', sans-serif; fill: var(--ink); text-anchor: middle; }
+  #bc .trail { fill: none; stroke: #e2541a; stroke-width: 4; stroke-dasharray: 10 7; stroke-linecap: round; }
+  #bc .trail.help { stroke: var(--purple); }
+  #bc .seglbl rect { fill: #fff; stroke: #e2541a; stroke-width: 2; }
+  #bc .seglbl.help rect { stroke: var(--purple); }
+  #bc .seglbl text { font: 900 17px 'Nunito', sans-serif; fill: var(--ink); text-anchor: middle; }
+  #bc .prop { animation: bc-prop 0.12s linear infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes bc-prop { 50% { transform: scaleY(0.2); } }
+  #bc .hover-ring { fill: rgba(255,214,10,0.25); stroke: #0b1b33; stroke-width: 3; pointer-events: none; }
+  #bc .kcur { fill: rgba(255,214,10,0.35); stroke: #0b1b33; stroke-width: 4; pointer-events: none; }
+  #bc .kcur2 { fill: none; stroke: var(--yellow); stroke-width: 4; stroke-dasharray: 7 5; pointer-events: none; }
+  #bc .wrongpick { fill: none; stroke: var(--red); stroke-width: 5; animation: bc-wrongfade 1.6s ease-out forwards; }
+  #bc .wrongx { stroke: var(--red); stroke-width: 5; stroke-linecap: round; animation: bc-wrongfade 1.6s ease-out forwards; }
+  @keyframes bc-wrongfade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+  #bc .okpick { fill: none; stroke: var(--green); stroke-width: 6; animation: bc-wrongfade 1.2s ease-out forwards; }
+  #bc .blip { fill: var(--purple); stroke: #fff; stroke-width: 3; }
+  #bc .blipring { fill: none; stroke: var(--purple); stroke-width: 3; animation: bc-ping 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes bc-ping { from { transform: scale(0.4); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+  #bc .boom { transform-box: fill-box; transform-origin: center; animation: bc-boom 0.7s ease-out forwards; }
+  #bc .boom.b2 { animation-duration: 0.55s; animation-delay: 0.06s; }
+  @keyframes bc-boom { from { transform: scale(0.1); opacity: 1; } 70% { opacity: 0.9; } to { transform: scale(1); opacity: 0; } }
+  #bc .spark { animation: bc-spark 0.7s ease-out forwards; }
+  @keyframes bc-spark { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; } }
+  #bc .ripple { fill: none; stroke: #2b8fd6; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: bc-ripple 0.9s ease-out forwards; }
+  #bc .ripple.r2 { animation-delay: 0.15s; }
+  @keyframes bc-ripple { from { transform: scale(0.1); opacity: 1; } to { transform: scale(1); opacity: 0; } }
+  #bc .drop { fill: #5fb8f0; stroke: #1c6fb3; stroke-width: 1.5; animation: bc-drop 0.7s ease-out forwards; }
+  @keyframes bc-drop { 0% { transform: translate(0, 0); opacity: 1; } 50% { transform: translate(calc(var(--dx) * 0.7), calc(var(--dy) - 18px)); } 100% { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+  #bc .reticle { fill: none; stroke: #e2541a; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: bc-ret 0.45s ease-in forwards; }
+  @keyframes bc-ret { from { transform: scale(2.4) rotate(0deg); opacity: 0.2; } to { transform: scale(0.6) rotate(90deg); opacity: 1; } }
+  #bc.paused *, #bc.paused *::before, #bc.paused *::after { animation-play-state: paused !important; }
+  /* the screens opened from the pause menu (How to play, the menu itself) still animate in */
+  #bc.paused #scr-instr *, #bc.paused #scr-pause * { animation-play-state: running !important; }
+  @media (prefers-reduced-motion: reduce) {
+    #bc .sea i, #bc .st-clouds g, #bc .st-rain, #bc .st-wave, #bc .st-bob, #bc .st-smoke, #bc .st-crash, #bc .st-spray circle, #bc .st-plane, #bc .st-beam, #bc .t-play, #bc .tring2, #bc .ztag { animation: none !important; }
+  }
+  /* "Less motion" in the menu: the same calm picture, chosen in the game */
+  #bc.calm .sea i, #bc.calm .st-clouds g, #bc.calm .st-rain, #bc.calm .st-wave, #bc.calm .st-bob, #bc.calm .st-smoke, #bc.calm .st-crash, #bc.calm .st-spray circle, #bc.calm .st-plane, #bc.calm .st-beam, #bc.calm .t-play, #bc.calm .tring2, #bc.calm .ztag { animation: none !important; }
+  #bc.calm .st-rain, #bc.calm .st-flash { display: none; }
+</style>
+<script data-goatcounter="https://studentmathgames.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-keyboard.js?v=e71645cc"></script>
+<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<script src="../site-layout.js?v=dc3e3464"></script>
+<script src="../site-sound.js?v=4daed956"></script>
+</head>
+<body>
+<a class="back-link" href="../">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Battle on the Coordinate Plane</h1>
+<p class="sr-only">A sea battle game on the coordinate plane. Place two ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink both enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
+    <div class="app" id="bc">
+      <div class="sea" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="storm" id="storm" aria-hidden="true"></div>
+      <div id="live" class="sr-only" aria-live="polite"></div>
+      <div id="live2" class="sr-only" aria-live="assertive"></div>
+
+      <div id="corner">
+        <button type="button" class="cbtn" id="btn-menu" hidden aria-label="Menu (Esc)" data-es-aria="Menú (Esc)"><span class="ic" aria-hidden="true">&#9776;</span> <span class="lbl" data-es="Menú">Menu</span></button>
+      </div>
+
+      <!-- Title -->
+      <section class="scr center" id="scr-title" aria-labelledby="t-title">
+        <div class="t-wrap">
+          <h1 class="t-big" id="t-title" aria-label="Battle on the Coordinate Plane" data-es-aria="Batalla en el plano cartesiano"><span data-es="BATALLA">BATTLE</span></h1>
+          <div class="t-ribbon bal" data-es="EN EL <b>PLANO CARTESIANO</b>">ON THE <b>COORDINATE PLANE</b></div>
+          <div class="t-sub" data-es="Ubica el punto. Dispara. ¡Hunde la flota!">Plot it. Fire it. Sink the fleet!</div>
+          <button type="button" class="btn orange big t-play" id="btn-play" data-es="&#9654; JUGAR">&#9654; PLAY</button>
+        </div>
+      </section>
+
+      <!-- Mode menu -->
+      <section class="scr center" id="scr-modes" hidden aria-labelledby="modes-h">
+        <div class="menu-wrap fade-in">
+          <div class="scr-head">
+            <h1 id="modes-h" data-es="ELIGE TU MISIÓN">CHOOSE YOUR MISSION</h1>
+            <p data-es="Cada modo es una batalla naval completa en el plano cartesiano.">Every mode is a full sea battle on the coordinate plane.</p>
+          </div>
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+          <defs>
+            <!-- a general\x27s rank star: five raised, polished facets (light and shadow on each point) -->
+            <symbol id="gstar" viewBox="-11 -11 22 22">
+              <path d="M0 -10.6 L2.6 -3.5 L10.1 -3.3 L4.1 1.3 L6.2 8.6 L0 4.3 L-6.2 8.6 L-4.1 1.3 L-10.1 -3.3 L-2.6 -3.5 Z" fill="#5d6874"/>
+              <g stroke="#59636e" stroke-width="0.25" stroke-linejoin="round">
+                <path d="M0 0 L0 -10 L2.351 -3.236 Z" fill="#eef2f6"/><path d="M0 0 L2.351 -3.236 L9.511 -3.09 Z" fill="#98a4b1"/>
+                <path d="M0 0 L9.511 -3.09 L3.804 1.236 Z" fill="#eef2f6"/><path d="M0 0 L3.804 1.236 L5.878 8.09 Z" fill="#98a4b1"/>
+                <path d="M0 0 L5.878 8.09 L0 4 Z" fill="#98a4b1"/><path d="M0 0 L0 4 L-5.878 8.09 Z" fill="#eef2f6"/>
+                <path d="M0 0 L-5.878 8.09 L-3.804 1.236 Z" fill="#98a4b1"/><path d="M0 0 L-3.804 1.236 L-9.511 -3.09 Z" fill="#eef2f6"/>
+                <path d="M0 0 L-9.511 -3.09 L-2.351 -3.236 Z" fill="#eef2f6"/><path d="M0 0 L-2.351 -3.236 L0 -10 Z" fill="#98a4b1"/>
+              </g>
+            </symbol>
+          </defs>
+        </svg>
+          <div class="modes" role="group" aria-label="Game modes" data-es-aria="Modos de juego">
+            <button type="button" class="mode easy" data-mode="easy">
+              <div class="m-top"><span class="m-stars" role="img" aria-label="1 star" data-es-aria="1 estrella"><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg></span><span class="m-lvl" data-es="GENERAL DE 1 ESTRELLA">1-STAR GENERAL</span></div>
+              <div class="m-art" aria-hidden="true"><svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="8" fill="#fff"/><g stroke="#8fb7a3" stroke-width="1.5"><path d="M30 14V82M42 14V82M54 14V82M66 14V82M78 14V82M18 70H88M18 58H88M18 46H88M18 34H88M18 22H88"/></g><path d="M18 82H90M18 82V10" stroke="#0b2545" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="82" r="5" fill="#c2410c"/><circle cx="54" cy="46" r="6" fill="#19a463" stroke="#0b2545" stroke-width="2"/></svg></div>
+              <div class="m-name" data-es="Primer cuadrante">First Quadrant</div>
+              <div class="m-desc" data-es="Practica cómo ubicar puntos con coordenadas positivas.">Practice plotting points using positive coordinates.</div>
+              <ul><li data-es="x de 0 a 4, y de 0 a 4">x = 0 to 4, y = 0 to 4</li><li data-es="El origen (0, 0) está abajo a la izquierda">Origin (0, 0) in the bottom-left</li></ul>
+            </button>
+            <button type="button" class="mode std" data-mode="standard">
+              <div class="m-top"><span class="m-stars" role="img" aria-label="2 stars" data-es-aria="2 estrellas"><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg></span><span class="m-lvl" data-es="GENERAL DE 2 ESTRELLAS">2-STAR GENERAL</span></div>
+              <div class="m-art" aria-hidden="true"><svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="8" fill="#fff"/><g stroke="#9db4d6" stroke-width="1.5"><path d="M20 12V88M32 12V88M44 12V88M56 12V88M68 12V88M80 12V88M12 20H88M12 32H88M12 44H88M12 56H88M12 68H88M12 80H88"/></g><path d="M8 50H92M50 8V92" stroke="#0b2545" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="50" r="5" fill="#c2410c"/><circle cx="26" cy="74" r="6" fill="#2b7de9" stroke="#0b2545" stroke-width="2"/><circle cx="74" cy="26" r="6" fill="#2b7de9" stroke="#0b2545" stroke-width="2"/></svg></div>
+              <div class="m-name" data-es="Plano cartesiano completo">Full Coordinate Plane</div>
+              <div class="m-desc" data-es="Practica cómo ubicar puntos en los cuatro cuadrantes.">Practice plotting points in all four quadrants.</div>
+              <ul><li data-es="x de &minus;2 a 2, y de &minus;2 a 2">x = &minus;2 to 2, y = &minus;2 to 2</li><li data-es="El origen (0, 0) está en el centro">Origin (0, 0) in the center</li></ul>
+            </button>
+            <button type="button" class="mode hard" data-mode="hard">
+              <div class="m-top"><span class="m-stars" role="img" aria-label="3 stars" data-es-aria="3 estrellas"><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg><svg class="gstar" viewBox="0 0 22 22" aria-hidden="true"><use href="#gstar" width="22" height="22"/></svg></span><span class="m-lvl" data-es="GENERAL DE 3 ESTRELLAS">3-STAR GENERAL</span></div>
+              <div class="m-art" aria-hidden="true"><svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="8" fill="#fff"/><g stroke="#e0aaaa" stroke-width="1.5"><path d="M20 12V88M32 12V88M44 12V88M56 12V88M68 12V88M80 12V88M12 20H88M12 32H88M12 44H88M12 56H88M12 68H88M12 80H88"/></g><path d="M8 50H92M50 8V92" stroke="#0b2545" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="50" r="5" fill="#c2410c"/><circle cx="72" cy="72" r="20" fill="#fff" stroke="#e23d3d" stroke-width="5"/><path d="M72 72V60M72 72L80 77" stroke="#0b2545" stroke-width="4" stroke-linecap="round"/><rect x="66" y="45" width="12" height="6" rx="2" fill="#e23d3d"/></svg></div>
+              <div class="m-name" data-es="Comandante de coordenadas">Coordinate Commander</div>
+              <div class="m-desc" data-es="Lee con cuidado, identifica cuadrantes y ubica coordenadas contra el reloj.">Read carefully, identify quadrants, and plot coordinates against the clock.</div>
+              <ul><li data-es="Cronómetro, pares ordenados completos">Timer, full ordered-pair typing</li><li data-es="Preguntas de cuadrantes y de razonamiento">Quadrant and reasoning challenges</li></ul>
+            </button>
+          </div>
+          <div class="row"><button type="button" class="btn ghost" id="modes-back" data-es="&larr; Atrás">&larr; Back</button></div>
+        </div>
+      </section>
+
+      <!-- Instructions (filled in for the chosen mode) -->
+      <section class="scr center" id="scr-instr" hidden aria-labelledby="instr-h">
+        <div class="menu-wrap fade-in" id="instr-body"></div>
+      </section>
+
+      <!-- Ship placement -->
+      <section class="scr" id="scr-place" hidden aria-labelledby="place-h">
+        <div class="place-wrap" id="place-wrap">
+          <div class="zone mine" id="place-zone">
+            <div class="zone-title"><span aria-hidden="true">&#9875;</span> <span data-es="TU TABLERO">YOUR BOARD</span></div>
+            <svg class="board placing" id="board-place" role="group" aria-label="Your board" data-es-aria="Tu tablero"></svg>
+          </div>
+          <div class="dock">
+            <h2 id="place-h" data-es="Ubica tu flota">Place Your Fleet</h2>
+            <p class="dhelp" data-es="Arrastra cada barco a los puntos del tablero. Haz clic en un barco del tablero para girarlo.">Drag each ship onto the points of your board. Click a ship on the board to rotate it.</p>
+            <div id="dock-cards"></div>
+            <div class="pmsg" id="place-msg" aria-live="polite"></div>
+            <div class="row">
+              <button type="button" class="btn ghost" id="btn-random" data-es="&#127922; Ubicar al azar">&#127922; Randomize Ships</button>
+            </div>
+            <div class="row">
+              <button type="button" class="btn ghost" id="place-back" data-es="&larr; Atrás">&larr; Back</button>
+              <button type="button" class="btn green" id="btn-start" disabled data-es="&#9875; EMPEZAR">&#9875; START GAME</button>
+            </div>
+            <p class="keys-help" data-es="Teclado: <kbd>Tab</kbd> hasta un barco, <kbd>Enter</kbd> lo pone en el tablero, las <kbd>flechas</kbd> lo mueven, <kbd>R</kbd> lo gira.">Keyboard: <kbd>Tab</kbd> to a ship, <kbd>Enter</kbd> puts it on the board, <kbd>arrow keys</kbd> move it, <kbd>R</kbd> rotates it.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Battle -->
+      <section class="scr" id="scr-battle" hidden aria-label="Battle" data-es-aria="Batalla">
+        <header class="hud">
+          <div class="turn" id="turn"><span id="turn-ico" aria-hidden="true">&#127919;</span> <span id="turn-txt">YOUR TURN</span></div>
+          <div class="fleet" id="fleet-me"></div>
+          <div class="fleet" id="fleet-foe"></div>
+          <div class="timer" id="timer" hidden role="timer" aria-label="Time left"><span id="timer-n">30</span></div>
+        </header>
+        <div class="pin" id="pin" hidden aria-hidden="true"></div>
+        <div class="arena" id="arena">
+          <div class="zone mine" id="zone-me">
+            <div class="zone-title"><span aria-hidden="true">&#9875;</span> <span data-es="TU TABLERO">YOUR BOARD</span></div>
+            <svg class="board" id="board-me" role="application" aria-label="Your board" data-es-aria="Tu tablero" aria-describedby="hist-me"></svg>
+            <p class="sr-only" id="hist-me" aria-live="off"></p>
+          </div>
+          <div class="panel" id="panel"></div>
+          <div class="zone foe" id="zone-foe">
+            <div class="zone-title"><span aria-hidden="true">&#127919;</span> <span data-es="TABLERO DEL OPONENTE">OPPONENT'S BOARD</span></div>
+            <svg class="board" id="board-foe" role="img" aria-label="Opponent's board" data-es-aria="Tablero del oponente" aria-describedby="hist-foe"></svg>
+            <p class="sr-only" id="hist-foe" aria-live="off"></p>
+          </div>
+        </div>
+      </section>
+
+      <div id="banner" hidden aria-hidden="true"></div>
+      <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+      <div class="overlay" id="scr-pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-h">
+        <div class="card">
+          <h2 id="pause-h" data-es="PAUSA">PAUSED</h2>
+          <div class="pause-btns">
+            <button type="button" class="btn green" id="pause-resume" data-es="CONTINUAR">RESUME</button>
+            <button type="button" class="btn" id="pause-restart" data-es="NUEVA BATALLA">NEW BATTLE</button>
+            <button type="button" class="btn ghost" id="pause-help" data-es="CÓMO JUGAR">HOW TO PLAY</button>
+            <button type="button" class="btn ghost" id="btn-sound" aria-pressed="true"><span id="snd-lbl">SOUND: ON</span></button>
+            <button type="button" class="btn ghost" id="pause-motion" aria-pressed="false"><span id="motion-lbl">LESS MOTION: OFF</span></button>
+            <button type="button" class="btn ghost" id="pause-menu" data-es="MENÚ PRINCIPAL">MAIN MENU</button>
+          </div>
+          <p data-es="Pulsa <kbd>Esc</kbd> para continuar.">Press <kbd>Esc</kbd> to resume.</p>
+        </div>
+      </div>
+
+      <div class="overlay" id="scr-end" hidden role="dialog" aria-modal="true" aria-labelledby="end-h">
+        <div class="card" id="end-card">
+          <h2 id="end-h"></h2>
+          <p id="end-p"></p>
+          <div class="report" id="end-report"></div>
+          <div class="row">
+            <button type="button" class="btn green" id="end-again" data-es="JUGAR DE NUEVO">PLAY AGAIN</button>
+            <button type="button" class="btn ghost" id="end-menu" data-es="MENÚ PRINCIPAL">MAIN MENU</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.5.G.A.1</span>
+      <p>Use a pair of perpendicular number lines, called axes, to define a coordinate system, with the intersection of the lines (the origin) arranged to coincide with the 0 on each line. Understand that the first number indicates how far to travel from the origin in the direction of one axis, and the second number indicates how far to travel in the direction of the second axis.</p>
+      <p class="applies">Applies to: every shot. The plane flies from the origin along the x-axis first, then turns and flies parallel to the y-axis.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.5.G.A.2</span>
+      <p>Represent real world and mathematical problems by graphing points in the first quadrant of the coordinate plane, and interpret coordinate values of points in the context of the situation.</p>
+      <p class="applies">Applies to: 1-Star General mode (x and y from 0 to 4).</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.6.NS.C.6</span>
+      <p>Understand a rational number as a point on the number line. Extend number line diagrams and coordinate axes to represent points on the line and in the plane with negative number coordinates. (6.NS.C.6b: signs of numbers in ordered pairs indicate locations in quadrants. 6.NS.C.6c: find and position pairs of integers on a coordinate plane.)</p>
+      <p class="applies">Applies to: 2-Star and 3-Star General modes (&minus;2 to 2), quadrant challenges, and finding the computer's shots.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.6.NS.C.8</span>
+      <p>Solve real-world and mathematical problems by graphing points in all four quadrants of the coordinate plane.</p>
+      <p class="applies">Applies to: 2-Star and 3-Star General modes.</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Quick Teacher Tips</h2>
+  <h3>Key vocabulary</h3>
+  <ul>
+    <li><strong>coordinate plane</strong>: a flat grid formed by two number lines that cross at right angles</li>
+    <li><strong>x-axis</strong>: the horizontal number line</li>
+    <li><strong>y-axis</strong>: the vertical number line</li>
+    <li><strong>origin</strong>: the point (0, 0), where the axes cross</li>
+    <li><strong>ordered pair</strong>: two numbers (x, y) that name one point; the order matters</li>
+    <li><strong>x-coordinate</strong>: the first number: how far to move left (negative) or right (positive) from the origin</li>
+    <li><strong>y-coordinate</strong>: the second number: how far to move down (negative) or up (positive)</li>
+    <li><strong>quadrant</strong>: one of the four regions made by the axes, numbered I to IV counterclockwise from the upper right</li>
+  </ul>
+  <h3>Tips for using the game</h3>
+  <p>A real sea battle against the computer, played like the classic ship-hunting board game, where every shot is an ordered pair. Students place two ships, fire by typing coordinates, and must find each of the computer's shots on their own board.</p>
+  <ul>
+    <li><strong>Three modes:</strong> 1-Star General uses the first quadrant (0 to 4, origin in the bottom-left). 2-Star General uses all four quadrants (&minus;2 to 2, origin in the center). 3-Star General (Coordinate Commander) uses all four quadrants with a timer, typed ordered pairs, and short Radar Check questions.</li>
+    <li><strong>Ships sit on points, not in squares:</strong> Boat Buddy covers 3 points and Giant Galley 4, horizontal or vertical, and they can lie on an axis or across the origin.</li>
+    <li><strong>The plane shows x first, then y:</strong> after every shot a plane starts at the origin, flies left or right for x, turns, then flies up or down for y, with the moves labeled ("2 right", "3 down"). After the first three shots it flies 50% faster (normal speed again for one flight after a wrong answer).</li>
+    <li><strong>Repeated shots are allowed on purpose:</strong> a student who keeps reversing x and y sees the plane land somewhere else and the miss stay on the board. The shot log lists every shot.</li>
+    <li><strong>The computer gets sharper with each rank:</strong> at 1-Star and 2-Star it checks around its hits (a 1-Star general sometimes wastes a shot on a point it already tried), and at 3-Star it also follows a ship's direction.</li>
+    <li><strong>New at 3-Star General:</strong> "Orders from HQ" describe a target in words, and students type it as an ordered pair to fire. Some turns also start with a Turn Check (will a scout plane turn clockwise or counterclockwise?), and a turn never asks more than one question before the shot.</li>
+    <li><strong>Axis points come up often:</strong> at least one of every three targets is on an axis, like (0, 2).</li>
+    <li><strong>Battle report:</strong> the end screen shows first-try results, the most common mistake, and a tip.</li>
+    <li><strong>Less motion:</strong> a switch in the Esc menu stills the storm and board shaking.</li>
+    <li><strong>Finding the enemy's shots:</strong> the computer names a coordinate and the student must select it on their own board. Wrong picks get feedback about the specific mistake (x and y swapped, wrong direction for x or y) and stronger hints each time; on the fourth try the path is drawn on the board.</li>
+    <li><strong>3-Star General mode:</strong> the computer's shots are given in words, often with y first ("The y-coordinate is &minus;2 and the x-coordinate is 1", "Move 2 units down and 1 unit right"). Students type full ordered pairs with parentheses and a comma. Radar Checks ask about quadrants, points on an axis, reading a highlighted point, and comparing points. Running out of time skips your shot, shows where the enemy's shot landed, or reveals the Radar Check answer.</li>
+    <li><strong>Nothing is saved:</strong> no accounts, no scores kept, no data stored. Every game starts fresh.</li>
+  </ul>
+</section>
+
+<script src="battle-on-the-coordinate-plane-game.js?v=dba0bfb4"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+
+<script src="../site-fullscreen.js?v=00f33012"></script>
+</body>
+</html>

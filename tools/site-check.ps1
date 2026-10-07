@@ -15,7 +15,7 @@
 #    - recorded sound files play through site-sound.js (no "new Audio(" in the game's own scripts)
 #    - on-screen joystick / number pad built with site-controls.js, and every keypad / touch button shown only on phones
 #      and tablets: the strict test (hover: none) and (pointer: coarse), never a loose "either one" or "any touchscreen"
-#    - listed on the home page and in sitemap.xml
+#    - the game page is the folder's index.html (studentmathgames.com/<game>/), listed on the home page and in sitemap.xml
 #    - every page has a <title>
 #    - public wording: "student devices" (not "Chromebook"), the teacher "designs" games (never "codes" them), no "AI"
 #
@@ -63,12 +63,12 @@ if ($Fix) { Write-Host "Versions: updated $stamped page(s)." }
 $homePage = ReadText 'index.html'
 $sitemap = ReadText 'sitemap.xml'
 $games = Get-ChildItem -Directory | Where-Object {
-  $main = Join-Path $_.FullName ($_.Name + '.html')
+  $main = Join-Path $_.FullName 'index.html'
   (Test-Path $main) -and ((ReadText $main) -match 'id="game-canvas-slot"|class="game-frame"')
 }
 foreach ($g in $games) {
   $name = $g.Name
-  $mainRel = "$name/$name.html"
+  $mainRel = "$name/index.html"
   $main = ReadText $mainRel
   foreach ($f in 'guide.html', 'worksheet.html', 'exit-ticket.html') {
     if (-not (Test-Path "$name/$f")) { Problem "${name}: no $f" }
@@ -90,8 +90,8 @@ foreach ($g in $games) {
     if ($t -match "\(hover: none\), \(pointer: coarse\)|'\(pointer: ?coarse\)'") { Problem "${name}: $($js.Name) uses a loose touch test (use '(hover: none) and (pointer: coarse)' so keypads only show on phones and tablets)" }
   }
   if ($main -match '@media \(hover: none\), \(pointer: coarse\)|@media \(pointer: ?coarse\)') { Problem "${name}: its page uses a loose touch test in its CSS (use '(hover: none) and (pointer: coarse)')" }
-  if ($homePage -notmatch [regex]::Escape("$name/$name.html")) { Problem "${name}: not listed on the home page" }
-  if ($sitemap -notmatch [regex]::Escape("/$name/$name.html")) { Problem "${name}: not in sitemap.xml" }
+  if ($homePage -notmatch [regex]::Escape("$name/")) { Problem "${name}: not listed on the home page" }
+  if ($sitemap -notmatch [regex]::Escape("/$name/")) { Problem "${name}: not in sitemap.xml" }
 }
 
 # ---------- Every page: a title, and the public wording rules ----------
