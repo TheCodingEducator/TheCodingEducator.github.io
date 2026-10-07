@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Laser Heist: Angle Breaker - Angle Relationships Practice (Grades 7-8)</title>
-<meta name="description" content="Climb Vex Tower: aim a laser with angle relationships to knock out each room's security, then sneak past the guards. Free grades 7-8 math practice for complementary, supplementary, vertical and parallel-line angles (CCSS 7.G.B.5, 8.G.A.5), with a teacher guide and printable worksheet. No accounts or logins.">
+<meta name="description" content="Climb Vertex Tower: aim a laser with angle relationships to knock out each room's security, then sneak past the guards. Free grades 7-8 math practice for complementary, supplementary, vertical and parallel-line angles (CCSS 7.G.B.5, 8.G.A.5), with a teacher guide and printable worksheet. No accounts or logins.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#050b18">
 <meta property="og:title" content="Laser Heist: Angle Breaker - Angle Relationships Practice (Grades 7-8)">
@@ -100,6 +100,7 @@
   #qpanel .panels span.miss { opacity: 0.55; }
   #qpanel .panels span.now { box-shadow: 0 0 0 2px #4fe3ff; }
   #qpanel .panels small { display: block; margin-top: 2px; font: 700 13px 'Nunito', sans-serif; letter-spacing: 0; opacity: 0.85; }
+  #qpanel .easier { margin: 10px 0 0; font-size: 15px; color: #9fb3d6; }
   #qpanel .err { color: #ffd166; font-size: 16px; min-height: 1.2em; margin-top: 6px; }
   #qpanel .work { margin-top: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(5,11,24,0.7); border: 1px solid rgba(125,255,176,0.35); }
   #qpanel .work .wt { font: 700 16px 'Rajdhani', sans-serif; letter-spacing: 2px; color: #7dffb0; text-transform: uppercase; }
@@ -151,7 +152,7 @@
   .item:focus-visible { outline: 3px solid #ffd166; outline-offset: 2px; }
 
   #toast { position: absolute; left: 50%; top: 80px; transform: translateX(-50%); padding: 10px 22px; border-radius: 999px; background: rgba(10,22,48,0.92); border: 1px solid rgba(79,227,255,0.5);
-    font: 700 22px 'Rajdhani', sans-serif; letter-spacing: 1.5px; pointer-events: none; opacity: 0; transition: opacity 0.25s; white-space: nowrap; }
+    font: 700 22px 'Rajdhani', sans-serif; letter-spacing: 1.5px; pointer-events: none; opacity: 0; transition: opacity 0.25s; max-width: 980px; width: max-content; text-align: center; border-radius: 22px; }
   #toast.show { opacity: 1; }
   #gadgets { position: absolute; left: 18px; bottom: 16px; display: flex; gap: 10px; }
   #gadgets[hidden] { display: none; }
@@ -159,7 +160,7 @@
   #gadgets button[disabled] { opacity: 0.35; cursor: default; }
   #gadgets kbd { font: inherit; color: #4fe3ff; }
 
-  /* title: the logo and buttons on the left, Vex Tower on the right (drawn on the canvas) */
+  /* title: the logo and buttons on the left, Vertex Tower on the right (drawn on the canvas) */
   .ov.title { justify-content: flex-start; background: transparent; }
   .title-wrap { width: 700px; margin-left: 64px; font-family: 'Nunito', sans-serif; }
   .title-wrap .case { display: inline-block; padding: 4px 14px; border: 1px solid rgba(255,79,163,0.7); border-radius: 6px; color: #ff9ad0;
@@ -193,8 +194,8 @@
   .tower { width: 380px; display: flex; flex-direction: column; align-items: center; animation: lh-rise 0.6s ease-out; }
   @keyframes lh-rise { from { opacity: 0; transform: translateY(40px); } }
   .tower .spire { width: 0; height: 0; border-left: 60px solid transparent; border-right: 60px solid transparent; border-bottom: 70px solid #141f4a; position: relative; filter: drop-shadow(0 0 10px rgba(255,79,163,0.6)); }
-  .tower .prism { position: absolute; left: -16px; top: -50px; width: 32px; height: 36px; clip-path: polygon(50% 0, 100% 100%, 0 100%);
-    background: conic-gradient(from 0deg, #ff4fa3, #ffd166, #7dffb0, #4fe3ff, #b57bff, #ff4fa3); animation: lh-prism 3s linear infinite; filter: drop-shadow(0 0 16px #fff); }
+  .tower .prism { position: absolute; left: -16px; top: -50px; width: 34px; height: 34px; clip-path: polygon(0 100%, 100% 100%, 100% 82%, 30% 82%, 92% 8%, 78% 0, 0 100%);
+    background: linear-gradient(135deg, #fff3c4, #ffd166 50%, #b8862b); animation: lh-prism 3s linear infinite; filter: drop-shadow(0 0 16px #ffd166); }
   @keyframes lh-prism { 50% { transform: scaleX(0.35); } }
   .floor { position: relative; width: 100%; display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 10px; padding: 14px 16px; margin-top: -1px;
     background: repeating-linear-gradient(90deg, rgba(79,227,255,0.07) 0 14px, transparent 14px 26px), linear-gradient(180deg, #16244f, #0d1838);
@@ -229,7 +230,7 @@
   .calm .title-logo .cut, .calm .title-logo .cut::after, .calm .title-logo b, .calm .title-wrap .pitch, .calm .tbtns, .calm .tstats, .calm .title-wrap .case,
   .calm .bt.big, .calm .tower, .calm .tower .prism, .calm .floor .you, .calm .floor-info { animation: none !important; }
   .calm .title-logo .cut::after { display: none; }
-  .win-card .prism-big { width: 90px; height: 100px; margin: 0 auto 10px; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: conic-gradient(from 0deg, #ff4fa3, #ffd166, #7dffb0, #4fe3ff, #b57bff, #ff4fa3); filter: drop-shadow(0 0 30px #fff); animation: lh-prism 3s linear infinite; }
+  .win-card .prism-big { width: 96px; height: 96px; margin: 0 auto 10px; clip-path: polygon(0 100%, 100% 100%, 100% 82%, 30% 82%, 92% 8%, 78% 0, 0 100%); background: linear-gradient(135deg, #fff3c4, #ffd166 50%, #b8862b); filter: drop-shadow(0 0 30px #ffd166); animation: lh-prism 3s linear infinite; }
   .calm .card, .calm .stars i.on { animation: none !important; }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
@@ -290,10 +291,10 @@
   </ul>
   <h3>Tips for using the game</h3>
   <ul>
-    <li><strong>One floor per relationship:</strong> Floor 1 complementary, 2 supplementary, 3 vertical, 4 corresponding and alternate interior, 5 co-interior. The final boss mixes all six.</li>
+    <li><strong>One floor per relationship:</strong> Floor 1 complementary, 2 supplementary, 3 vertical, 4 corresponding and alternate interior, 5 co-interior. Floor 6, the Algebra Vault, is all small equations like x + 3 (7.G.B.5).</li>
     <li><strong>The answer aims the laser:</strong> the laser fires at exactly the angle a student types, so a wrong answer visibly misses, and the steps to solve it are shown.</li>
-    <li><strong>The math changes the sneak:</strong> each room has three security panels (cameras, guard radios, blueprints). Every panel hit makes the sneak easier; misses make it harder, but every room can still be finished.</li>
-    <li><strong>Boss rooms</strong> write the unknown angle as x + 3 or x &minus; 5, a small equation students can solve in their head (7.G.B.5).</li>
+    <li><strong>The math changes the sneak:</strong> each missed panel adds trouble (an extra camera, sharper guards, darkness, tripwires, more guards and an alarm clock). Students can redo missed questions any time with the R key, and three catches after a miss sends them back to the questions.</li>
+    <li><strong>Stars measure the math:</strong> one star for each panel answered right on the first try.</li>
     <li><strong>Practice</strong> drills any mix of relationships with no guards or timer; <strong>Challenge</strong> is an endless run for a best score.</li>
   </ul>
 </section>
@@ -304,7 +305,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="laser-heist-game.js?v=cb88f7ce"></script>
+<script src="laser-heist-game.js?v=d36d58a7"></script>
 <script src="../site-controls.js?v=27028c32"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
