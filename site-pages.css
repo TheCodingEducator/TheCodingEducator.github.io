@@ -24,7 +24,8 @@ a:focus-visible, button:focus-visible { outline: 3px solid #1d4ed8; outline-offs
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
   max-width: 900px; margin: 0 auto; padding: 16px 24px 0; font-size: 14px;
 }
-.pg-nav .pg-home { font-weight: 800; color: var(--text); text-decoration: none; margin-right: auto; }
+.pg-nav .pg-home { display: inline-flex; align-items: center; gap: 8px; font-weight: 900; color: var(--text); text-decoration: none; margin-right: auto; }
+.pg-nav .pg-logo { width: 34px; height: 34px; }
 .pg-nav a:not(.pg-home) { color: var(--muted); text-decoration: none; }
 .pg-nav a:not(.pg-home):hover, .pg-nav a[aria-current="page"] { color: var(--text); }
 
