@@ -114,8 +114,6 @@
       heart: function () { tone("sine", 70, 45, 0.16, 0.22); tone("sine", 62, 40, 0.14, 0.16, 0.16); },
       hum: function () { tone("sawtooth", 110, 0, 0.35, 0.025); tone("square", 220, 0, 0.35, 0.012); },
       huh: function () { tone("sine", 620, 520, 0.12, 0.07); tone("sine", 700, 820, 0.14, 0.07, 0.13); },
-      grapple: function () { noise(0.5, 0.18, 2400, 0.5, 0, 'bandpass'); tone('triangle', 300, 1400, 0.45, 0.1); },
-      clank: function () { tone('square', 180, 90, 0.12, 0.14); noise(0.12, 0.2, 5000, 1, 0, 'highpass'); },
       exit: function () { tone('sine', 440, 880, 0.35, 0.15); tone('sine', 660, 1320, 0.35, 0.1, 0.1); }
     };
     return { play: function (n, a) { try { if (fx[n]) fx[n](a); } catch (e) {} }, unlock: ctxA };
@@ -743,8 +741,8 @@
     showOv(ovMain, '<div class="card" style="width:900px"><div class="tag">' + T('How to play', 'Cómo jugar') + '</div><h2>' + T('Every room has two parts', 'Cada sala tiene dos partes') + '</h2>' +
       '<p style="font-size:19px"><b style="color:#4fe3ff">1. ' + T('Laser puzzle.', 'Rompecabezas láser.') + '</b> ' + T('Type the missing angle and fire: the laser goes exactly where you aim. Each hit switches off security: the <b>cameras</b>, the guards’ <b>radios</b>, or the <b>blueprints</b> (doors open, routes shown, lights stay on). Each answer right on the first try earns a <b>star</b>.',
         'Escribe el ángulo que falta y dispara: el láser va justo a donde apuntas. Cada acierto apaga seguridad: las <b>cámaras</b>, las <b>radios</b> de los guardias o los <b>planos</b> (puertas abiertas, rutas visibles, luces encendidas). Cada respuesta correcta al primer intento gana una <b>estrella</b>.') + '</p>' +
-      '<p style="font-size:19px"><b style="color:#ff4fa3">2. ' + T('The sneak.', 'El escape.') + '</b> ' + T('Move with the arrow keys or WASD. Stay out of the light cones, keep out of the guards’ red rings, and hide behind cover. Cross a tripwire only while it’s dark. Step on a <b>GRAPPLE</b> pad and find the angle to swing across the room. Grab the diamond and reach the exit.',
-        'Muévete con las flechas o WASD. Evita los conos de luz, no entres en los anillos rojos de los guardias y escóndete detrás de la cobertura. Cruza un rayo trampa solo cuando esté apagado. Pisa una plataforma de GANCHO y responde una pregunta de ángulos para cruzar la sala colgado. Pisa una plataforma de <b>GANCHO</b> y halla el ángulo para cruzar la sala colgado. Toma el diamante y llega a la salida.') + '</p>' +
+      '<p style="font-size:19px"><b style="color:#ff4fa3">2. ' + T('The sneak.', 'El escape.') + '</b> ' + T('Move with the arrow keys or WASD. Stay out of the light cones, keep out of the guards’ red rings, and hide behind cover. Cross a tripwire only while it’s dark. Grab the diamond and reach the exit.',
+        'Muévete con las flechas o WASD. Evita los conos de luz, no entres en los anillos rojos de los guardias y escóndete detrás de la cobertura. Cruza un rayo trampa solo cuando esté apagado. Toma el diamante y llega a la salida.') + '</p>' +
       '<p style="font-size:19px"><b style="color:#ffd166">' + T('Missed answers make it harder:', 'Las respuestas falladas lo hacen más difícil:') + '</b> ' + T('an extra camera, sharper guards, lights out, tripwires, more guards, and a 30-second clock that sets off the alarm. Press <b>R</b> (or the button) to redo the missed questions any time. Caught 3 times? It’s back to the questions.',
         'una cámara extra, guardias más atentos, luces apagadas, rayos trampa, más guardias y un reloj de 30 segundos que activa la alarma. Pulsa <b>R</b> (o el botón) para repetir las preguntas falladas cuando quieras. ¿Te atraparon 3 veces? Vuelves a las preguntas.') + '</p>' +
       '<p style="font-size:19px">' + T('Get 3 right in a row for a <b>smoke bomb</b> (key 1), 5 in a row for a <b>decoy</b> (key 2). Spend diamonds in the shop.', 'Acierta 3 seguidas para ganar una <b>bomba de humo</b> (tecla 1) y 5 seguidas para un <b>señuelo</b> (tecla 2). Gasta diamantes en la tienda.') + '</p>' +
@@ -1081,7 +1079,6 @@
       if (ch === 's') row[c] = '.';   // no shadows to hide in: only walls, cover and smoke
     }); });
     S.plan = planTrouble(S, rm);
-    S.grap = placeGrapple(S);
     resetSneak(S);
     staticLayer = null;
     hud(); gadgetsUI();
@@ -1098,118 +1095,6 @@
     if (S.miss) setTimeout(function () {   // the reminder: right answers make this easier
       if (G.screen === 'sneak' && G.sneak === S) toast(T('TIP: RIGHT ANSWERS MAKE THE SNEAK EASIER. PRESS R TO REDO THE MISSED ONES', 'CONSEJO: LAS RESPUESTAS CORRECTAS FACILITAN EL ESCAPE. PULSA R PARA REPETIR LAS FALLADAS'), '#ffd166');
     }, 2200);
-  }
-
-  // The grappling line: a launch pad near the start and an anchor farther along. Standing on the pad asks one angle
-  // question (angles on a straight line); the right answer swings the agent over everything to the anchor, a wrong
-  // one misses and the line is spent until the next try.
-  function placeGrapple(S) {
-    var g = S.grid, open = function (c, r) { var ch = (g[r] || [])[c]; return ch === '.' || ch === 't' || ch === 'D'; };
-    var bfs = function (from) {
-      var d = {}, q = [from]; d[from] = 0;
-      while (q.length) { var p = q.shift(); [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (s) {
-        var n = [p[0] + s[0], p[1] + s[1]]; if (d[n] === undefined && open(n[0], n[1])) { d[n] = d[p] + 1; q.push(n); } }); }
-      return d;
-    };
-    var dS = bfs(S.startT), dE = bfs(S.exitT), best = null, all = [];
-    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
-      if (g[r][c] !== '.' || !(dS[[c, r]] >= 2 && dS[[c, r]] <= 5)) continue;
-      for (var r2 = 0; r2 < ROWS; r2++) for (var c2 = 0; c2 < COLS; c2++) {
-        if (g[r2][c2] !== '.' || !(dE[[c2, r2]] >= 3)) continue;
-        var e = Math.hypot(c2 - c, r2 - r); if (e < 4 || e > 9 || Math.abs(r2 - r) < 1.5) continue;   // never flat: the angle must be worth finding
-        var gain = dE[[c, r]] - dE[[c2, r2]];
-        if (gain >= 6) { all.push({ gain: gain, pad: [cpx(c), rpx(r)], land: [cpx(c2), rpx(r2)] }); if (!best || gain > best.gain) best = all[all.length - 1]; }
-      }
-    }
-    if (!best) return null;
-    all = all.filter(function (o) { return o.gain >= best.gain * 0.7; }); best = pick(all);   // a different aim each time
-    var th = Math.round(Math.abs(Math.atan2(best.land[1] - best.pad[1], best.land[0] - best.pad[0])) / D2R);
-    best.x = th; best.given = 180 - th; best.state = 'ready'; best.armed = true;
-    return best;
-  }
-  function askGrapple(S) {
-    var gp = S.grap; gp.state = 'ask'; keys.up = keys.down = keys.left = keys.right = false;
-    var qp = $('#qpanel'); qp.hidden = false; qp.style.zoom = '';
-    qp.innerHTML = '<div class="tag">' + T('Grappling line', 'Cuerda de gancho') + '</div><h2>' + T('Aim the line', 'Apunta la cuerda') + '</h2>' +
-      '<p class="rule">' + T('Angles on a straight line add to 180°.', 'Los ángulos sobre una recta suman 180°.') + '</p>' +
-      '<p class="ask">' + T('The floor angle is <b style="color:#ff8a5c">', 'El ángulo del suelo mide <b style="color:#ff8a5c">') + gp.given + '°</b>. ' + T('Aim at <b style="color:#ffd166">x</b> = ?', 'Apunta a <b style="color:#ffd166">x</b> = ?') + '</p>' +
-      '<div class="row"><input id="gq" inputmode="numeric" autocomplete="off" aria-label="x in degrees"><span class="deg">°</span><button class="fire" id="gfire">' + T('LAUNCH', 'LANZAR') + '</button></div>' +
-      '<div class="btns" style="margin-top:14px"><button class="bt" id="gskip">' + T('Skip: walk instead', 'Saltar: caminar') + '</button></div>';
-    var inp = $('#gq'); inp.focus();
-    inp.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); shoot(); } });
-    on('gfire', shoot); on('gskip', function () { done(); gp.state = 'ready'; gp.armed = false; });
-    say(T('Grappling line. The floor angle is ', 'Cuerda de gancho. El ángulo del suelo mide ') + gp.given + T(' degrees. Angles on a straight line add to 180. Type x and press Enter.', ' grados. Los ángulos sobre una recta suman 180. Escribe x y pulsa Enter.'));
-    function done() { qp.hidden = true; qp.innerHTML = ''; cv.focus(); }
-    function shoot() {
-      var v = parseFloat(inp.value); if (isNaN(v)) { inp.focus(); return; }
-      done(); gp.t = 0; gp.from = [S.px, S.py];
-      if (Math.round(v) === gp.x) {
-        gp.state = 'zip'; Sound.play('grapple');
-        toast(T('GRAPPLE! 180° − ', '¡GANCHO! 180° − ') + gp.given + '° = ' + gp.x + '°', '#7dffb0');
-        say(T('Right! 180 minus ', '¡Bien! 180 menos ') + gp.given + T(' is ', ' es ') + gp.x + T('. You swing across the room.', '. Cruzas la sala colgado.'));
-      } else {
-        gp.state = 'miss'; gp.wrong = v; Sound.play('miss');
-        toast(T('MISSED! 180° − ', '¡FALLASTE! 180° − ') + gp.given + '° = ' + gp.x + '°', '#ff9ad0');
-        say(T('Missed. 180 minus ', 'Fallaste. 180 menos ') + gp.given + T(' is ', ' es ') + gp.x + T('. The line is spent: walk the long way.', '. La cuerda se gastó: ve por el camino largo.'));
-      }
-    }
-  }
-  // returns true while the grapple holds the room still
-  function grapStep(S, dt) {
-    var gp = S.grap; if (!gp) return false;
-    if (gp.state === 'ready') {
-      var d = Math.hypot(gp.pad[0] - S.px, gp.pad[1] - S.py);
-      if (!gp.armed) { if (d > TS * 0.9) gp.armed = true; return false; }
-      if (d < TS * 0.45) { askGrapple(S); return true; }
-      return false;
-    }
-    if (gp.state === 'ask') return true;
-    if (gp.state === 'zip') {
-      gp.t += dt; var k = Math.min(1, gp.t / 0.7), e = k * k * (3 - 2 * k);
-      S.px = gp.from[0] + (gp.land[0] - gp.from[0]) * e; S.py = gp.from[1] + (gp.land[1] - gp.from[1]) * e - Math.sin(k * Math.PI) * TS * 0.6;
-      S.face = Math.atan2(gp.land[1] - gp.from[1], gp.land[0] - gp.from[0]);
-      if (k >= 1) { gp.state = 'used'; Sound.play('clank'); }
-      return true;
-    }
-    if (gp.state === 'miss') { gp.t += dt; if (gp.t > 1.4) gp.state = 'spent'; return true; }
-    return false;
-  }
-  function drawGrapple(S, t) {
-    var gp = S.grap; if (!gp) return;
-    var live = gp.state === 'ready' || gp.state === 'ask';
-    ctx.save();
-    // the anchor
-    ctx.strokeStyle = live || gp.state === 'zip' ? '#7dffb0' : 'rgba(125,255,176,0.3)'; ctx.lineWidth = 3; ctx.shadowColor = '#7dffb0'; ctx.shadowBlur = live ? 14 : 0;
-    ctx.strokeRect(gp.land[0] - 11, gp.land[1] - 11, 22, 22); ctx.beginPath(); ctx.arc(gp.land[0], gp.land[1], 4, 0, TAU); ctx.stroke();
-    // the launch pad
-    if (live) {
-      ctx.strokeStyle = '#4fe3ff'; ctx.shadowColor = '#4fe3ff'; ctx.lineWidth = 3;
-      ctx.beginPath(); for (var i = 0; i < 6; i++) { var a = i / 6 * TAU + t * (G.calm ? 0 : 0.6); ctx[i ? 'lineTo' : 'moveTo'](gp.pad[0] + Math.cos(a) * 15, gp.pad[1] + Math.sin(a) * 15); } ctx.closePath(); ctx.stroke();
-      ctx.shadowBlur = 0; ctx.fillStyle = '#4fe3ff'; ctx.font = '700 13px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(T('GRAPPLE', 'GANCHO'), gp.pad[0], gp.pad[1] + 28);
-    }
-    ctx.shadowBlur = 0;
-    var ad = Math.atan2(gp.land[1] - gp.pad[1], gp.land[0] - gp.pad[0]), len = Math.hypot(gp.land[0] - gp.pad[0], gp.land[1] - gp.pad[1]);
-    if (gp.state === 'ask') {   // the floor line, the given angle and x
-      var px = gp.pad[0], py = gp.pad[1];
-      ctx.strokeStyle = '#e6f0ff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(px - 110, py); ctx.lineTo(px + 110, py); ctx.stroke();
-      ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,209,102,0.5)'; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(ad) * 110, py + Math.sin(ad) * 110); ctx.stroke(); ctx.setLineDash([]);
-      var up = ad < 0, mx = ad / 2, mg = up ? (ad - Math.PI) / 2 : (ad + Math.PI) / 2;
-      ctx.lineWidth = 3; ctx.strokeStyle = '#ffd166'; ctx.beginPath(); if (up) ctx.arc(px, py, 34, ad, 0); else ctx.arc(px, py, 34, 0, ad); ctx.stroke();
-      ctx.strokeStyle = '#ff8a5c'; ctx.beginPath(); if (up) ctx.arc(px, py, 48, -Math.PI, ad); else ctx.arc(px, py, 48, ad, Math.PI); ctx.stroke();
-      ctx.font = '800 17px Nunito, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ffd166'; ctx.fillText('x', px + Math.cos(mx) * 52, py + Math.sin(mx) * 52);
-      ctx.fillStyle = '#ff8a5c'; ctx.fillText(gp.given + '°', px + Math.cos(mg) * 72, py + Math.sin(mg) * 72);
-    }
-    if (gp.state === 'zip') {
-      ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2.5; ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.moveTo(S.px, S.py); ctx.lineTo(gp.land[0], gp.land[1]); ctx.stroke();
-    }
-    if (gp.state === 'miss') {   // the line flies off at the typed angle; the right one shows dashed
-      var k = Math.min(1, gp.t / 0.35), wa_ = (ad < 0 ? -1 : 1) * Math.max(0, Math.min(180, gp.wrong)) * D2R;
-      ctx.strokeStyle = '#ff4fa3'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(gp.pad[0], gp.pad[1]); ctx.lineTo(gp.pad[0] + Math.cos(wa_) * len * k, gp.pad[1] + Math.sin(wa_) * len * k); ctx.stroke();
-      ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(125,255,176,0.8)'; ctx.beginPath(); ctx.moveTo(gp.pad[0], gp.pad[1]); ctx.lineTo(gp.land[0], gp.land[1]); ctx.stroke();
-    }
-    ctx.restore();
   }
 
   // Every missed panel brings trouble into the sneak. Each piece is placed the same way every time for a room, so it
@@ -1307,7 +1192,6 @@
     S.got = 0; S.gems.forEach(function (g) { g.got = false; g.on = false; });
     if (S.gems.length) S.gems[Math.floor(Math.random() * S.gems.length)].on = true;
     S.time = 30; S.tick = 6;
-    if (S.grap) { S.grap.state = 'ready'; S.grap.armed = true; }
     var spd = (S.radioOff ? 1.05 : 1.85) * TS, range = (S.radioOff ? 3.6 : 5.8) * TS;
     S.ring = S.radioOff ? RING : RING * 1.4;
     S.guards = rm.guards.concat(S.plan.guards).map(function (g) {
@@ -1351,7 +1235,6 @@
   function sneakStep(dt) {
     var S = G.sneak; S.t += dt;
     if (S.zoom > 0) { S.zoom = Math.max(0, S.zoom - dt); return; }   // the opening zoom-out: everything waits
-    if (grapStep(S, dt)) return;
     if (S.intro > 0) { S.intro -= dt; }
     else if (S.time > 0) {
       S.time = Math.max(0, S.time - dt);
@@ -2079,7 +1962,6 @@
     // lights out (blueprints missed): only a glow around the agent; the guards' flashlights, the cameras, the
     // tripwires and the exit still show through the dark
     if (!S.mapOn) drawDark(S, t);
-    drawGrapple(S, t);   // over the dark, so the pad and anchor always show
     if (S.alarm) { ctx.fillStyle = 'rgba(255,40,80,' + (G.calm ? 0.12 : 0.1 + Math.abs(Math.sin(t * 6)) * 0.12) + ')'; ctx.fillRect(0, 0, W, H); }
     // the alert glow at the screen's edges
     if (S.meter > 0) {
