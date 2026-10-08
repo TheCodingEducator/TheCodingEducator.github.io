@@ -1056,27 +1056,28 @@ function startHole(idx) {
   saveProgress();   // (a practice round is never saved)
 }
 
-// Snaps a known angle to this hole's difficulty tier (round numbers
-// ease in for Golf Gamer; Hole-In-One Hero is arbitrary from the start
-// and wraps the value in an algebraic expression on the back three) -
-// same progression as before, just now applied to a value that's
-// either measured live off the player's own aim (the wall case) or
-// generated fresh when there's no wall to measure (the straight case),
-// via `rawKnown` being a real degrees value or null respectively.
-// Hero mode's algebra holes (7-9) need an (a, x) pair - fixed once per
-// stroke (rolled whenever a fresh aim begins, see rollAlgebraSeed) so
-// applyDifficultyTier is otherwise fully deterministic given rawKnown,
-// rather than re-rolling a fresh (a, x) on every call.
-var algebraSeedA = 3, algebraSeedX = 5;
+// Snaps a known angle to this hole's difficulty tier (round numbers ease in for Golf Gamer; Hole-In-One
+// Hero is any whole number from the start), from either a value measured live off the player's own aim
+// (the wall case) or a fresh one when there's no wall to measure (the straight case: rawKnown null).
+// Hero mode's back three (holes 7-9) also write the MISSING angle as a tiny equation, (x + d)° or
+// (x - d)°: students find the angle, then undo the + d to get x. d is rolled once per stroke (see
+// rollAlgebraSeed) so a retried question keeps the same equation.
+var algebraSeedD = 4;
 function rollAlgebraSeed() {
-  algebraSeedA = floor(random(2, 5.999));
-  algebraSeedX = floor(random(2, 9.999));
+  algebraSeedD = floor(random(2, 9.999)) * (random() < 0.5 ? 1 : -1);
 }
+// the equation for a missing angle: x = missing - d (always a positive whole number)
+function algebraFor(missing) {
+  var d = algebraSeedD;
+  if (missing - d < 1) d = -abs(d);
+  return { d: d };
+}
+// "x + 5" / "x − 3"
+function algebraText(alg) { return 'x ' + (alg.d >= 0 ? '+ ' : '− ') + abs(alg.d); }
 
 function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
   var known;
-  var algebra = null;
-  var timerOn = false;
+  var useAlgebra = false;
 
   if (mode === MODE_EASY || mode === MODE_PRACTICE) {
     if (rawKnown !== null) {
@@ -1088,15 +1089,10 @@ function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
   } else {
     if (rawKnown !== null) known = round(rawKnown);
     else known = floor(random(1, maxVal - 0.001));
-    if (holeNum >= 7) {
-      var x = algebraSeedX, a = algebraSeedA;
-      var b = constrain(known - a * x, 1, maxVal - 1 - a * x);
-      known = a * x + b;
-      algebra = { a: a, b: b, x: x };
-    }
+    useAlgebra = holeNum >= 7;
   }
   known = constrain(known, 1, maxVal - 1);
-  return { known: known, algebra: algebra, timerOn: timerOn };
+  return { known: known, useAlgebra: useAlgebra };
 }
 
 // ---------------------------------------------------------------
@@ -1198,8 +1194,17 @@ function simulateFirstWallContact(origin, aimDir, power) {
 // other half of that straight line). The bounce physics works in angles measured
 // from the wall's normal, which is this answer minus 90.
 function wallNormalAngle(answerDeg) { return answerDeg - 90; }
-// the given angle's value (an algebra question gives it as ax + b)
-function shotKnown(s) { return s.algebra ? s.algebra.a * s.algebra.x + s.algebra.b : s.known; }
+// the given angle's value
+function shotKnown(s) { return s.known; }
+// the angle a typed answer stands for (with an equation, the angle is x + d)
+function typedAngle(s, typed) { return typed + (s && s.algebra ? s.algebra.d : 0); }
+// the question as an equation with a blank (shown as a hint after two misses, and on the explanation card)
+function questionEquation(p) {
+  var rhs = p.algebra ? algebraText(p.algebra) : '?';
+  if (p.rel === 'vert') return (p.algebra ? rhs : '?') + ' = ' + p.known + '°';
+  var sum = p.type === 'WALL' ? 180 : 90;
+  return sum + '° − ' + p.known + '°' + (p.double ? ' − ' + p.known + '°' : '') + ' = ' + rhs;
+}
 
 function classifyAndBuildShot(aimDir, power, holeNum) {
   var origin = { x: ball.x, y: ball.y };
@@ -1262,11 +1267,13 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
       var straightHit = raycastWalls(origin, askedAim, 100000, hole.walls);
       if (straightHit && straightHit.wall === w) { hit.point = straightHit.point; angDir = askedAim; }
     }
+    // Hole-In-One Hero shows both equal angles of the bounce (in and out); the missing one is between them
+    var wMissing = gameMode === MODE_HARD ? 180 - 2 * tier.known : 180 - tier.known;
+    var wAlg = tier.useAlgebra ? algebraFor(wMissing) : null;
     var wallShot = {
-      type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: false,
-      // Hole-In-One Hero shows both equal angles of the bounce (in and out); the missing one is between them
+      type: 'WALL', rel: 'supp', known: tier.known, missing: wMissing, algebra: wAlg, timerOn: false,
       double: gameMode === MODE_HARD,
-      correctAnswer: gameMode === MODE_HARD ? 180 - 2 * tier.known : 180 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
+      correctAnswer: wAlg ? wMissing - wAlg.d : wMissing, point: hit.point, Wd: Wd, N: N, wallRef: w,
       aimDir: aimDir, power: power, applied: false, launchFrom: { x: origin.x, y: origin.y }
     };
     // Only ask a wall question if the correct answer would really make the ball
@@ -1276,15 +1283,29 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     if (simulateTrail(wallShot, true).bounceIdx !== undefined) return wallShot;
   }
 
-  // Hole-In-One Hero splits the right angle into two equal given angles and the missing one
+  // A straight shot is either a complementary question (a right angle with the aim line as one side) or a
+  // vertical-angles one (the aim line and a guide line cross at the ball; the missing angle, between the
+  // ball's path and the guide line, is across from the given one), about half and half.
   var dbl = gameMode === MODE_HARD;
+  var vert = random() < 0.5;
   var tier2 = applyDifficultyTier(null, gameMode, holeNum, dbl ? 44 : 89);
-  // The missing (complementary) angle is any whole number from 1° to 89° on every hole - no rounding
-  // to 10s or 5s. (Hero mode's algebra questions keep their own known-angle expression.)
-  if (!tier2.algebra) tier2.known = dbl ? floor(random(4, 41)) : 90 - floor(random(1, 90));
+  var sMissing;
+  if (vert) {
+    // any angle that isn't too close to 0°, 90° or 180°, rounded like the wall angles on easy holes
+    var snapV = (gameMode === MODE_EASY && holeNum <= 3) ? 10 : ((gameMode === MODE_EASY && holeNum <= 6) ? 5 : 1);
+    do { tier2.known = round(random(20, 160) / snapV) * snapV; } while (abs(tier2.known - 90) < 6);
+    sMissing = tier2.known;
+  } else {
+    // The missing (complementary) angle is any whole number on every hole - no rounding to 10s or 5s.
+    // Hole-In-One Hero splits the right angle into two equal given angles and the missing one.
+    tier2.known = dbl ? floor(random(4, 41)) : 90 - floor(random(1, 90));
+    sMissing = dbl ? 90 - 2 * tier2.known : 90 - tier2.known;
+  }
+  var sAlg = tier2.useAlgebra ? algebraFor(sMissing) : null;
   return {
-    type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: false, double: dbl,
-    correctAnswer: dbl ? 90 - 2 * tier2.known : 90 - tier2.known,
+    type: 'STRAIGHT', rel: vert ? 'vert' : 'comp', known: tier2.known, missing: sMissing, algebra: sAlg, timerOn: false,
+    double: dbl && !vert, vSign: random() < 0.5 ? 1 : -1,
+    correctAnswer: sAlg ? sMissing - sAlg.d : sMissing,
     // The diagram/camera anchor for a straight shot - unlike WALL's
     // point (the actual contact point on a rail), there's no natural
     // "where" for an open-green shot except the ball's own launch spot.
@@ -2088,7 +2109,7 @@ function drawResolvedAngleLabels() {
   var label = (wrong ? resolvedInfo.typed : resolvedInfo.correctAnswer) + '°';
   if (waL && !wrong) {   // the known angle, in gold, on the other side of the outgoing line
     var kx = waL.vx + cos(waL.kMid) * WALL_HALF_R * 1.6, ky = waL.vy + sin(waL.kMid) * WALL_HALF_R * 1.6;
-    var kLbl = (resolvedInfo.algebra ? (resolvedInfo.algebra.a * resolvedInfo.algebra.x + resolvedInfo.algebra.b) : resolvedInfo.known) + '°';
+    var kLbl = resolvedInfo.known + '°';
     textSize(14);
     fill(0, 0, 0, 150); text(kLbl, kx + 1.5, ky + 1.5);
     fill('#ffce6b'); text(kLbl, kx, ky);
@@ -2479,6 +2500,7 @@ function drawLiveAngleDiagram(shot, reveal) {
   if (!reveal && (!pendingShot || holePhase !== 'QUESTION')) return;
   var p = shot || pendingShot;
   if (!p) return;
+  if (p.rel === 'vert') { drawVerticalDiagram(p, reveal); return; }
   var wrongR = reveal && resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct;
   var from = reveal ? (p.launchFrom || p.point) : ball;
   var dir0, sweepDir, totalDeg, knownVal;
@@ -2563,7 +2585,7 @@ function drawLiveAngleDiagram(shot, reveal) {
   if (wrongR) {
     // A wrong answer: the student's number as a red wedge, starting where the given angle(s) end.
     // Too small leaves a gray gap before the far side (the "?" still to find); too big spills past it.
-    var ty = min(max(resolvedInfo.typed, 1), 359 - abs(uS));
+    var ty = min(max(resolvedInfo.typedAngle, 1), 359 - abs(uS));
     var rs = uS, re = uS + ty;
     noStroke();
     fill(230, 57, 70, 120);
@@ -2617,7 +2639,47 @@ function drawLiveAngleDiagram(shot, reveal) {
   var uWorld = rotatePoint(uLocal, baseAngle);
   fill(!reveal ? '#bcd4ff' : wrongR ? '#ffffff' : '#4dff4d');
   textSize(reveal ? 19 : 23);
-  text(!reveal ? '?' : (wrongR ? resolvedInfo.typed : p.correctAnswer) + '°', p.point.x + uWorld.x, p.point.y + uWorld.y);
+  if (!reveal && p.algebra) textSize(17);
+  text(!reveal ? (p.algebra ? '(' + algebraText(p.algebra) + ')°' : '?') : (wrongR ? resolvedInfo.typedAngle : p.missing) + '°', p.point.x + uWorld.x, p.point.y + uWorld.y);
+  textStyle(NORMAL);
+}
+
+// Vertical angles: two lines cross at the ball - its path (the aim line, through the ball both ways) and a
+// guide line. The given angle (gold) sits between the path behind the ball and one end of the guide line;
+// the missing angle is the one across from it, between the path ahead and the other end. They're equal.
+function drawVerticalDiagram(p, reveal) {
+  var wrongR = reveal && resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct;
+  var O = p.point, aim = atan2(p.aimDir.y, p.aimDir.x), s = p.vSign, k = p.known, r = 62, L = r * 1.5;
+  var L2 = aim + s * k, L1 = L2 + 180, back = aim + 180;
+  push();
+  translate(O.x, O.y);
+  var wedge = function (a, b, col, alpha, mode) { var lo = min(a, b), hi = max(a, b); fill(col[0], col[1], col[2], alpha); arc(0, 0, r * 2, r * 2, lo, hi, mode); };
+  noStroke();
+  wedge(back, back + s * k, [224, 160, 48], 95, PIE);                                   // the given angle
+  if (!wrongR) wedge(aim, L2, reveal ? [77, 255, 77] : [91, 140, 255], 100, PIE);      // the one across from it
+  // the two crossing lines
+  stroke(255, 255, 255, 210); strokeWeight(2.5);
+  line(cos(L1) * L, sin(L1) * L, cos(L2) * L, sin(L2) * L);
+  line(cos(back) * L, sin(back) * L, 0, 0);
+  if (!reveal) { drawingContext.setLineDash([6, 8]); line(0, 0, cos(aim) * L * 1.1, sin(aim) * L * 1.1); drawingContext.setLineDash([]); }
+  noFill(); strokeWeight(4);
+  stroke('#e0a030'); arc(0, 0, r * 2, r * 2, min(back, back + s * k), max(back, back + s * k));
+  if (!wrongR) { stroke(reveal ? '#4dff4d' : '#5b8cff'); arc(0, 0, r * 2, r * 2, min(aim, L2), max(aim, L2)); }
+  var tMid = null;
+  if (wrongR) {   // the typed angle as a red wedge from the guide line, toward the path
+    var t = min(max(resolvedInfo.typedAngle, 1), 179), e = L2 - s * t;
+    noStroke(); wedge(L2, e, [230, 57, 70], 120, PIE);
+    noFill(); stroke('#e63946'); strokeWeight(4); arc(0, 0, r * 2, r * 2, min(L2, e), max(L2, e));
+    tMid = (L2 + e) / 2;
+  }
+  pop();
+  noStroke(); textAlign(CENTER, CENTER); textStyle(BOLD);
+  var gm = back + s * k / 2;
+  fill('#ffce6b'); textSize(15); text(k + '°', O.x + cos(gm) * r * 0.62, O.y + sin(gm) * r * 0.62);
+  var um = tMid !== null ? tMid : aim + s * k / 2;
+  fill(!reveal ? '#bcd4ff' : (wrongR ? '#ffffff' : '#4dff4d'));
+  textSize(reveal ? 19 : (p.algebra ? 17 : 23));
+  text(!reveal ? (p.algebra ? '(' + algebraText(p.algebra) + ')°' : '?') : (wrongR ? resolvedInfo.typedAngle : p.missing) + '°', O.x + cos(um) * r * 0.66, O.y + sin(um) * r * 0.66);
   textStyle(NORMAL);
 }
 
@@ -2639,14 +2701,16 @@ function drawQuestionBand(h) {
 // at the bottom instead of one big black box.
 function drawQuestionOverlay() {
   if (!pendingShot || !questionReady) return;   // wait for the zoom to finish
-  var isWall = pendingShot.type === 'WALL';
+  var isWall = pendingShot.type === 'WALL', vert = pendingShot.rel === 'vert';
   drawQuestionBand(pendingShot.algebra || retryHint ? 150 : 88);
-  var title = isWall ? tl('Supplementary Angles', 'Ángulos suplementarios') : tl('Complementary Angles', 'Ángulos complementarios');
+  var title = vert ? tl('Vertical Angles', 'Ángulos opuestos por el vértice')
+    : (isWall ? tl('Supplementary Angles', 'Ángulos suplementarios') : tl('Complementary Angles', 'Ángulos complementarios'));
   var relWord = isWall ? tl('sum to 180°', 'suman 180°') : tl('sum to 90°', 'suman 90°');
   var lead = pendingShot.double
     ? (isWall ? tl('The ball leaves the wall at the same angle it hit it. These three angles ', 'La bola sale de la pared con el mismo ángulo con que llegó. Estos tres ángulos ')
               : tl('These three angles ', 'Estos tres ángulos '))
     : tl('These two angles ', 'Estos dos ángulos ');
+  var sub = vert ? tl('Two lines cross at the ball: the angles across from each other are equal.', 'Dos rectas se cruzan en la bola: los ángulos opuestos son iguales.') : lead + relWord;
 
   noStroke();
   textAlign(CENTER, TOP);
@@ -2660,26 +2724,35 @@ function drawQuestionOverlay() {
 
   textSize(18);
   fill(0, 0, 0, 130);
-  if (pendingShot.double && isWall) textSize(15);
-  text(lead + relWord, width / 2 + 1, 151);
+  if ((pendingShot.double && isWall) || vert) textSize(15);
+  text(sub, width / 2 + 1, 151);
   fill(216, 226, 216);
-  text(lead + relWord, width / 2, 150);
+  text(sub, width / 2, 150);
   textSize(18);
+
+  // an equation question: the missing angle is written as x + d (or x - d)
+  if (pendingShot.algebra) {
+    var at = tl('The missing angle is (', 'El ángulo que falta es (') + algebraText(pendingShot.algebra) + tl(')°. Find x.', ')°. Halla x.');
+    fill(0, 0, 0, 130);
+    text(at, width / 2 + 1, 179);
+    fill('#ffce6b');
+    text(at, width / 2, 178);
+  }
 
   if (retryHint) {
     var hintY = pendingShot.algebra ? 206 : 178;
-    // just the rule for THIS question: a wall shot is supplementary, a straight shot complementary
-    var hint = isWall
-      ? tl('Hint: supplementary angles always add up to 180°.', 'Pista: los ángulos suplementarios siempre suman 180°.')
-      : tl('Hint: complementary angles always add up to 90°.', 'Pista: los ángulos complementarios siempre suman 90°.');
+    // just the rule for THIS question
+    var hint = vert ? tl('Hint: angles across from each other are equal.', 'Pista: los ángulos opuestos son iguales.')
+      : (isWall
+        ? tl('Hint: supplementary angles always add up to 180°.', 'Pista: los ángulos suplementarios siempre suman 180°.')
+        : tl('Hint: complementary angles always add up to 90°.', 'Pista: los ángulos complementarios siempre suman 90°.'));
     textSize(16);
     fill(0, 0, 0, 140);
     text(hint, width / 2 + 1, hintY + 1);
     fill('#ffce6b');
     text(hint, width / 2, hintY);
     if ((pendingShot.tries || 1) >= 3) {   // a second wrong try: the equation, with a blank to fill
-      var kq = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
-      var eq = (isWall ? 180 : 90) + '° − ' + kq + '°' + (pendingShot.double ? ' − ' + kq + '°' : '') + ' = ?';
+      var eq = questionEquation(pendingShot);
       textSize(22);
       fill(0, 0, 0, 140);
       text(eq, width / 2 + 1, hintY + 27);
@@ -2687,13 +2760,6 @@ function drawQuestionOverlay() {
       text(eq, width / 2, hintY + 26);
     }
     textSize(18);
-  }
-  if (pendingShot.algebra) {
-    var alg = pendingShot.algebra;
-    fill(0, 0, 0, 130);
-    text(tl('Known angle = (', 'Ángulo conocido = (') + alg.a + 'x + ' + alg.b + tl(')°, and x = ', ')°, y x = ') + alg.x, width / 2 + 1, 179);
-    fill('#ffce6b');
-    text(tl('Known angle = (', 'Ángulo conocido = (') + alg.a + 'x + ' + alg.b + tl(')°, and x = ', ')°, y x = ') + alg.x, width / 2, 178);
   }
 
   // bottom input pill
@@ -2705,7 +2771,7 @@ function drawQuestionOverlay() {
   fill(255);
   textSize(23);
   textAlign(CENTER, CENTER);
-  text((answerText.length ? answerText : '_') + '°', ix + iw / 2, iy + ih / 2 + 1);
+  text(pendingShot.algebra ? 'x = ' + (answerText.length ? answerText : '_') : (answerText.length ? answerText : '_') + '°', ix + iw / 2, iy + ih / 2 + 1);   // (an equation question asks for x)
 
   var sx = ix + iw + gap;
   fill(answerText.length ? '#3ea158' : 'rgba(60,80,60,0.85)');
@@ -2766,16 +2832,22 @@ function submitAnswer() {
     // A right answer bounces like a real bank shot. A wrong one leaves along the far edge of the red
     // wedge drawn afterwards: the typed angle measured on from the ball's incoming path (skimming
     // along the wall if the typed angle runs past it).
-    var kw = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
+    var kw = pendingShot.known, ta = typedAngle(pendingShot, typed);   // (with an equation, the angle typed is x + d)
     // (in Hero mode the typed angle sits between the in and out paths, measured from the path in, so it
     // works out to the very same outgoing direction formula)
-    pendingShot.resolvedAngle = correct ? wallNormalAngle(180 - kw) : wallNormalAngle(constrain(kw + typed, 3, 177));
+    pendingShot.resolvedAngle = correct ? wallNormalAngle(180 - kw) : wallNormalAngle(constrain(kw + ta, 3, 177));
   } else {
     if (!correct) {
-      // the typed angle measured on the question's right angle: the ball leaves along that line
-      var bs = shotBaseAngleAndSweep(pendingShot);
-      var kv = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
-      var outAng = bs.baseAngle + bs.sweepSign * ((pendingShot.double ? 2 * kv : kv) + constrain(typed, 1, 179));   // (Hero: after both given angles)
+      var kv = pendingShot.known, tv = typedAngle(pendingShot, typed), outAng;
+      if (pendingShot.rel === 'vert') {
+        // vertical angles: the typed angle measured from the guide line toward the aim; a right answer is
+        // exactly the aim, so a wrong one is off by the difference
+        outAng = atan2(pendingShot.aimDir.y, pendingShot.aimDir.x) + pendingShot.vSign * (kv - constrain(tv, 1, 179));
+      } else {
+        // the typed angle measured on the question's right angle: the ball leaves along that line
+        var bs = shotBaseAngleAndSweep(pendingShot);
+        outAng = bs.baseAngle + bs.sweepSign * ((pendingShot.double ? 2 * kv : kv) + constrain(tv, 1, 179));   // (Hero: after both given angles)
+      }
       launchDir = { x: cos(outAng), y: sin(outAng) };
       pendingShot.bendDeg = 0;
       pendingShot.applied = true;
@@ -2793,7 +2865,8 @@ function submitAnswer() {
   playSound(correct ? 'correct' : 'wrong');
   var baseSweep = shotBaseAngleAndSweep(pendingShot);
   resolvedInfo = {
-    correctAnswer: pendingShot.correctAnswer, typed: typed, correct: correct,
+    correctAnswer: pendingShot.correctAnswer, typed: typed, typedAngle: typedAngle(pendingShot, typed), correct: correct,
+    rel: pendingShot.rel, missing: pendingShot.missing,
     point: { x: pendingShot.point.x, y: pendingShot.point.y },
     offsetDir: pendingShot.type === 'WALL' ? pendingShot.N : { x: 0, y: -1 },
     wd: pendingShot.type === 'WALL' ? pendingShot.Wd : null,
@@ -3036,42 +3109,48 @@ function drawHUD() {
 // After a wrong answer: a small card adding the two angles, showing they miss the total -
 // without giving away the right number (the question is asked again).
 function drawSumCheckCard() {
-  var ri = resolvedInfo, sum = ri.type === 'WALL' ? 180 : 90;
-  var k = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
-  var dbl = !!(ri.shot && ri.shot.double);
-  var line1 = dbl ? k + '° + ' + k + '° + ' + ri.typed + '° = ' + (2 * k + ri.typed) + '°' : k + '° + ' + ri.typed + '° = ' + (k + ri.typed) + '°';
-  var line2 = tl('not ', 'no ') + sum + '°';
+  var ri = resolvedInfo, sum = ri.type === 'WALL' ? 180 : 90, k = ri.known, t = ri.typedAngle;
+  var dbl = !!(ri.shot && ri.shot.double), line1, line2;
+  if (ri.rel === 'vert') {   // vertical angles: the two should be equal
+    line1 = k + '° ≠ ' + t + '°';
+    line2 = tl('across from each other: equal', 'los opuestos son iguales');
+  } else {
+    line1 = dbl ? k + '° + ' + k + '° + ' + t + '° = ' + (2 * k + t) + '°' : k + '° + ' + t + '° = ' + (k + t) + '°';
+    line2 = tl('not ', 'no ') + sum + '°';
+  }
   noStroke();
   fill(15, 22, 16, 225);
-  rect(width / 2 - 140, 10, 280, 66, 12);
+  rect(width / 2 - 150, 10, 300, 66, 12);
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   fill(255);
   textSize(24);
   text(line1, width / 2, 32);
   fill('#ff8a93');
-  textSize(19);
+  textSize(ri.rel === 'vert' ? 16 : 19);
   text(line2, width / 2, 58);
   textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
 }
+// a right answer: the working, big and green across the top bar
 function drawEquation() {
   if (!resolvedInfo) return;
   if (!resolvedInfo.correct) { if (resolvedInfo.typed !== null) drawSumCheckCard(); return; }
-  var sum = resolvedInfo.type === 'WALL' ? 180 : 90;
-  var minus = ' − ' + resolvedInfo.known + '°' + (resolvedInfo.shot && resolvedInfo.shot.double ? ' − ' + resolvedInfo.known + '°' : '');   // (Hero: both given angles)
+  var ri = resolvedInfo, sum = ri.type === 'WALL' ? 180 : 90;
+  var main = ri.rel === 'vert'
+    ? tl('✓ Vertical angles are equal: ', '✓ Los opuestos son iguales: ') + ri.missing + '°'
+    : '✓ ' + sum + '° − ' + ri.known + '°' + (ri.shot && ri.shot.double ? ' − ' + ri.known + '°' : '') + ' = ' + ri.missing + '°';
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
   fill('#4dff4d');
-  if (resolvedInfo.algebra) {
-    var alg = resolvedInfo.algebra;
+  if (ri.algebra) {   // then undo the + d to find x
     textSize(21);
-    text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, 25);
-    text('✓ ' + sum + '°' + minus + ' = ' + resolvedInfo.correctAnswer + '°', width / 2, 57);
+    text(main, width / 2, 25);
+    text(algebraText(ri.algebra) + ' = ' + ri.missing + ',  x = ' + ri.correctAnswer, width / 2, 57);
   } else {
-    textSize(28);
-    text('✓ ' + sum + '°' + minus + ' = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
+    textSize(ri.rel === 'vert' ? 24 : 28);
+    text(main, width / 2, 41);
   }
   textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
@@ -3084,6 +3163,24 @@ function drawEquation() {
 // now. Reveals the solved unknown angle in green instead of a "?",
 // since the whole point here is showing what it resolves to.
 function drawExplainDiagram(cx, cy, r, info) {
+  if (info.rel === 'vert') {   // two crossing lines: the gold angle and the equal one across from it
+    var kv = info.known;
+    // (an X fits the same space as the half-circle diagram: centered a little higher, a little smaller)
+    var R = r * 0.62, A = r * 1.0;
+    push(); translate(cx, cy - r * 0.37);
+    noStroke(); fill(224, 160, 48, 150); arc(0, 0, A, A, 180, 180 + kv, PIE);
+    fill(77, 255, 77, 130); arc(0, 0, A, A, 0, kv, PIE);
+    stroke(255, 255, 255, 220); strokeWeight(3); strokeCap(ROUND);
+    line(-R, 0, R, 0);
+    line(-cos(kv) * R, -sin(kv) * R, cos(kv) * R, sin(kv) * R);
+    noFill(); strokeWeight(5); stroke('#e0a030'); arc(0, 0, A, A, 180, 180 + kv);
+    stroke('#4dff4d'); arc(0, 0, A, A, 0, kv);
+    noStroke(); textAlign(CENTER, CENTER); textStyle(BOLD);
+    fill('#ffce6b'); textSize(r * 0.15); text(kv + '°', cos(180 + kv / 2) * A * 0.33, sin(180 + kv / 2) * A * 0.33);
+    fill('#4dff4d'); textSize(r * 0.17); text('?', cos(kv / 2) * A * 0.33, sin(kv / 2) * A * 0.33);
+    textStyle(NORMAL); pop();
+    return;
+  }
   var sum = info.type === 'WALL' ? 180 : 90;
   var known = info.known, correctAns = info.correctAnswer;
   push();
@@ -3144,23 +3241,27 @@ function drawExplainDiagram(cx, cy, r, info) {
 // Names the most likely slip behind a wrong answer, so the retry is aimed at the real problem.
 function mistakeNote(ri) {
   if (!ri || ri.typed === null || ri.typed === undefined) return '';
-  var sum = ri.type === 'WALL' ? 180 : 90, other = sum === 180 ? 90 : 180;
-  var k = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
-  var dbl = !!(ri.shot && ri.shot.double), given = dbl ? 2 * k : k;   // (Hole-In-One Hero: two equal given angles)
-  var right = sum - given, t = ri.typed;
-  if (dbl && t === sum - k) return tl('Both gold angles count: take ', 'Cuentan los dos ángulos dorados: resta ') + k + tl('° away twice.', '° dos veces.');
-  if (ri.algebra) {
-    var a = ri.algebra.a, x = ri.algebra.x, b = ri.algebra.b;
-    if (t === sum - a * x || t === sum - b || t === sum - (a + x + b) || t === sum - (a * x * b))
-      return tl('Work out the given angle first: ', 'Primero calcula el ángulo dado: ') + a + '(' + x + ') + ' + b + ' = ' + k + '°.';
+  var k = ri.known, x = ri.typed, t = ri.typedAngle, missing = ri.missing;
+  var alg = ri.algebra, dTxt = alg ? (alg.d >= 0 ? '+ ' : '− ') + abs(alg.d) : '';
+  // an equation question: they found the angle but didn't undo the + d, or undid it the wrong way
+  if (alg && x === missing) return tl('That’s the whole angle, x ', 'Ese es el ángulo entero, x ') + dTxt + tl('. Now undo the ', '. Ahora deshaz el ') + dTxt + tl(' to find x.', ' para hallar x.');
+  if (alg && x === missing + alg.d) return alg.d >= 0
+    ? tl('To undo + ', 'Para deshacer + ') + alg.d + tl(', subtract ', ', resta ') + alg.d + tl(' (don’t add it).', ' (no lo sumes).')
+    : tl('To undo − ', 'Para deshacer − ') + abs(alg.d) + tl(', add ', ', suma ') + abs(alg.d) + tl(' (don’t subtract it).', ' (no lo restes).');
+  if (ri.rel === 'vert') {
+    if (t + k === 180) return tl('That angle is next to the gold one. The angle ACROSS from it is equal.', 'Ese ángulo está junto al dorado. El ángulo OPUESTO es igual.');
+    return tl('Vertical angles are equal: the missing angle is the same as the gold one.', 'Los opuestos por el vértice son iguales: el que falta mide lo mismo que el dorado.');
   }
+  var sum = ri.type === 'WALL' ? 180 : 90, other = sum === 180 ? 90 : 180;
+  var dbl = !!(ri.shot && ri.shot.double), given = dbl ? 2 * k : k;   // (Hole-In-One Hero: two equal given angles)
+  if (dbl && t === sum - k) return tl('Both gold angles count: take ', 'Cuentan los dos ángulos dorados: resta ') + k + tl('° away twice.', '° dos veces.');
   if (t === k) return tl('That’s the angle you were given. Find the other one.', 'Ese es el ángulo que te dieron. Halla el otro.');
   if (t + given === other) return sum === 90
-    ? tl('Those add up to 180°. These two make a square corner, so they add to 90°.', 'Esos suman 180°. Estos dos forman una esquina recta, así que suman 90°.')
-    : tl('Those add up to 90°. These two make a straight line, so they add to 180°.', 'Esos suman 90°. Estos dos forman una línea recta, así que suman 180°.');
+    ? tl('Those add up to 180°. These angles make a square corner, so they add to 90°.', 'Esos suman 180°. Estos ángulos forman una esquina recta, así que suman 90°.')
+    : tl('Those add up to 90°. These angles make a straight line, so they add to 180°.', 'Esos suman 90°. Estos ángulos forman una línea recta, así que suman 180°.');
   if (t >= sum) return tl('That’s bigger than ', 'Eso es más que ') + sum + '°. ' + (dbl ? tl('Take both given angles away from ', 'Resta los dos ángulos dados a ') : tl('Take the given angle away from ', 'Resta el ángulo dado a ')) + sum + '°.';
   var minusK = ' − ' + k + (dbl ? ' − ' + k : '');
-  if (Math.abs(t - right) <= 10) return tl('Close! Check your subtraction: ', '¡Casi! Revisa tu resta: ') + sum + minusK + '.';
+  if (Math.abs(t - missing) <= 10) return tl('Close! Check your subtraction: ', '¡Casi! Revisa tu resta: ') + sum + minusK + '.';
   return tl('Start from ', 'Empieza con ') + sum + tl('° and take away ', '° y resta ') + k + '°' + (dbl ? tl(' twice', ' dos veces') : '') + '.';
 }
 
@@ -3172,7 +3273,7 @@ function explainLayout() {
   var diagR = 165, diagCY = 300;
   var eqY = diagCY + 54;
   var typedY = eqY + (alg ? 82 : 46);
-  var btnY = typedY + 64;   // room for the answer they gave and a note about the likely mistake
+  var btnY = typedY + 76;   // room for the answer they gave and a note about the likely mistake (up to two lines)
   var boxH = btnY + EXPLAIN_BTN.h + 34;
   return { w: EXPLAIN_BOX_W, h: boxH, diagR: diagR, diagCY: diagCY, eqY: eqY, typedY: typedY, btnY: btnY };
 }
@@ -3220,29 +3321,30 @@ function drawExplainModal() {
   } else if (dblX) {
     text(tl('The two gold angles are equal. All three angles together', 'Los dos ángulos dorados son iguales. Los tres juntos'), width / 2, by + 82);
     text(tl('make the right angle, so they add up to 90°.', 'forman el ángulo recto, así que suman 90°.'), width / 2, by + 106);
+  } else if (resolvedInfo.rel === 'vert') {
+    text(tl('Two lines cross at the ball. The angles across from each other', 'Dos rectas se cruzan en la bola. Los ángulos opuestos'), width / 2, by + 82);
+    text(tl('are called vertical angles, and they are always equal.', 'se llaman opuestos por el vértice y siempre son iguales.'), width / 2, by + 106);
   } else {
     text(tl('These two angles are ', 'Estos dos ángulos son ') + relWord + tl(' - together they always', ' - juntos siempre'), width / 2, by + 82);
     text(tl('add up to ', 'suman ') + sum + '°.', width / 2, by + 106);
   }
-  var eqMinus = '° − ' + resolvedInfo.known + '°' + (dblX ? ' − ' + resolvedInfo.known + '°' : '') + ' = ?';
 
   drawExplainDiagram(width / 2, by + L.diagCY, L.diagR, resolvedInfo);
 
   var eqY = by + L.eqY;
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  if (resolvedInfo.algebra) {
-    var alg = resolvedInfo.algebra;
-    fill('#ffce6b');
-    textSize(21);
-    text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, eqY);
+  if (resolvedInfo.algebra) {   // the equation, then the reminder to undo the + d
     fill('#4dff4d');
     textSize(25);
-    text(sum + eqMinus, width / 2, eqY + 36);
+    text(questionEquation(resolvedInfo.shot), width / 2, eqY);
+    fill('#ffce6b');
+    textSize(18);
+    text(tl('Find the angle first, then undo the ', 'Halla primero el ángulo y luego deshaz el ') + (resolvedInfo.algebra.d >= 0 ? '+ ' : '− ') + abs(resolvedInfo.algebra.d) + tl(' to get x.', ' para obtener x.'), width / 2, eqY + 36);
   } else {
     fill('#4dff4d');
     textSize(28);
-    text(sum + eqMinus, width / 2, eqY);
+    text(questionEquation(resolvedInfo.shot), width / 2, eqY);
   }
   textStyle(NORMAL);
 
@@ -3254,9 +3356,9 @@ function drawExplainModal() {
   if (resolvedInfo.typed !== null) {
     fill(230, 130, 130);
     textSize(15);
-    text(tl('You answered ', 'Respondiste ') + resolvedInfo.typed + tl('° instead.', '° en su lugar.'), width / 2, by + L.typedY);
+    text(resolvedInfo.algebra ? tl('You answered x = ', 'Respondiste x = ') + resolvedInfo.typed + '.' : tl('You answered ', 'Respondiste ') + resolvedInfo.typed + tl('° instead.', '° en su lugar.'), width / 2, by + L.typedY);
     var note = mistakeNote(resolvedInfo);
-    if (note) { fill('#ffce6b'); textSize(16); textStyle(BOLD); text(note, width / 2, by + L.typedY + 28); textStyle(NORMAL); }
+    if (note) { fill('#ffce6b'); textSize(16); textStyle(BOLD); textAlign(CENTER, TOP); text(note, width / 2 - 260, by + L.typedY + 14, 520, 64); textAlign(CENTER, CENTER); textStyle(NORMAL); }   // (wraps onto two lines if it needs to)
   }
 
   var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + L.btnY;
