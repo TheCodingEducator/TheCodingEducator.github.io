@@ -422,12 +422,18 @@ function kbUpdateAim() {
   var push = (keyIsDown(UP_ARROW) ? 1 : 0) - (keyIsDown(DOWN_ARROW) ? 1 : 0);
   if (!kbAim) {
     if (!turn && !push) return;
-    // always starts pointing straight up the screen - not at the cup, so the player does the aiming
-    kbAim = { ang: -90, power: 0.45 };
+    // starts pointing the way of the first arrow key pressed (not at the cup, so the player does the aiming);
+    // after that, ← → turn the shot and ↑ ↓ set the power
+    var startAng = keyIsDown(RIGHT_ARROW) ? 0 : (keyIsDown(LEFT_ARROW) ? 180 : (keyIsDown(DOWN_ARROW) ? 90 : -90));
+    kbAim = { ang: startAng, power: 0.45, fresh: true };   // (every new shot starts this way)
   }
-  var fine = keyIsDown(SHIFT) ? 0.25 : 1;   // hold Shift for small adjustments
-  kbAim.ang += turn * 1.6 * fine;
-  kbAim.power = constrain(kbAim.power + push * 0.012 * fine, 0.08, 1);
+  // the first press only sets the direction: turning and power start once that key is let go
+  if (kbAim.fresh) { if (!turn && !push) kbAim.fresh = false; }
+  else {
+    var fine = keyIsDown(SHIFT) ? 0.25 : 1;   // hold Shift for small adjustments
+    kbAim.ang += turn * 1.6 * fine;
+    kbAim.power = constrain(kbAim.power + push * 0.012 * fine, 0.08, 1);
+  }
   // show it with the same arrow the mouse drag uses: pull back from the ball, opposite the shot
   dragging = true;
   dragStart.x = ball.x; dragStart.y = ball.y;
