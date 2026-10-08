@@ -866,7 +866,7 @@ function drawCourseSelect() {
     fill(light ? '#2a1a00' : 255); textSize(15); textStyle(BOLD);
     text(rec.total ? tl('Best round: ', 'Mejor ronda: ') + rec.total : tl('Not played yet', 'Aún sin jugar'), x + b.w / 2, y + 298);
     textStyle(NORMAL);
-    fill('#ffd166'); textSize(17); text(starsText(starTotal(rec.stars)), x + b.w / 2, y + 326);
+    fill(light ? '#8a5a00' : '#ffd166'); textSize(17); text(starsText(starTotal(rec.stars)), x + b.w / 2, y + 326);
     fill(hov ? th.accent : color(0, 0, 0, 120)); rect(x + 40, y + b.h - 52, b.w - 80, 38, 19);
     fill(hov ? '#101010' : 255); textStyle(BOLD); textSize(16); text(tl('Play', 'Jugar'), x + b.w / 2, y + b.h - 33); textStyle(NORMAL);
     if (hov) { stroke(th.accent); strokeWeight(3); noFill(); rect(x - 4, y - 4, b.w + 8, b.h + 8, 21); noStroke(); }
