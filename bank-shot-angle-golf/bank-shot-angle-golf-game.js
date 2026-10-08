@@ -955,11 +955,18 @@ function drawCourseIntro() {
   }
   fill(light ? '#2a1a00' : 255); textSize(16);
   text(tl('Par ', 'Par ') + totalPar() + (rec.total ? tl('   ·   Your best round: ', '   ·   Tu mejor ronda: ') + rec.total : '') + '   ·   ' + starsText(starTotal(rec.stars)), width / 2, 568);
+  // Back (to the course list), to the left of Tee Off
+  var bk = introBackRect(), bkHov = inBox(mouseX, mouseY, bk.x, bk.y, bk.w, bk.h);
+  fill(0, 0, 0, bkHov ? 170 : 120); rect(bk.x, bk.y, bk.w, bk.h, 14);
+  if (bkHov) { stroke(255); strokeWeight(2); noFill(); rect(bk.x, bk.y, bk.w, bk.h, 14); noStroke(); }
+  fill(255); textSize(18); textStyle(BOLD); text(tl('← Back', '← Volver'), bk.x + bk.w / 2, bk.y + bk.h / 2 + 1); textStyle(NORMAL);
   fill(th.accent); rect(width / 2 - INTRO_BTN.w / 2, INTRO_BTN.y, INTRO_BTN.w, INTRO_BTN.h, 14);
   fill('#101010'); textSize(21); textStyle(BOLD); text(tl('Tee Off', '¡A jugar!'), width / 2, INTRO_BTN.y + INTRO_BTN.h / 2 + 1); textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
 }
 function introHit(mx, my) { return inBox(mx, my, width / 2 - INTRO_BTN.w / 2, INTRO_BTN.y, INTRO_BTN.w, INTRO_BTN.h); }
+function introBackRect() { return { x: width / 2 - INTRO_BTN.w / 2 - 16 - 130, y: INTRO_BTN.y, w: 130, h: INTRO_BTN.h }; }
+function introBackHit(mx, my) { var r = introBackRect(); return inBox(mx, my, r.x, r.y, r.w, r.h); }
 
 // the hole's name and idea, shown for a moment when it starts
 function drawHoleBanner() {
@@ -2827,6 +2834,7 @@ function mousePressed() {
     return;
   }
   if (gameState === 'COURSE_INTRO') {
+    if (introBackHit(mouseX, mouseY)) { playSound('click'); gameState = 'COURSE_SELECT'; return; }
     if (introHit(mouseX, mouseY)) { playSound('click'); startHole(0); }
     return;
   }
