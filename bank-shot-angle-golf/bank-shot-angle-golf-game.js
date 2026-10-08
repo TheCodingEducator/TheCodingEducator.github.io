@@ -237,8 +237,9 @@ function playFx(name) {
 // Saved records (this device only: best strokes on each hole, best course total, stars)
 // ---------------------------------------------------------------
 var RECORDS_KEY = 'bankshot_records';
-function loadRecords() { try { return JSON.parse(localStorage.getItem(RECORDS_KEY)) || {}; } catch (e) { return {}; } }
-function saveRecords(r) { try { localStorage.setItem(RECORDS_KEY, JSON.stringify(r)); } catch (e) {} }
+var recordsCache = null;   // (read once, not every frame)
+function loadRecords() { if (recordsCache) return JSON.parse(recordsCache); try { recordsCache = localStorage.getItem(RECORDS_KEY) || '{}'; return JSON.parse(recordsCache); } catch (e) { return {}; } }
+function saveRecords(r) { recordsCache = JSON.stringify(r); try { localStorage.setItem(RECORDS_KEY, recordsCache); } catch (e) {} }
 function courseRecord(mode, key) {
   var r = loadRecords(), m = r[mode] || {}, c = m[key] || {};
   return { best: c.best || [], total: c.total || null, stars: c.stars || [] };
@@ -504,7 +505,6 @@ function gameDrawScreen() {
   drawHoleBackground();
   drawZones();
   drawWalls();
-  drawBushes();
   drawCup();
   drawObstacles();
   if (!confirmExitOpen && !explainOpen) updatePhysics();
@@ -584,7 +584,7 @@ function saveProgress(hole) {
 function clearProgress() { try { localStorage.removeItem(PROGRESS_KEY); } catch (e) {} }
 function loadProgress() {
   try {
-    var p = JSON.parse(localStorage.getItem(PROGRESS_KEY));
+    var p = JSON.parse(localStorage.getItem(PROGRESS_KEY));   // (only read on the menu)
     if (!p || (p.mode !== MODE_EASY && p.mode !== MODE_HARD) || p.hole < 0 || p.hole > 8) return null;
     for (var i = 0; i < COURSES.length; i++) if (COURSES[i].key === p.course) { p.index = i; return p; }
   } catch (e) {}
@@ -1344,7 +1344,7 @@ function seeded(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x 
 
 function buildHoleLayer(h, th) {
   var g = createGraphics(700, 700);
-  g.pixelDensity(2);
+  g.pixelDensity(pixelDensity());   // the same sharpness as the game canvas
   g.angleMode(DEGREES);
   var ctx = g.drawingContext;
   g.noStroke();
@@ -1402,6 +1402,9 @@ function buildHoleLayer(h, th) {
 
   // ---- islands: solid shapes inside the green
   (h.islands || []).forEach(function (isl) { drawIslandShape(g, isl, th); });
+  // ---- the walls and the round obstacles never move either
+  paintWalls(g);
+  paintBushes(g);
 
   return g;
 }
@@ -1490,6 +1493,13 @@ function drawZones() {
       drawFlowArrows(z, [220, 240, 255], 46);
     }
   }
+  // the zones are drawn every frame (their arrows move), so the few walls they touch go back on top
+  if (hole.zones.length) {
+    if (!hole._zoneWalls) hole._zoneWalls = hole.walls.filter(function (w) {
+      return hole.zones.some(function (z) { return max(w.x1, w.x2) >= z.x - 8 && min(w.x1, w.x2) <= z.x + z.w + 8 && max(w.y1, w.y2) >= z.y - 8 && min(w.y1, w.y2) <= z.y + z.h + 8; });
+    });
+    paintWalls(window, hole._zoneWalls);
+  }
 }
 
 // Continuously slides small chevrons through the zone along its real
@@ -1543,64 +1553,70 @@ function drawFlowArrows(z, rgb, basePxPerSec, scale) {
 
 // Walls in the course's style: castle stone, glowing station rails, or beach boardwalk planks. Bumpers
 // (fences, solar panels, breakwaters standing inside the green) are a little lighter so they stand out.
-function drawWalls() {
+// The walls never move, so they're painted once into the hole's saved picture (see buildHoleLayer);
+// G is that picture. Only the highlighted wall is drawn live, every frame (drawWalls).
+function paintWalls(G, list) {
   var th = course.theme, style = th.wallStyle;
-  push();
-  strokeCap(ROUND);
-  for (var i = 0; i < hole.walls.length; i++) {
-    var w = hole.walls[i];
-    // While a bank-shot question is live, the wall the ball is headed for lights up gold so the
-    // diagram's wall is unmistakably the same one sitting right there on the course.
-    var isLit = holePhase === 'QUESTION' && pendingShot && pendingShot.type === 'WALL' && pendingShot.wallRef === w;
+  list = list || hole.walls;
+  G.push();
+  G.strokeCap(ROUND);
+  for (var i = 0; i < list.length; i++) {
+    var w = list[i];
     var bump = w.kind === 'bumper';
-    stroke(0, 0, 0, 90); strokeWeight(13);
-    line(w.x1, w.y1 + 4, w.x2, w.y2 + 4);
-    if (isLit) {
-      stroke('#e0a030'); strokeWeight(11); line(w.x1, w.y1, w.x2, w.y2);
-      stroke('#ffce6b'); strokeWeight(4); line(w.x1, w.y1 - 1.5, w.x2, w.y2 - 1.5);
-      continue;
-    }
+    G.stroke(0, 0, 0, 90); G.strokeWeight(13);
+    G.line(w.x1, w.y1 + 4, w.x2, w.y2 + 4);
     if (style === 'neon') {
-      drawingContext.shadowColor = bump ? '#ffb347' : th.wall; drawingContext.shadowBlur = 12;
-      stroke(bump ? '#ff9f2e' : th.wall); strokeWeight(9); line(w.x1, w.y1, w.x2, w.y2);
-      drawingContext.shadowBlur = 0;
-      stroke(bump ? '#ffe2b0' : th.wallHi); strokeWeight(3); line(w.x1, w.y1, w.x2, w.y2);
+      G.drawingContext.shadowColor = bump ? '#ffb347' : th.wall; G.drawingContext.shadowBlur = 12;
+      G.stroke(bump ? '#ff9f2e' : th.wall); G.strokeWeight(9); G.line(w.x1, w.y1, w.x2, w.y2);
+      G.drawingContext.shadowBlur = 0;
+      G.stroke(bump ? '#ffe2b0' : th.wallHi); G.strokeWeight(3); G.line(w.x1, w.y1, w.x2, w.y2);
     } else if (style === 'stone') {
-      stroke(bump ? '#8a5a34' : th.wall); strokeWeight(12); line(w.x1, w.y1, w.x2, w.y2);
-      stroke(bump ? '#c08a5a' : th.wallHi); strokeWeight(4); line(w.x1, w.y1 - 2, w.x2, w.y2 - 2);
+      G.stroke(bump ? '#8a5a34' : th.wall); G.strokeWeight(12); G.line(w.x1, w.y1, w.x2, w.y2);
+      G.stroke(bump ? '#c08a5a' : th.wallHi); G.strokeWeight(4); G.line(w.x1, w.y1 - 2, w.x2, w.y2 - 2);
       // mortar joints along stone walls
       if (!bump) {
         var L = dist(w.x1, w.y1, w.x2, w.y2), n = floor(L / 22);
-        stroke(60, 62, 68, 160); strokeWeight(1.5);
+        G.stroke(60, 62, 68, 160); G.strokeWeight(1.5);
         var ux = (w.x2 - w.x1) / L, uy = (w.y2 - w.y1) / L;
-        for (var j = 1; j < n; j++) { var mx = w.x1 + ux * j * 22, my = w.y1 + uy * j * 22; line(mx - uy * 5, my + ux * 5, mx + uy * 5, my - ux * 5); }
+        for (var j = 1; j < n; j++) { var mx = w.x1 + ux * j * 22, my = w.y1 + uy * j * 22; G.line(mx - uy * 5, my + ux * 5, mx + uy * 5, my - ux * 5); }
       }
     } else {   // wood
-      stroke(bump ? '#6f6f78' : th.wall); strokeWeight(12); line(w.x1, w.y1, w.x2, w.y2);
-      stroke(bump ? '#a9a9b3' : th.wallHi); strokeWeight(4); line(w.x1, w.y1 - 2, w.x2, w.y2 - 2);
+      G.stroke(bump ? '#6f6f78' : th.wall); G.strokeWeight(12); G.line(w.x1, w.y1, w.x2, w.y2);
+      G.stroke(bump ? '#a9a9b3' : th.wallHi); G.strokeWeight(4); G.line(w.x1, w.y1 - 2, w.x2, w.y2 - 2);
     }
   }
+  G.pop();
+}
+// While a bank-shot question is live, the wall the ball is headed for lights up gold so the
+// diagram's wall is unmistakably the same one sitting right there on the course.
+function drawWalls() {
+  if (!(holePhase === 'QUESTION' && pendingShot && pendingShot.type === 'WALL' && pendingShot.wallRef)) return;
+  var w = pendingShot.wallRef;
+  push();
+  strokeCap(ROUND);
+  stroke('#e0a030'); strokeWeight(11); line(w.x1, w.y1, w.x2, w.y2);
+  stroke('#ffce6b'); strokeWeight(4); line(w.x1, w.y1 - 1.5, w.x2, w.y2 - 1.5);
   pop();
 }
 
 // round obstacles: hedges, asteroids or beach rocks
-function drawBushes() {
+function paintBushes(G) {   // (painted once into the hole's saved picture)
   var th = course.theme;
   for (var i = 0; i < hole.bushes.length; i++) {
     var b = hole.bushes[i];
-    noStroke();
-    fill(0, 0, 0, 70);
-    ellipse(b.x + 4, b.y + 6, b.r * 2.1, b.r * 1.1);
+    G.noStroke();
+    G.fill(0, 0, 0, 70);
+    G.ellipse(b.x + 4, b.y + 6, b.r * 2.1, b.r * 1.1);
     if (th.rockStyle === 'asteroid') {
-      fill(th.bush); ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
-      fill(90, 86, 80); ellipse(b.x + b.r * 0.3, b.y + b.r * 0.2, b.r * 0.6, b.r * 0.5); ellipse(b.x - b.r * 0.35, b.y - b.r * 0.1, b.r * 0.4, b.r * 0.35);
-      fill(th.bushHi); ellipse(b.x - b.r * 0.3, b.y - b.r * 0.45, b.r * 0.7, b.r * 0.35);
+      G.fill(th.bush); G.ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
+      G.fill(90, 86, 80); G.ellipse(b.x + b.r * 0.3, b.y + b.r * 0.2, b.r * 0.6, b.r * 0.5); G.ellipse(b.x - b.r * 0.35, b.y - b.r * 0.1, b.r * 0.4, b.r * 0.35);
+      G.fill(th.bushHi); G.ellipse(b.x - b.r * 0.3, b.y - b.r * 0.45, b.r * 0.7, b.r * 0.35);
     } else if (th.rockStyle === 'rock') {
-      fill(th.bush); ellipse(b.x, b.y, b.r * 2, b.r * 1.8);
-      fill(th.bushHi); ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.9, b.r * 0.6);
+      G.fill(th.bush); G.ellipse(b.x, b.y, b.r * 2, b.r * 1.8);
+      G.fill(th.bushHi); G.ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.9, b.r * 0.6);
     } else {
-      fill(th.bush); ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
-      fill(th.bushHi); ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 1.1, b.r);
+      G.fill(th.bush); G.ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
+      G.fill(th.bushHi); G.ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 1.1, b.r);
     }
   }
 }

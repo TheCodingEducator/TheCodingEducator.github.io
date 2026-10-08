@@ -1,16 +1,14 @@
 // Small support layer for Bank Shot: Angle Golf. Unlike the ported
 // Code.org games on this site, this game was written directly against
 // plain p5.js, so there's no Game Lab API to emulate here - this file
-// only supplies sound playback and the touch-density-aware canvas
-// bootstrap (the lesson learned from Piggy Bank Math running laggy on
-// phones: cap the backing-buffer multiplier on touch devices instead
-// of forcing the same high multiplier everywhere).
+// only supplies sound playback and the density-aware canvas bootstrap
+// (never draw sharper than the screen can show - extra pixels just cost speed).
 
 function setup() {
-  var isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
-    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
   createCanvas(700, 700).parent('game-canvas-slot');
-  pixelDensity(isTouch ? Math.min(2, displayDensity()) : 2);
+  // draw at the screen's own sharpness (1x on most classroom laptops and Chromebooks, 2x on sharp screens),
+  // never more: a forced 2x draws four times the pixels, which made the zoom and the first roll lag
+  pixelDensity(Math.min(2, Math.max(1, displayDensity())));
   frameRate(60);
   angleMode(DEGREES);
   gameSetup();
