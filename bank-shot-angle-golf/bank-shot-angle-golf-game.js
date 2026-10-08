@@ -29,8 +29,6 @@ var MAX_LAUNCH_SPEED = 15;
 var WALL_REST = 0.8;
 var BUSH_REST = 0.55;
 var CUP_CAPTURE_SPEED = 4.6;
-var HERO_TIMER_SECONDS = 10;
-var CHAOS_SPEED_MULT = 2.3;
 
 var MODE_EASY = 'EASY';
 var MODE_HARD = 'HARD';
@@ -170,9 +168,7 @@ var sinkAnim = 0;              // 0..1
 // The resolved-question readout shown next to the vertex while the
 // ball rolls - the correct angle always, plus the player's own wrong
 // number when they missed it. Captured as its own snapshot (not read
-// live off pendingShot) because pendingShot itself goes null the
-// instant a Hero-mode timeout fires (see triggerTimeoutChaos), and
-// this needs to keep showing what the correct answer WAS regardless.
+// live off pendingShot), so it keeps showing what the correct answer WAS.
 // Kept until the ball comes to rest. Nothing of it is drawn until `revealed` flips true (see updateAngleReveal) - the ball's route itself is never drawn.
 var resolvedInfo = null;       // { correctAnswer, typed, correct, point, offsetDir }
 
@@ -360,14 +356,14 @@ function kbKeyPressed() {
   if (explainOpen) return false;
   if (confirmExitOpen) {
     kbShown = true;
-    if (keyCode === LEFT_ARROW) { kbExitSel = 'cancel'; return true; }
-    if (keyCode === RIGHT_ARROW) { kbExitSel = 'exit'; return true; }
-    if (keyCode === UP_ARROW || keyCode === DOWN_ARROW) { kbExitSel = kbExitSel === 'exit' ? 'cancel' : 'exit'; return true; }   // the two buttons sit side by side: up / down switch too
+    var order = ['cancel', 'restart', 'exit'], oi = order.indexOf(kbExitSel);
+    if (keyCode === LEFT_ARROW || keyCode === UP_ARROW) { kbExitSel = order[max(0, oi - 1)]; return true; }   // the three buttons sit side by side
+    if (keyCode === RIGHT_ARROW || keyCode === DOWN_ARROW) { kbExitSel = order[min(order.length - 1, oi + 1)]; return true; }
     if (keyCode === ESCAPE) { confirmExitOpen = false; kbExitSel = 'cancel'; playSound('click'); return true; }
     if (kbConfirmKey()) {
-      confirmExitOpen = false; playSound('click');
-      if (kbExitSel === 'exit') { dragging = false; kbAim = null; gameState = 'MENU'; }
+      var act = kbExitSel;
       kbExitSel = 'cancel';
+      menuAction(act);
       return true;
     }
     return true;
@@ -447,8 +443,8 @@ function kbDrawFocus() {
   var r = null;
   if (confirmExitOpen) {
     var h = EXIT_CONFIRM_BOX.h, by = height / 2 - h / 2 + h - 70, gap = 16;
-    r = kbExitSel === 'cancel' ? { x: width / 2 - EXIT_CONFIRM_NO.w - gap / 2, y: by, w: EXIT_CONFIRM_NO.w, h: EXIT_CONFIRM_NO.h, rr: 10 }
-                               : { x: width / 2 + gap / 2, y: by, w: EXIT_CONFIRM_YES.w, h: EXIT_CONFIRM_YES.h, rr: 10 };
+    var mb = menuButtonRects().filter(function (b) { return b.id === kbExitSel; })[0];
+    if (mb) r = { x: mb.x, y: mb.y, w: mb.w, h: mb.h, rr: 10 };
   } else if (gameState === 'MENU') {
     if (kbMenuSel === 3 && loadProgress()) { var cr = continueRect(); r = { x: cr.x, y: cr.y, w: cr.w, h: cr.h, rr: cr.h / 2 }; }
     else if (kbMenuSel >= 2) { var pr = practiceRect(); r = { x: pr.x, y: pr.y, w: pr.w, h: pr.h, rr: pr.h / 2 }; }
@@ -566,7 +562,7 @@ function drawMenu() {
   drawModeCard(width / 2 - 12 - MENU_CARD_W, MENU_CARD_Y, tl('Golf Gamer', 'Golfista gamer'), 'EASY', '⛳',
     [tl('Angles ease in - 10s, then 5s,', 'Ángulos fáciles: de 10 en 10, luego de 5,'), tl('then anything by hole 7.', 'y cualquiera desde el hoyo 7.')], tl('No clock. Take your time.', 'Sin reloj. Tómate tu tiempo.'), '#3ea158');
   drawModeCard(width / 2 + 12, MENU_CARD_Y, tl('Hole-In-One Hero', 'Héroe del hoyo en uno'), 'HARD', '🔥',
-    [tl('Any angle from hole 1 -', 'Cualquier ángulo desde el hoyo 1 -'), tl('algebra by the back nine.', 'álgebra en los últimos nueve.')], tl('10s clock from hole 4. Run out and it counts as a miss.', 'Reloj de 10 s desde el hoyo 4. Si se acaba, cuenta como fallo.'), '#e0562f');
+    [tl('Two equal angles and one to find,', 'Dos ángulos iguales y uno por hallar,'), tl('any angle, algebra on the back nine.', 'cualquier ángulo, álgebra al final.')], tl('See the bounce: in and out at the same angle.', 'Mira el rebote: entra y sale con el mismo ángulo.'), '#e0562f');
 
   drawPracticeButton();
 
@@ -1090,7 +1086,6 @@ function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
     else if (holeNum <= 6) { do { known = 5 * floor(random(1, maxVal / 5 - 0.001)); } while (known % 10 === 0); }
     else known = floor(random(1, maxVal - 0.001));
   } else {
-    timerOn = holeNum >= 4;
     if (rawKnown !== null) known = round(rawKnown);
     else known = floor(random(1, maxVal - 0.001));
     if (holeNum >= 7) {
@@ -1203,6 +1198,8 @@ function simulateFirstWallContact(origin, aimDir, power) {
 // other half of that straight line). The bounce physics works in angles measured
 // from the wall's normal, which is this answer minus 90.
 function wallNormalAngle(answerDeg) { return answerDeg - 90; }
+// the given angle's value (an algebra question gives it as ax + b)
+function shotKnown(s) { return s.algebra ? s.algebra.a * s.algebra.x + s.algebra.b : s.known; }
 
 function classifyAndBuildShot(aimDir, power, holeNum) {
   var origin = { x: ball.x, y: ball.y };
@@ -1266,8 +1263,10 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
       if (straightHit && straightHit.wall === w) { hit.point = straightHit.point; angDir = askedAim; }
     }
     var wallShot = {
-      type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: tier.timerOn,
-      correctAnswer: 180 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
+      type: 'WALL', known: tier.known, algebra: tier.algebra, timerOn: false,
+      // Hole-In-One Hero shows both equal angles of the bounce (in and out); the missing one is between them
+      double: gameMode === MODE_HARD,
+      correctAnswer: gameMode === MODE_HARD ? 180 - 2 * tier.known : 180 - tier.known, point: hit.point, Wd: Wd, N: N, wallRef: w,
       aimDir: aimDir, power: power, applied: false, launchFrom: { x: origin.x, y: origin.y }
     };
     // Only ask a wall question if the correct answer would really make the ball
@@ -1277,13 +1276,15 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
     if (simulateTrail(wallShot, true).bounceIdx !== undefined) return wallShot;
   }
 
-  var tier2 = applyDifficultyTier(null, gameMode, holeNum, 89);
+  // Hole-In-One Hero splits the right angle into two equal given angles and the missing one
+  var dbl = gameMode === MODE_HARD;
+  var tier2 = applyDifficultyTier(null, gameMode, holeNum, dbl ? 44 : 89);
   // The missing (complementary) angle is any whole number from 1° to 89° on every hole - no rounding
   // to 10s or 5s. (Hero mode's algebra questions keep their own known-angle expression.)
-  if (!tier2.algebra) tier2.known = 90 - floor(random(1, 90));
+  if (!tier2.algebra) tier2.known = dbl ? floor(random(4, 41)) : 90 - floor(random(1, 90));
   return {
-    type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: tier2.timerOn,
-    correctAnswer: 90 - tier2.known,
+    type: 'STRAIGHT', known: tier2.known, algebra: tier2.algebra, timerOn: false, double: dbl,
+    correctAnswer: dbl ? 90 - 2 * tier2.known : 90 - tier2.known,
     // The diagram/camera anchor for a straight shot - unlike WALL's
     // point (the actual contact point on a rail), there's no natural
     // "where" for an open-green shot except the ball's own launch spot.
@@ -1785,7 +1786,7 @@ function simulateTrail(shot, isCorrect) {
   // (see submitAnswer), so its "bounce" is just where its heading first turns.
   var pending = {
     type: shot.type, wallRef: shot.wallRef, Wd: shot.Wd, N: shot.N,
-    resolvedAngle: isCorrect ? wallNormalAngle(shot.correctAnswer) : shot.resolvedAngle, correct: isCorrect,
+    resolvedAngle: isCorrect ? wallNormalAngle(180 - shotKnown(shot)) : shot.resolvedAngle, correct: isCorrect,
     bendDeg: isCorrect ? 0 : (shot.bendDeg || 0),
     launchFrom: from, triggerDist: shot.triggerDist, applied: !isCorrect && shot.type !== 'WALL'   // a wrong wall shot still bounces at the wall (at the typed angle)
   };
@@ -2470,6 +2471,10 @@ function closestPointOnSegment(px, py, x1, y1, x2, y2) {
 // own wedge; the unknown angle in blue with a big "?" the same way.
 // Also drawn after the shot (reveal = true) from the same shot, so the angle the player sees
 // afterwards is exactly the one they answered - with the "?" replaced by the answer.
+// Hole-In-One Hero (p.double): three angles instead of two. A bank shot shows the straight wall with
+// the ball's path in AND its path out, each making the same gold angle with the wall (a real bounce);
+// the missing angle is between the two paths. A straight shot splits the right angle into two equal
+// gold angles and the missing one next to the aim line.
 function drawLiveAngleDiagram(shot, reveal) {
   if (!reveal && (!pendingShot || holePhase !== 'QUESTION')) return;
   var p = shot || pendingShot;
@@ -2484,7 +2489,7 @@ function drawLiveAngleDiagram(shot, reveal) {
     // a right angle whose far side is the aim line: known from the square edge, answer up to the aim
     dir0 = vPerp(p.aimDir); sweepDir = p.aimDir; totalDeg = 90;
   }
-  knownVal = p.algebra ? (p.algebra.a * p.algebra.x + p.algebra.b) : p.known;
+  knownVal = shotKnown(p);
 
   var baseAngle = atan2(dir0.y, dir0.x);
   var sweepSign = vDot(sweepDir, vPerp(dir0)) >= 0 ? 1 : -1;
@@ -2510,18 +2515,23 @@ function drawLiveAngleDiagram(shot, reveal) {
     var tb = vNorm(vSub(from, p.point));
     drawKnown = degrees(Math.acos(constrain(vDot(dir0, tb), -1, 1)));
   }
-  var knownEnd = sweepSign * drawKnown;
-  var totalEnd = sweepSign * totalDeg;
-  var kLo = min(0, knownEnd), kHi = max(0, knownEnd);
-  var uLo = min(knownEnd, totalEnd), uHi = max(knownEnd, totalEnd);
+  var S = sweepSign, T = totalDeg;
+  // the gold given angle(s) and the unknown, as [start, end] in degrees from the baseline
+  var gold = [[0, drawKnown]];
+  var uS = drawKnown, uE = T;
+  if (p.double) {
+    if (p.type === 'WALL') { gold.push([T - drawKnown, T]); uE = T - drawKnown; }
+    else { gold.push([drawKnown, 2 * drawKnown]); uS = 2 * drawKnown; }
+  }
+  var arcBetween = function (a, b, mode) { var x = S * a, y = S * b; arc(0, 0, r * 2, r * 2, min(x, y), max(x, y), mode); };
 
   // filled wedges first, so the shared baseline/marker draw crisply on top
   noStroke();
   fill(224, 160, 48, 95);
-  arc(0, 0, r * 2, r * 2, kLo, kHi, PIE);
+  for (var gi = 0; gi < gold.length; gi++) arcBetween(gold[gi][0], gold[gi][1], PIE);
   if (!wrongR) {
     if (!reveal) fill(91, 140, 255, 95); else fill(77, 255, 77, 100);
-    arc(0, 0, r * 2, r * 2, uLo, uHi, PIE);
+    arcBetween(uS, uE, PIE);
   }
 
   noFill();
@@ -2531,35 +2541,43 @@ function drawLiveAngleDiagram(shot, reveal) {
   line(p.type === 'WALL' ? -lineR : 0, 0, lineR, 0);
   if (p.type !== 'WALL' && !reveal) {   // a straight shot's one dotted line is its path: the aim side of the right angle (after the shot, the solid route line takes its place)
     drawingContext.setLineDash([6, 8]);
-    line(0, 0, cos(totalEnd) * (wrongR ? r : r * 1.6), sin(totalEnd) * (wrongR ? r : r * 1.6));
+    line(0, 0, cos(S * T) * (wrongR ? r : r * 1.6), sin(S * T) * (wrongR ? r : r * 1.6));
+    drawingContext.setLineDash([]);
+  }
+  if (p.double) {   // the extra side: the ball's path out of the bounce, or the line splitting the right angle
+    var xa = p.type === 'WALL' ? T - drawKnown : drawKnown;
+    if (p.type === 'WALL') drawingContext.setLineDash([6, 8]);
+    line(0, 0, cos(S * xa) * r * 1.15, sin(S * xa) * r * 1.15);
     drawingContext.setLineDash([]);
   }
 
   strokeWeight(4);
   stroke('#e0a030');
-  arc(0, 0, r * 2, r * 2, kLo, kHi);
+  for (var gj = 0; gj < gold.length; gj++) arcBetween(gold[gj][0], gold[gj][1]);
   if (!wrongR) {
     stroke(!reveal ? '#5b8cff' : '#4dff4d');
-    arc(0, 0, r * 2, r * 2, uLo, uHi);
+    arcBetween(uS, uE);
   }
 
+  var tMid, gMid, hasGap = false;
   if (wrongR) {
-    // A wrong answer: the student's number as a red wedge, starting where the known angle ends.
-    // Too small leaves a gray gap before the wall (the "?" still to find); too big spills past it.
-    var ty = min(max(resolvedInfo.typed, 1), 359 - abs(knownEnd));
-    var rs = knownEnd, re = knownEnd + sweepSign * ty;
+    // A wrong answer: the student's number as a red wedge, starting where the given angle(s) end.
+    // Too small leaves a gray gap before the far side (the "?" still to find); too big spills past it.
+    var ty = min(max(resolvedInfo.typed, 1), 359 - abs(uS));
+    var rs = uS, re = uS + ty;
     noStroke();
     fill(230, 57, 70, 120);
-    arc(0, 0, r * 2, r * 2, min(rs, re), max(rs, re), PIE);
-    if (abs(re) < abs(totalEnd)) {
+    arcBetween(rs, re, PIE);
+    if (re < uE) {
       fill(255, 255, 255, 60);
-      arc(0, 0, r * 2, r * 2, min(re, totalEnd), max(re, totalEnd), PIE);
+      arcBetween(re, uE, PIE);
+      hasGap = true;
     }
     noFill();
     stroke('#e63946');
     strokeWeight(4);
-    arc(0, 0, r * 2, r * 2, min(rs, re), max(rs, re));
-    var tMid = (rs + re) / 2, gMid = (re + totalEnd) / 2, hasGap = abs(re) < abs(totalEnd);
+    arcBetween(rs, re);
+    tMid = S * (rs + re) / 2; gMid = S * (re + uE) / 2;
   }
 
   if (totalDeg === 90) {
@@ -2568,36 +2586,35 @@ function drawLiveAngleDiagram(shot, reveal) {
     strokeWeight(2.5);
     var m = 20;
     beginShape();
-    vertex(m, 0); vertex(m, m * sweepSign); vertex(0, m * sweepSign);
+    vertex(m, 0); vertex(m, m * S); vertex(0, m * S);
     endShape();
   }
 
-  // Local-space positions for the two labels, computed here (still inside
-  // the rotated frame) but drawn AFTER pop() below - text drawn while the
-  // canvas is rotated gets rotated too (upside-down/mirrored digits, "?"
-  // turns into "¿"), so we place it in unrotated world space instead.
-  var kMid = knownEnd / 2;
-  var kLocal = { x: cos(kMid) * r * 0.6, y: sin(kMid) * r * 0.6 };
-  var uMid = (knownEnd + totalEnd) / 2;
+  // Local-space positions for the labels, computed here (still inside the rotated frame) but drawn
+  // AFTER pop() below - text drawn while the canvas is rotated gets rotated too (upside-down/mirrored
+  // digits, "?" turns into "¿"), so we place it in unrotated world space instead.
+  var kLocals = gold.map(function (gw) { var mid = S * (gw[0] + gw[1]) / 2; return { x: cos(mid) * r * 0.6, y: sin(mid) * r * 0.6 }; });
+  var uMid = S * (uS + uE) / 2;
   var uLocal = { x: cos(uMid) * r * 0.65, y: sin(uMid) * r * 0.65 };
   if (wrongR) uLocal = { x: cos(tMid) * r * 0.62, y: sin(tMid) * r * 0.62 };   // the typed number, inside its red wedge
   var gLocal = wrongR && hasGap ? { x: cos(gMid) * r * 0.7, y: sin(gMid) * r * 0.7 } : null;
   pop();
 
-  var kWorld = rotatePoint(kLocal, baseAngle);
-  var uWorld = rotatePoint(uLocal, baseAngle);
-
   noStroke();
   fill('#ffce6b');
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(15);
-  text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
+  textSize(p.double ? 13 : 15);
+  for (var ki = 0; ki < kLocals.length; ki++) {
+    var kWorld = rotatePoint(kLocals[ki], baseAngle);
+    text(knownVal + '°', p.point.x + kWorld.x, p.point.y + kWorld.y);
+  }
   if (gLocal) {   // the gap the typed angle left unfilled
     var gWorld = rotatePoint(gLocal, baseAngle);
     fill(255); textSize(18);
     text('?', p.point.x + gWorld.x, p.point.y + gWorld.y);
   }
+  var uWorld = rotatePoint(uLocal, baseAngle);
   fill(!reveal ? '#bcd4ff' : wrongR ? '#ffffff' : '#4dff4d');
   textSize(reveal ? 19 : 23);
   text(!reveal ? '?' : (wrongR ? resolvedInfo.typed : p.correctAnswer) + '°', p.point.x + uWorld.x, p.point.y + uWorld.y);
@@ -2623,9 +2640,13 @@ function drawQuestionBand(h) {
 function drawQuestionOverlay() {
   if (!pendingShot || !questionReady) return;   // wait for the zoom to finish
   var isWall = pendingShot.type === 'WALL';
-  drawQuestionBand(pendingShot.algebra || retryHint || pendingShot.timerOn ? 150 : 88);
+  drawQuestionBand(pendingShot.algebra || retryHint ? 150 : 88);
   var title = isWall ? tl('Supplementary Angles', 'Ángulos suplementarios') : tl('Complementary Angles', 'Ángulos complementarios');
   var relWord = isWall ? tl('sum to 180°', 'suman 180°') : tl('sum to 90°', 'suman 90°');
+  var lead = pendingShot.double
+    ? (isWall ? tl('The ball leaves the wall at the same angle it hit it. These three angles ', 'La bola sale de la pared con el mismo ángulo con que llegó. Estos tres ángulos ')
+              : tl('These three angles ', 'Estos tres ángulos '))
+    : tl('These two angles ', 'Estos dos ángulos ');
 
   noStroke();
   textAlign(CENTER, TOP);
@@ -2639,9 +2660,11 @@ function drawQuestionOverlay() {
 
   textSize(18);
   fill(0, 0, 0, 130);
-  text(tl('These two angles ', 'Estos dos ángulos ') + relWord, width / 2 + 1, 151);
+  if (pendingShot.double && isWall) textSize(15);
+  text(lead + relWord, width / 2 + 1, 151);
   fill(216, 226, 216);
-  text(tl('These two angles ', 'Estos dos ángulos ') + relWord, width / 2, 150);
+  text(lead + relWord, width / 2, 150);
+  textSize(18);
 
   if (retryHint) {
     var hintY = pendingShot.algebra ? 206 : 178;
@@ -2656,7 +2679,7 @@ function drawQuestionOverlay() {
     text(hint, width / 2, hintY);
     if ((pendingShot.tries || 1) >= 3) {   // a second wrong try: the equation, with a blank to fill
       var kq = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
-      var eq = (isWall ? 180 : 90) + '° − ' + kq + '° = ?';
+      var eq = (isWall ? 180 : 90) + '° − ' + kq + '°' + (pendingShot.double ? ' − ' + kq + '°' : '') + ' = ?';
       textSize(22);
       fill(0, 0, 0, 140);
       text(eq, width / 2 + 1, hintY + 27);
@@ -2671,19 +2694,6 @@ function drawQuestionOverlay() {
     text(tl('Known angle = (', 'Ángulo conocido = (') + alg.a + 'x + ' + alg.b + tl(')°, and x = ', ')°, y x = ') + alg.x, width / 2 + 1, 179);
     fill('#ffce6b');
     text(tl('Known angle = (', 'Ángulo conocido = (') + alg.a + 'x + ' + alg.b + tl(')°, and x = ', ')°, y x = ') + alg.x, width / 2, 178);
-  }
-
-  if (pendingShot.timerOn) {
-    var remain = max(0, HERO_TIMER_SECONDS - (millis() - timerStart) / 1000);
-    fill(remain < 3 ? '#e63946' : 255);
-    textAlign(CENTER, TOP);
-    textSize(26);
-    textStyle(BOLD);
-    text(ceil(remain) + 's', width / 2, pendingShot.algebra ? 208 : 178);
-    textStyle(NORMAL);
-    if (remain <= 0 && !answerLocked && !confirmExitOpen) {
-      triggerTimeoutChaos();
-    }
   }
 
   // bottom input pill
@@ -2757,13 +2767,15 @@ function submitAnswer() {
     // wedge drawn afterwards: the typed angle measured on from the ball's incoming path (skimming
     // along the wall if the typed angle runs past it).
     var kw = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
-    pendingShot.resolvedAngle = correct ? wallNormalAngle(pendingShot.correctAnswer) : wallNormalAngle(constrain(kw + typed, 3, 177));
+    // (in Hero mode the typed angle sits between the in and out paths, measured from the path in, so it
+    // works out to the very same outgoing direction formula)
+    pendingShot.resolvedAngle = correct ? wallNormalAngle(180 - kw) : wallNormalAngle(constrain(kw + typed, 3, 177));
   } else {
     if (!correct) {
       // the typed angle measured on the question's right angle: the ball leaves along that line
       var bs = shotBaseAngleAndSweep(pendingShot);
       var kv = pendingShot.algebra ? (pendingShot.algebra.a * pendingShot.algebra.x + pendingShot.algebra.b) : pendingShot.known;
-      var outAng = bs.baseAngle + bs.sweepSign * (kv + constrain(typed, 1, 179));
+      var outAng = bs.baseAngle + bs.sweepSign * ((pendingShot.double ? 2 * kv : kv) + constrain(typed, 1, 179));   // (Hero: after both given angles)
       launchDir = { x: cos(outAng), y: sin(outAng) };
       pendingShot.bendDeg = 0;
       pendingShot.applied = true;
@@ -2837,8 +2849,7 @@ function mousePressed() {
   }
   if (confirmExitOpen) {
     var choice = exitConfirmHit(mouseX, mouseY);
-    if (choice === 'exit') { confirmExitOpen = false; dragging = false; gameState = 'MENU'; playSound('click'); }
-    else if (choice === 'cancel') { confirmExitOpen = false; playSound('click'); }
+    if (choice) menuAction(choice);
     return;
   }
   if (gameState === 'PLAYING' && exitButtonHit(mouseX, mouseY)) {
@@ -2977,35 +2988,6 @@ function mouseReleased() {
 
 
 // ---------------------------------------------------------------
-// Hero-mode timeout chaos shot
-// ---------------------------------------------------------------
-function triggerTimeoutChaos() {
-  // Running out of time counts as a miss, like a wrong answer: the ball doesn't move, the
-  // explanation card opens, and then the same question is asked again with the hint.
-  answerLocked = true;
-  var shot = pendingShot;
-  shot.launchFrom = { x: ball.x, y: ball.y };
-  var baseSweep = shotBaseAngleAndSweep(shot);
-  resolvedInfo = {
-    correctAnswer: shot.correctAnswer, typed: null, correct: false, timedOut: true,
-    point: { x: shot.point.x, y: shot.point.y },
-    offsetDir: shot.type === 'WALL' ? shot.N : { x: 0, y: -1 },
-    wd: shot.type === 'WALL' ? shot.Wd : null,
-    type: shot.type, known: shot.known, algebra: shot.algebra,
-    shot: shot,
-    baseAngle: baseSweep.baseAngle, sweepSign: baseSweep.sweepSign,
-    revealed: false, revealFrom: { x: ball.x, y: ball.y },
-    aimAngle: atan2(shot.aimDir.y, shot.aimDir.x), launchAngle: atan2(shot.aimDir.y, shot.aimDir.x),
-    trail: [{ x: ball.x, y: ball.y }], trailDone: true, afterReveal: 0, intendedTrail: []
-  };
-  nextStroke();
-  playSound('wrong');
-  triggerScreenFlash('#e63946', false);
-  holePhase = 'EXPLAIN';
-  explainOpen = true;
-}
-
-// ---------------------------------------------------------------
 // HUD / overlays
 // ---------------------------------------------------------------
 
@@ -3056,7 +3038,8 @@ function drawHUD() {
 function drawSumCheckCard() {
   var ri = resolvedInfo, sum = ri.type === 'WALL' ? 180 : 90;
   var k = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
-  var line1 = k + '° + ' + ri.typed + '° = ' + (k + ri.typed) + '°';
+  var dbl = !!(ri.shot && ri.shot.double);
+  var line1 = dbl ? k + '° + ' + k + '° + ' + ri.typed + '° = ' + (2 * k + ri.typed) + '°' : k + '° + ' + ri.typed + '° = ' + (k + ri.typed) + '°';
   var line2 = tl('not ', 'no ') + sum + '°';
   noStroke();
   fill(15, 22, 16, 225);
@@ -3076,6 +3059,7 @@ function drawEquation() {
   if (!resolvedInfo) return;
   if (!resolvedInfo.correct) { if (resolvedInfo.typed !== null) drawSumCheckCard(); return; }
   var sum = resolvedInfo.type === 'WALL' ? 180 : 90;
+  var minus = ' − ' + resolvedInfo.known + '°' + (resolvedInfo.shot && resolvedInfo.shot.double ? ' − ' + resolvedInfo.known + '°' : '');   // (Hero: both given angles)
   noStroke();
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
@@ -3084,10 +3068,10 @@ function drawEquation() {
     var alg = resolvedInfo.algebra;
     textSize(21);
     text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, 25);
-    text('✓ ' + sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 57);
+    text('✓ ' + sum + '°' + minus + ' = ' + resolvedInfo.correctAnswer + '°', width / 2, 57);
   } else {
     textSize(28);
-    text('✓ ' + sum + '° − ' + resolvedInfo.known + '° = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
+    text('✓ ' + sum + '°' + minus + ' = ' + resolvedInfo.correctAnswer + '°', width / 2, 41);
   }
   textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
@@ -3110,18 +3094,28 @@ function drawExplainDiagram(cx, cy, r, info) {
   strokeCap(ROUND);
   line(-r * 1.15, 0, r * 1.15, 0);
 
+  // the given angle(s) in gold and the missing one in green (Hole-In-One Hero has two equal given angles)
+  var dbl = !!(info.shot && info.shot.double);
+  var gold = [[0, known]], uS = known, uE = sum;
+  if (dbl && sum === 180) { gold.push([sum - known, sum]); uE = sum - known; }
+  else if (dbl) { gold.push([known, 2 * known]); uS = 2 * known; }
   noStroke();
   fill(224, 160, 48, 150);
-  arc(0, 0, r * 2, r * 2, -known, 0, PIE);
+  gold.forEach(function (g) { arc(0, 0, r * 2, r * 2, -g[1], -g[0], PIE); });
   fill(77, 255, 77, 130);
-  arc(0, 0, r * 2, r * 2, -sum, -known, PIE);
+  arc(0, 0, r * 2, r * 2, -uE, -uS, PIE);
 
   noFill();
   strokeWeight(5);
   stroke('#e0a030');
-  arc(0, 0, r * 2, r * 2, -known, 0);
+  gold.forEach(function (g) { arc(0, 0, r * 2, r * 2, -g[1], -g[0]); });
   stroke('#4dff4d');
-  arc(0, 0, r * 2, r * 2, -sum, -known);
+  arc(0, 0, r * 2, r * 2, -uE, -uS);
+  if (dbl) {   // the extra side
+    stroke(255, 255, 255, 220); strokeWeight(3);
+    var xa = sum === 180 ? sum - known : known;
+    line(0, 0, cos(-xa) * r * 1.1, sin(-xa) * r * 1.1);
+  }
 
   if (sum === 90) {
     stroke(255, 255, 255, 230);
@@ -3138,11 +3132,10 @@ function drawExplainDiagram(cx, cy, r, info) {
   textStyle(BOLD);
   fill('#ffce6b');
   textSize(r * 0.19);
-  var kMid = -known / 2;
-  text(known + '°', cos(kMid) * r * 0.62, sin(kMid) * r * 0.62);
+  gold.forEach(function (g) { var kMid = -(g[0] + g[1]) / 2; text(known + '°', cos(kMid) * r * 0.62, sin(kMid) * r * 0.62); });
   fill('#4dff4d');
   textSize(r * 0.22);
-  var uMid = -(known + sum) / 2;
+  var uMid = -(uS + uE) / 2;
   text('?', cos(uMid) * r * 0.65, sin(uMid) * r * 0.65);
   textStyle(NORMAL);
   pop();
@@ -3153,19 +3146,22 @@ function mistakeNote(ri) {
   if (!ri || ri.typed === null || ri.typed === undefined) return '';
   var sum = ri.type === 'WALL' ? 180 : 90, other = sum === 180 ? 90 : 180;
   var k = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
-  var right = sum - k, t = ri.typed;
+  var dbl = !!(ri.shot && ri.shot.double), given = dbl ? 2 * k : k;   // (Hole-In-One Hero: two equal given angles)
+  var right = sum - given, t = ri.typed;
+  if (dbl && t === sum - k) return tl('Both gold angles count: take ', 'Cuentan los dos ángulos dorados: resta ') + k + tl('° away twice.', '° dos veces.');
   if (ri.algebra) {
     var a = ri.algebra.a, x = ri.algebra.x, b = ri.algebra.b;
     if (t === sum - a * x || t === sum - b || t === sum - (a + x + b) || t === sum - (a * x * b))
       return tl('Work out the given angle first: ', 'Primero calcula el ángulo dado: ') + a + '(' + x + ') + ' + b + ' = ' + k + '°.';
   }
   if (t === k) return tl('That’s the angle you were given. Find the other one.', 'Ese es el ángulo que te dieron. Halla el otro.');
-  if (t + k === other) return sum === 90
+  if (t + given === other) return sum === 90
     ? tl('Those add up to 180°. These two make a square corner, so they add to 90°.', 'Esos suman 180°. Estos dos forman una esquina recta, así que suman 90°.')
     : tl('Those add up to 90°. These two make a straight line, so they add to 180°.', 'Esos suman 90°. Estos dos forman una línea recta, así que suman 180°.');
-  if (t === sum + k || t >= sum) return tl('That’s bigger than ', 'Eso es más que ') + sum + tl('°. Take the given angle away from ', '°. Resta el ángulo dado a ') + sum + '°.';
-  if (Math.abs(t - right) <= 10) return tl('Close! Check your subtraction: ', '¡Casi! Revisa tu resta: ') + sum + ' − ' + k + '.';
-  return tl('Start from ', 'Empieza con ') + sum + tl('° and take away ', '° y resta ') + k + '°.';
+  if (t >= sum) return tl('That’s bigger than ', 'Eso es más que ') + sum + '°. ' + (dbl ? tl('Take both given angles away from ', 'Resta los dos ángulos dados a ') : tl('Take the given angle away from ', 'Resta el ángulo dado a ')) + sum + '°.';
+  var minusK = ' − ' + k + (dbl ? ' − ' + k : '');
+  if (Math.abs(t - right) <= 10) return tl('Close! Check your subtraction: ', '¡Casi! Revisa tu resta: ') + sum + minusK + '.';
+  return tl('Start from ', 'Empieza con ') + sum + tl('° and take away ', '° y resta ') + k + '°' + (dbl ? tl(' twice', ' dos veces') : '') + '.';
 }
 
 var EXPLAIN_BOX_W = 600;
@@ -3217,8 +3213,18 @@ function drawExplainModal() {
 
   textSize(17);
   fill(206, 218, 206);
-  text(tl('These two angles are ', 'Estos dos ángulos son ') + relWord + tl(' - together they always', ' - juntos siempre'), width / 2, by + 82);
-  text(tl('add up to ', 'suman ') + sum + '°.', width / 2, by + 106);
+  var dblX = !!(resolvedInfo.shot && resolvedInfo.shot.double);
+  if (dblX && sum === 180) {
+    text(tl('The ball leaves the wall at the same angle it hit it, so both gold', 'La bola sale de la pared con el mismo ángulo con que llegó: los dos'), width / 2, by + 82);
+    text(tl('angles match. All three angles on the straight wall add up to 180°.', 'ángulos dorados son iguales. Los tres ángulos sobre la pared suman 180°.'), width / 2, by + 106);
+  } else if (dblX) {
+    text(tl('The two gold angles are equal. All three angles together', 'Los dos ángulos dorados son iguales. Los tres juntos'), width / 2, by + 82);
+    text(tl('make the right angle, so they add up to 90°.', 'forman el ángulo recto, así que suman 90°.'), width / 2, by + 106);
+  } else {
+    text(tl('These two angles are ', 'Estos dos ángulos son ') + relWord + tl(' - together they always', ' - juntos siempre'), width / 2, by + 82);
+    text(tl('add up to ', 'suman ') + sum + '°.', width / 2, by + 106);
+  }
+  var eqMinus = '° − ' + resolvedInfo.known + '°' + (dblX ? ' − ' + resolvedInfo.known + '°' : '') + ' = ?';
 
   drawExplainDiagram(width / 2, by + L.diagCY, L.diagR, resolvedInfo);
 
@@ -3232,11 +3238,11 @@ function drawExplainModal() {
     text(alg.a + '(' + alg.x + ') + ' + alg.b + ' = ' + resolvedInfo.known + '°', width / 2, eqY);
     fill('#4dff4d');
     textSize(25);
-    text(sum + '° − ' + resolvedInfo.known + '° = ?', width / 2, eqY + 36);
+    text(sum + eqMinus, width / 2, eqY + 36);
   } else {
     fill('#4dff4d');
     textSize(28);
-    text(sum + '° − ' + resolvedInfo.known + '° = ?', width / 2, eqY);
+    text(sum + eqMinus, width / 2, eqY);
   }
   textStyle(NORMAL);
 
@@ -3318,9 +3324,16 @@ function exitButtonHit(mx, my) {
   return mx > b.x && mx < b.x + b.w && my > b.y && my < b.y + b.h;
 }
 
-var EXIT_CONFIRM_BOX = { w: 420, h: 224 };
-var EXIT_CONFIRM_YES = { w: 140, h: 50 };
-var EXIT_CONFIRM_NO = { w: 140, h: 50 };
+// The in-game menu (the Menu button or Esc): keep playing, restart this hole, or go back to the main menu.
+var EXIT_CONFIRM_BOX = { w: 500, h: 236 };
+var MENU_BTNS = [{ id: 'cancel', w: 140 }, { id: 'restart', w: 160 }, { id: 'exit', w: 140 }];
+var MENU_BTN_H = 50, MENU_BTN_GAP = 14;
+function menuButtonRects() {
+  var total = MENU_BTN_GAP * (MENU_BTNS.length - 1);
+  MENU_BTNS.forEach(function (b) { total += b.w; });
+  var y = height / 2 - EXIT_CONFIRM_BOX.h / 2 + EXIT_CONFIRM_BOX.h - 72, x = width / 2 - total / 2;
+  return MENU_BTNS.map(function (b) { var r = { id: b.id, x: x, y: y, w: b.w, h: MENU_BTN_H }; x += b.w + MENU_BTN_GAP; return r; });
+}
 
 function drawExitConfirm() {
   noStroke();
@@ -3340,37 +3353,33 @@ function drawExitConfirm() {
   textAlign(CENTER, CENTER);
   textSize(23);
   textStyle(BOLD);
-  text(tl('Exit to Main Menu?', '¿Salir al menú principal?'), width / 2, y + 52);
+  text(tl('Menu', 'Menú'), width / 2, y + 46);
   textStyle(NORMAL);
-  textSize(16);
+  textSize(15);
   fill(200, 212, 200);
-  text(gameMode === MODE_PRACTICE ? tl('Your practice shots aren’t saved.', 'Tus tiros de práctica no se guardan.') : tl('You can pick up from this hole later: choose Continue on the menu.', 'Puedes seguir desde este hoyo luego: elige Continuar en el menú.'), width / 2, y + 84);
+  text(tl('Restart this hole from the tee, or exit to the main menu.', 'Reinicia este hoyo desde la salida o vuelve al menú principal.'), width / 2, y + 80);
+  text(gameMode === MODE_PRACTICE ? tl('Your practice shots aren’t saved.', 'Tus tiros de práctica no se guardan.') : tl('If you exit, choose Continue on the menu to pick up from this hole.', 'Si sales, elige Continuar en el menú para seguir desde este hoyo.'), width / 2, y + 104);
 
-  var by = y + h - 70, gap = 16;
-  var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;
-  var yesX = width / 2 + gap / 2;
-
-  fill('rgba(60,80,60,0.9)');
-  rect(noX, by, EXIT_CONFIRM_NO.w, EXIT_CONFIRM_NO.h, 10);
-  fill('#c0392b');
-  rect(yesX, by, EXIT_CONFIRM_YES.w, EXIT_CONFIRM_YES.h, 10);
-
-  fill(255);
-  textSize(18);
-  textStyle(BOLD);
-  text(tl('Cancel', 'Cancelar'), noX + EXIT_CONFIRM_NO.w / 2, by + EXIT_CONFIRM_NO.h / 2 + 1);
-  text(tl('Exit', 'Salir'), yesX + EXIT_CONFIRM_YES.w / 2, by + EXIT_CONFIRM_YES.h / 2 + 1);
-  textStyle(NORMAL);
+  var labels = { cancel: tl('Keep Playing', 'Seguir'), restart: tl('↺ Restart Hole', '↺ Reiniciar hoyo'), exit: tl('Exit', 'Salir') };
+  var cols = { cancel: 'rgba(60,80,60,0.9)', restart: '#2f8ac7', exit: '#c0392b' };
+  menuButtonRects().forEach(function (b) {
+    fill(cols[b.id]); rect(b.x, b.y, b.w, b.h, 10);
+    if (inBox(mouseX, mouseY, b.x, b.y, b.w, b.h)) { stroke(255); strokeWeight(2); noFill(); rect(b.x, b.y, b.w, b.h, 10); noStroke(); }
+    fill(255); textSize(16); textStyle(BOLD); text(labels[b.id], b.x + b.w / 2, b.y + b.h / 2 + 1); textStyle(NORMAL);
+  });
 }
 
 function exitConfirmHit(mx, my) {
-  var w = EXIT_CONFIRM_BOX.w, h = EXIT_CONFIRM_BOX.h, y = height / 2 - h / 2;
-  var by = y + h - 70, gap = 16;
-  var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;
-  var yesX = width / 2 + gap / 2;
-  if (mx > noX && mx < noX + EXIT_CONFIRM_NO.w && my > by && my < by + EXIT_CONFIRM_NO.h) return 'cancel';
-  if (mx > yesX && mx < yesX + EXIT_CONFIRM_YES.w && my > by && my < by + EXIT_CONFIRM_YES.h) return 'exit';
+  var bs = menuButtonRects();
+  for (var i = 0; i < bs.length; i++) if (inBox(mx, my, bs[i].x, bs[i].y, bs[i].w, bs[i].h)) return bs[i].id;
   return null;
+}
+// what each in-game menu button does
+function menuAction(id) {
+  confirmExitOpen = false;
+  playSound('click');
+  if (id === 'exit') { dragging = false; kbAim = null; gameState = 'MENU'; }
+  else if (id === 'restart') { dragging = false; kbAim = null; startHole(holeIndex); }
 }
 
 // ---------------------------------------------------------------
