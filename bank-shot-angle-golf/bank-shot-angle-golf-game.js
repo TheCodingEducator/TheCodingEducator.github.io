@@ -186,12 +186,8 @@ var cameraZoom = 1;
 var cameraFocus = { x: 350, y: 350 };
 var QUESTION_ZOOM = 2.4;
 
-// The question only appears once the camera has finished zooming in (questionReady), and it starts
-// with a quick check: do these two angles add to 90° or 180°? (checkDone)
+// The question only appears once the camera has finished zooming in (questionReady).
 var questionReady = false;
-var checkDone = false;
-var checkWrongAt = -10000;
-var CHECK_BTN = { w: 196, h: 58, gap: 14 };
 var holeResult = null;    // the last finished hole's record result (see recordHole)
 var roundResult = null;   // the last finished round's (see recordRound)
 var kbCourseSel = 0;      // which course card the keyboard has picked
@@ -223,8 +219,6 @@ function playFx(name) {
       warp: function () { tone('sine', 220, 1800, 0.35, 0.12); tone('triangle', 330, 2400, 0.3, 0.06, 0.05); },
       thunk: function () { tone('square', 140, 70, 0.12, 0.08); noise(0.08, 0.15, 500); },
       boing: function () { tone('sine', 260, 520, 0.18, 0.12); tone('sine', 520, 300, 0.15, 0.06, 0.08); },
-      checkOk: function () { tone('triangle', 660, 0, 0.1, 0.1); tone('triangle', 990, 0, 0.14, 0.1, 0.08); },
-      nope: function () { tone('sawtooth', 180, 140, 0.22, 0.07); },
       star: function () { tone('sine', 1320, 0, 0.25, 0.12); tone('sine', 2640, 0, 0.15, 0.04); },
       pop: function () { noise(0.15, 0.25, 2500); },
       par: function () { [523, 659, 784].forEach(function (f, i) { tone('triangle', f, 0, 0.22, 0.1, i * 0.09); }); },
@@ -489,7 +483,7 @@ function gameDrawScreen() {
   // the question (and its clock) only starts once the zoom has settled
   if (wantZoomIn && !questionReady && Math.abs(cameraZoom - targetZoom) < 0.03 && dist(cameraFocus.x, cameraFocus.y, targetFocus.x, targetFocus.y) < 2) {
     questionReady = true;
-    if (checkDone) timerStart = millis();
+    timerStart = millis();
   }
   if (!confirmExitOpen && !explainOpen && gameState === 'PLAYING') obsClock += 1 / 60;
 
@@ -990,7 +984,7 @@ function startHole(idx) {
   resolvedInfo = null;
   explainOpen = false;
   holeBlockedThisStroke = false;
-  questionReady = false; checkDone = false;
+  questionReady = false;
   confetti = []; popWord = null;
   cameraZoom = 1; cameraFocus.x = 350; cameraFocus.y = 350;
   holeBannerAt = millis();
@@ -2548,62 +2542,19 @@ function rotatePoint(pt, deg) {
   return { x: pt.x * c - pt.y * s, y: pt.x * s + pt.y * c };
 }
 
-// No background panel any more - just a bold title floating near the
-// top (with a soft drop-shadow pass for legibility over the course
-// art) once the camera has zoomed in, and a small pill-shaped input
-// at the bottom instead of one big black box.
-// The check before the answer: do these two angles add to 90° or 180°? Two big buttons (keys 1 and 2).
-function checkButtons() {
-  var b = CHECK_BTN, y = height - b.h - 24, x0 = width / 2 - b.w - b.gap / 2;
-  return [{ sum: 90, x: x0, y: y, w: b.w, h: b.h }, { sum: 180, x: width / 2 + b.gap / 2, y: y, w: b.w, h: b.h }];
-}
-function checkButtonHit(mx, my) {
-  var bs = checkButtons();
-  for (var i = 0; i < bs.length; i++) if (mx > bs[i].x && mx < bs[i].x + bs[i].w && my > bs[i].y && my < bs[i].y + bs[i].h) return bs[i].sum;
-  return null;
-}
-function answerCheck(sum) {
-  if (!pendingShot || checkDone) return;
-  if (sum === (pendingShot.type === 'WALL' ? 180 : 90)) {
-    checkDone = true; timerStart = millis(); playFx('checkOk');
-  } else {
-    checkWrongAt = millis(); playFx('nope');
-  }
-}
 // a dark band under the question text, so it reads on every course (light sand included)
 function drawQuestionBand(h) {
   noStroke();
   for (var i = 0; i < 12; i++) { fill(0, 0, 0, 150 * (1 - i / 12)); rect(0, 82 + h + i * 3, width, 3); }
   fill(0, 0, 0, 150); rect(0, 82, width, h);
 }
-function drawCheckPrompt() {
-  drawQuestionBand(millis() - checkWrongAt < 2800 ? 112 : 88);
-  noStroke(); textAlign(CENTER, TOP); textStyle(BOLD); textSize(34);
-  fill(0, 0, 0, 130); text(tl('Which kind of angles?', '¿Qué tipo de ángulos?'), width / 2 + 2, 96);
-  fill(255); text(tl('Which kind of angles?', '¿Qué tipo de ángulos?'), width / 2, 94);
-  textStyle(NORMAL); textSize(18);
-  fill(0, 0, 0, 130); text(tl('Do the two angles add up to 90° or 180°?', '¿Los dos ángulos suman 90° o 180°?'), width / 2 + 1, 146);
-  fill(216, 226, 216); text(tl('Do the two angles add up to 90° or 180°?', '¿Los dos ángulos suman 90° o 180°?'), width / 2, 145);
-  if (millis() - checkWrongAt < 2800) {
-    var hint = tl('Look again: a square corner makes 90°, a straight line makes 180°.', 'Mira otra vez: una esquina recta forma 90°, una línea recta forma 180°.');
-    textSize(16); fill(0, 0, 0, 150); text(hint, width / 2 + 1, 177); fill('#ffce6b'); text(hint, width / 2, 176);
-  }
-  var bs = checkButtons();
-  for (var i = 0; i < bs.length; i++) {
-    var b = bs[i], hov = mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h;
-    fill(0, 0, 0, 200); rect(b.x, b.y, b.w, b.h, 14);
-    stroke(b.sum === 90 ? '#5fb0ff' : '#ffb347'); strokeWeight(hov ? 3.5 : 2); noFill(); rect(b.x, b.y, b.w, b.h, 14); noStroke();
-    textAlign(CENTER, CENTER); textStyle(BOLD); textSize(22); fill(255);
-    text(b.sum + '°', b.x + b.w / 2, b.y + 20);
-    textStyle(NORMAL); textSize(13); fill(200, 212, 200);
-    text((b.sum === 90 ? tl('complementary', 'complementarios') : tl('supplementary', 'suplementarios')) + tl('  ·  key ', '  ·  tecla ') + (i + 1), b.x + b.w / 2, b.y + 42);
-  }
-  textAlign(LEFT, BASELINE);
-}
 
+// No background panel any more - just a bold title floating near the
+// top (with a soft drop-shadow pass for legibility over the course
+// art) once the camera has zoomed in, and a small pill-shaped input
+// at the bottom instead of one big black box.
 function drawQuestionOverlay() {
   if (!pendingShot || !questionReady) return;   // wait for the zoom to finish
-  if (!checkDone) { drawCheckPrompt(); return; }
   var isWall = pendingShot.type === 'WALL';
   drawQuestionBand(pendingShot.algebra || retryHint || pendingShot.timerOn ? 150 : 88);
   var title = isWall ? tl('Supplementary Angles', 'Ángulos suplementarios') : tl('Complementary Angles', 'Ángulos complementarios');
@@ -2692,7 +2643,6 @@ function drawQuestionOverlay() {
 
 function handleAnswerKey(k) {
   if (holePhase !== 'QUESTION' || answerLocked || !questionReady) return;
-  if (!checkDone) { if (k === '1') answerCheck(90); else if (k === '2') answerCheck(180); return; }
   if (k === 'backspace') { answerText = answerText.slice(0, -1); return; }
   if (k === 'enter') { submitAnswer(); return; }
   if (answerText.length < 3) answerText += k;
@@ -2857,7 +2807,6 @@ function mousePressed() {
   }
   if (gameState === 'PLAYING' && holePhase === 'QUESTION') {
     if (!questionReady) return;
-    if (!checkDone) { var cs = checkButtonHit(mouseX, mouseY); if (cs) answerCheck(cs); return; }
     var iw = 124, ih = 50, sw = 112, gap = 10;   // (the same box drawQuestionOverlay draws)
     var totalW = iw + gap + sw;
     var ix = width / 2 - totalW / 2, iy = height - ih - 24;
@@ -2950,7 +2899,7 @@ function mouseReleased() {
 
   pendingShot = classifyAndBuildShot(aimDir, power, currentHoleNum());
   retryHint = false;
-  questionReady = false; checkDone = false; checkWrongAt = -10000;
+  questionReady = false;
   answerText = '';
   answerLocked = false;
   timerStart = millis();
@@ -3262,7 +3211,6 @@ function retryQuestion() {
   retryHint = true;
   answerText = '';
   answerLocked = false;
-  checkDone = true;   // (they already know which kind it is)
   questionReady = false;
   timerStart = millis();
   holePhase = 'QUESTION';
