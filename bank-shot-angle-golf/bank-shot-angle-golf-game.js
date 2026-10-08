@@ -373,13 +373,14 @@ function kbKeyPressed() {
   }
   if (gameState === 'MENU') {
     kbShown = true;
-    if (keyCode === LEFT_ARROW) { kbMenuSel = 0; return true; }
-    if (keyCode === RIGHT_ARROW) { kbMenuSel = 1; return true; }
-    if (keyCode === DOWN_ARROW) { kbMenuSel = 2; return true; }
-    if (keyCode === UP_ARROW) { if (kbMenuSel === 2) kbMenuSel = 0; return true; }
+    var hasSave = !!loadProgress();
+    if (keyCode === LEFT_ARROW) { kbMenuSel = kbMenuSel === 3 ? 2 : (kbMenuSel === 2 ? 2 : 0); return true; }
+    if (keyCode === RIGHT_ARROW) { kbMenuSel = kbMenuSel >= 2 ? (hasSave ? 3 : 2) : 1; return true; }
+    if (keyCode === DOWN_ARROW) { kbMenuSel = hasSave ? 3 : 2; return true; }
+    if (keyCode === UP_ARROW) { if (kbMenuSel >= 2) kbMenuSel = 0; return true; }
     if (kbConfirmKey()) {
       playSound('click');
-      if (kbMenuSel === 2) startPractice(); else { gameMode = kbMenuSel === 0 ? MODE_EASY : MODE_HARD; startCourse(); }
+      if (kbMenuSel === 3) resumeProgress(); else if (kbMenuSel === 2) startPractice(); else { gameMode = kbMenuSel === 0 ? MODE_EASY : MODE_HARD; startCourse(); }
       return true;
     }
     return false;
@@ -442,7 +443,8 @@ function kbDrawFocus() {
     r = kbExitSel === 'cancel' ? { x: width / 2 - EXIT_CONFIRM_NO.w - gap / 2, y: by, w: EXIT_CONFIRM_NO.w, h: EXIT_CONFIRM_NO.h, rr: 10 }
                                : { x: width / 2 + gap / 2, y: by, w: EXIT_CONFIRM_YES.w, h: EXIT_CONFIRM_YES.h, rr: 10 };
   } else if (gameState === 'MENU') {
-    if (kbMenuSel === 2) r = { x: width / 2 - PRACTICE_BTN.w / 2, y: PRACTICE_BTN.y, w: PRACTICE_BTN.w, h: PRACTICE_BTN.h, rr: PRACTICE_BTN.h / 2 };
+    if (kbMenuSel === 3 && loadProgress()) { var cr = continueRect(); r = { x: cr.x, y: cr.y, w: cr.w, h: cr.h, rr: cr.h / 2 }; }
+    else if (kbMenuSel >= 2) { var pr = practiceRect(); r = { x: pr.x, y: pr.y, w: pr.w, h: pr.h, rr: pr.h / 2 }; }
     else r = { x: kbMenuSel === 0 ? width / 2 - 12 - MENU_CARD_W : width / 2 + 12, y: MENU_CARD_Y, w: MENU_CARD_W, h: MENU_CARD_H, rr: 16 };
   }
   if (!r) return;
@@ -566,8 +568,57 @@ function drawMenu() {
 
 var PRACTICE_BTN = { w: 340, h: 50, y: 608 };
 
+// ---------------------------------------------------------------
+// A round in progress is saved at the start of every hole, so a student can pick it up again later
+// from the menu (this device only). It's cleared when the round is finished.
+// ---------------------------------------------------------------
+var PROGRESS_KEY = 'bankshot_progress';
+function saveProgress(hole) {
+  if (gameMode === MODE_PRACTICE || !course || course.key === 'practice') return;
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ mode: gameMode, course: course.key, hole: hole === undefined ? holeIndex : hole, scorecard: scorecard.slice() })); } catch (e) {}
+}
+function clearProgress() { try { localStorage.removeItem(PROGRESS_KEY); } catch (e) {} }
+function loadProgress() {
+  try {
+    var p = JSON.parse(localStorage.getItem(PROGRESS_KEY));
+    if (!p || (p.mode !== MODE_EASY && p.mode !== MODE_HARD) || p.hole < 0 || p.hole > 8) return null;
+    for (var i = 0; i < COURSES.length; i++) if (COURSES[i].key === p.course) { p.index = i; return p; }
+  } catch (e) {}
+  return null;
+}
+function resumeProgress() {
+  var p = loadProgress();
+  if (!p) return;
+  gameMode = p.mode;
+  course = COURSES[p.index];
+  scorecard = (p.scorecard || []).slice(0, p.hole);
+  roundResult = null;
+  obsClock = 0;
+  startHole(p.hole);
+}
+// the practice button sits in the middle, or on the left when there's a round to continue
+function practiceRect() {
+  var b = PRACTICE_BTN;
+  return loadProgress() ? { x: width / 2 - 10 - 300, y: b.y, w: 300, h: b.h } : { x: width / 2 - b.w / 2, y: b.y, w: b.w, h: b.h };
+}
+function continueRect() { var b = PRACTICE_BTN; return { x: width / 2 + 10, y: b.y, w: 300, h: b.h }; }
+function continueButtonHit(mx, my) { var r = continueRect(); return !!loadProgress() && inBox(mx, my, r.x, r.y, r.w, r.h); }
+function drawContinueButton() {
+  var p = loadProgress();
+  if (!p) return;
+  var r = continueRect(), hovered = inBox(mouseX, mouseY, r.x, r.y, r.w, r.h), th = COURSES[p.index].theme;
+  noStroke();
+  fill(0, 0, 0, hovered ? 90 : 60); rect(r.x + 2, r.y + 3, r.w, r.h, r.h / 2);
+  fill(th.accent); rect(r.x, r.y, r.w, r.h, r.h / 2);
+  if (hovered) { stroke(255); strokeWeight(2.5); noFill(); rect(r.x, r.y, r.w, r.h, r.h / 2); noStroke(); }
+  fill('#101010'); textAlign(CENTER, CENTER);
+  textStyle(BOLD); textSize(17); text(tl('▶ Continue: ', '▶ Continuar: ') + th.icon + ' ' + tl('Hole ', 'Hoyo ') + (p.hole + 1), r.x + r.w / 2, r.y + 17); textStyle(NORMAL);
+  textSize(12); text(th.label + ' · ' + (p.mode === MODE_EASY ? tl('Golf Gamer', 'Golfista gamer') : tl('Hole-In-One Hero', 'Héroe del hoyo en uno')), r.x + r.w / 2, r.y + 36);
+}
+
 function drawPracticeButton() {
-  var b = PRACTICE_BTN, x = width / 2 - b.w / 2;
+  drawContinueButton();
+  var b = practiceRect(), x = b.x;
   var hovered = mouseX > x && mouseX < x + b.w && mouseY > b.y && mouseY < b.y + b.h;
   noStroke();
   fill(0, 0, 0, hovered ? 90 : 60);
@@ -582,15 +633,15 @@ function drawPracticeButton() {
   noStroke();
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(19);
+  textSize(b.w < 340 ? 16 : 19);
   textStyle(BOLD);
-  text(tl('🎯 Putting Green — Free Practice', '🎯 Green de práctica — práctica libre'), width / 2, b.y + b.h / 2 + 1);
+  text(tl('🎯 Putting Green — Free Practice', '🎯 Green de práctica — práctica libre'), x + b.w / 2, b.y + b.h / 2 + 1);
   textStyle(NORMAL);
 }
 
 function practiceButtonHit(mx, my) {
-  var b = PRACTICE_BTN, x = width / 2 - b.w / 2;
-  return mx > x && mx < x + b.w && my > b.y && my < b.y + b.h;
+  var b = practiceRect();
+  return inBox(mx, my, b.x, b.y, b.w, b.h);
 }
 
 function drawMenuBackground() {
@@ -989,6 +1040,7 @@ function startHole(idx) {
   cameraZoom = 1; cameraFocus.x = 350; cameraFocus.y = 350;
   holeBannerAt = millis();
   hole._layer = null;
+  saveProgress();   // (a practice round is never saved)
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -1247,6 +1299,7 @@ function finishHole() {
   scorecard.push(strokeCount);
   gameState = 'HOLE_COMPLETE';
   holeResult = recordHole(holeIndex, strokeCount, hole.par);
+  if (holeIndex + 1 < course.holes.length) saveProgress(holeIndex + 1);   // leaving now picks up at the next hole
   holeResult.at = millis();
   playSound(strokeCount <= hole.par ? 'hole_complete' : 'click');
   if (holeResult.newBest) burstConfetti(width / 2, height / 2 - 60, 60, 9);
@@ -1257,6 +1310,7 @@ function advanceAfterHole() {
     startHole(holeIndex + 1);
   } else {
     gameState = 'COURSE_COMPLETE';
+    clearProgress();
     var tot = 0; for (var i = 0; i < scorecard.length; i++) tot += scorecard[i];
     roundResult = recordRound(tot, totalPar());
     playSound('course_complete');
@@ -1282,31 +1336,15 @@ function buildHoleLayer(h, th) {
   g.pixelDensity(2);
   g.angleMode(DEGREES);
   var ctx = g.drawingContext;
-  var hasDecor = function (e) { return (h.decor || []).some(function (d) { return d.e === e; }); };
   g.noStroke();
 
-  // ---- the ground around the hole
-  g.fill(th.rough); g.rect(0, 0, 700, 700);
-  var k;
-  if (th.key === 'space') {
-    for (k = 0; k < 160; k++) { g.fill(255, 255, 255, 60 + seeded(k) * 180); var r = seeded(k + 500) < 0.1 ? 2.6 : 1.3; g.circle(seeded(k + 1000) * 700, seeded(k + 2000) * 700, r); }
-    g.fill(110, 60, 200, 26); g.circle(120, 620, 260); g.fill(40, 120, 220, 22); g.circle(620, 160, 300);
-  } else if (th.key === 'summer') {
-    for (k = 0; k < 260; k++) { g.fill(th.roughDot); g.circle(seeded(k) * 700, seeded(k + 900) * 700, 2 + seeded(k + 77) * 3); }
-  } else if (th.key === 'medieval') {
-    for (k = 0; k < 180; k++) {   // grass tufts
-      var gx = seeded(k) * 700, gy = seeded(k + 400) * 700;
-      g.stroke(th.roughDot); g.strokeWeight(2); g.line(gx, gy, gx - 3, gy - 7); g.line(gx, gy, gx + 3, gy - 7); g.noStroke();
-    }
-  } else {
-    for (k = 0; k < 120; k++) { g.fill(th.roughDot); g.circle(seeded(k) * 700, seeded(k + 900) * 700, 4); }
-  }
-  // the sea all around (a pier or a headland), with a strip of sand along the green
-  if (hasDecor('ocean')) {
-    g.fill('#1593b8'); g.rect(0, 0, 700, 700);
-    g.stroke(255, 255, 255, 70); g.strokeWeight(2); g.noFill();
-    for (k = 0; k < 40; k++) { var wx = seeded(k) * 700, wy = seeded(k + 300) * 700; g.arc(wx, wy, 26, 12, 200, 340); }
-    g.noStroke();
+  // ---- the ground around the hole (see bank-shot-angle-golf-scenery.js)
+  var seed = 0, nm = String(h.name || th.key);
+  for (var si0 = 0; si0 < nm.length; si0++) seed = (seed * 31 + nm.charCodeAt(si0)) | 0;
+  var rnd = sceneRng(seed), k;
+  drawSceneGround(g, h, th, rnd);
+  // out over the sea (a pier or a headland): a strip of sand along the green
+  if (h.ground === 'ocean') {
     ctx.save(); ctx.lineJoin = 'round';
     g.stroke('#e8cc8e'); g.strokeWeight(46); g.fill('#e8cc8e');
     g.beginShape(); h.fairwayPoly.forEach(function (p) { g.vertex(p.x, p.y); }); g.endShape(CLOSE);
@@ -1320,6 +1358,8 @@ function buildHoleLayer(h, th) {
     for (var m = 0; m < 14; m++) g.arc(m * 52 + 20, d.y + d.h / 2 + (m % 2) * 14 - 7, 30, 10, 200, 340);
     g.noStroke();
   });
+  // ---- the props around the hole (towers, rockets, palm trees...), fitted into the open ground
+  placeSceneProps(g, h, rnd);
 
   // ---- the green, striped, clipped to the hole's outline
   ctx.save();
@@ -1352,14 +1392,6 @@ function buildHoleLayer(h, th) {
   // ---- islands: solid shapes inside the green
   (h.islands || []).forEach(function (isl) { drawIslandShape(g, isl, th); });
 
-  // ---- pictures: around the hole, and the few that sit on the green
-  g.textAlign(CENTER, CENTER);
-  (h.decor || []).forEach(function (d) {
-    if (d.e === 'moat' || d.e === 'carpet' || d.e === 'ocean') return;   // the named scenery pieces above
-    g.textSize(d.s || 48);
-    if (d.onGreen) { g.fill(255, 255, 255, 200); } else { g.fill(255); }
-    g.text(d.e, d.x, d.y);
-  });
   return g;
 }
 
@@ -2782,6 +2814,7 @@ function mousePressed() {
     return;
   }
   if (gameState === 'MENU') {
+    if (continueButtonHit(mouseX, mouseY)) { playSound('click'); resumeProgress(); return; }
     if (practiceButtonHit(mouseX, mouseY)) { startPractice(); playSound('click'); return; }
     var m = menuHit(mouseX, mouseY);
     if (m) { gameMode = m; startCourse(); playSound('click'); }
@@ -3277,7 +3310,7 @@ function drawExitConfirm() {
   textStyle(NORMAL);
   textSize(16);
   fill(200, 212, 200);
-  text(tl('This round will end and won’t be saved.', 'Esta ronda terminará y no se guardará.'), width / 2, y + 84);
+  text(gameMode === MODE_PRACTICE ? tl('Your practice shots aren’t saved.', 'Tus tiros de práctica no se guardan.') : tl('You can pick up from this hole later: choose Continue on the menu.', 'Puedes seguir desde este hoyo luego: elige Continuar en el menú.'), width / 2, y + 84);
 
   var by = y + h - 70, gap = 16;
   var noX = width / 2 - EXIT_CONFIRM_NO.w - gap / 2;

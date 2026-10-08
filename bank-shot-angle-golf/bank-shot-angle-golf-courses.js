@@ -106,6 +106,7 @@ function makeHole(spec) {
   (spec.chains || []).forEach(function (c) { edges(c, 'bumper', false); });
   return {
     par: spec.par, name: spec.name, icon: spec.icon, tip: spec.tip,
+    ground: spec.ground, scenery: spec.scenery || [], seaTop: spec.seaTop, castleTop: spec.castleTop,
     tee: P(spec.tee[0], spec.tee[1]), cup: P(spec.cup[0], spec.cup[1]),
     walls: walls, fairwayPoly: spec.outline,
     islands: spec.islands || [],
@@ -129,7 +130,7 @@ function buildMedievalCourse() {
       outline: pts([[260, 610], [440, 610], [440, 410], [395, 410], [395, 320], [440, 320], [440, 130], [260, 130], [260, 320], [305, 320], [305, 410], [260, 410]]),
       tee: [350, 565], cup: [350, 180],
       zones: [{ type: 'water', x: 305, y: 335, w: 90, h: 60, dirDeg: 0, strength: 0.03 }],
-      decor: [{ e: '🏰', x: 350, y: 104, s: 38 }, { e: 'moat', x: 0, y: 320, w: 700, h: 90 }, { e: '🚩', x: 230, y: 150, s: 34 }, { e: '🚩', x: 470, y: 150, s: 34 }, { e: '🛡️', x: 200, y: 520, s: 40 }, { e: '⚔️', x: 500, y: 520, s: 40 }] }),
+      ground: 'grass', castleTop: 116, decor: [{ e: 'moat', x: 0, y: 320, w: 700, h: 90 }], scenery: [['tower', 2], ['tree', 4], ['banner', 2], ['flowers', 4], ['bush', 3]] }),
 
     // 2. Castle Courtyard: a square yard with a fountain in the middle
     makeHole({ par: 3, name: tl('Castle Courtyard', 'El patio del castillo'), icon: '⛲',
@@ -137,7 +138,7 @@ function buildMedievalCourse() {
       outline: pts([[160, 160], [560, 160], [560, 560], [250, 560], [250, 625], [160, 625]]),
       islands: [{ pts: circlePts(370, 360, 62, 20), style: 'fountain' }],
       tee: [205, 590], cup: [480, 230],
-      decor: [{ e: '⛲', x: 370, y: 360, s: 58 }, { e: '🌹', x: 120, y: 200, s: 30 }, { e: '🌹', x: 600, y: 420, s: 30 }, { e: '🏰', x: 610, y: 600, s: 60 }] }),
+      ground: 'stone', castleTop: 140, scenery: [['tower', 1], ['well', 1], ['barrel', 3], ['banner', 2], ['bush', 3], ['flowers', 3]] }),
 
     // 3. The Windmill: a four-sailed windmill blocks the lane
     makeHole({ par: 3, name: tl('The Old Windmill', 'El viejo molino'), icon: '🌾',
@@ -145,7 +146,7 @@ function buildMedievalCourse() {
       outline: pts([[255, 615], [445, 615], [445, 130], [255, 130]]),
       obstacles: [windmill(350, 375, 80, 4, 55)],
       tee: [350, 575], cup: [350, 175],
-      decor: [{ e: '🌾', x: 170, y: 260, s: 40 }, { e: '🌾', x: 530, y: 470, s: 40 }, { e: '🐄', x: 160, y: 470, s: 44 }, { e: '🐓', x: 540, y: 240, s: 36 }] }),
+      ground: 'grass', scenery: [['wheat', 4], ['sheep', 4], ['fence', 3], ['hay', 3], ['tree', 2]] }),
 
     // 4. Jousting Field: a long tilt fence splits the field in two lanes
     makeHole({ par: 3, name: tl('Jousting Field', 'El campo de justas'), icon: '🐎',
@@ -153,7 +154,7 @@ function buildMedievalCourse() {
       outline: pts([[80, 255], [620, 255], [620, 485], [80, 485]]),
       bumpers: [[190, 370, 510, 370]],
       tee: [130, 430], cup: [570, 310],
-      decor: [{ e: '🐎', x: 350, y: 190, s: 48 }, { e: '🛡️', x: 150, y: 560, s: 40 }, { e: '🏇', x: 520, y: 560, s: 44 }, { e: '🚩', x: 60, y: 230, s: 30 }, { e: '🚩', x: 640, y: 230, s: 30 }] }),
+      ground: 'grass', scenery: [['tent', 4], ['banner', 4], ['fence', 3], ['hay', 2], ['flowers', 2]] }),
 
     // 5. The Dragon's Lair: a twisting cave; the cup hides behind a boulder and the dragon's breath pushes the ball
     makeHole({ par: 4, name: tl('The Dragon’s Lair', 'La guarida del dragón'), icon: '🐉',
@@ -162,7 +163,7 @@ function buildMedievalCourse() {
       islands: [{ pts: pts([[395, 215], [470, 200], [505, 248], [462, 292], [405, 278]]), style: 'boulder' }],
       zones: [{ type: 'hill', x: 230, y: 250, w: 130, h: 70, dirDeg: 180, strength: 0.03 }],
       tee: [212, 585], cup: [560, 220],
-      decor: [{ e: '🐉', x: 600, y: 470, s: 80 }, { e: '🔥', x: 380, y: 285, s: 26, onGreen: true }, { e: '💰', x: 100, y: 330, s: 34 }, { e: '🦴', x: 420, y: 520, s: 30 }] }),
+      ground: 'cave', scenery: [['dragon', 1], ['treasure', 2], ['bones', 5], ['rock', 6], ['campfire', 1]] }),
 
     // 6. The Wizard's Tower: a round tower room with a curved wall around the cup
     makeHole({ par: 3, name: tl('The Wizard’s Tower', 'La torre del mago'), icon: '🧙',
@@ -170,7 +171,7 @@ function buildMedievalCourse() {
       outline: circlePts(350, 380, 235, 28),
       chains: [arcPts(350, 380, 115, 0, 290, 12)],
       tee: [350, 585], cup: [350, 380],
-      decor: [{ e: '🧙', x: 90, y: 160, s: 50 }, { e: '🔮', x: 600, y: 610, s: 38 }, { e: '✨', x: 610, y: 150, s: 34 }, { e: '📜', x: 90, y: 600, s: 34 }] }),
+      ground: 'grass', scenery: [['crystal', 5], ['pine', 5], ['cauldron', 1], ['flowers', 2]] }),
 
     // 7. The Blacksmith's Forge: a zigzag past the anvil, with hot coals pushing at the turns
     makeHole({ par: 4, name: tl('The Blacksmith’s Forge', 'La forja del herrero'), icon: '⚒️',
@@ -180,7 +181,7 @@ function buildMedievalCourse() {
       zones: [{ type: 'hill', x: 505, y: 440, w: 100, h: 80, dirDeg: 270, strength: 0.025 },
               { type: 'hill', x: 95, y: 245, w: 100, h: 90, dirDeg: 270, strength: 0.025 }],
       tee: [200, 575], cup: [530, 200],
-      decor: [{ e: '⚒️', x: 650, y: 480, s: 40 }, { e: '🔥', x: 60, y: 480, s: 40 }, { e: '🗡️', x: 640, y: 320, s: 36 }, { e: '🛡️', x: 60, y: 120, s: 34 }] }),
+      ground: 'stone', scenery: [['campfire', 2], ['barrel', 4], ['torch', 3], ['rock', 2], ['hay', 1]] }),
 
     // 8. The Dungeon: three cells with doorways at alternate ends
     makeHole({ par: 4, name: tl('The Dungeon', 'La mazmorra'), icon: '⛓️',
@@ -188,7 +189,7 @@ function buildMedievalCourse() {
       outline: pts([[150, 150], [570, 150], [570, 610], [150, 610]]),
       bumpers: [[290, 150, 290, 480], [430, 280, 430, 610]],
       tee: [220, 570], cup: [500, 215],
-      decor: [{ e: '⛓️', x: 220, y: 300, s: 34, onGreen: true }, { e: '🗝️', x: 360, y: 560, s: 30, onGreen: true }, { e: '🕯️', x: 100, y: 200, s: 36 }, { e: '🐀', x: 620, y: 560, s: 34 }, { e: '💀', x: 100, y: 470, s: 30 }] }),
+      ground: 'stone', scenery: [['torch', 5], ['bones', 3], ['barrel', 3], ['rock', 3]] }),
 
     // 9. The Throne Room: a grand hall of pillars with a windmill guarding the throne
     makeHole({ par: 4, name: tl('The Throne Room', 'La sala del trono'), icon: '👑',
@@ -197,7 +198,7 @@ function buildMedievalCourse() {
       rocks: [[235, 290, 17], [465, 290, 17], [235, 440, 17], [465, 440, 17]],
       obstacles: [windmill(350, 280, 70, 3, 70)],
       tee: [350, 585], cup: [350, 180],
-      decor: [{ e: '👑', x: 350, y: 95, s: 44 }, { e: 'carpet', x: 320, y: 140, w: 60, h: 485 }, { e: '🚩', x: 110, y: 160, s: 34 }, { e: '🚩', x: 590, y: 160, s: 34 }, { e: '🍗', x: 600, y: 520, s: 34 }, { e: '🏆', x: 100, y: 520, s: 34 }] })
+      ground: 'stone', castleTop: 122, decor: [{ e: 'carpet', x: 320, y: 140, w: 60, h: 485 }], scenery: [['banner', 5], ['tower', 2], ['torch', 3], ['treasure', 2]] })
   ] };
 }
 
@@ -210,7 +211,7 @@ function buildSpaceCourse() {
       outline: pts([[270, 615], [430, 615], [430, 130], [270, 130]]),
       bumpers: [[300, 380, 375, 345]],
       tee: [350, 575], cup: [350, 175],
-      decor: [{ e: '🚀', x: 160, y: 380, s: 70 }, { e: '🌍', x: 560, y: 520, s: 70 }, { e: '⭐', x: 540, y: 200, s: 26 }] }),
+      ground: 'space', scenery: [['rocket', 1], ['planet', 1], ['beacon', 3], ['crate', 3]] }),
 
     // 2. The Airlock: two chambers sealed apart; only the portal connects them
     makeHole({ par: 3, name: tl('The Airlock', 'La esclusa'), icon: '🚪',
@@ -219,7 +220,7 @@ function buildSpaceCourse() {
       bumpers: [[130, 375, 570, 375]],
       obstacles: [portal(200, 470, 480, 300, '#b46bff')],
       tee: [470, 555], cup: [230, 215],
-      decor: [{ e: '👨‍🚀', x: 620, y: 470, s: 46 }, { e: '🚪', x: 80, y: 375, s: 44 }, { e: '⚠️', x: 620, y: 260, s: 32 }] }),
+      ground: 'space', scenery: [['module', 2], ['solar', 2], ['astronaut', 1], ['beacon', 2]] }),
 
     // 3. Orbit: a ring around a planet; the cup is on the far side
     makeHole({ par: 3, name: tl('Planet Orbit', 'Órbita planetaria'), icon: '🪐',
@@ -227,7 +228,7 @@ function buildSpaceCourse() {
       outline: circlePts(350, 385, 232, 28),
       islands: [{ pts: circlePts(350, 385, 95, 22), style: 'planet' }],
       tee: [350, 580], cup: [350, 190],
-      decor: [{ e: '🪐', x: 350, y: 385, s: 110, onGreen: true }, { e: '🛰️', x: 90, y: 140, s: 40 }, { e: '🌙', x: 615, y: 615, s: 36 }] }),
+      ground: 'space', scenery: [['moon', 2], ['satellite', 2], ['comet', 1], ['asteroid', 2]] }),
 
     // 4. Asteroid Belt: a field of drifting rocks between the tee and the cup
     makeHole({ par: 3, name: tl('Asteroid Belt', 'Cinturón de asteroides'), icon: '☄️',
@@ -235,7 +236,7 @@ function buildSpaceCourse() {
       outline: pts([[110, 150], [600, 150], [600, 600], [180, 600], [180, 625], [110, 625]]),
       rocks: [[250, 470, 24], [330, 400, 20], [410, 330, 26], [480, 430, 18], [230, 300, 18], [380, 520, 20], [500, 250, 20]],
       tee: [150, 585], cup: [545, 200],
-      decor: [{ e: '☄️', x: 640, y: 420, s: 40 }, { e: '🛸', x: 70, y: 330, s: 40 }, { e: '⭐', x: 640, y: 160, s: 24 }] }),
+      ground: 'space', scenery: [['planet', 1], ['asteroid', 10], ['comet', 1]] }),
 
     // 5. Black Hole: gravity fields pull the ball in toward the black hole in the middle
     makeHole({ par: 4, name: tl('The Black Hole', 'El agujero negro'), icon: '🕳️',
@@ -247,7 +248,7 @@ function buildSpaceCourse() {
               { type: 'hill', x: 295, y: 435, w: 110, h: 70, dirDeg: 270, strength: 0.03 },
               { type: 'hill', x: 295, y: 265, w: 110, h: 70, dirDeg: 90, strength: 0.03 }],
       tee: [350, 590], cup: [350, 180],
-      decor: [{ e: '🌌', x: 75, y: 380, s: 50 }, { e: '💫', x: 625, y: 380, s: 40 }, { e: '🔭', x: 625, y: 590, s: 36 }] }),
+      ground: 'void', scenery: [['comet', 2], ['asteroid', 4], ['satellite', 1]] }),
 
     // 6. Hyperspace Lanes: three sealed lanes linked by one-way portals
     makeHole({ par: 4, name: tl('Hyperspace Lanes', 'Carriles hiperespaciales'), icon: '🌌',
@@ -256,7 +257,7 @@ function buildSpaceCourse() {
       bumpers: [[110, 295, 600, 295], [110, 450, 600, 450]],
       obstacles: [portal(545, 525, 165, 372, '#ff6ad5'), portal(545, 372, 165, 217, '#5fe3ff')],
       tee: [165, 525], cup: [540, 217],
-      decor: [{ e: '🌠', x: 60, y: 220, s: 34 }, { e: '🛸', x: 645, y: 525, s: 36 }, { e: '⚡', x: 60, y: 525, s: 32 }] }),
+      ground: 'space', scenery: [['planet', 1], ['comet', 3], ['beacon', 5]] }),
 
     // 7. Satellite Dish: a curved dish wall bounces shots in toward the cup
     makeHole({ par: 3, name: tl('Satellite Dish', 'La antena parabólica'), icon: '📡',
@@ -265,7 +266,7 @@ function buildSpaceCourse() {
       chains: [arcPts(350, 330, 170, 200, 340, 12)],
       islands: [{ pts: rectPts(300, 420, 100, 26), style: 'panel' }],
       tee: [350, 570], cup: [350, 300],
-      decor: [{ e: '📡', x: 70, y: 380, s: 44 }, { e: '📶', x: 630, y: 380, s: 32 }, { e: '🌍', x: 620, y: 620, s: 40 }] }),
+      ground: 'space', scenery: [['module', 1], ['dish', 2], ['solar', 2], ['beacon', 2]] }),
 
     // 8. Solar Array: rows of tilted solar panels to bank between
     makeHole({ par: 4, name: tl('Solar Array', 'Paneles solares'), icon: '☀️',
@@ -275,7 +276,7 @@ function buildSpaceCourse() {
                 [200, 420, 260, 380], [330, 380, 390, 420], [460, 420, 520, 380],
                 [260, 520, 320, 550], [400, 550, 460, 520]],
       tee: [155, 590], cup: [545, 185],
-      decor: [{ e: '☀️', x: 640, y: 120, s: 46 }, { e: '🔋', x: 640, y: 420, s: 34 }, { e: '🛰️', x: 60, y: 300, s: 38 }] }),
+      ground: 'space', scenery: [['solar', 4], ['moon', 1], ['satellite', 1], ['beacon', 2]] }),
 
     // 9. Mission Control: a U-shaped station with a portal shortcut across the middle
     makeHole({ par: 5, name: tl('Mission Control', 'Control de misión'), icon: '🛰️',
@@ -284,7 +285,7 @@ function buildSpaceCourse() {
       rocks: [[300, 175, 16], [400, 175, 16]],
       obstacles: [portal(150, 300, 550, 340, '#ffd166')],
       tee: [150, 560], cup: [550, 560],
-      decor: [{ e: '🖥️', x: 350, y: 420, s: 50 }, { e: '👨‍🚀', x: 280, y: 520, s: 40 }, { e: '🎛️', x: 420, y: 520, s: 36 }, { e: '🌕', x: 640, y: 110, s: 36 }] })
+      ground: 'space', scenery: [['module', 2], ['rocket', 1], ['dish', 1], ['astronaut', 2], ['crate', 3]] })
   ] };
 }
 
@@ -297,7 +298,7 @@ function buildSummerCourse() {
       outline: pts([[230, 615], [470, 615], [470, 135], [230, 135]]),
       obstacles: [surfboard(255, 375, 445, 375, 90, 0, 3.2, 0, '#ff8a3d')],
       tee: [350, 575], cup: [350, 180],
-      decor: [{ e: '⛱️', x: 130, y: 250, s: 54 }, { e: '🐚', x: 570, y: 470, s: 34 }, { e: '👙', x: 140, y: 520, s: 34 }, { e: '☀️', x: 590, y: 160, s: 46 }] }),
+      ground: 'sand', seaTop: 112, scenery: [['palm', 2], ['umbrella', 2], ['towel', 3], ['ball', 2], ['shell', 4]] }),
 
     // 2. Sandcastle: a big sandcastle sits between the tee and the cup
     makeHole({ par: 3, name: tl('The Sandcastle', 'El castillo de arena'), icon: '🏝️',
@@ -305,7 +306,7 @@ function buildSummerCourse() {
       outline: pts([[140, 150], [560, 150], [560, 600], [140, 600]]),
       islands: [{ pts: crenPts(255, 300, 190, 120, 4), style: 'sandcastle' }],
       tee: [350, 560], cup: [350, 210],
-      decor: [{ e: '🏝️', x: 80, y: 520, s: 40 }, { e: '🏖️', x: 620, y: 300, s: 44 }, { e: '🦀', x: 610, y: 560, s: 34 }] }),
+      ground: 'sand', seaTop: 128, scenery: [['sandcastle', 3], ['umbrella', 1], ['bucket', 2], ['starfish', 3], ['shell', 4]] }),
 
     // 3. Tide Pools: currents run up and down across the green
     makeHole({ par: 3, name: tl('Tide Pools', 'Pozas de marea'), icon: '🦀',
@@ -315,7 +316,7 @@ function buildSummerCourse() {
               { type: 'water', x: 400, y: 200, w: 85, h: 350, dirDeg: 270, strength: 0.025 }],
       rocks: [[350, 300, 16], [350, 450, 16]],
       tee: [145, 375], cup: [555, 375],
-      decor: [{ e: '🦀', x: 160, y: 140, s: 38 }, { e: '⭐', x: 540, y: 610, s: 30 }, { e: '🐚', x: 350, y: 620, s: 30 }] }),
+      ground: 'sand', seaTop: 165, scenery: [['crab', 4], ['rock', 4], ['starfish', 4], ['shell', 3]] }),
 
     // 4. The Pier: a long narrow pier out to a T-shaped end
     makeHole({ par: 3, name: tl('The Pier', 'El muelle'), icon: '🎣',
@@ -323,7 +324,7 @@ function buildSummerCourse() {
       outline: pts([[310, 615], [390, 615], [390, 230], [520, 230], [520, 140], [180, 140], [180, 230], [310, 230]]),
       obstacles: [surfboard(200, 185, 500, 185, 70, 90, 3.6, 0.5, '#1fa3c4')],
       tee: [350, 580], cup: [470, 185],
-      decor: [{ e: 'ocean', x: 0, y: 0, w: 700, h: 700 }, { e: '🎣', x: 250, y: 420, s: 44 }, { e: '🐬', x: 520, y: 430, s: 50 }, { e: '⛵', x: 600, y: 260, s: 40 }] }),
+      ground: 'ocean', scenery: [['boat', 2], ['buoy', 4], ['wave', 8], ['fish', 3], ['seagull', 3]] }),
 
     // 5. Surf's Up: three rows of surfboards sliding at different speeds
     makeHole({ par: 4, name: tl('Surf’s Up', '¡A surfear!'), icon: '🏄',
@@ -333,7 +334,7 @@ function buildSummerCourse() {
                   surfboard(525, 380, 175, 380, 100, 0, 4.2, 0.3, '#ff5d8f'),
                   surfboard(175, 500, 525, 500, 100, 0, 2.4, 0.6, '#1fa3c4')],
       tee: [350, 580], cup: [350, 185],
-      decor: [{ e: '🏄', x: 80, y: 380, s: 50 }, { e: '🌊', x: 620, y: 260, s: 44 }, { e: '🌊', x: 620, y: 500, s: 44 }] }),
+      ground: 'sand', seaTop: 118, scenery: [['lifeguard', 1], ['palm', 2], ['umbrella', 1], ['surfboard', 5]] }),
 
     // 6. Lighthouse Point: a pointed headland with the lighthouse in the way
     makeHole({ par: 3, name: tl('Lighthouse Point', 'Punta del faro'), icon: '🗼',
@@ -341,7 +342,7 @@ function buildSummerCourse() {
       outline: pts([[130, 610], [570, 610], [430, 220], [350, 135], [270, 220]]),
       islands: [{ pts: circlePts(350, 420, 38, 16), style: 'lighthouse' }],
       tee: [350, 575], cup: [350, 200],
-      decor: [{ e: '🗼', x: 350, y: 410, s: 54, onGreen: true }, { e: 'ocean', x: 0, y: 0, w: 700, h: 700 }, { e: '⛵', x: 140, y: 240, s: 40 }, { e: '🐳', x: 570, y: 280, s: 50 }] }),
+      ground: 'ocean', scenery: [['boat', 2], ['buoy', 2], ['wave', 8], ['fish', 3], ['seagull', 3]] }),
 
     // 7. Boardwalk Arcade: an S-shaped boardwalk lined with pinball posts
     makeHole({ par: 4, name: tl('Boardwalk Arcade', 'Las atracciones del paseo'), icon: '🎡',
@@ -349,7 +350,7 @@ function buildSummerCourse() {
       outline: lanePts([[150, 580], [545, 580], [545, 395], [160, 395], [160, 200], [565, 200]], 58),
       rocks: [[350, 560, 12], [430, 600, 12], [300, 410, 12], [400, 380, 12], [330, 215, 12]],
       tee: [205, 580], cup: [530, 200],
-      decor: [{ e: '🎡', x: 640, y: 470, s: 54 }, { e: '🍦', x: 60, y: 470, s: 36 }, { e: '🎠', x: 640, y: 300, s: 40 }, { e: '🌭', x: 60, y: 300, s: 34 }] }),
+      ground: 'boardwalk', scenery: [['stall', 4], ['umbrella', 1], ['surfboard', 2], ['cooler', 2], ['ball', 2]] }),
 
     // 8. Snorkel Reef: a reef-shaped lagoon with coral to bank around
     makeHole({ par: 3, name: tl('Snorkel Reef', 'El arrecife'), icon: '🐠',
@@ -360,7 +361,7 @@ function buildSummerCourse() {
                 { pts: pts([[330, 470], [370, 490], [345, 530], [310, 510]]), style: 'coral' }],
       zones: [{ type: 'water', x: 230, y: 380, w: 140, h: 60, dirDeg: 0, strength: 0.02 }],
       tee: [140, 380], cup: [555, 380],
-      decor: [{ e: '🐠', x: 300, y: 220, s: 34, onGreen: true }, { e: '🐢', x: 460, y: 300, s: 36, onGreen: true }, { e: '🐟', x: 620, y: 610, s: 38 }, { e: '🐙', x: 80, y: 610, s: 40 }] }),
+      ground: 'reef', scenery: [['coral', 8], ['fish', 8]] }),
 
     // 9. Sunset Finale: a long winding boardwalk with surfboards and a tide current
     makeHole({ par: 5, name: tl('Sunset Finale', 'Final al atardecer'), icon: '🌅',
@@ -369,7 +370,7 @@ function buildSummerCourse() {
       obstacles: [surfboard(380, 525, 380, 625, 70, 0, 3.0, 0, '#ff5d8f'), surfboard(320, 340, 320, 430, 70, 0, 2.6, 0.5, '#ff8a3d')],
       zones: [{ type: 'water', x: 230, y: 145, w: 160, h: 90, dirDeg: 0, strength: 0.02 }],
       tee: [550, 575], cup: [200, 190],
-      decor: [{ e: '🌅', x: 350, y: 95, s: 50 }, { e: '🍹', x: 640, y: 380, s: 36 }, { e: '🎆', x: 60, y: 300, s: 40 }, { e: '🌴', x: 640, y: 160, s: 44 }] })
+      ground: 'sunset', seaTop: 118, scenery: [['palm', 4], ['umbrella', 1], ['campfire', 1], ['towel', 2], ['seagull', 3]] })
   ] };
 }
 
@@ -382,7 +383,7 @@ var COURSES = [buildMedievalCourse(), buildSpaceCourse(), buildSummerCourse()];
   btn.addEventListener('click', function () {
     if (!confirm(tl('Reset your Bank Shot: Angle Golf progress? This erases your best scores, stars and holes in one on this device. This cannot be undone.',
       '¿Borrar tu progreso de Bank Shot: golf de ángulos? Se borran tus mejores marcas, estrellas y hoyos en uno en este dispositivo. No se puede deshacer.'))) return;
-    ['bankshot_records', 'bankshot_rounds', 'bankshot_hole_in_ones', 'bankshot_under_par'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+    ['bankshot_records', 'bankshot_rounds', 'bankshot_hole_in_ones', 'bankshot_under_par', 'bankshot_progress'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     location.reload();
   });
 })();
