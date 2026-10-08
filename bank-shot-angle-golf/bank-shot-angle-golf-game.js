@@ -184,7 +184,7 @@ var resolvedInfo = null;       // { correctAnswer, typed, correct, point, offset
 // (e.g. the moment a question resolves) without a jump cut.
 var cameraZoom = 1;
 var cameraFocus = { x: 350, y: 350 };
-var QUESTION_ZOOM = 2.4;
+var QUESTION_ZOOM = 1.7;   // how close the camera moves in while the question is up
 
 // The question only appears once the camera has finished zooming in (questionReady).
 var questionReady = false;
@@ -479,6 +479,10 @@ function gameDrawScreen() {
   var wantZoomIn = holePhase === 'QUESTION' && pendingShot;
   var targetZoom = wantZoomIn ? QUESTION_ZOOM : 1;
   var targetFocus = wantZoomIn ? pendingShot.point : { x: 350, y: 350 };
+  if (wantZoomIn) {   // keep the zoomed view inside the scenery (no black past the edge of the course)
+    var half = 350 / targetZoom;
+    targetFocus = { x: constrain(targetFocus.x, half, 700 - half), y: constrain(targetFocus.y, half, 700 - half) };
+  }
   cameraZoom = lerp(cameraZoom, targetZoom, 0.16);
   cameraFocus.x = lerp(cameraFocus.x, targetFocus.x, 0.16);
   cameraFocus.y = lerp(cameraFocus.y, targetFocus.y, 0.16);
