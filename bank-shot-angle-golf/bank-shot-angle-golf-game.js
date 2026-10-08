@@ -1929,8 +1929,10 @@ function drawExactRoute(ri, wrong) {
     pts.push(reached ? { x: V.x, y: V.y } : vAdd(A, vScale(vNorm(vSub(V, A)), L)));
     // right or wrong, the line stops at the wall (a wrong answer's red arc shows the typed angle)
   } else {
+    // a straight (complementary) shot: the line is one side of the right angle, so it stops at the
+    // end of the angle's arc (see drawLiveAngleDiagram: r = 62)
     var dir = wrong && p.launchDir ? p.launchDir : p.aimDir;
-    pts.push(ray(A, dir, L));
+    pts.push(ray(A, dir, min(L, 62)));
   }
   push();
   noFill();
@@ -2636,7 +2638,7 @@ function drawQuestionOverlay() {
   fill(255);
   textSize(18);
   textStyle(BOLD);
-  text(tl('Submit', 'Enviar'), sx + sw / 2, iy + ih / 2 + 1);
+  text(tl('Hit', 'Golpear'), sx + sw / 2, iy + ih / 2 + 1);
   textStyle(NORMAL);
   textAlign(LEFT, BASELINE);
 }
