@@ -154,6 +154,9 @@
   .teaching-notes li strong {
     color: var(--text);
   }
+  .reset-progress { max-width: 720px; margin: 0 auto; padding: 0 24px 48px; color: var(--text); }
+  .reset-progress h2 { font-size: 16px; color: var(--accent); }
+  .reset-progress p { font-size: 14px; color: var(--muted); }
   .sr-only {
     position: absolute;
     width: 1px;
@@ -254,7 +257,7 @@
 <script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
-<script src="../site-stats.js?v=b7719b54"></script>
+<script src="../site-stats.js?v=27457a94"></script>
 <script src="../site-layout.js?v=dc3e3464"></script>
 </head>
 <body>
@@ -262,7 +265,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Bank Shot: Angle Golf</h1>
-<p class="sr-only">A mini golf game where every hole opens with a bank-shot angle problem: the wall's known angle is shown, you solve for its complementary or supplementary partner angle, then drag from the ball to aim and set power. A correct answer sends the ball exactly where you aimed; a wrong answer deflects the shot by your own error. Real physics - hills, water currents, bushes, wall bounces - carries every shot after that. Play Golf Gamer (easy) or Hole-In-One Hero (hard) mode across a random 9-hole themed course.</p>
+<p class="sr-only">A mini golf game where every hole opens with a bank-shot angle problem: the wall's known angle is shown, you solve for its complementary or supplementary partner angle, then drag from the ball to aim and set power. A correct answer sends the ball exactly where you aimed; a wrong answer deflects the shot by your own error. Real physics - hills, currents, bumpers, wall bounces - carries every shot after that. Play Golf Gamer (easy) or Hole-In-One Hero (hard) mode on one of three 9-hole courses: Medieval Kingdom (windmills), Space Station (warp portals) or Summer Beach (sliding surfboards). Best scores and stars are saved on this device.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot"></div>
@@ -294,18 +297,28 @@
   <h3>Tips for using the game</h3>
   <p>Students find the missing angle in a complementary or supplementary pair, then use it to aim a mini golf shot off a wall.</p>
   <ul>
+    <li><strong>Think first:</strong> before typing, students answer a quick check: do the two angles add to 90&deg; or 180&deg;? The diagram (a square corner or a straight line) is the clue.</li>
     <li><strong>The math:</strong> complementary angles add to 90&deg; and supplementary angles add to 180&deg;. A shot aimed at a wall asks for the supplementary angle (the ball's path and the wall make a straight line); a straight shot into open green asks for the complementary angle (a right angle with the aim line as one side).</li>
     <li><strong>Visible consequence:</strong> a correct answer bounces the ball like a mirror along the aimed path; a wrong one sends it off the wall at the typed angle. The student's number is drawn as a red wedge next to the known angle, with a gap if it is too small or an overflow if it is too big, and a card adds the two angles to show they miss the total.</li>
-    <li><strong>Retry with hints:</strong> after a miss, a short explanation appears (without the answer) and the same question is asked again with a hint about the 90&deg; or 180&deg; total; a second miss adds the equation with a blank.</li>
+    <li><strong>Retry with hints:</strong> after a miss, a short explanation appears (without the answer), names the likely mistake (using 90&deg; instead of 180&deg;, typing the given angle, a subtraction slip) and the same question is asked again with a hint about the 90&deg; or 180&deg; total; a second miss adds the equation with a blank.</li>
     <li><strong>Algebra on the back nine:</strong> Hole-In-One Hero gives some wall angles as expressions like (2x + 10)&deg; with x provided, so students substitute and evaluate before solving.</li>
     <li><strong>Real life:</strong> a ball, a billiard cue ball, a laser, or a sound wave leaves a wall at the same angle it arrived, and angle pairs like these guide roof framing, carpentry, and any layout with corners.</li>
     <li><strong>Built-in progression:</strong> wall angles move from multiples of 10 to multiples of 5 to any whole number, and the hard mode adds a countdown clock (running out of time counts as a miss).</li>
+    <li><strong>Three themed courses:</strong> Medieval Kingdom, Space Station and Summer Beach, nine different holes each (a drawbridge, a black hole, a pier...). Each course has one moving obstacle: windmill sails, warp portals or sliding surfboards. Every bumper and wall is a chance for a bank shot.</li>
+    <li><strong>Goals to chase:</strong> students choose a course, see their strokes on every hole and the round total, and earn up to three stars a hole. Best scores per hole and per course are saved on this device only.</li>
   </ul>
+</section>
+
+<section class="reset-progress">
+  <h2>Reset Progress</h2>
+  <p>Erases your saved best scores, stars and holes in one for Bank Shot: Angle Golf on this device only. Other games are not affected. Your progress is saved only in this browser and is never sent anywhere. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
 <script src="../site-sound.js?v=4daed956"></script>
 <script src="bank-shot-angle-golf-shim.js?v=6d5df345"></script>
-<script src="bank-shot-angle-golf-game.js?v=49517705"></script>
+<script src="bank-shot-angle-golf-game.js?v=b1fb88e5"></script>
+<script src="bank-shot-angle-golf-courses.js?v=6bee8fbf"></script>
 <script src="../site-controls.js?v=27028c32"></script>
 <script src="bank-shot-angle-golf-mobile-controls.js?v=eadc5641"></script>
 

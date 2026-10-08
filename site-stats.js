@@ -69,6 +69,16 @@
       goals: readNum('penaltyshootout_goals_total', 0), perfect: readNum('penaltyshootout_perfect', 0),
       allRight: readNum('penaltyshootout_allright', 0)
     };
+    // Bank Shot: Angle Golf keeps best strokes and stars per course and mode; stars count once per hole (best of either mode)
+    var golfRec = readJSON('bankshot_records', {}) || {}, golfCourses = ['medieval', 'space', 'summer'], golfNames = { medieval: 'Medieval Kingdom', space: 'Space Station', summer: 'Summer Beach' };
+    var bs = { rounds: readNum('bankshot_rounds', 0), aces: readNum('bankshot_hole_in_ones', 0), underPar: readBool('bankshot_under_par'), stars: 0, played: 0, best: {} };
+    golfCourses.forEach(function (k) {
+      var e = (golfRec.EASY || {})[k] || {}, h = (golfRec.HARD || {})[k] || {};
+      for (var i = 0; i < 9; i++) bs.stars += Math.max((e.stars || [])[i] || 0, (h.stars || [])[i] || 0);
+      var tots = [e.total, h.total].filter(function (t) { return typeof t === 'number'; });
+      if (tots.length) { bs.played++; bs.best[k] = Math.min.apply(null, tots); }
+    });
+    bs.any = bs.rounds > 0 || bs.stars > 0;
     var games = [
       { key: 'lgttp', folder: 'lets-get-to-the-point', icon: '🎯', name: "Let's Get to the Point", played: lg.played,
         best: lg.hsGenius > 0 || lg.hsGeometry > 0, coins: lg.coins, rows: [
@@ -102,7 +112,12 @@
       { key: 'penalty', folder: 'rooted-to-the-spot', icon: '⚽', name: 'Rooted to the Spot', played: ps.played,
         best: ps.best > 0, coins: 0, rows: [
           ['Shootouts played', ps.games], ['Best shootout', ps.best + ' / 5 goals'], ['Total goals', ps.goals],
-          ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] }
+          ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] },
+      { key: 'golf', folder: 'bank-shot-angle-golf', icon: '⛳', name: 'Bank Shot: Angle Golf', played: bs.any,
+        best: bs.played > 0, coins: 0, rows: [
+          ['Rounds finished', bs.rounds], ['Holes in one', bs.aces], ['Stars', bs.stars + ' / 81']].concat(golfCourses.map(function (k) {
+            return ['Best round (' + golfNames[k] + ')', bs.best[k] !== undefined ? bs.best[k] + ' strokes' : '—'];
+          })) }
     ];
     var played = games.filter(function (g) { return g.played; }).length;
     var coinsAll = lg.coins + er.coins + sb.coins;
@@ -140,7 +155,12 @@
       { game: 'penalty', icon: '🎩', name: 'Hat Trick', desc: 'Score 3+ goals in one shootout', earned: ps.best >= 3 },
       { game: 'penalty', icon: '🧠', name: 'Sharp Shooter', desc: 'Answer every question right in a shootout', earned: ps.allRight >= 1 },
       { game: 'penalty', icon: '🏆', name: 'Perfect Shootout', desc: 'Score all 5 goals', earned: ps.perfect >= 1 },
-      { game: 'penalty', icon: '⭐', name: 'Goal Machine', desc: 'Score 25 goals in total', earned: ps.goals >= 25 }
+      { game: 'penalty', icon: '⭐', name: 'Goal Machine', desc: 'Score 25 goals in total', earned: ps.goals >= 25 },
+      { game: 'golf', icon: '⛳', name: 'First Round', desc: 'Finish a round of 9 holes', earned: bs.rounds >= 1 },
+      { game: 'golf', icon: '🕳️', name: 'Hole in One', desc: 'Sink a ball in one stroke', earned: bs.aces >= 1 },
+      { game: 'golf', icon: '🐦', name: 'Under Par', desc: 'Finish a round under par', earned: bs.underPar },
+      { game: 'golf', icon: '⭐', name: 'Star Collector', desc: 'Earn 40 stars', earned: bs.stars >= 40 },
+      { game: 'golf', icon: '🌍', name: 'World Tour', desc: 'Finish all three courses', earned: bs.played >= 3 }
     ];
     var totals = {
       played: played, games: games.length,

@@ -37,42 +37,6 @@ var MODE_HARD = 'HARD';
 var MODE_PRACTICE = 'PRACTICE';
 
 // ---------------------------------------------------------------
-// Theme palettes (more themes get appended here as courses are added)
-// ---------------------------------------------------------------
-var THEMES = {
-  classicGreen: {
-    label: tl('Classic Green', 'Verde clásico'),
-    icon: '⛳',
-    fairwayA: '#3f9a55', fairwayB: '#66c277',
-    rough: '#256b39',
-    wall: '#8a5a34', wallHi: '#b9855a',
-    bush: '#1f6b34', bushHi: '#2f8c47',
-    water: '#2f7bdb', waterHi: '#6db2ff',
-    sky: '#0e2a17'
-  },
-  nightLinks: {
-    label: tl('Night Links', 'Campo nocturno'),
-    icon: '🌙',
-    fairwayA: '#2f6f8a', fairwayB: '#3f8aa8',
-    rough: '#123241',
-    wall: '#6b7c93', wallHi: '#a3b3c9',
-    bush: '#1c4b46', bushHi: '#2b6d63',
-    water: '#3a5fd0', waterHi: '#7d9bff',
-    sky: '#08161f'
-  },
-  autumnOrchard: {
-    label: tl('Autumn Orchard', 'Huerto de otoño'),
-    icon: '🍂',
-    fairwayA: '#b07a2c', fairwayB: '#cf9a45',
-    rough: '#6b4a1f',
-    wall: '#4a3020', wallHi: '#7a5238',
-    bush: '#8a3b1a', bushHi: '#b5541f',
-    water: '#3f8f9e', waterHi: '#88d3df',
-    sky: '#24160a'
-  }
-};
-
-// ---------------------------------------------------------------
 // Vector helpers + corridor builder
 // ---------------------------------------------------------------
 function vSub(a, b) { return { x: a.x - b.x, y: a.y - b.y }; }
@@ -118,31 +82,6 @@ function buildCorridor(points, widths) {
   return { walls: walls, left: left, right: right };
 }
 
-// The corridor's end-cap walls pass directly through points[0] and
-// points[last] (see buildCorridor) - placing the tee/cup exactly there
-// means the cup sits ON the end-cap wall with zero clearance. Insetting
-// both markers along the centerline keeps them genuinely inside the
-// enclosed shape instead of touching its boundary.
-var HOLE_END_INSET = 40;
-
-function makeHole(par, points, widths, bushes, zones) {
-  var corridor = buildCorridor(points, widths);
-  var n = points.length;
-  var teeDir = vNorm(vSub(points[1], points[0]));
-  var cupDir = vNorm(vSub(points[n - 1], points[n - 2]));
-  var teePos = vAdd(points[0], vScale(teeDir, HOLE_END_INSET));
-  var cupPos = vSub(points[n - 1], vScale(cupDir, HOLE_END_INSET));
-  return {
-    par: par,
-    tee: { x: teePos.x, y: teePos.y },
-    cup: { x: cupPos.x, y: cupPos.y },
-    walls: corridor.walls,
-    fairwayLeft: corridor.left, fairwayRight: corridor.right,
-    // bushes are drawn and collide at 60% of their listed size, so there is room to play around them
-    bushes: (bushes || []).map(function (b) { return { x: b.x, y: b.y, r: Math.max(7, Math.round(b.r * 0.6)) }; }), zones: zones || []
-  };
-}
-
 // Putting Green: a plain open square with no cup and no obstacles -
 // an infinite practice arena. Every shot still gets a real bank/
 // straight question off the same live classification every course
@@ -157,7 +96,7 @@ function buildPracticeArena() {
   var walls = [];
   for (var i = 0; i < 4; i++) {
     var a = corners[i], c = corners[(i + 1) % 4];
-    walls.push({ x1: a.x, y1: a.y, x2: c.x, y2: c.y });
+    walls.push({ x1: a.x, y1: a.y, x2: c.x, y2: c.y, kind: 'rail' });
   }
   return {
     par: null,
@@ -165,146 +104,9 @@ function buildPracticeArena() {
     cup: null,
     walls: walls,
     fairwayPoly: corners,
-    bushes: [], zones: []
+    bushes: [], zones: [], islands: [], obstacles: [], decor: []
   };
 }
-
-// ---------------------------------------------------------------
-// Course data - Course 1: Classic Green (9 holes)
-// Each hole is an enclosed fairway corridor (tee to cup), not an open
-// field - see buildCorridor above. No hole authors a fixed "puzzle
-// wall" or complementary/supplementary type any more: every shot is
-// classified live from the player's own aim (see classifyAndBuildShot)
-// - if it's heading for a rail, that's a complementary bank-shot
-// question at the real contact point; if it's headed into open green,
-// that's a supplementary straight-line question at the real spot it
-// would come to rest.
-// ---------------------------------------------------------------
-function buildClassicGreenCourse() {
-  return {
-    key: 'classicGreen', theme: THEMES.classicGreen,
-    holes: [
-      makeHole(3, [{ x: 110, y: 600 }, { x: 110, y: 270 }, { x: 560, y: 270 }], [52, 52, 70],
-        [], [{ type: 'water', x: 280, y: 240, w: 110, h: 60, dirDeg: 0, strength: 0.02 }]),
-
-      makeHole(3, [{ x: 130, y: 610 }, { x: 130, y: 430 }, { x: 340, y: 430 }, { x: 340, y: 230 }, { x: 570, y: 230 }], 58,
-        [{ x: 130, y: 520, r: 12 }], [{ type: 'hill', x: 200, y: 410, w: 50, h: 40, dirDeg: 0, strength: 0.028 }]),
-
-      makeHole(3, [{ x: 130, y: 620 }, { x: 130, y: 160 }], 55,
-        [], [{ type: 'hill', x: 92, y: 345, w: 80, h: 120, dirDeg: 0, strength: 0.04 }]),
-
-      makeHole(4, [{ x: 590, y: 620 }, { x: 590, y: 390 }, { x: 300, y: 390 }, { x: 300, y: 160 }], 50,
-        [{ x: 440, y: 500, r: 26 }],
-        [{ type: 'water', x: 370, y: 365, w: 90, h: 45, dirDeg: 210, strength: 0.03 }]),
-
-      makeHole(4, [{ x: 120, y: 620 }, { x: 120, y: 480 }, { x: 300, y: 480 }, { x: 300, y: 340 }, { x: 480, y: 340 }, { x: 480, y: 160 }], 46,
-        [{ x: 300, y: 250, r: 22 }], [{ type: 'water', x: 180, y: 465, w: 40, h: 30, dirDeg: 0, strength: 0.026 }]),
-
-      makeHole(4, [{ x: 150, y: 610 }, { x: 400, y: 610 }, { x: 400, y: 340 }, { x: 400, y: 170 }], [50, 50, 50, 85],
-        [{ x: 350, y: 230, r: 16 }, { x: 450, y: 230, r: 16 }],
-        [{ type: 'hill', x: 375, y: 480, w: 50, h: 80, dirDeg: 270, strength: 0.035 }]),
-
-      makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 400 }, { x: 350, y: 400 }, { x: 350, y: 170 }, { x: 580, y: 170 }], 50,
-        [{ x: 470, y: 170, r: 8 }],
-        [
-          { type: 'hill', x: 68, y: 465, w: 58, h: 80, dirDeg: 0, strength: 0.035 },
-          { type: 'water', x: 190, y: 375, w: 170, h: 45, dirDeg: 90, strength: 0.026 }
-        ]),
-
-      makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 450 }, { x: 370, y: 450 }, { x: 370, y: 270 }, { x: 550, y: 270 }, { x: 550, y: 150 }], 42,
-        [{ x: 290, y: 290, r: 11 }, { x: 350, y: 350, r: 10 }, { x: 400, y: 405, r: 7 }],
-        [{ type: 'hill', x: 535, y: 195, w: 30, h: 50, dirDeg: 90, strength: 0.03 }]),
-
-      makeHole(5, [{ x: 120, y: 160 }, { x: 120, y: 350 }, { x: 300, y: 350 }, { x: 300, y: 540 }, { x: 490, y: 540 }, { x: 490, y: 300 }, { x: 600, y: 300 }], 48,
-        [{ x: 520, y: 340, r: 14 }],
-        [
-          { type: 'hill', x: 275, y: 410, w: 50, h: 80, dirDeg: 90, strength: 0.035 },
-          { type: 'water', x: 468, y: 395, w: 44, h: 65, dirDeg: 190, strength: 0.028 }
-        ])
-    ]
-  };
-}
-
-// Course 2: Night Links - straight runs, diagonals and hairpins, on a dark
-// moonlit palette.
-function buildNightLinksCourse() {
-  return {
-    key: 'nightLinks', theme: THEMES.nightLinks,
-    holes: [
-      // 1: one long straight lane with a bush blocking the middle
-      makeHole(3, [{ x: 350, y: 620 }, { x: 350, y: 190 }], 62,
-        [{ x: 350, y: 400, r: 16 }], []),
-      // 2: an L with a hill pushing toward the turn
-      makeHole(3, [{ x: 110, y: 610 }, { x: 110, y: 210 }, { x: 580, y: 210 }], [55, 55, 70],
-        [], [{ type: 'hill', x: 80, y: 360, w: 60, h: 80, dirDeg: 270, strength: 0.03 }]),
-      // 3: a diagonal lane - every wall meets the ball at an unusual angle
-      makeHole(3, [{ x: 120, y: 620 }, { x: 570, y: 200 }], 58,
-        [], []),
-      // 4: a dogleg with a bush and a pond in the fairway
-      makeHole(4, [{ x: 580, y: 620 }, { x: 580, y: 420 }, { x: 130, y: 420 }, { x: 130, y: 180 }], 52,
-        [{ x: 350, y: 420, r: 18 }],
-        [{ type: 'water', x: 420, y: 400, w: 70, h: 40, dirDeg: 180, strength: 0.024 }]),
-      // 5: a U-turn - up, across, and back down to a far cup
-      makeHole(4, [{ x: 130, y: 620 }, { x: 130, y: 200 }, { x: 370, y: 200 }, { x: 370, y: 560 }, { x: 600, y: 560 }], 46,
-        [{ x: 250, y: 200, r: 14 }], [{ type: 'hill', x: 345, y: 380, w: 50, h: 60, dirDeg: 90, strength: 0.03 }]),
-      // 6: a Z that doubles back across the course
-      makeHole(5, [{ x: 110, y: 620 }, { x: 110, y: 470 }, { x: 590, y: 470 }, { x: 590, y: 300 }, { x: 110, y: 300 }, { x: 110, y: 170 }], 46,
-        [{ x: 350, y: 470, r: 14 }],
-        [{ type: 'water', x: 300, y: 285, w: 120, h: 30, dirDeg: 0, strength: 0.024 }]),
-      // 7: a five-leg zigzag, tight corridor
-      makeHole(5, [{ x: 100, y: 620 }, { x: 100, y: 540 }, { x: 330, y: 540 }, { x: 330, y: 420 }, { x: 100, y: 420 }, { x: 100, y: 300 }, { x: 330, y: 300 }, { x: 330, y: 170 }, { x: 600, y: 170 }], 38,
-        [], []),
-      // 8: an S-curve
-      makeHole(4, [{ x: 350, y: 630 }, { x: 350, y: 470 }, { x: 150, y: 470 }, { x: 150, y: 320 }, { x: 550, y: 320 }, { x: 550, y: 170 }], 44,
-        [{ x: 250, y: 470, r: 12 }], [{ type: 'hill', x: 330, y: 300, w: 60, h: 40, dirDeg: 0, strength: 0.03 }]),
-      // 9: the finale - a winding route with hazards
-      makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 500 }, { x: 200, y: 500 }, { x: 200, y: 380 }, { x: 500, y: 380 }, { x: 500, y: 260 }, { x: 150, y: 260 }, { x: 150, y: 170 }], 40,
-        [{ x: 400, y: 500, r: 12 }, { x: 300, y: 260, r: 12 }],
-        [{ type: 'water', x: 340, y: 365, w: 80, h: 30, dirDeg: 0, strength: 0.024 }])
-    ]
-  };
-}
-
-// Course 3: Autumn Orchard - mirrored openings, a V-shaped hole, a spiral and
-// hairpins, on a warm autumn palette.
-function buildAutumnOrchardCourse() {
-  return {
-    key: 'autumnOrchard', theme: THEMES.autumnOrchard,
-    holes: [
-      // 1: the classic L, mirrored
-      makeHole(3, [{ x: 600, y: 620 }, { x: 600, y: 250 }, { x: 150, y: 250 }], [52, 52, 70],
-        [], [{ type: 'hill', x: 570, y: 420, w: 60, h: 80, dirDeg: 90, strength: 0.03 }]),
-      // 2: a diagonal lane the other way
-      makeHole(3, [{ x: 580, y: 620 }, { x: 140, y: 220 }], 58,
-        [{ x: 360, y: 420, r: 14 }], []),
-      // 3: a loop that turns back on itself
-      makeHole(4, [{ x: 350, y: 620 }, { x: 350, y: 400 }, { x: 130, y: 400 }, { x: 130, y: 180 }, { x: 350, y: 180 }], 50,
-        [{ x: 240, y: 400, r: 14 }], [{ type: 'water', x: 105, y: 280, w: 50, h: 60, dirDeg: 90, strength: 0.024 }]),
-      // 4: a narrow straight with two bushes in the lane
-      makeHole(3, [{ x: 350, y: 620 }, { x: 350, y: 170 }], 40,
-        [{ x: 350, y: 470, r: 16 }, { x: 350, y: 300, r: 16 }], []),
-      // 5: down, across and up again
-      makeHole(4, [{ x: 120, y: 620 }, { x: 120, y: 430 }, { x: 300, y: 430 }, { x: 300, y: 620 }, { x: 520, y: 620 }, { x: 520, y: 200 }], 44,
-        [], [{ type: 'hill', x: 490, y: 400, w: 60, h: 60, dirDeg: 270, strength: 0.03 }]),
-      // 6: a spiral in toward the cup
-      makeHole(5, [{ x: 110, y: 620 }, { x: 110, y: 180 }, { x: 590, y: 180 }, { x: 590, y: 560 }, { x: 260, y: 560 }, { x: 260, y: 340 }], 46,
-        [{ x: 350, y: 180, r: 14 }],
-        [{ type: 'water', x: 570, y: 350, w: 40, h: 90, dirDeg: 90, strength: 0.024 }]),
-      // 7: a V - down to the middle and back up
-      makeHole(4, [{ x: 110, y: 180 }, { x: 350, y: 610 }, { x: 590, y: 180 }], 46,
-        [], []),
-      // 8: three hairpins
-      makeHole(5, [{ x: 590, y: 620 }, { x: 590, y: 520 }, { x: 130, y: 520 }, { x: 130, y: 420 }, { x: 590, y: 420 }, { x: 590, y: 320 }, { x: 130, y: 320 }, { x: 130, y: 170 }], 38,
-        [{ x: 360, y: 420, r: 12 }], []),
-      // 9: a wide finale with a bush and a pond
-      makeHole(4, [{ x: 350, y: 630 }, { x: 350, y: 300 }, { x: 560, y: 300 }, { x: 560, y: 170 }], 70,
-        [{ x: 350, y: 450, r: 20 }],
-        [{ type: 'water', x: 420, y: 270, w: 80, h: 50, dirDeg: 0, strength: 0.024 }])
-    ]
-  };
-}
-
-var COURSES = [buildClassicGreenCourse(), buildNightLinksCourse(), buildAutumnOrchardCourse()];
 
 // ---------------------------------------------------------------
 // State
@@ -384,6 +186,155 @@ var cameraZoom = 1;
 var cameraFocus = { x: 350, y: 350 };
 var QUESTION_ZOOM = 2.4;
 
+// The question only appears once the camera has finished zooming in (questionReady), and it starts
+// with a quick check: do these two angles add to 90° or 180°? (checkDone)
+var questionReady = false;
+var checkDone = false;
+var checkWrongAt = -10000;
+var CHECK_BTN = { w: 196, h: 58, gap: 14 };
+var holeResult = null;    // the last finished hole's record result (see recordHole)
+var roundResult = null;   // the last finished round's (see recordRound)
+var kbCourseSel = 0;      // which course card the keyboard has picked
+var holeBannerAt = -10000; // when the hole-name banner appeared
+
+// ---------------------------------------------------------------
+// Sound effects made on the fly (this game's own; the recorded ones live in sounds/)
+// ---------------------------------------------------------------
+function playFx(name) {
+  var ctx = window.SiteSound && SiteSound.context && SiteSound.context();
+  if (!ctx) return;
+  try {
+    var now = ctx.currentTime;
+    var tone = function (type, f0, f1, dur, vol, delay) {
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = now + (delay || 0);
+      o.type = type; o.frequency.setValueAtTime(f0, t);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02);
+    };
+    var noise = function (dur, vol, freq, delay) {
+      var n = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), t = now + (delay || 0);
+      f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 0.9; g.gain.value = vol;
+      s.buffer = buf; s.connect(f); f.connect(g); g.connect(ctx.destination); s.start(t);
+    };
+    var fx = {
+      warp: function () { tone('sine', 220, 1800, 0.35, 0.12); tone('triangle', 330, 2400, 0.3, 0.06, 0.05); },
+      thunk: function () { tone('square', 140, 70, 0.12, 0.08); noise(0.08, 0.15, 500); },
+      boing: function () { tone('sine', 260, 520, 0.18, 0.12); tone('sine', 520, 300, 0.15, 0.06, 0.08); },
+      checkOk: function () { tone('triangle', 660, 0, 0.1, 0.1); tone('triangle', 990, 0, 0.14, 0.1, 0.08); },
+      nope: function () { tone('sawtooth', 180, 140, 0.22, 0.07); },
+      star: function () { tone('sine', 1320, 0, 0.25, 0.12); tone('sine', 2640, 0, 0.15, 0.04); },
+      pop: function () { noise(0.15, 0.25, 2500); },
+      par: function () { [523, 659, 784].forEach(function (f, i) { tone('triangle', f, 0, 0.22, 0.1, i * 0.09); }); },
+      birdie: function () { [1568, 2093, 1760, 2349, 2637].forEach(function (f, i) { tone('sine', f, f * 1.05, 0.09, 0.08, i * 0.06); }); },
+      holeInOne: function () {
+        [523, 659, 784, 1047, 784, 1047, 1319].forEach(function (f, i) { tone('square', f, 0, 0.18, 0.06, i * 0.1); tone('triangle', f / 2, 0, 0.2, 0.06, i * 0.1); });
+        noise(0.4, 0.2, 3000, 0.75);
+      },
+      record: function () { [784, 988, 1175, 1568].forEach(function (f, i) { tone('triangle', f, 0, 0.3, 0.1, i * 0.12); }); }
+    };
+    if (fx[name]) fx[name]();
+  } catch (e) {}
+}
+
+// ---------------------------------------------------------------
+// Saved records (this device only: best strokes on each hole, best course total, stars)
+// ---------------------------------------------------------------
+var RECORDS_KEY = 'bankshot_records';
+function loadRecords() { try { return JSON.parse(localStorage.getItem(RECORDS_KEY)) || {}; } catch (e) { return {}; } }
+function saveRecords(r) { try { localStorage.setItem(RECORDS_KEY, JSON.stringify(r)); } catch (e) {} }
+function courseRecord(mode, key) {
+  var r = loadRecords(), m = r[mode] || {}, c = m[key] || {};
+  return { best: c.best || [], total: c.total || null, stars: c.stars || [] };
+}
+function bumpCounter(key) { try { localStorage.setItem(key, String((parseInt(localStorage.getItem(key), 10) || 0) + 1)); } catch (e) {} }
+function holeStars(strokes, par) { return strokes === 1 || strokes - par <= -1 ? 3 : (strokes <= par ? 2 : 1); }
+function starTotal(stars) { var s = 0; for (var i = 0; i < 9; i++) s += stars[i] || 0; return s; }
+// records one finished hole; returns { newBest, stars }
+function recordHole(idx, strokes, par) {
+  var r = loadRecords(), m = r[gameMode] = r[gameMode] || {}, c = m[course.key] = m[course.key] || { best: [], total: null, stars: [] };
+  var stars = holeStars(strokes, par), had = c.best[idx];
+  var newBest = had === undefined || had === null || strokes < had;
+  if (newBest) c.best[idx] = strokes;
+  c.stars[idx] = Math.max(c.stars[idx] || 0, stars);
+  saveRecords(r);
+  if (strokes === 1) bumpCounter('bankshot_hole_in_ones');
+  return { newBest: newBest && had !== undefined && had !== null, firstTime: had === undefined || had === null, stars: stars, prev: had };
+}
+// records a finished round; returns true for a new course record
+function recordRound(total, par) {
+  var r = loadRecords(), m = r[gameMode] = r[gameMode] || {}, c = m[course.key] = m[course.key] || { best: [], total: null, stars: [] };
+  var prev = c.total, isNew = prev === null || prev === undefined || total < prev;
+  if (isNew) c.total = total;
+  saveRecords(r);
+  bumpCounter('bankshot_rounds');
+  if (total < par) { try { localStorage.setItem('bankshot_under_par', 'true'); } catch (e) {} }
+  return { isNew: isNew && prev !== null && prev !== undefined, first: prev === null || prev === undefined, prev: prev };
+}
+
+// ---------------------------------------------------------------
+// Celebrations: confetti and a big pop-up word when the ball drops
+// ---------------------------------------------------------------
+var confetti = [];
+var popWord = null;   // { text, sub, col, at }
+function burstConfetti(x, y, n, spread) {
+  var cols = (course && course.theme.confetti) || ['#ffd166', '#ffffff'];
+  for (var i = 0; i < n; i++) {
+    var a = random(0, 360), s = random(2, spread || 9);
+    confetti.push({ x: x, y: y, vx: cos(a) * s, vy: sin(a) * s - random(2, 5), rot: random(360), vr: random(-12, 12),
+      col: cols[i % cols.length], life: random(70, 120), w: random(5, 10), h: random(3, 6) });
+  }
+}
+function drawConfetti() {
+  if (!confetti.length) return;
+  push(); noStroke(); rectMode(CENTER);
+  for (var i = confetti.length - 1; i >= 0; i--) {
+    var p = confetti[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.vx *= 0.985; p.rot += p.vr; p.life--;
+    if (p.life <= 0 || p.y > height + 20) { confetti.splice(i, 1); continue; }
+    push(); translate(p.x, p.y); rotate(p.rot); fill(p.col); rect(0, 0, p.w, p.h, 1); pop();
+  }
+  pop();
+}
+function showPopWord(text, sub, col) { popWord = { text: text, sub: sub || '', col: col || '#ffd166', at: millis() }; }
+function drawPopWord() {
+  if (!popWord) return;
+  var t = (millis() - popWord.at) / 1600;
+  if (t > 1) { popWord = null; return; }
+  var sc = t < 0.15 ? 0.4 + t / 0.15 * 0.75 : (t < 0.25 ? 1.15 - (t - 0.15) : 1.05);
+  var a = t > 0.8 ? (1 - t) / 0.2 : 1;
+  push();
+  translate(width / 2, height / 2 - 40); scale(sc);
+  textAlign(CENTER, CENTER); textStyle(BOLD); textSize(64);
+  fill(0, 0, 0, 160 * a); text(popWord.text, 3, 4);
+  var c = color(popWord.col); c.setAlpha(255 * a); fill(c); text(popWord.text, 0, 0);
+  if (popWord.sub) { textSize(22); fill(255, 255, 255, 230 * a); text(popWord.sub, 0, 52); }
+  textStyle(NORMAL);
+  pop();
+}
+// the word for a score on a hole
+function scoreWord(strokes, par) {
+  if (strokes === 1) return tl('HOLE IN ONE!', '¡HOYO EN UNO!');
+  var rel = strokes - par;
+  if (rel <= -3) return tl('Albatross!', '¡Albatros!');
+  if (rel === -2) return tl('Eagle!', '¡Águila!');
+  if (rel === -1) return tl('Birdie!', '¡Birdie!');
+  if (rel === 0) return tl('Par', 'Par');
+  if (rel === 1) return tl('Bogey', 'Bogey');
+  return tl('Double Bogey+', 'Doble bogey+');
+}
+// called the moment the ball drops in
+function celebrateSink() {
+  var s = strokeCount, par = hole.par;   // the stroke that dropped is already counted
+  var sx = (hole.cup.x - cameraFocus.x) * cameraZoom + width / 2, sy = (hole.cup.y - cameraFocus.y) * cameraZoom + height / 2;
+  if (s === 1) { burstConfetti(sx, sy, 140, 12); burstConfetti(width / 2, height / 2, 80, 14); playFx('holeInOne'); showPopWord(scoreWord(s, par), '', '#ffd166'); }
+  else if (s < par) { burstConfetti(sx, sy, 90, 10); playFx('birdie'); showPopWord(scoreWord(s, par), '', '#7dffb0'); }
+  else if (s === par) { burstConfetti(sx, sy, 40, 7); playFx('par'); showPopWord(scoreWord(s, par), '', '#ffffff'); }
+  else { burstConfetti(sx, sy, 16, 5); showPopWord(scoreWord(s, par), '', '#ffce6b'); }
+}
+
 // ---------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------
@@ -439,8 +390,26 @@ function kbKeyPressed() {
     }
     return false;
   }
-  if (gameState === 'COURSE_INTRO') { if (kbConfirmKey()) { playSound('click'); startHole(0); } return true; }
-  if (gameState === 'COURSE_COMPLETE') { if (kbConfirmKey()) { playSound('click'); gameState = 'MENU'; } return true; }
+  if (gameState === 'COURSE_SELECT') {
+    kbShown = true;
+    if (keyCode === LEFT_ARROW) { kbCourseSel = (kbCourseSel + COURSES.length - 1) % COURSES.length; return true; }
+    if (keyCode === RIGHT_ARROW) { kbCourseSel = (kbCourseSel + 1) % COURSES.length; return true; }
+    if (keyCode === ESCAPE) { gameState = 'MENU'; playSound('click'); return true; }
+    if (kbConfirmKey()) { playSound('click'); chooseCourse(kbCourseSel); }
+    return true;
+  }
+  if (gameState === 'COURSE_INTRO') {
+    if (keyCode === ESCAPE) { gameState = 'COURSE_SELECT'; playSound('click'); return true; }
+    if (kbConfirmKey()) { playSound('click'); startHole(0); }
+    return true;
+  }
+  if (gameState === 'COURSE_COMPLETE') {
+    kbShown = true;
+    if (keyCode === LEFT_ARROW) { kbCardSel = max(0, kbCardSel - 1); return true; }
+    if (keyCode === RIGHT_ARROW) { kbCardSel = min(CARD_BTNS.length - 1, kbCardSel + 1); return true; }
+    if (kbConfirmKey()) scorecardAction(CARD_BTNS[kbCardSel].id);
+    return true;
+  }
   if (gameState === 'PLAYING' && holePhase === 'AIMING' && kbAim && kbConfirmKey()) {
     kbAim = null;
     mouseReleased();   // fires exactly like releasing a mouse drag
@@ -505,17 +474,24 @@ function gameDraw() {
 function gameDrawScreen() {
   background(10, 14, 10);
   if (gameState === 'MENU') { drawMenu(); return; }
+  if (gameState === 'COURSE_SELECT') { drawCourseSelect(); return; }
   if (gameState === 'COURSE_INTRO') { drawCourseIntro(); return; }
-  if (gameState === 'COURSE_COMPLETE') { drawScorecard(); return; }
+  if (gameState === 'COURSE_COMPLETE') { drawScorecard(); drawConfetti(); return; }
 
   // Ease the camera toward the live question's real point (making the
   // angle diagram big and legible) or back out to the full course view.
   var wantZoomIn = holePhase === 'QUESTION' && pendingShot;
   var targetZoom = wantZoomIn ? QUESTION_ZOOM : 1;
   var targetFocus = wantZoomIn ? pendingShot.point : { x: 350, y: 350 };
-  cameraZoom = lerp(cameraZoom, targetZoom, 0.12);
-  cameraFocus.x = lerp(cameraFocus.x, targetFocus.x, 0.12);
-  cameraFocus.y = lerp(cameraFocus.y, targetFocus.y, 0.12);
+  cameraZoom = lerp(cameraZoom, targetZoom, 0.16);
+  cameraFocus.x = lerp(cameraFocus.x, targetFocus.x, 0.16);
+  cameraFocus.y = lerp(cameraFocus.y, targetFocus.y, 0.16);
+  // the question (and its clock) only starts once the zoom has settled
+  if (wantZoomIn && !questionReady && Math.abs(cameraZoom - targetZoom) < 0.03 && dist(cameraFocus.x, cameraFocus.y, targetFocus.x, targetFocus.y) < 2) {
+    questionReady = true;
+    if (checkDone) timerStart = millis();
+  }
+  if (!confirmExitOpen && !explainOpen && gameState === 'PLAYING') obsClock += 1 / 60;
 
   // PLAYING / HOLE_COMPLETE both render the hole underneath
   push();
@@ -530,6 +506,7 @@ function gameDrawScreen() {
   drawWalls();
   drawBushes();
   drawCup();
+  drawObstacles();
   if (!confirmExitOpen && !explainOpen) updatePhysics();
   updateAngleReveal();
   updateTrail();
@@ -541,7 +518,7 @@ function gameDrawScreen() {
   drawLiveAngleDiagram();
   pop();
 
-  if (holePhase === 'SUNK' && sinkAnim >= 1 && gameState === 'PLAYING') {
+  if (holePhase === 'SUNK' && sinkAnim >= 1 && gameState === 'PLAYING' && (!popWord || millis() - popWord.at > 1200)) {   // after the celebration
     finishHole();
   }
 
@@ -550,7 +527,10 @@ function gameDrawScreen() {
   if (gameState === 'PLAYING') drawExitButton();
   if (holePhase === 'QUESTION') drawQuestionOverlay();
   drawScreenFlash();
+  drawHoleBanner();
   if (gameState === 'HOLE_COMPLETE') drawHoleCompleteOverlay();
+  else drawPopWord();
+  drawConfetti();
   if (confirmExitOpen) drawExitConfirm();
   if (explainOpen) drawExplainModal();
 }
@@ -587,7 +567,7 @@ function drawMenu() {
   textAlign(CENTER, CENTER);
   textSize(15);
   fill(140, 155, 140);
-  text(tl('9 holes per round · a new random themed course every time you play', '9 hoyos por ronda · un campo temático nuevo cada vez que juegas'), width / 2, PRACTICE_BTN.y + PRACTICE_BTN.h + 24);
+  text(tl('Three themed courses · 9 holes each · your best scores are saved', 'Tres campos temáticos · 9 hoyos cada uno · se guardan tus mejores marcas'), width / 2, PRACTICE_BTN.y + PRACTICE_BTN.h + 24);
 }
 
 var PRACTICE_BTN = { w: 340, h: 50, y: 608 };
@@ -844,53 +824,134 @@ function menuHit(mx, my) {
 }
 
 // ---------------------------------------------------------------
-// Course intro
+// Choosing a course, and the course intro
 // ---------------------------------------------------------------
-var introTitle = '';
-function drawCourseIntro() {
-  background(10, 14, 10);
-  noStroke();
-  fill(255);
-  textAlign(CENTER, CENTER);
-  textSize(21);
-  fill(150, 200, 160);
-  text((gameMode === MODE_EASY ? tl('GOLF GAMER', 'GOLFISTA GAMER') : tl('HOLE-IN-ONE HERO', 'HÉROE DEL HOYO EN UNO')) + tl(' · TODAY’S COURSE', ' · CAMPO DE HOY'), width / 2, height / 2 - 90);
-  textSize(56);
-  fill(255);
-  textStyle(BOLD);
-  text(course.theme.icon + ' ' + course.theme.label, width / 2, height / 2 - 30);
-  textStyle(NORMAL);
-  textSize(18);
-  fill(200, 210, 200);
-  text(tl('9 holes · par ', '9 hoyos · par ') + totalPar(), width / 2, height / 2 + 24);
-
-  fill('#3ea158');
-  rect(width / 2 - 100, height / 2 + 64, 200, 54, 14);
-  fill(255);
-  textSize(21);
-  textStyle(BOLD);
-  text(tl('Tee Off', '¡A jugar!'), width / 2, height / 2 + 91);
-  textStyle(NORMAL);
-}
-
-function totalPar() {
+function totalPar(c) {
+  c = c || course;
   var p = 0;
-  for (var i = 0; i < course.holes.length; i++) p += course.holes[i].par;
+  for (var i = 0; i < c.holes.length; i++) p += c.holes[i].par;
   return p;
 }
+function modeName() { return gameMode === MODE_EASY ? tl('Golf Gamer', 'Golfista gamer') : (gameMode === MODE_HARD ? tl('Hole-In-One Hero', 'Héroe del hoyo en uno') : tl('Putting Green', 'Green de práctica')); }
+function starsText(n) { return '★ ' + n + ' / 27'; }
 
-function introHit(mx, my) {
-  var x = width / 2 - 100, y = height / 2 + 64, w = 200, h = 54;
-  return mx > x && mx < x + w && my > y && my < y + h;
+var SELECT_CARD = { w: 206, h: 392, y: 132, gap: 15 };
+var SELECT_BACK = { w: 150, h: 46, y: 560 };
+function selectCardX(i) { var b = SELECT_CARD; return width / 2 - (b.w * 3 + b.gap * 2) / 2 + i * (b.w + b.gap); }
+function inBox(mx, my, x, y, w, h) { return mx > x && mx < x + w && my > y && my < y + h; }
+
+function drawCourseSelect() {
+  drawMenuBackground();
+  noStroke(); textAlign(CENTER, CENTER);
+  fill(150, 200, 160); textSize(16); text(modeName().toUpperCase(), width / 2, 52);
+  fill(255); textStyle(BOLD); textSize(36); text(tl('Choose your course', 'Elige tu campo'), width / 2, 88); textStyle(NORMAL);
+  var b = SELECT_CARD;
+  for (var i = 0; i < COURSES.length; i++) {
+    var c = COURSES[i], th = c.theme, x = selectCardX(i), y = b.y;
+    var hov = inBox(mouseX, mouseY, x, y, b.w, b.h) || (kbShown && kbCourseSel === i);
+    var rec = courseRecord(gameMode, c.key);
+    fill(0, 0, 0, hov ? 110 : 70); rect(x + 3, y + 5, b.w, b.h, 18);
+    fill(th.rough); rect(x, y, b.w, b.h, 18);
+    fill(th.fairwayB); rect(x + 12, y + 12, b.w - 24, 120, 12);
+    fill(th.fairwayA); for (var s = 0; s < 6; s++) rect(x + 12 + s * 32, y + 12, 16, 120, s === 0 ? 12 : 0);
+    stroke(th.wall); strokeWeight(5); noFill(); rect(x + 12, y + 12, b.w - 24, 120, 12); noStroke();
+    textSize(64); fill(255); text(th.icon, x + b.w / 2, y + 74);
+    var light = th.key === 'summer';
+    fill(light ? '#3a2a10' : 255); textStyle(BOLD); textSize(22); text(th.label, x + b.w / 2, y + 160); textStyle(NORMAL);
+    fill(light ? '#5a4a2a' : color(210, 220, 215)); textSize(14); textAlign(CENTER, TOP);
+    text(th.blurb, x + 16, y + 180, b.w - 32, 70);
+    textAlign(CENTER, CENTER);
+    fill(light ? '#5a4a2a' : color(180, 195, 185)); textSize(14);
+    text(tl('9 holes · par ', '9 hoyos · par ') + totalPar(c), x + b.w / 2, y + 268);
+    fill(light ? '#2a1a00' : 255); textSize(15); textStyle(BOLD);
+    text(rec.total ? tl('Best round: ', 'Mejor ronda: ') + rec.total : tl('Not played yet', 'Aún sin jugar'), x + b.w / 2, y + 298);
+    textStyle(NORMAL);
+    fill('#ffd166'); textSize(17); text(starsText(starTotal(rec.stars)), x + b.w / 2, y + 326);
+    fill(hov ? th.accent : color(0, 0, 0, 120)); rect(x + 40, y + b.h - 52, b.w - 80, 38, 19);
+    fill(hov ? '#101010' : 255); textStyle(BOLD); textSize(16); text(tl('Play', 'Jugar'), x + b.w / 2, y + b.h - 33); textStyle(NORMAL);
+    if (hov) { stroke(th.accent); strokeWeight(3); noFill(); rect(x - 4, y - 4, b.w + 8, b.h + 8, 21); noStroke(); }
+  }
+  var bx = width / 2 - SELECT_BACK.w / 2;
+  fill(0, 0, 0, 150); rect(bx, SELECT_BACK.y, SELECT_BACK.w, SELECT_BACK.h, 23);
+  fill(255); textSize(16); textStyle(BOLD); text(tl('← Back', '← Volver'), width / 2, SELECT_BACK.y + SELECT_BACK.h / 2 + 1); textStyle(NORMAL);
+  fill(140, 155, 140); textSize(13); text(tl('← → to choose · Enter to play · Esc to go back', '← → para elegir · Enter para jugar · Esc para volver'), width / 2, 636);
+  textAlign(LEFT, BASELINE);
 }
+function courseSelectHit(mx, my) {
+  for (var i = 0; i < COURSES.length; i++) if (inBox(mx, my, selectCardX(i), SELECT_CARD.y, SELECT_CARD.w, SELECT_CARD.h)) return i;
+  if (inBox(mx, my, width / 2 - SELECT_BACK.w / 2, SELECT_BACK.y, SELECT_BACK.w, SELECT_BACK.h)) return 'back';
+  return null;
+}
+
+var INTRO_BTN = { w: 220, h: 54, y: 606 };
+function drawCourseIntro() {
+  var th = course.theme, rec = courseRecord(gameMode, course.key);
+  background(th.rough);
+  noStroke(); textAlign(CENTER, CENTER);
+  var light = th.key === 'summer';
+  fill(0, 0, 0, light ? 40 : 120); rect(24, 24, width - 48, height - 48, 20);
+  fill(light ? '#3a2a10' : color(150, 200, 160)); textSize(15); text(modeName().toUpperCase() + tl(' · TODAY’S COURSE', ' · CAMPO DE HOY'), width / 2, 58);
+  fill(light ? '#2a1a00' : 255); textStyle(BOLD); textSize(42); text(th.icon + ' ' + th.label, width / 2, 100); textStyle(NORMAL);
+  fill(light ? '#4a3a1a' : color(210, 220, 210)); textSize(15); textAlign(CENTER, TOP);
+  text(th.signature, 70, 128, width - 140, 44);
+  textAlign(CENTER, CENTER);
+  // the nine holes
+  for (var i = 0; i < 9; i++) {
+    var h = course.holes[i], col = i % 3, row = floor(i / 3);
+    var x = 56 + col * 200, y = 186 + row * 118, w = 188, hh = 106;
+    fill(th.fairwayB); rect(x, y, w, hh, 12);
+    fill(0, 0, 0, 60); rect(x, y + hh - 30, w, 30, 0, 0, 12, 12);
+    textSize(34); fill(255); text(h.icon, x + 30, y + 40);
+    fill(255); textStyle(BOLD); textSize(13); textAlign(LEFT, CENTER);
+    text((i + 1) + '. ' + h.name, x + 56, y + 32, w - 62, 40);
+    textStyle(NORMAL); textAlign(CENTER, CENTER); textSize(13); fill(235);
+    var best = rec.best[i];
+    text('Par ' + h.par + (best ? tl('   ·   Best ', '   ·   Mejor ') + best : '') + '   ' + '★'.repeat(rec.stars[i] || 0), x + w / 2, y + hh - 15);
+  }
+  fill(light ? '#2a1a00' : 255); textSize(16);
+  text(tl('Par ', 'Par ') + totalPar() + (rec.total ? tl('   ·   Your best round: ', '   ·   Tu mejor ronda: ') + rec.total : '') + '   ·   ' + starsText(starTotal(rec.stars)), width / 2, 568);
+  fill(th.accent); rect(width / 2 - INTRO_BTN.w / 2, INTRO_BTN.y, INTRO_BTN.w, INTRO_BTN.h, 14);
+  fill('#101010'); textSize(21); textStyle(BOLD); text(tl('Tee Off', '¡A jugar!'), width / 2, INTRO_BTN.y + INTRO_BTN.h / 2 + 1); textStyle(NORMAL);
+  textAlign(LEFT, BASELINE);
+}
+function introHit(mx, my) { return inBox(mx, my, width / 2 - INTRO_BTN.w / 2, INTRO_BTN.y, INTRO_BTN.w, INTRO_BTN.h); }
+
+// the hole's name and idea, shown for a moment when it starts
+function drawHoleBanner() {
+  if (gameState !== 'PLAYING' || gameMode === MODE_PRACTICE || !hole.name) return;
+  var t = (millis() - holeBannerAt) / 3200;
+  if (t > 1 || holePhase !== 'AIMING' || strokeCount > 0) return;
+  var a = t < 0.1 ? t / 0.1 : (t > 0.75 ? (1 - t) / 0.25 : 1);
+  push(); noStroke(); textAlign(CENTER, CENTER);
+  fill(0, 0, 0, 185 * a); rect(width / 2 - 250, 96, 500, 86, 16);
+  fill(255, 255, 255, 255 * a); textStyle(BOLD); textSize(24);
+  text(hole.icon + '  ' + tl('Hole ', 'Hoyo ') + (holeIndex + 1) + ': ' + hole.name, width / 2, 124);
+  textStyle(NORMAL); textSize(15); fill(220, 230, 220, 255 * a);
+  text(hole.tip + '   ·   Par ' + hole.par, width / 2, 158);
+  pop();
+}
+
+// strokes so far this round (finished holes plus this one)
+function roundStrokes() { var s = scorecard.length > holeIndex ? 0 : strokeCount; for (var i = 0; i < scorecard.length; i++) s += scorecard[i]; return s; }
+function roundPar(n) { var p = 0; for (var i = 0; i < n; i++) p += course.holes[i].par; return p; }
+function relText(rel) { return rel === 0 ? 'E' : (rel > 0 ? '+' + rel : String(rel)); }
+
 
 // ---------------------------------------------------------------
 // Hole lifecycle
 // ---------------------------------------------------------------
+// after choosing a mode: pick a course (each has its own theme and nine holes)
 function startCourse() {
-  course = random(COURSES);
+  gameState = 'COURSE_SELECT';
+  kbCourseSel = kbCourseSel || 0;
+}
+function chooseCourse(i) {
+  course = COURSES[i];
+  kbCourseSel = i;
   holeIndex = 0;
   scorecard = [];
+  roundResult = null;
+  obsClock = 0;
   gameState = 'COURSE_INTRO';
 }
 
@@ -900,11 +961,7 @@ function startCourse() {
 // to the menu themselves.
 function startPractice() {
   gameMode = MODE_PRACTICE;
-  var practiceTheme = {};
-  for (var k in THEMES.classicGreen) practiceTheme[k] = THEMES.classicGreen[k];
-  practiceTheme.icon = '🎯';
-  practiceTheme.label = tl('Putting Green', 'Green de práctica');
-  course = { key: 'practice', theme: practiceTheme, holes: [buildPracticeArena()] };
+  course = { key: 'practice', theme: THEMES.practice, holes: [buildPracticeArena()] };
   holeIndex = 0;
   scorecard = [];
   startHole(0);
@@ -933,6 +990,11 @@ function startHole(idx) {
   resolvedInfo = null;
   explainOpen = false;
   holeBlockedThisStroke = false;
+  questionReady = false; checkDone = false;
+  confetti = []; popWord = null;
+  cameraZoom = 1; cameraFocus.x = 350; cameraFocus.y = 350;
+  holeBannerAt = millis();
+  hole._layer = null;
 }
 
 // Snaps a known angle to this hole's difficulty tier (round numbers
@@ -1183,13 +1245,17 @@ function checkHoleComplete() {
     holePhase = 'SUNK';
     playSound('sink');
     ball.vx = 0; ball.vy = 0;
+    celebrateSink();
   }
 }
 
 function finishHole() {
   scorecard.push(strokeCount);
   gameState = 'HOLE_COMPLETE';
+  holeResult = recordHole(holeIndex, strokeCount, hole.par);
+  holeResult.at = millis();
   playSound(strokeCount <= hole.par ? 'hole_complete' : 'click');
+  if (holeResult.newBest) burstConfetti(width / 2, height / 2 - 60, 60, 9);
 }
 
 function advanceAfterHole() {
@@ -1197,55 +1263,154 @@ function advanceAfterHole() {
     startHole(holeIndex + 1);
   } else {
     gameState = 'COURSE_COMPLETE';
+    var tot = 0; for (var i = 0; i < scorecard.length; i++) tot += scorecard[i];
+    roundResult = recordRound(tot, totalPar());
     playSound('course_complete');
+    if (roundResult.isNew || tot < totalPar()) { playFx('record'); burstConfetti(width / 2, 120, 150, 12); }
   }
 }
 
 // ---------------------------------------------------------------
 // Rendering: hole world
 // ---------------------------------------------------------------
-// Fills ONLY the enclosed fairway corridor (the real playable shape),
-// not the whole canvas - the surrounding "rough" reads as clearly
-// outside the course, and the corridor's own rail walls (drawn after
-// this) become a real, visible course boundary instead of a couple of
-// free-floating lines inside an open field.
+// Everything that never moves (the scenery around the hole, the green, the islands and the hole's
+// pictures) is painted once into a picture and reused every frame.
 function drawHoleBackground() {
-  var th = course.theme;
-  noStroke();
-  fill(th.rough);
-  rect(0, 0, width, height);
+  if (!hole._layer) hole._layer = buildHoleLayer(hole, course.theme);
+  image(hole._layer, 0, 0, 700, 700);
+}
 
-  drawingContext.save();
-  drawingContext.beginPath();
-  if (hole.fairwayPoly) {
-    // A plain closed polygon (the Putting Green practice arena's
-    // square) instead of a corridor's offset left/right rail lists.
-    var poly = hole.fairwayPoly;
-    drawingContext.moveTo(poly[0].x, poly[0].y);
-    for (var pi = 1; pi < poly.length; pi++) drawingContext.lineTo(poly[pi].x, poly[pi].y);
+// a repeatable pseudo-random number (the same scenery every time a hole is played)
+function seeded(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+function buildHoleLayer(h, th) {
+  var g = createGraphics(700, 700);
+  g.pixelDensity(2);
+  g.angleMode(DEGREES);
+  var ctx = g.drawingContext;
+  var hasDecor = function (e) { return (h.decor || []).some(function (d) { return d.e === e; }); };
+  g.noStroke();
+
+  // ---- the ground around the hole
+  g.fill(th.rough); g.rect(0, 0, 700, 700);
+  var k;
+  if (th.key === 'space') {
+    for (k = 0; k < 160; k++) { g.fill(255, 255, 255, 60 + seeded(k) * 180); var r = seeded(k + 500) < 0.1 ? 2.6 : 1.3; g.circle(seeded(k + 1000) * 700, seeded(k + 2000) * 700, r); }
+    g.fill(110, 60, 200, 26); g.circle(120, 620, 260); g.fill(40, 120, 220, 22); g.circle(620, 160, 300);
+  } else if (th.key === 'summer') {
+    for (k = 0; k < 260; k++) { g.fill(th.roughDot); g.circle(seeded(k) * 700, seeded(k + 900) * 700, 2 + seeded(k + 77) * 3); }
+  } else if (th.key === 'medieval') {
+    for (k = 0; k < 180; k++) {   // grass tufts
+      var gx = seeded(k) * 700, gy = seeded(k + 400) * 700;
+      g.stroke(th.roughDot); g.strokeWeight(2); g.line(gx, gy, gx - 3, gy - 7); g.line(gx, gy, gx + 3, gy - 7); g.noStroke();
+    }
   } else {
-    var left = hole.fairwayLeft, right = hole.fairwayRight;
-    drawingContext.moveTo(left[0].x, left[0].y);
-    for (var i = 1; i < left.length; i++) drawingContext.lineTo(left[i].x, left[i].y);
-    for (i = right.length - 1; i >= 0; i--) drawingContext.lineTo(right[i].x, right[i].y);
+    for (k = 0; k < 120; k++) { g.fill(th.roughDot); g.circle(seeded(k) * 700, seeded(k + 900) * 700, 4); }
   }
-  drawingContext.closePath();
-  drawingContext.clip();
+  // the sea all around (a pier or a headland), with a strip of sand along the green
+  if (hasDecor('ocean')) {
+    g.fill('#1593b8'); g.rect(0, 0, 700, 700);
+    g.stroke(255, 255, 255, 70); g.strokeWeight(2); g.noFill();
+    for (k = 0; k < 40; k++) { var wx = seeded(k) * 700, wy = seeded(k + 300) * 700; g.arc(wx, wy, 26, 12, 200, 340); }
+    g.noStroke();
+    ctx.save(); ctx.lineJoin = 'round';
+    g.stroke('#e8cc8e'); g.strokeWeight(46); g.fill('#e8cc8e');
+    g.beginShape(); h.fairwayPoly.forEach(function (p) { g.vertex(p.x, p.y); }); g.endShape(CLOSE);
+    ctx.restore(); g.noStroke();
+  }
+  // a moat across the hole (the drawbridge)
+  (h.decor || []).forEach(function (d) {
+    if (d.e !== 'moat') return;
+    g.fill(th.water); g.rect(d.x, d.y, d.w, d.h);
+    g.stroke(255, 255, 255, 60); g.strokeWeight(2); g.noFill();
+    for (var m = 0; m < 14; m++) g.arc(m * 52 + 20, d.y + d.h / 2 + (m % 2) * 14 - 7, 30, 10, 200, 340);
+    g.noStroke();
+  });
 
-  fill(th.fairwayB);
-  rect(0, 0, width, height);
+  // ---- the green, striped, clipped to the hole's outline
+  ctx.save();
+  ctx.beginPath();
+  var poly = h.fairwayPoly;
+  ctx.moveTo(poly[0].x, poly[0].y);
+  for (var pi = 1; pi < poly.length; pi++) ctx.lineTo(poly[pi].x, poly[pi].y);
+  ctx.closePath();
+  ctx.clip();
+  g.fill(th.fairwayB); g.rect(0, 0, 700, 700);
+  g.fill(th.fairwayA);
   var stripeW = 34;
-  fill(th.fairwayA);
-  // Starts far enough left that the diagonal bands (which slope down and
-  // to the right) also reach the bottom-left of the canvas; a start of -2
-  // left that whole corner unstriped, so half the course looked plain.
-  for (var si = -Math.ceil(height / stripeW) - 2; si * stripeW < width; si++) {
+  for (var si = -Math.ceil(700 / stripeW) - 2; si * stripeW < 700; si++) {
     if (si % 2 !== 0) continue;
     var x0 = si * stripeW;
-    quad(x0, 0, x0 + stripeW, 0, x0 + stripeW + height, height, x0 + height, height);
+    g.quad(x0, 0, x0 + stripeW, 0, x0 + stripeW + 700, 700, x0 + 700, 700);
   }
+  if (th.key === 'space') {   // a faint grid on the deck
+    g.stroke(255, 255, 255, 18); g.strokeWeight(1);
+    for (k = 0; k <= 700; k += 35) { g.line(k, 0, k, 700); g.line(0, k, 700, k); }
+    g.noStroke();
+  }
+  (h.decor || []).forEach(function (d) {   // the royal carpet
+    if (d.e !== 'carpet') return;
+    g.fill('#9e2a2b'); g.rect(d.x, d.y, d.w, d.h);
+    g.fill('#d4a73a'); g.rect(d.x, d.y, 5, d.h); g.rect(d.x + d.w - 5, d.y, 5, d.h);
+  });
+  ctx.restore();
 
-  drawingContext.restore();
+  // ---- islands: solid shapes inside the green
+  (h.islands || []).forEach(function (isl) { drawIslandShape(g, isl, th); });
+
+  // ---- pictures: around the hole, and the few that sit on the green
+  g.textAlign(CENTER, CENTER);
+  (h.decor || []).forEach(function (d) {
+    if (d.e === 'moat' || d.e === 'carpet' || d.e === 'ocean') return;   // the named scenery pieces above
+    g.textSize(d.s || 48);
+    if (d.onGreen) { g.fill(255, 255, 255, 200); } else { g.fill(255); }
+    g.text(d.e, d.x, d.y);
+  });
+  return g;
+}
+
+function islandPath(g, p) { g.beginShape(); p.forEach(function (q) { g.vertex(q.x, q.y); }); g.endShape(CLOSE); }
+function islandCenter(p) { var x = 0, y = 0; p.forEach(function (q) { x += q.x; y += q.y; }); return { x: x / p.length, y: y / p.length }; }
+
+// each island style has its own look; the island's edges are drawn as walls on top
+function drawIslandShape(g, isl, th) {
+  var p = isl.pts, c = islandCenter(p);
+  g.noStroke();
+  g.fill(0, 0, 0, 70); g.push(); g.translate(3, 5); islandPath(g, p); g.pop();   // shadow
+  var st = isl.style;
+  if (st === 'fountain') {
+    g.fill('#9a9ca3'); islandPath(g, p);
+    g.fill(th.water); g.circle(c.x, c.y, 82);
+    g.fill(255, 255, 255, 90); g.circle(c.x - 12, c.y - 10, 22);
+  } else if (st === 'boulder') {
+    g.fill('#6e6a63'); islandPath(g, p); g.fill('#8a857c'); g.circle(c.x - 12, c.y - 10, 30);
+  } else if (st === 'anvil') {
+    g.fill('#3b3d42'); islandPath(g, p); g.fill('#5c5f66'); g.rect(c.x - 34, c.y - 14, 68, 6, 2);
+  } else if (st === 'planet') {
+    g.fill('#d9823b'); islandPath(g, p);
+    g.fill('#f0a65a'); g.arc(c.x, c.y, 190, 190, 180, 360, CHORD);
+    g.fill(255, 255, 255, 40); g.circle(c.x - 30, c.y - 30, 60);
+  } else if (st === 'blackhole') {
+    for (var r = 5; r >= 0; r--) { g.fill(120 - r * 15, 40, 200 - r * 20, 60 + r * 20); g.circle(c.x, c.y, 84 + r * 14); }
+    g.fill(0); islandPath(g, p);
+  } else if (st === 'panel') {
+    g.fill('#2856c8'); islandPath(g, p);
+    g.stroke(255, 255, 255, 90); g.strokeWeight(1);
+    for (var x = p[0].x + 12; x < p[1].x; x += 12) g.line(x, p[0].y, x, p[2].y);
+    g.noStroke();
+  } else if (st === 'sandcastle') {
+    g.fill('#d9b46a'); islandPath(g, p);
+    g.fill('#c49a50');
+    for (var b = 0; b < 3; b++) g.rect(c.x - 70 + b * 55, c.y - 5, 30, 34, 2);
+    g.fill('#8a6a35'); g.rect(c.x - 14, c.y + 20, 28, 38, 14, 14, 0, 0);
+  } else if (st === 'lighthouse') {
+    g.fill('#f2f2f2'); islandPath(g, p);
+    g.fill('#d6343c'); g.rect(c.x - 38, c.y - 8, 76, 16);
+  } else if (st === 'coral') {
+    g.fill('#ff7e9d'); islandPath(g, p); g.fill('#ffb3c6'); g.circle(c.x - 6, c.y - 6, 14); g.circle(c.x + 8, c.y + 4, 9);
+  } else {
+    g.fill(th.island); islandPath(g, p); g.fill(th.islandHi); g.circle(c.x - 8, c.y - 8, 18);
+  }
 }
 
 function drawZones() {
@@ -1261,7 +1426,7 @@ function drawZones() {
       // so there's no diagonal slope to shade toward, and a uniform
       // fill reads as a clean rectangular tile instead of a soft,
       // blurred patch of terrain.
-      fill(70, 55, 35, 100);
+      var hc = th.hill || [70, 55, 35]; fill(hc[0], hc[1], hc[2], 110);
       rect(z.x, z.y, z.w, z.h, 5);
       noFill();
       stroke(255, 235, 190, 190);
@@ -1339,29 +1504,49 @@ function drawFlowArrows(z, rgb, basePxPerSec, scale) {
   pop();
 }
 
+// Walls in the course's style: castle stone, glowing station rails, or beach boardwalk planks. Bumpers
+// (fences, solar panels, breakwaters standing inside the green) are a little lighter so they stand out.
 function drawWalls() {
-  var th = course.theme;
+  var th = course.theme, style = th.wallStyle;
+  push();
+  strokeCap(ROUND);
   for (var i = 0; i < hole.walls.length; i++) {
     var w = hole.walls[i];
-    // While a bank-shot question is live, the rail the ball is actually
-    // headed for lights up gold so the diagram's wall is unmistakably
-    // the same one sitting right there on the course.
+    // While a bank-shot question is live, the wall the ball is headed for lights up gold so the
+    // diagram's wall is unmistakably the same one sitting right there on the course.
     var isLit = holePhase === 'QUESTION' && pendingShot && pendingShot.type === 'WALL' && pendingShot.wallRef === w;
-    push();
-    strokeCap(ROUND);
-    stroke(0, 0, 0, 90);
-    strokeWeight(13);
+    var bump = w.kind === 'bumper';
+    stroke(0, 0, 0, 90); strokeWeight(13);
     line(w.x1, w.y1 + 4, w.x2, w.y2 + 4);
-    stroke(isLit ? '#e0a030' : th.wall);
-    strokeWeight(11);
-    line(w.x1, w.y1, w.x2, w.y2);
-    stroke(isLit ? '#ffce6b' : th.wallHi);
-    strokeWeight(4);
-    line(w.x1, w.y1 - 1.5, w.x2, w.y2 - 1.5);
-    pop();
+    if (isLit) {
+      stroke('#e0a030'); strokeWeight(11); line(w.x1, w.y1, w.x2, w.y2);
+      stroke('#ffce6b'); strokeWeight(4); line(w.x1, w.y1 - 1.5, w.x2, w.y2 - 1.5);
+      continue;
+    }
+    if (style === 'neon') {
+      drawingContext.shadowColor = bump ? '#ffb347' : th.wall; drawingContext.shadowBlur = 12;
+      stroke(bump ? '#ff9f2e' : th.wall); strokeWeight(9); line(w.x1, w.y1, w.x2, w.y2);
+      drawingContext.shadowBlur = 0;
+      stroke(bump ? '#ffe2b0' : th.wallHi); strokeWeight(3); line(w.x1, w.y1, w.x2, w.y2);
+    } else if (style === 'stone') {
+      stroke(bump ? '#8a5a34' : th.wall); strokeWeight(12); line(w.x1, w.y1, w.x2, w.y2);
+      stroke(bump ? '#c08a5a' : th.wallHi); strokeWeight(4); line(w.x1, w.y1 - 2, w.x2, w.y2 - 2);
+      // mortar joints along stone walls
+      if (!bump) {
+        var L = dist(w.x1, w.y1, w.x2, w.y2), n = floor(L / 22);
+        stroke(60, 62, 68, 160); strokeWeight(1.5);
+        var ux = (w.x2 - w.x1) / L, uy = (w.y2 - w.y1) / L;
+        for (var j = 1; j < n; j++) { var mx = w.x1 + ux * j * 22, my = w.y1 + uy * j * 22; line(mx - uy * 5, my + ux * 5, mx + uy * 5, my - ux * 5); }
+      }
+    } else {   // wood
+      stroke(bump ? '#6f6f78' : th.wall); strokeWeight(12); line(w.x1, w.y1, w.x2, w.y2);
+      stroke(bump ? '#a9a9b3' : th.wallHi); strokeWeight(4); line(w.x1, w.y1 - 2, w.x2, w.y2 - 2);
+    }
   }
+  pop();
 }
 
+// round obstacles: hedges, asteroids or beach rocks
 function drawBushes() {
   var th = course.theme;
   for (var i = 0; i < hole.bushes.length; i++) {
@@ -1369,10 +1554,63 @@ function drawBushes() {
     noStroke();
     fill(0, 0, 0, 70);
     ellipse(b.x + 4, b.y + 6, b.r * 2.1, b.r * 1.1);
-    fill(th.bush);
-    ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
-    fill(th.bushHi);
-    ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 1.1, b.r);
+    if (th.rockStyle === 'asteroid') {
+      fill(th.bush); ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
+      fill(90, 86, 80); ellipse(b.x + b.r * 0.3, b.y + b.r * 0.2, b.r * 0.6, b.r * 0.5); ellipse(b.x - b.r * 0.35, b.y - b.r * 0.1, b.r * 0.4, b.r * 0.35);
+      fill(th.bushHi); ellipse(b.x - b.r * 0.3, b.y - b.r * 0.45, b.r * 0.7, b.r * 0.35);
+    } else if (th.rockStyle === 'rock') {
+      fill(th.bush); ellipse(b.x, b.y, b.r * 2, b.r * 1.8);
+      fill(th.bushHi); ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.9, b.r * 0.6);
+    } else {
+      fill(th.bush); ellipse(b.x, b.y, b.r * 2, b.r * 1.9);
+      fill(th.bushHi); ellipse(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 1.1, b.r);
+    }
+  }
+}
+
+// the signature moving obstacles, drawn at the obstacle clock's current time
+function drawObstacles() {
+  if (!hole.obstacles) return;
+  for (var i = 0; i < hole.obstacles.length; i++) {
+    var o = hole.obstacles[i];
+    push();
+    if (o.type === 'windmill') {
+      noStroke(); fill(0, 0, 0, 70); ellipse(o.x + 4, o.y + 6, 50, 30);
+      fill('#8b7d6b'); ellipse(o.x, o.y, 44, 44); fill('#a89a86'); ellipse(o.x - 6, o.y - 6, 18, 18);   // the stone tower top
+      var segs = obstacleSegments(o, obsClock);
+      for (var j = 0; j < segs.length; j++) {
+        var s = segs[j], ux = (s.x2 - s.x1) / o.r, uy = (s.y2 - s.y1) / o.r;
+        stroke('#5a3c22'); strokeWeight(6); line(s.x1, s.y1, s.x2, s.y2);
+        noStroke(); fill(245, 238, 220, 235);   // the sail cloth along one side of the arm
+        quad(s.x1 + ux * 18, s.y1 + uy * 18, s.x2, s.y2, s.x2 - uy * 16, s.y2 + ux * 16, s.x1 + ux * 18 - uy * 12, s.y1 + uy * 18 + ux * 12);
+        stroke('#5a3c22'); strokeWeight(1.5);
+        for (var q = 1; q < 4; q++) { var t = 0.25 + q * 0.18; line(s.x1 + ux * o.r * t, s.y1 + uy * o.r * t, s.x1 + ux * o.r * t - uy * 14, s.y1 + uy * o.r * t + ux * 14); }
+      }
+      noStroke(); fill('#3b2a1a'); ellipse(o.x, o.y, WINDMILL_HUB_R * 2, WINDMILL_HUB_R * 2); fill('#c9a227'); ellipse(o.x, o.y, 8, 8);
+    } else if (o.type === 'portal') {
+      var spin = obsClock * 140, flash = o.flashAt && millis() - o.flashAt < 400 ? 1 - (millis() - o.flashAt) / 400 : 0;
+      var pc = color(o.color);
+      // entry: a swirling disc
+      noStroke(); fill(red(pc), green(pc), blue(pc), 60 + flash * 120); ellipse(o.a.x, o.a.y, o.r * 2.6, o.r * 2.6);
+      fill(10, 6, 30); ellipse(o.a.x, o.a.y, o.r * 1.7, o.r * 1.7);
+      noFill(); stroke(pc); strokeWeight(3);
+      for (var k = 0; k < 3; k++) arc(o.a.x, o.a.y, o.r * (1 + k * 0.45), o.r * (1 + k * 0.45), spin + k * 120, spin + k * 120 + 200);
+      // exit: a ring with an arrow-shaped glow, and a faint link line between the two
+      drawingContext.setLineDash([3, 9]); stroke(red(pc), green(pc), blue(pc), 70); strokeWeight(2); line(o.a.x, o.a.y, o.b.x, o.b.y); drawingContext.setLineDash([]);
+      noStroke(); fill(red(pc), green(pc), blue(pc), 40 + flash * 160); ellipse(o.b.x, o.b.y, o.r * 2.4, o.r * 2.4);
+      noFill(); stroke(pc); strokeWeight(2.5); ellipse(o.b.x, o.b.y, o.r * 1.8, o.r * 1.8);
+      noStroke(); fill(pc); textAlign(CENTER, CENTER); textSize(10); textStyle(BOLD); text(tl('OUT', 'SALIDA'), o.b.x, o.b.y); textStyle(NORMAL);
+    } else if (o.type === 'slider') {
+      // the track, then the board
+      stroke(255, 255, 255, 70); strokeWeight(3); drawingContext.setLineDash([6, 8]); line(o.x1, o.y1, o.x2, o.y2); drawingContext.setLineDash([]);
+      var sg = obstacleSegments(o, obsClock)[0], cx = (sg.x1 + sg.x2) / 2, cy = (sg.y1 + sg.y2) / 2;
+      translate(cx, cy); rotate(o.deg);
+      noStroke(); fill(0, 0, 0, 70); ellipse(4, 6, o.len + 8, 20);
+      fill(o.color); ellipse(0, 0, o.len + 6, 18);
+      fill(255, 255, 255, 220); rect(-o.len / 2 + 8, -2.5, o.len - 16, 5, 2);
+      fill(255, 255, 255, 90); ellipse(-o.len / 4, -4, o.len / 3, 5);
+    }
+    pop();
   }
 }
 
@@ -1875,14 +2113,14 @@ function updatePhysics() {
 
   // a wrong answer plays back a little slower (3 of every 4 frames), on exactly the same path
   if (resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct && (slowTick = (slowTick + 1) % 4) === 0) return;
-  stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones, false, holeBlockedThisStroke);
+  stepBallOneFrame(ball, pendingShot, allWalls(), hole.bushes, hole.zones, false, holeBlockedThisStroke, obsClock);
   checkHoleComplete();
 }
 
 // One frame's worth of ball motion: zone forces, then substepped
 // movement with collision resolution, then friction. Pulled out of
 // updatePhysics().
-function stepBallOneFrame(b, pending, walls, bushes, zones, silent, poleActive) {
+function stepBallOneFrame(b, pending, walls, bushes, zones, silent, poleActive, obsT) {
   for (var i = 0; i < zones.length; i++) {
     var z = zones[i];
     if (b.x > z.x && b.x < z.x + z.w && b.y > z.y && b.y < z.y + z.h) {
@@ -1922,6 +2160,7 @@ function stepBallOneFrame(b, pending, walls, bushes, zones, silent, poleActive) 
 
     collideWalls(b, pending, walls, silent);
     collideBushes(b, bushes);
+    if (obsT !== undefined && hole.obstacles && hole.obstacles.length) collideObstacles(b, pending, obsT, silent);
     // Only real gameplay passes poleActive=true (see updatePhysics): the
     // pole only exists because THIS stroke's answer was wrong.
     if (poleActive && hole.cup) collidePole(b, hole.cup);
@@ -2068,6 +2307,83 @@ function collidePole(b, cup) {
       if (b === ball) { coverFlashAt = millis(); playSound('bounce'); }
     }
   }
+}
+
+// ---------------------------------------------------------------
+// Signature obstacles (one kind per course): windmill sails, warp portals, sliding surfboards.
+// They move on their own clock (obsClock, seconds), which runs while a hole is on screen. The
+// shot questions are worked out on the fixed walls only; if the ball touches a moving obstacle
+// before reaching the question's wall, that shot's scripted bounce is dropped and plain physics
+// carries the ball from there.
+// ---------------------------------------------------------------
+var obsClock = 0;
+var OBS_REST = 0.85;
+var WINDMILL_HUB_R = 13;
+
+// the moving wall pieces at time t: [{x1,y1,x2,y2, vel(px,py) -> {x,y} px/frame}]
+function obstacleSegments(o, t) {
+  var out = [];
+  if (o.type === 'windmill') {
+    var w = o.speed * Math.PI / 180;   // radians per second
+    for (var k = 0; k < o.blades; k++) {
+      var a = (o.speed * t + k * 360 / o.blades) * Math.PI / 180;
+      out.push({ x1: o.x, y1: o.y, x2: o.x + Math.cos(a) * o.r, y2: o.y + Math.sin(a) * o.r,
+        vel: function (px, py) { return { x: -(py - o.y) * w / 60, y: (px - o.x) * w / 60 }; } });
+    }
+  } else if (o.type === 'slider') {
+    var s = sliderState(o, t), d = o.deg * Math.PI / 180, hl = o.len / 2;
+    out.push({ x1: s.x - Math.cos(d) * hl, y1: s.y - Math.sin(d) * hl, x2: s.x + Math.cos(d) * hl, y2: s.y + Math.sin(d) * hl,
+      vel: function () { return { x: s.vx, y: s.vy }; } });
+  }
+  return out;
+}
+// where a surfboard is at time t, and how fast it's moving (px/frame)
+function sliderState(o, t) {
+  var ph = (t / o.period + o.phase) * Math.PI * 2;
+  var k = (1 - Math.cos(ph)) / 2, dk = Math.sin(ph) * Math.PI / o.period / 60;
+  return { x: o.x1 + (o.x2 - o.x1) * k, y: o.y1 + (o.y2 - o.y1) * k, vx: (o.x2 - o.x1) * dk, vy: (o.y2 - o.y1) * dk };
+}
+function dropPending(pending) { if (pending && !pending.applied) { pending.applied = true; pending.abandoned = true; } }
+
+function collideObstacles(b, pending, t, silent) {
+  for (var i = 0; i < hole.obstacles.length; i++) {
+    var o = hole.obstacles[i];
+    if (o.type === 'portal') {
+      if ((b.portalCool || 0) > 0) continue;
+      if (dist(b.x, b.y, o.a.x, o.a.y) < o.r) {
+        var sp = mag(b.vx, b.vy), dir = sp > 0.01 ? { x: b.vx / sp, y: b.vy / sp } : { x: 0, y: -1 };
+        b.x = o.b.x + dir.x * (o.r + BALL_R + 2); b.y = o.b.y + dir.y * (o.r + BALL_R + 2);
+        b.portalCool = 12;
+        dropPending(pending);
+        if (!silent) { playFx('warp'); o.flashAt = millis(); }
+      }
+      continue;
+    }
+    if (o.type === 'windmill') {   // the hub is a solid post
+      var hd = dist(b.x, b.y, o.x, o.y), minD = WINDMILL_HUB_R + BALL_R;
+      if (hd < minD && hd > 0.0001) {
+        var hx = (b.x - o.x) / hd, hy = (b.y - o.y) / hd;
+        b.x = o.x + hx * minD; b.y = o.y + hy * minD;
+        var hvn = b.vx * hx + b.vy * hy;
+        if (hvn < 0) { b.vx -= (1 + OBS_REST) * hvn * hx; b.vy -= (1 + OBS_REST) * hvn * hy; dropPending(pending); }
+      }
+    }
+    var segs = obstacleSegments(o, t);
+    for (var j = 0; j < segs.length; j++) {
+      var sg = segs[j], c = closestPointOnSegment(b.x, b.y, sg.x1, sg.y1, sg.x2, sg.y2);
+      var dx = b.x - c.x, dy = b.y - c.y, d = mag(dx, dy), R = BALL_R + 3;   // boards and sails are ~6px thick
+      if (d >= R || d <= 0.0001) continue;
+      var nx = dx / d, ny = dy / d, v = sg.vel(c.x, c.y);
+      b.x = c.x + nx * R; b.y = c.y + ny * R;
+      var rvx = b.vx - v.x, rvy = b.vy - v.y, vn = rvx * nx + rvy * ny;
+      if (vn < 0) {
+        b.vx -= (1 + OBS_REST) * vn * nx; b.vy -= (1 + OBS_REST) * vn * ny;
+        dropPending(pending);
+        if (!silent && mag(b.vx, b.vy) > 1.2) playFx(o.type === 'windmill' ? 'thunk' : 'boing');
+      }
+    }
+  }
+  if (b.portalCool > 0) b.portalCool--;
 }
 
 function closestPointOnSegment(px, py, x1, y1, x2, y2) {
@@ -2236,9 +2552,60 @@ function rotatePoint(pt, deg) {
 // top (with a soft drop-shadow pass for legibility over the course
 // art) once the camera has zoomed in, and a small pill-shaped input
 // at the bottom instead of one big black box.
+// The check before the answer: do these two angles add to 90° or 180°? Two big buttons (keys 1 and 2).
+function checkButtons() {
+  var b = CHECK_BTN, y = height - b.h - 24, x0 = width / 2 - b.w - b.gap / 2;
+  return [{ sum: 90, x: x0, y: y, w: b.w, h: b.h }, { sum: 180, x: width / 2 + b.gap / 2, y: y, w: b.w, h: b.h }];
+}
+function checkButtonHit(mx, my) {
+  var bs = checkButtons();
+  for (var i = 0; i < bs.length; i++) if (mx > bs[i].x && mx < bs[i].x + bs[i].w && my > bs[i].y && my < bs[i].y + bs[i].h) return bs[i].sum;
+  return null;
+}
+function answerCheck(sum) {
+  if (!pendingShot || checkDone) return;
+  if (sum === (pendingShot.type === 'WALL' ? 180 : 90)) {
+    checkDone = true; timerStart = millis(); playFx('checkOk');
+  } else {
+    checkWrongAt = millis(); playFx('nope');
+  }
+}
+// a dark band under the question text, so it reads on every course (light sand included)
+function drawQuestionBand(h) {
+  noStroke();
+  for (var i = 0; i < 12; i++) { fill(0, 0, 0, 150 * (1 - i / 12)); rect(0, 82 + h + i * 3, width, 3); }
+  fill(0, 0, 0, 150); rect(0, 82, width, h);
+}
+function drawCheckPrompt() {
+  drawQuestionBand(millis() - checkWrongAt < 2800 ? 112 : 88);
+  noStroke(); textAlign(CENTER, TOP); textStyle(BOLD); textSize(34);
+  fill(0, 0, 0, 130); text(tl('Which kind of angles?', '¿Qué tipo de ángulos?'), width / 2 + 2, 96);
+  fill(255); text(tl('Which kind of angles?', '¿Qué tipo de ángulos?'), width / 2, 94);
+  textStyle(NORMAL); textSize(18);
+  fill(0, 0, 0, 130); text(tl('Do the two angles add up to 90° or 180°?', '¿Los dos ángulos suman 90° o 180°?'), width / 2 + 1, 146);
+  fill(216, 226, 216); text(tl('Do the two angles add up to 90° or 180°?', '¿Los dos ángulos suman 90° o 180°?'), width / 2, 145);
+  if (millis() - checkWrongAt < 2800) {
+    var hint = tl('Look again: a square corner makes 90°, a straight line makes 180°.', 'Mira otra vez: una esquina recta forma 90°, una línea recta forma 180°.');
+    textSize(16); fill(0, 0, 0, 150); text(hint, width / 2 + 1, 177); fill('#ffce6b'); text(hint, width / 2, 176);
+  }
+  var bs = checkButtons();
+  for (var i = 0; i < bs.length; i++) {
+    var b = bs[i], hov = mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h;
+    fill(0, 0, 0, 200); rect(b.x, b.y, b.w, b.h, 14);
+    stroke(b.sum === 90 ? '#5fb0ff' : '#ffb347'); strokeWeight(hov ? 3.5 : 2); noFill(); rect(b.x, b.y, b.w, b.h, 14); noStroke();
+    textAlign(CENTER, CENTER); textStyle(BOLD); textSize(22); fill(255);
+    text(b.sum + '°', b.x + b.w / 2, b.y + 20);
+    textStyle(NORMAL); textSize(13); fill(200, 212, 200);
+    text((b.sum === 90 ? tl('complementary', 'complementarios') : tl('supplementary', 'suplementarios')) + tl('  ·  key ', '  ·  tecla ') + (i + 1), b.x + b.w / 2, b.y + 42);
+  }
+  textAlign(LEFT, BASELINE);
+}
+
 function drawQuestionOverlay() {
-  if (!pendingShot) return;
+  if (!pendingShot || !questionReady) return;   // wait for the zoom to finish
+  if (!checkDone) { drawCheckPrompt(); return; }
   var isWall = pendingShot.type === 'WALL';
+  drawQuestionBand(pendingShot.algebra || retryHint || pendingShot.timerOn ? 150 : 88);
   var title = isWall ? tl('Supplementary Angles', 'Ángulos suplementarios') : tl('Complementary Angles', 'Ángulos complementarios');
   var relWord = isWall ? tl('sum to 180°', 'suman 180°') : tl('sum to 90°', 'suman 90°');
 
@@ -2324,7 +2691,8 @@ function drawQuestionOverlay() {
 }
 
 function handleAnswerKey(k) {
-  if (holePhase !== 'QUESTION' || answerLocked) return;
+  if (holePhase !== 'QUESTION' || answerLocked || !questionReady) return;
+  if (!checkDone) { if (k === '1') answerCheck(90); else if (k === '2') answerCheck(180); return; }
   if (k === 'backspace') { answerText = answerText.slice(0, -1); return; }
   if (k === 'enter') { submitAnswer(); return; }
   if (answerText.length < 3) answerText += k;
@@ -2467,6 +2835,12 @@ function mousePressed() {
     if (m) { gameMode = m; startCourse(); playSound('click'); }
     return;
   }
+  if (gameState === 'COURSE_SELECT') {
+    var cs = courseSelectHit(mouseX, mouseY);
+    if (cs === 'back') { gameState = 'MENU'; playSound('click'); }
+    else if (cs !== null) { playSound('click'); chooseCourse(cs); }
+    return;
+  }
   if (gameState === 'COURSE_INTRO') {
     if (introHit(mouseX, mouseY)) { playSound('click'); startHole(0); }
     return;
@@ -2477,13 +2851,16 @@ function mousePressed() {
     return;
   }
   if (gameState === 'COURSE_COMPLETE') {
-    if (scorecardHit(mouseX, mouseY)) { gameState = 'MENU'; playSound('click'); }
+    var sh = scorecardHit(mouseX, mouseY);
+    if (sh) scorecardAction(sh);
     return;
   }
   if (gameState === 'PLAYING' && holePhase === 'QUESTION') {
-    var iw = 100, ih = 42, sw = 90, gap = 8;
+    if (!questionReady) return;
+    if (!checkDone) { var cs = checkButtonHit(mouseX, mouseY); if (cs) answerCheck(cs); return; }
+    var iw = 124, ih = 50, sw = 112, gap = 10;   // (the same box drawQuestionOverlay draws)
     var totalW = iw + gap + sw;
-    var ix = width / 2 - totalW / 2, iy = height - ih - 22;
+    var ix = width / 2 - totalW / 2, iy = height - ih - 24;
     var sx = ix + iw + gap;
     if (mouseX > sx && mouseX < sx + sw && mouseY > iy && mouseY < iy + ih) submitAnswer();
     return;
@@ -2573,6 +2950,7 @@ function mouseReleased() {
 
   pendingShot = classifyAndBuildShot(aimDir, power, currentHoleNum());
   retryHint = false;
+  questionReady = false; checkDone = false; checkWrongAt = -10000;
   answerText = '';
   answerLocked = false;
   timerStart = millis();
@@ -2612,34 +2990,39 @@ function triggerTimeoutChaos() {
 // ---------------------------------------------------------------
 // HUD / overlays
 // ---------------------------------------------------------------
+
 function drawHUD() {
   noStroke();
   fill(10, 14, 10, 220);
   rect(0, 0, width, 82);
   fill(255);
   textAlign(LEFT, CENTER);
-  textSize(19);
+  textSize(18);
   textStyle(BOLD);
-  text(course.theme.icon + ' ' + course.theme.label, 20, 26);
+  var practice = gameMode === MODE_PRACTICE;
+  // while the solved equation sits in the middle of this bar, the side text stays short so they never overlap
+  var busy = !!resolvedInfo;
+  text(practice ? course.theme.icon + ' ' + course.theme.label : (busy ? hole.icon + ' ' + tl('Hole ', 'Hoyo ') + (holeIndex + 1) : hole.icon + ' ' + hole.name), 20, 26);
   textStyle(NORMAL);
-  textSize(15.5);
+  textSize(15);
   fill(180, 195, 180);
-  if (gameMode === MODE_PRACTICE) {
-    text(tl('Free practice · no par, no limit', 'Práctica libre · sin par, sin límite'), 20, 54);
-  } else {
-    text(tl('Hole ', 'Hoyo ') + (holeIndex + 1) + ' / 9 · Par ' + hole.par, 20, 54);
-  }
-
+  if (!busy) text(practice ? tl('Free practice · no par, no limit', 'Práctica libre · sin par, sin límite')
+                : course.theme.icon + ' ' + tl('Hole ', 'Hoyo ') + (holeIndex + 1) + ' / 9  ·  Par ' + hole.par, 20, 54);
   textAlign(RIGHT, CENTER);
   fill(255);
-  textSize(19);
+  textSize(18);
   textStyle(BOLD);
-  text((gameMode === MODE_PRACTICE ? tl('Shots: ', 'Tiros: ') : tl('Strokes: ', 'Golpes: ')) + strokeCount, width - 20, 26);
+  text((practice ? tl('Shots: ', 'Tiros: ') : tl('Strokes: ', 'Golpes: ')) + strokeCount, width - 20, 26);
   textStyle(NORMAL);
-  textSize(15.5);
+  textSize(15);
   fill(180, 195, 180);
-  var modeLabel = gameMode === MODE_EASY ? tl('Golf Gamer', 'Golfista gamer') : (gameMode === MODE_HARD ? tl('Hole-In-One Hero', 'Héroe del hoyo en uno') : tl('Putting Green', 'Green de práctica'));
-  text(modeLabel, width - 20, 54);
+  if (busy) { }
+  else if (practice) text(modeName(), width - 20, 54);
+  else {
+    var rs = roundStrokes();
+    var best = courseRecord(gameMode, course.key).best[holeIndex];
+    text(tl('Round: ', 'Ronda: ') + rs + (scorecard.length ? ' (' + relText(rs - (scorecard.length > holeIndex ? 0 : strokeCount) - roundPar(scorecard.length)) + ')' : '') + (best ? tl('  ·  Best here: ', '  ·  Mejor aquí: ') + best : ''), width - 20, 54);
+  }
   textAlign(LEFT, BASELINE);
 }
 
@@ -2747,6 +3130,26 @@ function drawExplainDiagram(cx, cy, r, info) {
   pop();
 }
 
+// Names the most likely slip behind a wrong answer, so the retry is aimed at the real problem.
+function mistakeNote(ri) {
+  if (!ri || ri.typed === null || ri.typed === undefined) return '';
+  var sum = ri.type === 'WALL' ? 180 : 90, other = sum === 180 ? 90 : 180;
+  var k = ri.algebra ? (ri.algebra.a * ri.algebra.x + ri.algebra.b) : ri.known;
+  var right = sum - k, t = ri.typed;
+  if (ri.algebra) {
+    var a = ri.algebra.a, x = ri.algebra.x, b = ri.algebra.b;
+    if (t === sum - a * x || t === sum - b || t === sum - (a + x + b) || t === sum - (a * x * b))
+      return tl('Work out the given angle first: ', 'Primero calcula el ángulo dado: ') + a + '(' + x + ') + ' + b + ' = ' + k + '°.';
+  }
+  if (t === k) return tl('That’s the angle you were given. Find the other one.', 'Ese es el ángulo que te dieron. Halla el otro.');
+  if (t + k === other) return sum === 90
+    ? tl('Those add up to 180°. These two make a square corner, so they add to 90°.', 'Esos suman 180°. Estos dos forman una esquina recta, así que suman 90°.')
+    : tl('Those add up to 90°. These two make a straight line, so they add to 180°.', 'Esos suman 90°. Estos dos forman una línea recta, así que suman 180°.');
+  if (t === sum + k || t >= sum) return tl('That’s bigger than ', 'Eso es más que ') + sum + tl('°. Take the given angle away from ', '°. Resta el ángulo dado a ') + sum + '°.';
+  if (Math.abs(t - right) <= 10) return tl('Close! Check your subtraction: ', '¡Casi! Revisa tu resta: ') + sum + ' − ' + k + '.';
+  return tl('Start from ', 'Empieza con ') + sum + tl('° and take away ', '° y resta ') + k + '°.';
+}
+
 var EXPLAIN_BOX_W = 600;
 // Every y below is measured from the top of the box, spaced evenly so the box is
 // only as tall as its content (algebra questions have one extra equation line).
@@ -2755,7 +3158,7 @@ function explainLayout() {
   var diagR = 165, diagCY = 300;
   var eqY = diagCY + 54;
   var typedY = eqY + (alg ? 82 : 46);
-  var btnY = typedY + 36;
+  var btnY = typedY + 64;   // room for the answer they gave and a note about the likely mistake
   var boxH = btnY + EXPLAIN_BTN.h + 34;
   return { w: EXPLAIN_BOX_W, h: boxH, diagR: diagR, diagCY: diagCY, eqY: eqY, typedY: typedY, btnY: btnY };
 }
@@ -2828,6 +3231,8 @@ function drawExplainModal() {
     fill(230, 130, 130);
     textSize(15);
     text(tl('You answered ', 'Respondiste ') + resolvedInfo.typed + tl('° instead.', '° en su lugar.'), width / 2, by + L.typedY);
+    var note = mistakeNote(resolvedInfo);
+    if (note) { fill('#ffce6b'); textSize(16); textStyle(BOLD); text(note, width / 2, by + L.typedY + 28); textStyle(NORMAL); }
   }
 
   var btn = EXPLAIN_BTN, btnX = width / 2 - btn.w / 2, btnY = by + L.btnY;
@@ -2857,6 +3262,8 @@ function retryQuestion() {
   retryHint = true;
   answerText = '';
   answerLocked = false;
+  checkDone = true;   // (they already know which kind it is)
+  questionReady = false;
   timerStart = millis();
   holePhase = 'QUESTION';
 }
@@ -2949,82 +3356,147 @@ function exitConfirmHit(mx, my) {
   return null;
 }
 
+// ---------------------------------------------------------------
+// End of a hole: the score, stars, this hole's best, and the round so far
+// ---------------------------------------------------------------
+var HOLE_BOX = { w: 560, h: 372 };
+var NEXT_BTN = { w: 210, h: 52 };
+function drawStar(cx, cy, r, filled) {
+  push(); translate(cx, cy);
+  stroke(filled ? '#b8860b' : color(255, 255, 255, 90)); strokeWeight(2.5);
+  fill(filled ? '#ffd166' : color(255, 255, 255, 25));
+  beginShape();
+  for (var i = 0; i < 10; i++) { var a = -90 + i * 36, rr = i % 2 === 0 ? r : r * 0.45; vertex(cos(a) * rr, sin(a) * rr); }
+  endShape(CLOSE);
+  pop();
+}
+// one row of nine little score boxes (the round so far)
+function drawMiniCard(x, y, cellW) {
+  textAlign(CENTER, CENTER);
+  for (var i = 0; i < 9; i++) {
+    var s = scorecard[i], p = course.holes[i].par, cx = x + i * cellW;
+    fill(i === holeIndex ? color(255, 255, 255, 40) : color(0, 0, 0, 90)); rect(cx, y, cellW - 4, 46, 6);
+    fill(150, 165, 150); textSize(11); text(i + 1, cx + (cellW - 4) / 2, y + 11);
+    if (s !== undefined) { fill(s < p ? '#7dffb0' : (s > p ? '#ff9a9a' : '#ffffff')); textStyle(BOLD); textSize(17); text(s, cx + (cellW - 4) / 2, y + 31); textStyle(NORMAL); }
+  }
+}
+function holeBoxRect() { return { x: width / 2 - HOLE_BOX.w / 2, y: height / 2 - HOLE_BOX.h / 2 }; }
+function nextButtonRect() { var r = holeBoxRect(); return { x: width / 2 - NEXT_BTN.w / 2, y: r.y + HOLE_BOX.h - NEXT_BTN.h - 20, w: NEXT_BTN.w, h: NEXT_BTN.h }; }
 function drawHoleCompleteOverlay() {
   noStroke();
   fill(0, 0, 0, 150);
   rect(0, 0, width, height);
-  fill(15, 20, 15, 235);
-  rect(width / 2 - 230, height / 2 - 122, 460, 244, 16);
-  fill(255);
+  var b = HOLE_BOX, r0 = holeBoxRect(), x = r0.x, y = r0.y;
+  fill(15, 20, 15, 238); rect(x, y, b.w, b.h, 18);
+  stroke(course.theme.accent); strokeWeight(2); noFill(); rect(x, y, b.w, b.h, 18); noStroke();
   textAlign(CENTER, CENTER);
-  textSize(29);
-  textStyle(BOLD);
-  var rel = strokeCount - hole.par;
-  var label = rel === 0 ? 'Par' : (rel < 0 ? (rel === -1 ? 'Birdie' : 'Eagle') : (rel === 1 ? 'Bogey' : tl('Double Bogey+', 'Doble bogey+')));
-  text(tl('Hole ', '¡Hoyo ') + (holeIndex + 1) + tl(' complete!', ' terminado!'), width / 2, height / 2 - 66);
+  fill(200, 215, 200); textSize(16);
+  text(hole.icon + '  ' + tl('Hole ', 'Hoyo ') + (holeIndex + 1) + ': ' + hole.name, width / 2, y + 30);
+  var word = scoreWord(strokeCount, hole.par), rel = strokeCount - hole.par;
+  fill(strokeCount === 1 ? '#ffd166' : (rel < 0 ? '#7dffb0' : (rel === 0 ? '#ffffff' : '#ffce6b')));
+  textStyle(BOLD); textSize(36); text(word, width / 2, y + 70); textStyle(NORMAL);
+  fill(220, 230, 220); textSize(17);
+  text(tl('Strokes: ', 'Golpes: ') + strokeCount + '   ·   Par ' + hole.par, width / 2, y + 106);
+  // the stars pop in one at a time
+  var stars = holeResult ? holeResult.stars : holeStars(strokeCount, hole.par);
+  var since = holeResult ? millis() - holeResult.at : 9999;
+  for (var i = 0; i < 3; i++) {
+    var appear = since > 250 + i * 260, on = appear && i < stars;
+    if (holeResult && on && (holeResult.played || 0) <= i) { holeResult.played = i + 1; playFx('star'); }
+    var sz = on && since < 250 + i * 260 + 160 ? 30 : 24;
+    drawStar(width / 2 - 54 + i * 54, y + 146, sz, on);
+  }
+  // this hole's best
+  var best = courseRecord(gameMode, course.key).best[holeIndex];
+  textSize(15);
+  if (holeResult && holeResult.newBest) { fill('#ffd166'); textStyle(BOLD); text(tl('NEW BEST on this hole! (was ', '¡NUEVO RÉCORD en este hoyo! (era ') + holeResult.prev + ')', width / 2, y + 186); textStyle(NORMAL); }
+  else if (holeResult && holeResult.firstTime) { fill(200, 215, 200); text(tl('First time on this hole: that’s your best to beat.', 'Primera vez en este hoyo: ese es tu récord a batir.'), width / 2, y + 186); }
+  else { fill(200, 215, 200); text(tl('Your best on this hole: ', 'Tu mejor en este hoyo: ') + best, width / 2, y + 186); }
+  // the round so far
+  drawMiniCard(x + 28, y + 208, (b.w - 56) / 9);
+  var done = scorecard.length, tot = 0; for (var k = 0; k < done; k++) tot += scorecard[k];
+  fill(255); textSize(15); textStyle(BOLD);
+  text(tl('Round total: ', 'Total de la ronda: ') + tot + '  (' + relText(tot - roundPar(done)) + tl(' to par)', ' respecto al par)'), width / 2, y + 274);
   textStyle(NORMAL);
-  textSize(19);
-  fill(200, 215, 200);
-  text(tl('Strokes: ', 'Golpes: ') + strokeCount + ' (Par ' + hole.par + ') — ' + label, width / 2, height / 2 - 22);
-  fill('#3ea158');
-  rect(width / 2 - 100, height / 2 + 22, 200, 52, 12);
-  fill(255);
-  textSize(19);
-  textStyle(BOLD);
-  text(holeIndex + 1 < 9 ? tl('Next Hole', 'Siguiente hoyo') : tl('See Scorecard', 'Ver tarjeta'), width / 2, height / 2 + 48);
+  var nb = nextButtonRect();
+  fill(course.theme.accent); rect(nb.x, nb.y, nb.w, nb.h, 12);
+  fill('#101010'); textSize(18); textStyle(BOLD);
+  text(holeIndex + 1 < 9 ? tl('Next Hole', 'Siguiente hoyo') : tl('See Scorecard', 'Ver tarjeta'), width / 2, nb.y + nb.h / 2 + 1);
   textStyle(NORMAL);
+  textAlign(LEFT, BASELINE);
 }
 
+// ---------------------------------------------------------------
+// The round's scorecard: every hole's strokes, par, best and stars, the total, and the course record
+// ---------------------------------------------------------------
+var CARD_BTNS = [{ id: 'again', w: 170 }, { id: 'courses', w: 170 }, { id: 'menu', w: 130 }];
+var CARD_BTN_Y = 530, CARD_BTN_H = 52, CARD_BTN_GAP = 14;
+var kbCardSel = 0;
+function cardButtonX(i) {
+  var total = 0; CARD_BTNS.forEach(function (b) { total += b.w; }); total += CARD_BTN_GAP * (CARD_BTNS.length - 1);
+  var x = width / 2 - total / 2; for (var k = 0; k < i; k++) x += CARD_BTNS[k].w + CARD_BTN_GAP;
+  return x;
+}
 function drawScorecard() {
+  var th = course.theme, rec = courseRecord(gameMode, course.key);
   background(10, 14, 10);
   noStroke();
-  fill(255);
   textAlign(CENTER, CENTER);
-  textSize(36);
-  textStyle(BOLD);
-  text(tl('Round Complete!', '¡Ronda terminada!'), width / 2, 72);
-  textStyle(NORMAL);
-  textSize(17);
-  fill(180, 195, 180);
-  text(course.theme.icon + ' ' + course.theme.label + ' · ' + (gameMode === MODE_EASY ? tl('Golf Gamer', 'Golfista gamer') : tl('Hole-In-One Hero', 'Héroe del hoyo en uno')), width / 2, 106);
-
-  var totalStrokes = 0, par = 0;
-  var startX = width / 2 - 306, y = 150, colW = 68;
-  textAlign(CENTER, CENTER);
-  for (var i = 0; i < 9; i++) {
-    fill(20, 26, 20);
-    rect(startX + i * colW, y, colW - 6, 104, 6);
-    fill(160, 175, 160);
-    textSize(14.5);
-    text(tl('Hole ', 'Hoyo ') + (i + 1), startX + i * colW + (colW - 6) / 2, y + 18);
-    fill(255);
-    textSize(25);
-    textStyle(BOLD);
-    text(scorecard[i], startX + i * colW + (colW - 6) / 2, y + 52);
-    textStyle(NORMAL);
-    textSize(13.5);
-    fill(140, 155, 140);
-    text('par ' + course.holes[i].par, startX + i * colW + (colW - 6) / 2, y + 78);
-    totalStrokes += scorecard[i];
-    par += course.holes[i].par;
+  fill(255); textStyle(BOLD); textSize(36); text(tl('Round Complete!', '¡Ronda terminada!'), width / 2, 58); textStyle(NORMAL);
+  fill(180, 195, 180); textSize(16); text(th.icon + ' ' + th.label + '  ·  ' + modeName(), width / 2, 92);
+  // the table: a label column, then one column per hole, then the total
+  var x0 = 14, labelW = 70, colW = 56, totW = 92, y0 = 128, rowH = 44;
+  var rows = [tl('Hole', 'Hoyo'), 'Par', tl('You', 'Tú'), tl('Best', 'Mejor'), tl('Stars', 'Estrellas')];
+  var totalStrokes = 0, par = 0, starsRound = 0;
+  for (var r = 0; r < rows.length; r++) {
+    var ry = y0 + r * rowH;
+    fill(r === 0 ? color(30, 40, 30) : color(20, 26, 20)); rect(x0, ry, labelW + colW * 9 + totW, rowH - 4, 6);
+    fill(160, 175, 160); textSize(13); textStyle(BOLD); text(rows[r], x0 + labelW / 2, ry + rowH / 2 - 2); textStyle(NORMAL);
+    for (var i = 0; i < 9; i++) {
+      var cx = x0 + labelW + i * colW + colW / 2, cy = ry + rowH / 2 - 2, s = scorecard[i], p = course.holes[i].par;
+      if (r === 0) { textSize(18); fill(255); text(course.holes[i].icon, cx, cy); }
+      else if (r === 1) { fill(200); textSize(16); text(p, cx, cy); }
+      else if (r === 2) { fill(s < p ? '#7dffb0' : (s > p ? '#ff9a9a' : '#ffffff')); textStyle(BOLD); textSize(19); text(s, cx, cy); textStyle(NORMAL); }
+      else if (r === 3) { fill(rec.best[i] === s ? '#ffd166' : color(200)); textSize(16); text(rec.best[i] || '—', cx, cy); }
+      else { var st = holeStars(s, p); starsRound += st; fill('#ffd166'); textSize(12); text('★'.repeat(st), cx, cy); }
+    }
+    if (r === 0) { fill(255); textSize(13); textStyle(BOLD); text(tl('Total', 'Total'), x0 + labelW + 9 * colW + totW / 2, ry + rowH / 2 - 2); textStyle(NORMAL); }
   }
+  for (var j = 0; j < 9; j++) { totalStrokes += scorecard[j]; par += course.holes[j].par; }
+  var txx = x0 + labelW + 9 * colW + totW / 2;
+  fill(200); textSize(16); text(par, txx, y0 + rowH * 1 + rowH / 2 - 2);
+  fill(255); textStyle(BOLD); textSize(19); text(totalStrokes, txx, y0 + rowH * 2 + rowH / 2 - 2); textStyle(NORMAL);
+  fill('#ffd166'); textSize(16); text(rec.total || '—', txx, y0 + rowH * 3 + rowH / 2 - 2);
+  fill('#ffd166'); textSize(14); text(starsRound + ' / 27', txx, y0 + rowH * 4 + rowH / 2 - 2);
 
-  textSize(24);
-  fill(255);
-  textStyle(BOLD);
-  var rel = totalStrokes - par;
-  text('Total: ' + totalStrokes + tl(' strokes (', ' golpes (') + (rel <= 0 ? rel : '+' + rel) + tl(' to par)', ' respecto al par)'), width / 2, 300);
-  textStyle(NORMAL);
+  var rel = totalStrokes - par, ly = y0 + rowH * 5 + 34;
+  fill(255); textStyle(BOLD); textSize(26);
+  text(tl('Total: ', 'Total: ') + totalStrokes + tl(' strokes  (', ' golpes  (') + relText(rel) + tl(' to par)', ' respecto al par)'), width / 2, ly);
+  textStyle(NORMAL); textSize(18);
+  if (roundResult && roundResult.isNew) { fill('#ffd166'); textStyle(BOLD); text(tl('🏆 New course record! (was ', '🏆 ¡Nuevo récord del campo! (era ') + roundResult.prev + ')', width / 2, ly + 42); textStyle(NORMAL); }
+  else if (roundResult && roundResult.first) { fill('#7dffb0'); text(tl('Your first round here: that’s the score to beat.', 'Tu primera ronda aquí: esa es la marca a batir.'), width / 2, ly + 42); }
+  else { fill(200, 215, 200); text(tl('Course record: ', 'Récord del campo: ') + rec.total, width / 2, ly + 42); }
+  fill(200, 215, 200); textSize(16);
+  text(tl('Stars on this course: ', 'Estrellas en este campo: ') + starsText(starTotal(rec.stars)), width / 2, ly + 76);
 
-  fill('#3ea158');
-  rect(width / 2 - 110, 344, 220, 54, 12);
-  fill(255);
-  textSize(20);
-  textStyle(BOLD);
-  text(tl('Play Again', 'Jugar otra vez'), width / 2, 371);
-  textStyle(NORMAL);
+  var labels = { again: tl('Play Again', 'Jugar otra vez'), courses: tl('Courses', 'Campos'), menu: tl('Menu', 'Menú') };
+  for (var bi = 0; bi < CARD_BTNS.length; bi++) {
+    var btn = CARD_BTNS[bi], bx = cardButtonX(bi);
+    var hov = inBox(mouseX, mouseY, bx, CARD_BTN_Y, btn.w, CARD_BTN_H) || (kbShown && kbCardSel === bi);
+    fill(bi === 0 ? th.accent : color(40, 52, 42)); rect(bx, CARD_BTN_Y, btn.w, CARD_BTN_H, 12);
+    if (hov) { stroke(255, 214, 60); strokeWeight(3); noFill(); rect(bx - 3, CARD_BTN_Y - 3, btn.w + 6, CARD_BTN_H + 6, 14); noStroke(); }
+    fill(bi === 0 ? '#101010' : 255); textStyle(BOLD); textSize(18); text(labels[btn.id], bx + btn.w / 2, CARD_BTN_Y + CARD_BTN_H / 2 + 1); textStyle(NORMAL);
+  }
+  textAlign(LEFT, BASELINE);
 }
-
 function scorecardHit(mx, my) {
-  return mx > width / 2 - 110 && mx < width / 2 + 110 && my > 344 && my < 398;
+  for (var i = 0; i < CARD_BTNS.length; i++) if (inBox(mx, my, cardButtonX(i), CARD_BTN_Y, CARD_BTNS[i].w, CARD_BTN_H)) return CARD_BTNS[i].id;
+  return null;
 }
+function scorecardAction(id) {
+  playSound('click');
+  if (id === 'again') chooseCourse(COURSES.indexOf(course));
+  else if (id === 'courses') gameState = 'COURSE_SELECT';
+  else if (id === 'menu') gameState = 'MENU';
+}
+
