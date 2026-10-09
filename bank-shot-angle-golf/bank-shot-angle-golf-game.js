@@ -1075,6 +1075,8 @@ function algebraFor(missing) {
 // "x + 5" / "x − 3"
 function algebraText(alg) { return 'x ' + (alg.d >= 0 ? '+ ' : '− ') + abs(alg.d); }
 
+// Golf Gamer eases in: given angles are multiples of 10 on holes 1-3, multiples of 5 on holes 4-6, then any whole number
+function easySnap(mode, holeNum) { return (mode === MODE_EASY || mode === MODE_PRACTICE) ? (holeNum <= 3 ? 10 : (holeNum <= 6 ? 5 : 1)) : 1; }
 function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
   var known;
   var useAlgebra = false;
@@ -1091,7 +1093,9 @@ function applyDifficultyTier(rawKnown, mode, holeNum, maxVal) {
     else known = floor(random(1, maxVal - 0.001));
     useAlgebra = holeNum >= 7;
   }
-  known = constrain(known, 1, maxVal - 1);
+  // (a rounded angle stays a multiple of its step: a shallow 3° rounds up to 10°, not down to 0° and then 1°)
+  var step = easySnap(mode, holeNum);
+  known = constrain(known, step, floor((maxVal - 1) / step) * step);
   return { known: known, useAlgebra: useAlgebra };
 }
 
@@ -1292,13 +1296,14 @@ function classifyAndBuildShot(aimDir, power, holeNum) {
   var sMissing;
   if (vert) {
     // any angle that isn't too close to 0°, 90° or 180°, rounded like the wall angles on easy holes
-    var snapV = (gameMode === MODE_EASY && holeNum <= 3) ? 10 : ((gameMode === MODE_EASY && holeNum <= 6) ? 5 : 1);
+    var snapV = easySnap(gameMode, holeNum);
     do { tier2.known = round(random(20, 160) / snapV) * snapV; } while (abs(tier2.known - 90) < 6);
     sMissing = tier2.known;
   } else {
-    // The missing (complementary) angle is any whole number on every hole - no rounding to 10s or 5s.
+    // Golf Gamer's given angle is rounded like the wall angles (10s, then 5s, then anything).
     // Hole-In-One Hero splits the right angle into two equal given angles and the missing one.
-    tier2.known = dbl ? floor(random(4, 41)) : 90 - floor(random(1, 90));
+    var snapC = easySnap(gameMode, holeNum);
+    tier2.known = dbl ? floor(random(4, 41)) : snapC * floor(random(1, 90 / snapC));
     sMissing = dbl ? 90 - 2 * tier2.known : 90 - tier2.known;
   }
   var sAlg = tier2.useAlgebra ? algebraFor(sMissing) : null;
