@@ -735,8 +735,8 @@
         'Escribe el ángulo que falta y dispara: el láser va justo a donde apuntas. Cada acierto apaga seguridad: las <b>cámaras</b>, las <b>radios</b> de los guardias o los <b>planos</b> (puertas abiertas, rutas visibles, luces encendidas). Cada respuesta correcta al primer intento gana una <b>estrella</b>.') + '</p>' +
       '<p style="font-size:19px"><b style="color:#ff4fa3">2. ' + T('The sneak.', 'El escape.') + '</b> ' + T('Move with the arrow keys or WASD. Stay out of the light cones, keep out of the guards’ red rings, and hide behind cover. Cross a tripwire only while it’s dark. Grab the diamond and reach the exit.',
         'Muévete con las flechas o WASD. Evita los conos de luz, no entres en los anillos rojos de los guardias y escóndete detrás de la cobertura. Cruza un rayo trampa solo cuando esté apagado. Toma el diamante y llega a la salida.') + '</p>' +
-      '<p style="font-size:19px"><b style="color:#ffd166">' + T('Missed answers make it harder:', 'Las respuestas falladas lo hacen más difícil:') + '</b> ' + T('an extra camera, sharper guards, lights out, tripwires, more guards, and a 30-second clock that sets off the alarm. Press <b>R</b> (or the button) to redo the missed questions any time. Caught 3 times? It’s back to the questions.',
-        'una cámara extra, guardias más atentos, luces apagadas, rayos trampa, más guardias y un reloj de 30 segundos que activa la alarma. Pulsa <b>R</b> (o el botón) para repetir las preguntas falladas cuando quieras. ¿Te atraparon 3 veces? Vuelves a las preguntas.') + '</p>' +
+      '<p style="font-size:19px"><b style="color:#ffd166">' + T('Missed answers make it harder:', 'Las respuestas falladas lo hacen más difícil:') + '</b> ' + T('an extra camera, sharper guards, lights out, tripwires, more guards, and a 20-second clock that sets off the alarm. Press <b>R</b> (or the button) to redo the missed questions any time. Caught 3 times? It’s back to the questions.',
+        'una cámara extra, guardias más atentos, luces apagadas, rayos trampa, más guardias y un reloj de 20 segundos que activa la alarma. Pulsa <b>R</b> (o el botón) para repetir las preguntas falladas cuando quieras. ¿Te atraparon 3 veces? Vuelves a las preguntas.') + '</p>' +
       '<p style="font-size:19px">' + T('Get 3 right in a row for a <b>smoke bomb</b> (key 1), 5 in a row for a <b>decoy</b> (key 2). Spend diamonds in the shop.', 'Acierta 3 seguidas para ganar una <b>bomba de humo</b> (tecla 1) y 5 seguidas para un <b>señuelo</b> (tecla 2). Gasta diamantes en la tienda.') + '</p>' +
       '<div class="btns"><button class="bt primary" id="b-back">' + T('GOT IT', 'ENTENDIDO') + '</button></div></div>');
     on('b-back', back);
@@ -1156,10 +1156,10 @@
   function resetSneak(S) {
     var rm = S.room;
     S.px = S.start[0]; S.py = S.start[1]; S.face = 0; S.meter = 0; S.seenBy = null; S.smokeT = 0; S.decoyT = 0; S.chase = 0; S.alarm = false;
-    // one diamond per run, in one of the room's diamond spots; and a 30-second clock
+    // one diamond per run, in one of the room's diamond spots; and a 20-second clock
     S.got = 0; S.gems.forEach(function (g) { g.got = false; g.on = false; });
     if (S.gems.length) S.gems[Math.floor(Math.random() * S.gems.length)].on = true;
-    S.time = 30; S.tick = 6;
+    S.time = 20; S.tick = 6;
     var spd = (S.radioOff ? 1.05 : 1.85) * TS, range = (S.radioOff ? 3.6 : 5.8) * TS;
     S.ring = S.radioOff ? RING : RING * 1.4;
     S.guards = rm.guards.concat(S.plan.guards).map(function (g) {
