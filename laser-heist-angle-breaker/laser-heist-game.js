@@ -154,10 +154,10 @@
       brief: T('Floor 3 is the lab where Victor builds his lasers. Here two beams cross at every turret, making an X. The angles across from each other, called vertical angles, are always equal.',
         'El piso 3 es el laboratorio donde Victor fabrica sus láseres. Aquí dos rayos se cruzan en cada torreta y forman una X. Los ángulos opuestos, llamados opuestos por el vértice, siempre son iguales.'),
       theme: { f1: '#150d2a', f2: '#190f31', w1: '#281848', w2: '#33205a', edge: '181,123,255', c1: '#2a1c4e', c2: '#6a48b8', lamp: '200,140,255', crate: 'lab' } },
-    { id: 4, name: T('Rail Yard', 'Patio de trenes'), rels: ['corr', 'alt'], topic: T('Parallel lines: corresponding and alternate angles', 'Paralelas: ángulos correspondientes y alternos'),
-      tip: T('Two parallel rails cut by a crossing track. Corresponding angles and alternate interior angles are equal.', 'Dos rieles paralelos cortados por una vía. Los ángulos correspondientes y los alternos internos son iguales.'),
-      brief: T('Floor 4 is Victor’s private rail yard, where his armored train loads the loot. Every turret sits where a crossing track cuts two parallel rails. Angles in the same position at each crossing (corresponding) are equal, and so are angles between the rails on opposite sides of the track (alternate interior).',
-        'El piso 4 es el patio de trenes privado de Victor, donde su tren blindado carga el botín. Cada torreta está donde una vía cruza dos rieles paralelos. Los ángulos en la misma posición en cada cruce (correspondientes) son iguales, y también los ángulos entre los rieles en lados opuestos de la vía (alternos internos).'),
+    { id: 4, name: T('Rail Yard', 'Patio de trenes'), rels: ['par'], topic: T('Parallel lines: any of the eight angles', 'Paralelas: cualquiera de los ocho ángulos'),
+      tip: T('Two parallel rails cut by a crossing track make eight angles. One is given; x can be any of the others. Each is equal to the given angle or adds with it to 180°.', 'Dos rieles paralelos cortados por una vía forman ocho ángulos. Uno es dado; x puede ser cualquiera de los otros. Cada uno es igual al dado o suma 180° con él.'),
+      brief: T('Floor 4 is Victor’s private rail yard, where his armored train loads the loot. A crossing track cuts two parallel rails, making eight angles. Each turret gives you one of them and asks for another: corresponding, alternate, vertical, on a straight line, or two steps away. Every one is either equal to the given angle or adds with it to 180°.',
+        'El piso 4 es el patio de trenes privado de Victor, donde su tren blindado carga el botín. Una vía cruza dos rieles paralelos y forma ocho ángulos. Cada torreta te da uno y te pide otro: correspondiente, alterno, opuesto, sobre una recta o a dos pasos. Cada uno es igual al ángulo dado o suma 180° con él.'),
       theme: { f1: '#1c130d', f2: '#21170f', w1: '#382214', w2: '#472c19', edge: '255,160,80', c1: '#5a2a1c', c2: '#b85a2f', lamp: '255,180,100', crate: 'container' } },
     { id: 5, name: T('Penthouse Vault', 'Bóveda del ático'), rels: ['coint'], topic: T('Parallel lines: co-interior angles', 'Paralelas: ángulos colaterales internos'),
       tip: T('Parallel lines again. Angles between the lines, on the same side of the crossing line, add to 180°.', 'Otra vez paralelas. Los ángulos entre las rectas, del mismo lado de la transversal, suman 180°.'),
@@ -352,7 +352,7 @@
     ],
     // Floor 4: the Rail Yard (corresponding and alternate angles). c = shipping containers, t = train tracks.
     4: [
-      { name: T('Freight Platform', 'Andén de carga'), rels: ['corr'],   // 24 x 11
+      { name: T('Freight Platform', 'Andén de carga'), rels: ['par'],   // 24 x 11
         map: [
           '########################',
           '#P..................#.d#',
@@ -369,7 +369,7 @@
                  { path: [[22, 7], [1, 7]], loop: false }],
         cams: [{ c: 0, r: 6, dir: 0, sweep: 25 }],
         lamps: [[8, 2], [17, 2], [22, 2], [8, 6], [18, 6], [12, 9]] },
-      { name: T('Signal Box', 'Caseta de señales'), rels: ['alt'], noExtraCam: true,   // 24 x 12
+      { name: T('Signal Box', 'Caseta de señales'), rels: ['par'], noExtraCam: true,   // 24 x 12
         map: [
           '########################',
           '#P...#.........#......d#',
@@ -388,7 +388,7 @@
                  { path: [[9, 9], [14, 9], [14, 10], [9, 10]], loop: true }],
         cams: [{ c: 23, r: 9, dir: 180, sweep: 30 }],
         lamps: [[3, 3], [11, 3], [19, 3], [10, 7], [4, 10], [12, 10], [20, 10]] },
-      { name: T('The Vertex Express', 'El Expreso Vértice'), rels: ['corr', 'alt'], noExtraCam: true,   // 24 x 12
+      { name: T('The Vertex Express', 'El Expreso Vértice'), rels: ['par'], noExtraCam: true,   // 24 x 12
         map: [
           '########################',
           '#P...#...............d.#',
@@ -514,8 +514,42 @@
       why: T('Alternate interior angles are equal:', 'Los ángulos alternos internos son iguales:') },
     coint: { name: T('Co-interior angles', 'Ángulos colaterales internos'), sum: 180,
       rule: T('Parallel lines: angles between the lines, on the same side of the transversal, add to 180°.', 'Rectas paralelas: los ángulos entre las rectas, del mismo lado de la transversal, suman 180°.'),
-      why: T('Co-interior angles add to 180°:', 'Los ángulos colaterales internos suman 180°:') }
+      why: T('Co-interior angles add to 180°:', 'Los ángulos colaterales internos suman 180°:') },
+    // Floor 4: one given angle and x anywhere among the other seven. Each question names its own pair (see parPair).
+    par: { name: T('Parallel lines: any angle', 'Paralelas: cualquier ángulo'), eq: true,
+      rule: T('A transversal crossing two parallel lines makes 8 angles. Each one is equal to the given angle, or adds with it to 180°.', 'Una transversal que cruza dos paralelas forma 8 ángulos. Cada uno es igual al ángulo dado o suma 180° con él.'),
+      why: '' }
   };
+  // the relationship a question really uses (a Floor 4 question carries its own)
+  function relOf(q) { return q.R || RELS[q.rel]; }
+  // Two parallel lines cut by a transversal: angle (vertex a, sector i) and angle (vertex b, sector j). Vertex 1 is the
+  // top crossing, vertex 2 the bottom one; the sectors go round each crossing (see SEC): 0 above-right, 1 above-left,
+  // 2 below-left, 3 below-right. Returns the pair's name, rule and the "why" line for the worked steps.
+  function parPair(a, i, b, j) {
+    var interior = function (v, s) { return v === 1 ? s >= 2 : s <= 1; };
+    var right = function (s) { return s === 0 || s === 3; };
+    var mk = function (base, extra) { var r = {}; for (var k in base) r[k] = base[k]; for (k in extra) r[k] = extra[k]; return r; };
+    if (a === b) return Math.abs(i - j) === 2 ? RELS.vert
+      : mk(RELS.supp, { name: T('Angles on a straight line', 'Ángulos sobre una recta'), why: T('The two angles make a straight line:', 'Los dos ángulos forman una línea recta:') });
+    if (i === j) return RELS.corr;
+    var inA = interior(a, i), inB = interior(b, j), same = right(i) === right(j);
+    if (inA && inB) return same ? RELS.coint : RELS.alt;
+    if (!inA && !inB) return same
+      ? { name: T('Same-side exterior angles', 'Ángulos colaterales externos'), sum: 180,
+          rule: T('Parallel lines: angles outside the lines, on the same side of the transversal, add to 180°.', 'Rectas paralelas: los ángulos fuera de las rectas, del mismo lado de la transversal, suman 180°.'),
+          why: T('Same-side exterior angles add to 180°:', 'Los ángulos colaterales externos suman 180°:') }
+      : { name: T('Alternate exterior angles', 'Ángulos alternos externos'), eq: true,
+          rule: T('Parallel lines: angles outside the lines, on opposite sides of the transversal, are equal.', 'Rectas paralelas: los ángulos fuera de las rectas, en lados opuestos de la transversal, son iguales.'),
+          why: T('Alternate exterior angles are equal:', 'Los ángulos alternos externos son iguales:') };
+    // one inside the lines and one outside: two steps (over to the other crossing, then round it)
+    return (i + j) % 2 === 0
+      ? { name: T('Two steps: corresponding, then vertical', 'Dos pasos: correspondientes y luego opuestos'), eq: true,
+          rule: T('Slide the given angle to the other crossing (corresponding angles are equal). The angle across from it there is equal too.', 'Lleva el ángulo dado al otro cruce (los correspondientes son iguales). El opuesto a él allí también es igual.'),
+          why: T('Corresponding, then vertical: both equal, so', 'Correspondientes y luego opuestos: los dos son iguales, así que') }
+      : { name: T('Two steps: corresponding, then a straight line', 'Dos pasos: correspondientes y luego una recta'), sum: 180,
+          rule: T('Slide the given angle to the other crossing (corresponding angles are equal). There it makes a straight line with x: they add to 180°.', 'Lleva el ángulo dado al otro cruce (los correspondientes son iguales). Allí forma una línea recta con x: suman 180°.'),
+          why: T('Its corresponding angle makes a straight line with x:', 'Su ángulo correspondiente forma una línea recta con x:') };
+  }
 
   // A question: the given angle (known), the angle the laser must turn to reach the panel (trueAngle), and what the
   // student types: x itself, or (in a boss room) x where the angle is x + d or x − d. The laser always turns the whole
@@ -547,16 +581,34 @@
     } else {   // parallel lines cut by a transversal: the given angle at the top crossing, x at the bottom one (the turret)
       var t; do { t = rnd(40, 140); } while (t > 80 && t < 100);
       // x never ends on the crossing line toward the top crossing, so the panel can't cover the given angle
-      var pairs = rel === 'corr' ? [[1, 1], [2, 2], [3, 3]] : rel === 'alt' ? [[3, 1]] : [[2, 1]];
-      var pr = pick(pairs), sec = SEC(t), V2 = V, V1 = pol(V, t, 250), LL = 230;
-      q.known = sec[pr[0]][1]; q.trueAngle = sec[pr[1]][1];
+      var sec = SEC(t), V2 = V, V1 = pol(V, t, 250), LL = 230;
+      // [vertex of the given angle, its sector, vertex of x, its sector]; vertex 1 = top crossing, 2 = bottom
+      var pr4;
+      if (rel === 'par') {
+        // Floor 4: the given angle anywhere, x any of the other seven. x never ends on the crossing line that
+        // points at the other crossing, so the panel can't cover the given angle.
+        // Every allowed pair, grouped by kind; pick a kind first, so each kind comes up about as often as the others.
+        var groups = {};
+        for (var a4 = 1; a4 <= 2; a4++) for (var i4 = 0; i4 < 4; i4++) for (var b4 = 1; b4 <= 2; b4++) for (var j4 = 0; j4 < 4; j4++) {
+          if ((a4 === b4 && i4 === j4) || (b4 === 2 && j4 === 0) || (b4 === 1 && j4 === 2)) continue;
+          var nm4 = parPair(a4, i4, b4, j4).name;
+          (groups[nm4] = groups[nm4] || []).push([a4, i4, b4, j4]);
+        }
+        pr4 = pick(groups[pick(Object.keys(groups))]);
+        q.R = R = parPair(pr4[0], pr4[1], pr4[2], pr4[3]);
+      } else {
+        var pr = pick(rel === 'corr' ? [[1, 1], [2, 2], [3, 3]] : rel === 'alt' ? [[3, 1]] : [[2, 1]]);
+        pr4 = [1, pr[0], 2, pr[1]];
+      }
+      var VK = pr4[0] === 1 ? V1 : V2, VX = pr4[2] === 1 ? V1 : V2;
+      q.known = sec[pr4[1]][1]; q.trueAngle = sec[pr4[3]][1];
       sc.segs.push([pol(V2, 180, LL), pol(V2, 0, LL)], [pol(V1, 180, LL), pol(V1, 0, LL)], [pol(V2, t + 180, 90), pol(V1, t, 90)]);
       sc.par = [V1, V2, LL];   // little arrow marks show the lines are parallel
       sc.all = { t: t, verts: [V1, V2] };   // for labeling all eight angles after a hit
-      sc.arcs.push({ v: V1, a0: sec[pr[0]][0], sw: sec[pr[0]][1], r: 58, lr: 98, known: true }, { v: V2, a0: sec[pr[1]][0], sw: sec[pr[1]][1], r: 76, lr: 116 });
-      sc.turret = { v: V2, rest: sec[pr[1]][0] }; sc.panelR = 150;
+      sc.arcs.push({ v: VK, a0: sec[pr4[1]][0], sw: sec[pr4[1]][1], r: 58, lr: 98, known: true }, { v: VX, a0: sec[pr4[3]][0], sw: sec[pr4[3]][1], r: 76, lr: 116 });
+      sc.turret = { v: VX, rest: sec[pr4[3]][0] }; sc.panelR = 150;
       q.base = pick([-20, -15, -10, -5, 0, 5, 10, 15, 20]) + (Math.random() < 0.5 ? 0 : 180);   // the parallel lines stay roughly level
-      if (rel === 'coint') sc.sumNote = true;
+      if (R.sum) sc.sumNote = true;
       k = q.known;
     }
     // a boss writes the other angle as x + d or x − d (small numbers, so it works out in your head)
@@ -590,7 +642,7 @@
     return q;
   }
   function mistakeNote(q, v) {
-    var R = RELS[q.rel];
+    var R = relOf(q);
     if (q.offset && v === q.trueAngle) return T('That’s the whole angle, ' + q.xLabel + '. Now find <b>x</b>.', 'Ese es el ángulo completo, ' + q.xLabel + '. Ahora halla <b>x</b>.');
     if (R.sum) {
       var other = R.sum === 90 ? 180 : 90;
@@ -831,7 +883,7 @@
     var box = $('#qpanel');
     box.innerHTML = '<div class="tag">' + (P.practice ? T('Practice · ', 'Práctica · ') + G.prac.right + T(' of ', ' de ') + G.prac.total + T(' right', ' bien')
         : T('Panel ', 'Panel ') + (P.i + 1) + T(' of 3', ' de 3') + ' · ' + pn.icon + ' ' + pn.name) + '</div>' +
-      '<h2>' + RELS[q.rel].name + '</h2><p class="rule">' + RELS[q.rel].rule + '</p>' +
+      '<h2>' + relOf(q).name + '</h2><p class="rule">' + relOf(q).rule + '</p>' +
       '<p class="ask">' + q.ask + '</p>' +
       '<div class="row"><label class="sr-only" for="ans">' + T('x in degrees', 'x en grados') + '</label><span style="font-size:28px;font-weight:900">x =</span><input id="ans" inputmode="numeric" autocomplete="off" maxlength="5"><span class="deg">°</span>' +
       '<button class="fire" id="b-fire">' + T('FIRE', 'DISPARAR') + '</button></div><div class="err" id="err" role="alert"></div>' +
@@ -878,7 +930,7 @@
       fb.innerHTML = '&#10007; ' + T('Missed! ', '¡Fallaste! ') + (note ? note + ' ' : '') + (P.practice ? '' : T(pn.name + ' stay on.', pn.name + ' siguen encendidas.'));
       // how to do it: for angles that add up, the whole angle as a bar split into its two parts; for equal angles, two
       // matching bars. Then the steps, one at a time.
-      var R = RELS[q.rel], work = document.createElement('div');
+      var R = relOf(q), work = document.createElement('div');
       work.className = 'work';
       work.innerHTML = '<div class="wt">' + T('How to solve it', 'Cómo resolverlo') + '</div>' +
         (R.sum ? '<div class="brace">' + R.sum + '°</div>' +
@@ -1367,7 +1419,7 @@
 
 
   // ------------------------------------------------------------------ Practice: just the laser puzzles, any mix of angle types, no sneak, no timer
-  var REL_ORDER = ['comp', 'supp', 'vert', 'corr', 'alt', 'coint'];
+  var REL_ORDER = ['comp', 'supp', 'vert', 'corr', 'alt', 'coint', 'par'];
   function showPracticeSetup() {
     var chosen = (save.practiceRels || ['comp', 'supp']).slice();
     function draw() {
@@ -1639,7 +1691,7 @@
         tag(q.offset ? 'x = ' + q.answer : q.answer + '°', [pp[0], pp[1] - 56], '#7dffb0', 22);
         if (sc.sumArc) {   // the whole angle lit up, so the two parts can be seen adding to 90° or 180°
           sArc(q, sc.sumArc.v, sc.sumArc.a0, sc.sumArc.sw, sc.sumArc.r, 'rgba(230,240,255,0.7)', 2.5);
-          tag(RELS[q.rel].sum + '°', wpol(q, sc.sumArc.v, sc.sumArc.a0 + sc.sumArc.sw * 0.25, sc.sumArc.lr), '#e6f0ff', 22);
+          tag(relOf(q).sum + '°', wpol(q, sc.sumArc.v, sc.sumArc.a0 + sc.sumArc.sw * 0.25, sc.sumArc.lr), '#e6f0ff', 22);
         }
       }
     }
