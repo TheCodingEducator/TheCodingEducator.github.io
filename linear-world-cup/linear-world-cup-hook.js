@@ -1,4 +1,4 @@
-// Wraps the game's draw() (defined in linear-world-cup-game.js, loaded
+// Wraps the game's draw() (defined in linear-world-cup-main.js, loaded
 // just before this file) so the key edge-detection snapshot runs after
 // every frame. p5.registerMethod() isn't reliably callable from a
 // global-mode sketch in this p5 build, so plain function wrapping is used

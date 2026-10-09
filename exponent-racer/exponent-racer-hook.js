@@ -13,7 +13,7 @@
     }
     _glMouseNow = mouseIsPressed;
 
-    if (window._rwRecord) window._rwRecord();                     // Second Chance: remember this frame (exponent-racer-game.js)
+    if (window._rwRecord) window._rwRecord();                     // Second Chance: remember this frame (exponent-racer-end.js)
     gameDraw();
     if (window._kbDraw) window._kbDraw();                       // keyboard-focus ring (exponent-racer-keyboard.js)
 

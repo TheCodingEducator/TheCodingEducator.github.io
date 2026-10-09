@@ -521,7 +521,6 @@
     Rd.world(function (ctx) {
       Rd.table();
       if (G.closed && (ph === 'swing' || ph === 'strike' || ph === 'roll')) Rd.blocked(G.t);
-      if (ph === 'roll' && G.demoWrong) Rd.path(G.path, 'rgba(255,90,90,0.8)', 3, null);
       Rd.balls(G.balls, dt);
       Rd.particles(dt);
       if (ph === 'aim') { Rd.preview(G.balls, c, G.aim.dir, G.aim.power); Rd.cue(c, G.aim.dir, 6 + (G.drag ? G.aim.power * 70 : G.aim.power * 18)); }
@@ -534,9 +533,8 @@
       }
       else if (ph === 'explain') {
         Rd.diagram(G.problem, { wrong: G.wrongX, reveal: true, hint: Math.max(1, G.wrongs), fills: true }, G.t);
-        // where each answer sends the cue ball: green for the right angle, red for the wrong one
+        // where the right angle would have sent the cue ball (the wrong shot's path isn't traced)
         if (G.rightPath) Rd.path(G.rightPath, 'rgba(125,255,176,0.95)', 4 / Rd.cam.z, [12 / Rd.cam.z, 7 / Rd.cam.z]);
-        Rd.path(G.path, 'rgba(255,90,90,0.95)', 4 / Rd.cam.z, null);
       }
       else if (ph === 'ai-solve') { Rd.cue(c, G.aim.dir, 10, 0.3); Rd.diagram(G.problem, { solve: G.ai && G.ai.step >= 2, reveal: G.ai && G.ai.step >= G.ai.lines.length }, G.t); }
       else if (ph === 'ai-aim') { Rd.preview(G.balls, c, G.aim.dir, G.aim.power); Rd.cue(c, G.aim.dir, 6 + Math.max(0, G.timer - 0.6) / 0.9 * G.aim.power * 70); }

@@ -2,7 +2,7 @@
 // ../site-controls.js). It sits below the field, so it replaces the game's own on-canvas KEYBOARD toggle, which covered
 // part of the field. Shown only while an equation is being typed.
 if (SiteControls.isTouch) {
-  // tells drawKeyboardButton() in linear-world-cup-game.js to keep its on-canvas keypad hidden
+  // tells drawKeyboardButton() in linear-world-cup-draw.js to keep its on-canvas keypad hidden
   window.mobileNumpadActive = true;
   SiteControls.create({
     numpad: ['sign', 'backspace'],

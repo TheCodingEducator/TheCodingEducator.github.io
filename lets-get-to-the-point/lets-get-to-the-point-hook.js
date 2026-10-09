@@ -1,4 +1,4 @@
-// Wraps the game's draw() (defined in lets-get-to-the-point-game.js, loaded
+// Wraps the game's draw() (defined in lets-get-to-the-point-main.js, loaded
 // just before this file) so per-frame bookkeeping - sprite velocity, input
 // edge-detection - runs around it every frame. p5.registerMethod() isn't
 // reliably callable from a global-mode sketch in this p5 build, so plain

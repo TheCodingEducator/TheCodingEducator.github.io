@@ -30,7 +30,37 @@ $problems = New-Object System.Collections.Generic.List[string]
 function Problem($msg) { $problems.Add($msg) | Out-Null }
 function ReadText($path) { [System.IO.File]::ReadAllText((Resolve-Path $path), $utf8) }
 
-# ---------- 0. Unit packs (built from the worksheets; see tools/unit-packs.ps1) ----------
+# ---------- 0a. Home page thumbnails ----------
+# The home page shows each game's card picture small, so it loads og/thumbs/<game>.jpg (600 x 315, about a tenth of
+# the size) instead of the full og/<game>.png that link previews use. -Fix makes a thumbnail for any picture that
+# doesn't have one yet or has changed since.
+$thumbDir = Join-Path $root 'og\thumbs'
+foreach ($png in Get-ChildItem (Join-Path $root 'og') -Filter *.png) {
+  if ($png.Name -eq 'site.png') { continue }
+  $jpg = Join-Path $thumbDir ($png.BaseName + '.jpg')
+  if ((Test-Path $jpg) -and (Get-Item $jpg).LastWriteTime -ge $png.LastWriteTime) { continue }
+  if (-not $Fix) { Problem "og/thumbs/$($png.BaseName).jpg: missing or older than its picture (run with -Fix)"; continue }
+  if (-not (Test-Path $thumbDir)) { New-Item -ItemType Directory $thumbDir | Out-Null }
+  Add-Type -AssemblyName System.Drawing
+  $src = [System.Drawing.Image]::FromFile($png.FullName)
+  $bmp = New-Object System.Drawing.Bitmap 600, 315
+  $g = [System.Drawing.Graphics]::FromImage($bmp)
+  $g.InterpolationMode = 'HighQualityBicubic'; $g.SmoothingMode = 'HighQuality'; $g.PixelOffsetMode = 'HighQuality'
+  $g.DrawImage($src, 0, 0, 600, 315)
+  $codec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }
+  $ep = New-Object System.Drawing.Imaging.EncoderParameters 1
+  $ep.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter ([System.Drawing.Imaging.Encoder]::Quality), ([long]82)
+  $bmp.Save($jpg, $codec, $ep)
+  $g.Dispose(); $bmp.Dispose(); $src.Dispose()
+  Write-Host "Thumbnail: og/thumbs/$($png.BaseName).jpg"
+}
+$homeText = ReadText 'index.html'
+foreach ($m in [regex]::Matches($homeText, 'src="og/thumbs/([a-z0-9-]+)\.jpg"')) {
+  if (-not (Test-Path (Join-Path $thumbDir ($m.Groups[1].Value + '.jpg')))) { Problem "index.html: thumbnail og/thumbs/$($m.Groups[1].Value).jpg doesn't exist" }
+}
+if ($homeText -match 'class="thumb" src="og/[a-z0-9-]+\.png"') { Problem 'index.html: a game card uses a full-size og/*.png picture (use og/thumbs/<game>.jpg)' }
+
+# ---------- 0b. Unit packs (built from the worksheets; see tools/unit-packs.ps1) ----------
 . (Join-Path $PSScriptRoot 'unit-packs.ps1')
 
 # ---------- 1. Versions ----------

@@ -143,8 +143,10 @@ function _glSoundFile(url) {
 SiteSound.preload(['app_tab_sound', 'bounce_1', 'coin_1', 'deep_pass_by_whoosh_1', 'deep_pass_by_whoosh_7_fast', 'energy_bar_recharge_4',
   'f1_race', 'go_male', 'lighthearted_bonus_objective_1', 'peaceful_win_1', 'perfect_clean_app_button_click',
   'puzzle_game_organic_wood_block_tone_tap_1', 'puzzle_game_secret_unlock_01', 'puzzle_game_ui_pop_01', 'puzzle_game_ui_pop_tiny_01',
-  'rain_thunderstorm_calm', 'retro_game_simple_impact_1', 'vibrant_game_life_lost_1', 'vibrant_game_start_with_tone_hum',
+  'retro_game_simple_impact_1', 'vibrant_game_life_lost_1', 'vibrant_game_start_with_tone_hum',
   'vibrant_ui_mouse_click_1', 'vibrant_ui_tap_1'].map(function (n) { return 'exponent-racer-sounds/' + n + '.mp3'; }));
+// the long rain loop (only heard in rain or at night) loads a few seconds later, so it doesn't slow down the first screen
+setTimeout(function () { SiteSound.preload(['exponent-racer-sounds/rain_thunderstorm_calm.mp3']); }, 4000);
 
 function playSound(url, loop) { SiteSound.play(_glSoundFile(url), loop); }
 function stopSound(url) { SiteSound.stop(_glSoundFile(url)); }
