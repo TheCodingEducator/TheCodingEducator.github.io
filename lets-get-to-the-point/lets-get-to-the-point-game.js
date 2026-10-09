@@ -670,6 +670,7 @@ function resetRound() {
 }
 
 function resetGame() {
+  if (window.SiteResults) SiteResults.reset();
   score=0; round=0;
   p1wins=0; p2wins=0;
   newHighScore=false; timerFinished=0; practiceHintType=""; practiceQNum=0;
@@ -3165,7 +3166,21 @@ function drawGameOver(){
 }
 
 // ---------- MAIN DRAW LOOP ----------
+// results by skill (site-results.js): translations, reflections and rotations, shown once when a game ends
+if (window.SiteResults) SiteResults.setup([{ id: 'translate', en: 'Translations', es: 'Traslaciones' }, { id: 'reflect', en: 'Reflections', es: 'Reflexiones' }, { id: 'rotate', en: 'Rotations', es: 'Rotaciones' }]);
+function noteMove(ch, ok) { if (window.SiteResults && ch) SiteResults.record(isRotation(ch) ? 'rotate' : (ch.type === 'reflect_x' || ch.type === 'reflect_y') ? 'reflect' : 'translate', ok); }
+var lgStateWas = '', lgResultsShown = true;
+function watchGameEnd() {
+  var inGame = STATE === 'MOVING' || STATE === 'FEEDBACK' || STATE === 'ANSWER_DEMO' || STATE === 'ROTATION_DEMO';
+  if (inGame) lgResultsShown = false;
+  else if (!lgResultsShown && window.SiteResults && ['MOVING', 'FEEDBACK', 'ANSWER_DEMO', 'ROTATION_DEMO'].indexOf(lgStateWas) >= 0) {
+    lgResultsShown = true;
+    setTimeout(function () { SiteResults.show({ title: tl('Your results', 'Tus resultados') }); }, STATE === 'START' ? 0 : 1200);
+  }
+  lgStateWas = STATE;
+}
 function draw(){
+  watchGameEnd();
   if(exitConfirmPending){ drawExitConfirmOverlay(); return; }
 
   // ---- TIMEOUT: ask if they're still there at 300s, force back to menu
@@ -3252,7 +3267,7 @@ function draw(){
       if(feedbackCorrect && isRotation(curCh()) && tracingPhase==="PAPER"){
         if(!isCorrectRotationAmount(curCh())) equivalentRotation=true;
       }
-      practiceAttempts++;
+      practiceAttempts++; noteMove(ch, feedbackCorrect);
       // score tracking removed
       if(feedbackCorrect&&round===TOTAL_ROUNDS-1&&(gameMode==="GENIUS"||gameMode==="GEOMETRY"))
         timerFinished=(Date.now()-timerStart)/1000;
@@ -3341,7 +3356,7 @@ function draw(){
         if(feedbackCorrect&&isRotation(curCh())&&tracingPhase==="PAPER"){
           if(!isCorrectRotationAmount(curCh())) equivalentRotation=true;
         }
-        practiceAttempts++;
+        practiceAttempts++; noteMove(ec, feedbackCorrect);
         // score tracking removed
         if(feedbackCorrect&&round===TOTAL_ROUNDS-1&&(gameMode==="GENIUS"||gameMode==="GEOMETRY"))
           timerFinished=(Date.now()-timerStart)/1000;

@@ -1996,7 +1996,12 @@
   function reportHTML() {
     var r = G.rep; if (!r) return '';
     var rows = [], hits = G.shots.filter(function (s) { return s.hit; }).length;
-    function row(label, v) { if (v[1]) rows.push('<li>' + label + ': <b>' + v[0] + ' ' + T('of', 'de') + ' ' + v[1] + '</b></li>'); }
+    // each kind of question: right of tried, the percent, and a word with a color band (80%+ strong, 40-79% growing)
+    function row(label, v) {
+      if (!v[1]) return;
+      var p = Math.round(100 * v[0] / v[1]), b = p >= 80 ? ['#1f7a45', '#d9f5e3', T('Strong', 'Fuerte')] : p >= 40 ? ['#8a6100', '#fff1c9', T('Growing', 'Creciendo')] : ['#b3261e', '#ffe0dd', T('Keep practicing', 'Sigue practicando')];
+      rows.push('<li>' + label + ': <b>' + v[0] + ' ' + T('of', 'de') + ' ' + v[1] + '</b> <span style="display:inline-block;padding:1px 9px;border-radius:999px;font-weight:800;color:' + b[0] + ';background:' + b[1] + ';border:1px solid ' + b[0] + '">' + p + '% · ' + b[2] + '</span></li>');
+    }
     rows.push('<li>' + T('Shots fired', 'Disparos') + ': <b>' + G.shots.length + '</b> (' + hits + ' ' + T(hits === 1 ? 'hit' : 'hits', hits === 1 ? 'impacto' : 'impactos') + ')</li>');
     row(T('Enemy shots found on the first try', 'Disparos enemigos encontrados al primer intento'), r.find);
     row(T('Radar Checks right on the first try', 'Revisiones de radar correctas al primer intento'), r.radar);

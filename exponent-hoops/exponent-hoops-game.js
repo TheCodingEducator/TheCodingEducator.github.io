@@ -34,6 +34,10 @@ oppBody.visible = false; oppHead.visible = false; oppLarm.visible = false; oppRa
 p2EyeL.visible = false; p2EyeR.visible = false; ball.visible = false;
 
 var scoreBlue = 0; var scoreRed = 0;
+// results by skill (site-results.js): which exponent rule each question used
+var qRule = 'product';
+if (window.SiteResults) SiteResults.setup([{ id: 'product', en: 'Product rule (add exponents)', es: 'Regla del producto (sumar exponentes)' }, { id: 'quotient', en: 'Quotient rule (subtract exponents)', es: 'Regla del cociente (restar exponentes)' }, { id: 'zero', en: 'Zero exponent', es: 'Exponente cero' }, { id: 'power', en: 'Power of a power (multiply exponents)', es: 'Potencia de una potencia (multiplicar exponentes)' }]);
+function noteRule(ok) { if (window.SiteResults) SiteResults.record(qRule, ok); }
 var gameMode = "title"; var gameState = "title";
 var exitConfirmPending = false;
 var possession = 1; var defenderLockedOut = false; var lockedOptionIndex = -1;
@@ -698,6 +702,7 @@ function drawExitConfirmOverlay() {
   var go = keyWentDown("space") || keyWentDown("enter");
   if ((mouseWentDown("leftButton") && hoverYes) || (go && exitSel === 0)) {
     exitConfirmPending = false; showCorrect = false; showPenalty = false; afkStreak = 0; gameState = "title"; exitSel = 1;
+    if (window.SiteResults) { SiteResults.show({ title: tl('Your results', 'Tus resultados') }); SiteResults.reset(); }
   } else if ((mouseWentDown("leftButton") && hoverNo) || (go && exitSel === 1) || keyWentDown("escape")) {
     exitConfirmPending = false; exitSel = 1;
   }
@@ -796,6 +801,7 @@ function generateExponentQuestion(isHard) {
   isFraction = false; subQuestionText = "";
   var qType = randomNumber(0, 7);
   if (qType >= 4) qType = randomNumber(0, 1);
+  qRule = ['product', 'quotient', 'zero', 'power'][qType];
   var vars = ["x", "y", "a", "b"]; var v = vars[randomNumber(0, 3)];
   var m, n, correctStr;
   var wrongExponents = [];
@@ -932,6 +938,7 @@ function renderMathUI_1P() {
     if (keyWentDown(buttonLayout[i].key) || keyWentDown(buttonLayout[i].altKey) || (mouseWentDown("leftButton") && hover)) {
       lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
 
+      noteRule(options[i].isCorrect);
       if (options[i].isCorrect) {
         showCorrect = true; penaltyTimer = 150; triggerScore();
       } else {
@@ -972,11 +979,13 @@ function renderMathUI_2P() {
 
       if (!defenderLockedOut && defPress) {
         lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
+        noteRule(options[i].isCorrect);
         if (options[i].isCorrect) { showPenalty = true; penaltyTimer = 150; triggerBlock(); }
         else { defenderLockedOut = true; lockedOptionIndex = i; shakeTimer = 9; playSound("sound://category_tap/slight_negative_select_1.mp3"); }
       }
       if (atkPress) {
         lastQuestionText = questionText; lastSubQuestionText = subQuestionText; lastIsFraction = isFraction;
+        noteRule(options[i].isCorrect);
         if (options[i].isCorrect) { showCorrect = true; penaltyTimer = 150; triggerScore(); }
         else { showPenalty = true; penaltyTimer = 150; shakeTimer = 9; triggerMiss(); }
       }

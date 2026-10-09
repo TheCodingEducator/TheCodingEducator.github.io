@@ -109,6 +109,8 @@ function buildPracticeArena() {
 // ---------------------------------------------------------------
 // State
 // ---------------------------------------------------------------
+// results by skill at the end of a round (site-results.js)
+if (window.SiteResults) SiteResults.setup([{ id: 'comp', en: 'Complementary angles', es: 'Ángulos complementarios' }, { id: 'supp', en: 'Supplementary angles', es: 'Ángulos suplementarios' }, { id: 'vert', en: 'Vertical angles', es: 'Ángulos opuestos por el vértice' }]);
 var gameState = 'MENU';        // MENU | COURSE_INTRO | PLAYING | HOLE_COMPLETE | COURSE_COMPLETE
 var holePhase = 'AIMING';      // AIMING | QUESTION | ROLLING | SUNK
 var gameMode = MODE_EASY;
@@ -1010,6 +1012,7 @@ function chooseCourse(i) {
   scorecard = [];
   roundResult = null;
   obsClock = 0;
+  if (window.SiteResults) SiteResults.reset();
   gameState = 'COURSE_INTRO';
 }
 
@@ -1359,6 +1362,7 @@ function advanceAfterHole() {
     roundResult = recordRound(tot, totalPar());
     playSound('course_complete');
     if (roundResult.isNew || tot < totalPar()) { playFx('record'); burstConfetti(width / 2, 120, 150, 12); }
+    if (window.SiteResults) setTimeout(function () { SiteResults.show({ title: tl('Round results', 'Resultados de la ronda') }); }, 1800);
   }
 }
 
@@ -2829,6 +2833,7 @@ function submitAnswer() {
   var correct = typed === pendingShot.correctAnswer;
   pendingShot.typed = typed;
   pendingShot.correct = correct;
+  if (window.SiteResults) SiteResults.record(pendingShot.rel, correct);
   pendingShot.launchFrom = { x: ball.x, y: ball.y };
   if (!correct) holeBlockedThisStroke = true;
 
@@ -3485,7 +3490,7 @@ function exitConfirmHit(mx, my) {
 function menuAction(id) {
   confirmExitOpen = false;
   playSound('click');
-  if (id === 'exit') { dragging = false; kbAim = null; gameState = 'MENU'; }
+  if (id === 'exit') { dragging = false; kbAim = null; gameState = 'MENU'; if (window.SiteResults) { SiteResults.show({ title: tl('Your results', 'Tus resultados') }); SiteResults.reset(); } }
   else if (id === 'restart') { dragging = false; kbAim = null; startHole(holeIndex); }
 }
 

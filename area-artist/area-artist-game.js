@@ -222,7 +222,10 @@
     for (var k = 0; k < w * h / 14; k++) x.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), 1, 1);
     return c;
   }
+  // results by skill when a picture is finished (site-results.js)
+  if (window.SiteResults) SiteResults.setup([{ id: 'area', en: 'Area of a rectangle (rows × columns)', es: 'Área de un rectángulo (filas × columnas)' }, { id: 'missing', en: 'Missing side length', es: 'Lado que falta' }]);
   function startGame(mk, z) {
+    if (window.SiteResults) SiteResults.reset();
     var m = MODES[mk], sz = m.sizes[z], sc = pickScene(catChoice), seed = Math.floor(Math.random() * 2147483647);
     var art = scaleUp(SC.renderSquares(sc.id, seed, sz[0], sz[1]), m.art);
     var pieces = shuffle(partition(sz[0], sz[1], m));
@@ -294,6 +297,7 @@
     var a = $('ans'), v = parseInt(a.value, 10);
     if (isNaN(v)) { shakeInput(a); if (!TOUCH) a.focus(); return; }
     var want = pc.kind === 'missing' ? (pc.hide === 'w' ? pc.w : pc.h) : pc.w * pc.h;
+    if (window.SiteResults) SiteResults.record(pc.kind === 'missing' ? 'missing' : 'area', v === want);
     if (v === want) return correct();
     a.value = '';
     shakeInput(a);
@@ -357,6 +361,7 @@
         $('doneSub').innerHTML = '&ldquo;' + sceneName(g.scene) + '&rdquo; &middot; ' + T(g.firstTry + ' of ' + g.pieces.length + ' pieces right on the first try', g.firstTry + ' de ' + g.pieces.length + ' piezas correctas al primer intento') +
           '<br><small>' + T('Saved to your gallery.', 'Guardado en tu galería.') + '</small>';
         show('doneOv');
+        if (window.SiteResults) setTimeout(function () { SiteResults.show({ title: T('Your results', 'Tus resultados') }); }, 900);
         camTo(doneCam(), 700);
         hide('checkBtn'); setFb('good', '&#127912; ' + T('Masterpiece complete!', '¡Obra maestra terminada!'));
         try { $('doneAgain').focus({ preventScroll: true }); } catch (e) {}

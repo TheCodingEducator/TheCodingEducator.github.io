@@ -168,6 +168,8 @@ function genFrac() {
   return genUp();
 }
 const GEN = { up: genUp, down: genDown, table: genTable, rate: genRate, frac: genFrac };
+// results by skill (site-results.js): each kind of order, shown when the restaurant closes or practice ends
+if (window.SiteResults) SiteResults.setup(PRACTICE_TYPES.map(t => ({ id: t.id, en: t.name, es: t.name })));
 function genProblem(kind, easy) { return GEN[kind](easy); }
 
 // how the numbers break into equal "blocks" (the tape diagram and the steps both use it):
@@ -533,6 +535,7 @@ function submit() {
 }
 function deliver(C) {                                                 // plate on the table: the customer reacts
   const ok = C.result === 'ok', P = C.P, over = C.userAns > fval(P.ans);
+  if (window.SiteResults) SiteResults.record(P.kind, ok);
   G.chef.plates = G.chef.plates.filter(c => c !== C); C.state = 'served'; C.plated = true; C.react = 0;
   if (!ok) G.chef.worry = 1.8;
   C.mood = ok ? 'happy' : C.result === 'close' ? 'upset' : 'fuming';
@@ -710,12 +713,14 @@ function explainHTML(T) {
 
 /* ===================== GAME FLOW ===================== */
 function startGame(level) {
+  if (window.SiteResults) SiteResults.reset();
   G = newWorld('run', level || 1); orderNo = 0; clearKeys();
   hideOverlays(); showScreen('play'); audioInit();
   toast(level > 1 ? L(`Level ${level}: ${LEVEL_NAMES[level - 1]} - the restaurant is open!`, `Nivel ${level}: ${LEVEL_NAMES[level - 1]} — ¡el restaurante está abierto!`) : L('The restaurant is open! Use ← → to walk.', '¡El restaurante está abierto! Usa ← → para caminar.'), '');
   renderRail(); renderCook(); updateHUD();
 }
 function startPractice(kinds) {
+  if (window.SiteResults) SiteResults.reset();
   G = newWorld('practice', 1, kinds); orderNo = 0; clearKeys();
   hideOverlays(); showScreen('play'); audioInit();
   toast(L('Practice: no rush and no reviews - take your time!', 'Práctica: sin prisa y sin reseñas. ¡Tómate tu tiempo!'), '');
@@ -737,6 +742,7 @@ function gameOver() {
   hideOverlays(['over']); $('over').classList.remove('hidden'); cardAt = performance.now();
   setTimeout(() => $('btnAgain').focus(), 30);
   renderCook();
+  if (window.SiteResults) setTimeout(() => SiteResults.show({ title: L('Your results', 'Tus resultados'), onClose: () => $('btnAgain').focus() }), 700);
 }
 function missedHTML(list) {
   const last = list.slice(-4);
@@ -759,7 +765,8 @@ function buildMenu() {
   $('btnStart').textContent = bestLevel > 1 ? L(`▶ Continue · Level ${bestLevel}`, `▶ Continuar · Nivel ${bestLevel}`) : L('Open the restaurant!', '¡Abre el restaurante!');
   renderStarts($('menuStarts'), L('📍 Or start at:', '📍 O empieza en:'));
 }
-function toMenu() { setPaused(false); G = null; hideOverlays(); buildMenu(); showScreen('menu'); renderCook(); $('rail').innerHTML = ''; }
+function toMenu() {
+  if (window.SiteResults && G && G.mode === 'practice' && !G.over) { SiteResults.show({ title: L('Practice results', 'Resultados de la práctica') }); SiteResults.reset(); } setPaused(false); G = null; hideOverlays(); buildMenu(); showScreen('menu'); renderCook(); $('rail').innerHTML = ''; }
 function showScreen(name) {
   screen = name;
   ['title', 'menu', 'practice'].forEach(id => $(id).classList.toggle('hidden', id !== name));

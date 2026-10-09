@@ -14,6 +14,9 @@
     { id: 'cube', name: T('Cubes and Cube Roots', 'Cubos y raíces cúbicas'), ex: T('∛64, 4³, volume 64 → edge', '∛64, 4³, volumen 64 → arista') },
     { id: 'estimate', name: T('Estimating Square and Cube Roots', 'Estimar raíces cuadradas y cúbicas'), ex: T('√50 is between ? and ?', '√50 está entre ? y ?') }
   ];
+  // results by skill (site-results.js): squares and square roots, cubes and cube roots, estimating; shown at full time
+  if (window.SiteResults) window.SiteResults.setup(SKILLS.map(function (s) { return { id: s.id, en: s.name, es: s.name }; }));
+  function skillGroup(k) { return /^est/.test(k) ? 'estimate' : (k === 'cube' || k === 'cubed' || k === 'cubeside') ? 'cube' : 'sqrt'; }
   function load(key, fallback) {
     try { var v = localStorage.getItem('penaltyshootout_' + key); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
   }
@@ -921,6 +924,7 @@
       given = v1;
     }
     hide(scrQ);
+    if (window.SiteResults) window.SiteResults.record(question.cat || skillGroup(question.skill || ''), ok);
     if (question.bonus) {   // the bonus question: right earns a power shot; wrong just shows why, then a normal shot
       if (ok) { powerShot = true; playSound('blip'); goShoot(); }
       else { missed.push({ q: question.plain, you: answerText(given), ans: question.answer }); showExplanation(answerText(given), given); }
@@ -1753,6 +1757,7 @@
   // ---------- Shootout flow ----------
   function startShootout() {
     kickNum = 0; goals = 0; rightCount = 0; results = []; missed = []; usedQ = {};
+    if (window.SiteResults) window.SiteResults.reset();
     hide(scrMenu); hide(scrOver);
     hud.hidden = false;
     drawHud();
@@ -1774,6 +1779,7 @@
 
   function showOver() {
     state = STATE.OVER;
+    if (window.SiteResults) setTimeout(function () { window.SiteResults.show({ title: T('Your results', 'Tus resultados') }); }, 1500);
     hideAimHud();
     drawHud();
     var best = load('best', 0), newBest = goals > best;

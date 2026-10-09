@@ -1108,6 +1108,7 @@ function toMenu() {
 // startGame()   = a brand-new Bridge Run from level 1
 // startGame(cp) = start from a saved level checkpoint: same level and distance, 3 fresh hearts.
 function startGame(cp) {
+  if (window.SiteResults) SiteResults.reset();
   curMode = 'run'; G = newWorld(false, cp);
   G.tipT = cp ? 0 : 4;
   hidePlayOverlays(); showScreen('play');
@@ -1283,6 +1284,8 @@ function parseAns(str) {                          // whole numbers only
   return /^\d{1,4}$/.test(str) ? Number(str) : NaN;
 }
 
+// results by skill (site-results.js): each kind of bridge question, shown when the run ends
+if (window.SiteResults) SiteResults.setup([{ id: 'scale', en: 'Finding the scale factor', es: 'Hallar el factor de escala' }, { id: 'up', en: 'Missing side (scaling up)', es: 'Lado que falta (ampliar)' }, { id: 'down', en: 'Missing side (scaling down)', es: 'Lado que falta (reducir)' }, { id: 'sim', en: 'Similar or not?', es: '¿Semejantes o no?' }, { id: 'nest', en: 'Nested triangles', es: 'Triángulos anidados' }]);
 function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for a "Similar or not?" question
   if (G.state !== 'solve') return;
   let val = null;
@@ -1295,6 +1298,7 @@ function submit(timedOut, choice) {                 // choice = 'yes' / 'no' for
   }
   const P = G.problem, p = G.platforms[G.pi];
   const ok = val === P.answer;
+  if (window.SiteResults) SiteResults.record(P.type, ok);
   P.userAns = val; P.timedOut = !!timedOut;
   if (timedOut) {                                                       // out of time: no bridge at all - you just walk to the edge and fall in
     p.bridge = null; $('problem').classList.add('hidden'); G.state = 'cross';
@@ -1386,6 +1390,7 @@ function respawn() {
 
 function gameOver() {
   G.state = 'over';
+  if (window.SiteResults) setTimeout(() => SiteResults.show({ title: tl('Your results', 'Tus resultados') }), 900);
   const total = G.solved + G.wrong, acc = total ? Math.round(G.solved / total * 100) : 0;
   const meters = Math.max(0, Math.floor(G.px / 30)), newBest = meters > best, newBestLevel = G.level > bestLevel;
   saveRunStats();                                       // best distance, highest level, most bridges, best streak

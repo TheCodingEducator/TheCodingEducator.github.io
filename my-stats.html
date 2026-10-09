@@ -202,7 +202,7 @@
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="site-layout.css?v=2dc18537">
-<script src="site-stats.js?v=cf4a1e00"></script>
+<script src="site-stats.js?v=432f56b2"></script>
 <script src="site-layout.js?v=dc3e3464"></script>
 </head>
 <body>
@@ -284,7 +284,7 @@ document.getElementById('games').innerHTML = data.games.map(function (g) { retur
 function resetAllProgress() {
   var ok = confirm("This will erase all saved coins, streaks, unlocks, and best times for every game on this device. This can't be undone. Continue?");
   if (!ok) return;
-  var prefixes = ['lgttp_', 'exprace_', 'laserheist_', 'piggybank_', 'similaritybuilder_', 'proportionalplates_', 'grapplerope_', 'mathbilliards_'];
+  var prefixes = ['lgttp_', 'exprace_', 'laserheist_', 'piggybank_', 'similaritybuilder_', 'bridgerunner_', 'proportionalplates_', 'grapplerope_', 'mathbilliards_', 'bankshot_', 'areaartist_', 'penaltyshootout_'];
   var keysToRemove = [];
   for (var i = 0; i < localStorage.length; i++) {
     var k = localStorage.key(i);

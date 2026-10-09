@@ -1186,6 +1186,7 @@ function drawBracketScreen() {
 }
 
 function startMatch() {
+  if (window.SiteResults) SiteResults.reset();
   scoreA = 0; scoreB = 0; gameClockSeconds = 0; attackingTeam = "A";
   newPossession(kickoffB());
 }
@@ -1277,6 +1278,11 @@ function resolveEquation(eq) {
     return;
   }
 
+  if (window.SiteResults) {
+    var bOk = onLine(eq, 0, ballB);
+    SiteResults.record('intercept', bOk);
+    if (bOk) SiteResults.record('slope', target.type === 'shoot' ? onLine(eq, target.x, target.y) : teammates.some(function (t) { return onLine(eq, t.x, t.y); }));
+  }
   if (!onLine(eq, 0, ballB)) {
     if (target.type === "pass") startFeedback(tl("BAD PASS: INCORRECT Y-INTERCEPT", "MAL PASE: INTERSECCIÓN Y INCORRECTA"), 30);
     else startFeedback(tl("INCORRECT Y-INTERCEPT", "INTERSECCIÓN Y INCORRECTA"));
@@ -2917,7 +2923,20 @@ function drawGameOver() {
   }
 }
 
+// results by skill (site-results.js): the y-intercept and the slope of each equation typed, shown once when a match ends
+if (window.SiteResults) SiteResults.setup([{ id: 'intercept', en: 'y-intercept (b)', es: 'Intersección con el eje y (b)' }, { id: 'slope', en: 'Slope (m)', es: 'Pendiente (m)' }]);
+var wcStateWas = 'menu', wcResultsShown = true;
+function watchMatchEnd() {
+  var ended = screenState === 'over' || screenState === 'menu' || screenState === 'bracket';
+  if (!ended) wcResultsShown = false;
+  else if (!wcResultsShown && wcStateWas !== 'over' && wcStateWas !== 'menu' && wcStateWas !== 'bracket' && window.SiteResults) {
+    wcResultsShown = true;
+    setTimeout(function () { SiteResults.show({ title: tl('Match results', 'Resultados del partido') }); }, screenState === 'menu' ? 0 : 1200);
+  }
+  wcStateWas = screenState;
+}
 function draw() {
+  watchMatchEnd();
   kbBeginFrame();
   drawFrame();
   kbEndFrame();

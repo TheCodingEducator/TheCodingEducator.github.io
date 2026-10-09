@@ -322,8 +322,22 @@ function drawTides(yTop, yBottom) {
   rect(w1, yTop, 4, yBottom - yTop); rect(400 - w2 - 4, yTop, 4, yBottom - yTop);
 }
 
+// results by skill (site-results.js): shown once when a run ends (out of fuel, 3 strikes, the finish line, or Menu)
+var qSkillIdx = 0, runStateWas = '', runResultsShown = true;
+var RACER_SKILL_IDS = ['eval', 'muldiv', 'powpow', 'neg', 'zeroone', 'vocab'];
+if (window.SiteResults) SiteResults.setup([{ id: 'eval', en: 'Evaluating powers', es: 'Evaluar potencias' }, { id: 'muldiv', en: 'Multiplying and dividing powers', es: 'Multiplicar y dividir potencias' }, { id: 'powpow', en: 'Power of a power', es: 'Potencia de una potencia' }, { id: 'neg', en: 'Negative exponents', es: 'Exponentes negativos' }, { id: 'zeroone', en: 'Exponents of zero and one', es: 'Exponentes cero y uno' }, { id: 'vocab', en: 'Vocabulary', es: 'Vocabulario' }]);
+function watchRunEnd() {
+  var inRun = gameState === 'play' || gameState === 'paused';
+  if (inRun) runResultsShown = false;
+  else if (!runResultsShown && (runStateWas === 'play' || runStateWas === 'paused') && window.SiteResults) {
+    runResultsShown = true;
+    setTimeout(function () { SiteResults.show({ title: tl('Your results', 'Tus resultados') }); }, gameState === 'start' ? 0 : 1600);
+  }
+  runStateWas = gameState;
+}
 function draw() {
   textFont("sans-serif");
+  watchRunEnd();
 
   if (exitConfirmPending) { drawExitConfirmOverlay(); return; }
 
@@ -703,7 +717,7 @@ function startGame() {
   zoomFrames = 0; shakeFrames = 0; startSequencePhase = 1; startTimer = 120; startLineY = 280; currentStartSpeed = 0;
   expressionString = tl("GET READY!", "¡PREPÁRATE!"); fuelY = -1000;
   lightningFrames = 0; lightningPath = { main: [], branches: [] }; stormPhase = 0; coinPopupTimer = 0;
-  damageFrames = 0; dayPhase = 1.0; lightPoles = [-100, 100, 300, 500]; gameOverReason = ""; wrongAnswersList = []; strikes = 0;
+  damageFrames = 0; dayPhase = 1.0; lightPoles = [-100, 100, 300, 500]; gameOverReason = ""; wrongAnswersList = []; strikes = 0; if (window.SiteResults) SiteResults.reset();
   roadDecorations = []; lastSignMessage = ""; lastPickedAnswer = ""; lastQuestionString = "";
   playerWater = 0; playerSand = 0; activeShield = (equipped.boost === "shield");
   usedSecondChance = false; usedTimeFreeze = false; timeFreezeFramesLeft = 0; questionCheckpoint = null;
@@ -780,6 +794,7 @@ function resetQuestion() {
 
   while (!valid) {
     var pickedSkill = activeSkills[randomNumber(0, activeSkills.length - 1)];
+    qSkillIdx = pickedSkill;
 
     if (pickedSkill === 0) {
       var evalPair = EVAL_POWER_PAIRS[randomNumber(0, EVAL_POWER_PAIRS.length - 1)];
@@ -1332,6 +1347,7 @@ function playGame(isFrozen) {
 
 
       if (pLane !== -1) {
+       if (window.SiteResults) SiteResults.record(RACER_SKILL_IDS[qSkillIdx], fuelOptions[pLane] === answer);
        if (fuelOptions[pLane] === answer) { score += 10; fuel = Math.min(fuel + 25, maxFuel); correctAnswersCount++;
           if (score >= 200 && gameMode === "easy") {
             // Completing Street Racing is what unlocks Maximum Velocity, plus the Maximum Velocity version of every skill played in this run.

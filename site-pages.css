@@ -79,6 +79,8 @@ main.pg li { margin: 4px 0; }
 .pg-card h3 { margin: 0 0 4px !important; font-size: 17px; }
 .pg-card p { margin: 0 0 8px; font-size: 14px !important; color: var(--muted); line-height: 1.45 !important; }
 .pg-card .links { font-size: 14px; display: flex; gap: 14px; flex-wrap: wrap; }
+.unit-line { margin: 4px 0 0; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.unit-line b { color: var(--text, inherit); }
 
 /* What's new timeline */
 .log-day { margin: 26px 0 0; }

@@ -3,6 +3,10 @@ var exitConfirmPending = false;
 var difficulty = "easy";
 var targetAmount = 0;
 var currentTotal = 0;
+// results by skill (site-results.js): which coins each round allowed; a round is right when matched, wrong when the bank goes over
+var piggySkill = 'all';
+if (window.SiteResults) SiteResults.setup([{ id: 'all', en: 'Any coins', es: 'Cualquier moneda' }, { id: 'pn', en: 'Pennies and nickels only', es: 'Solo centavos y níqueles' }, { id: 'pd', en: 'Dimes and pennies only', es: 'Solo dimes y centavos' }, { id: 'nd', en: 'Dimes and nickels only', es: 'Solo dimes y níqueles' }, { id: 'nq', en: 'Quarters and nickels only', es: 'Solo cuartos y níqueles' }]);
+function showPiggyResults() { if (window.SiteResults) setTimeout(function () { SiteResults.show({ title: tl('Your results', 'Tus resultados') }); }, 900); }
 var message = "";
 var challengeText = "";
 var clickHistory = [];
@@ -229,6 +233,7 @@ function setupNextLevel() {
   var minCoinsReq = 3 + Math.floor(rampStep / 2); // 3, 3, 4, 4
 
   if (difficulty === "easy") {
+    piggySkill = 'all';
     allowedCoins = ["penny", "nickel", "dime", "quarter"];
     challengeText = "";
     var easyMin = [1, 1, 15, 30][rampStep];
@@ -238,6 +243,7 @@ function setupNextLevel() {
     } while (minCoinsToMake(targetAmount, allowedCoins) < minCoinsReq);
   } else {
     var challengeRoll = randomNumber(1, 4);
+    piggySkill = ['pn', 'pd', 'nd', 'nq'][challengeRoll - 1];
 
     if (challengeRoll === 1) {
       challengeText = tl("Challenge: Use only Pennies and Nickels!", "Reto: ¡Usa solo centavos y níqueles!");
@@ -304,9 +310,11 @@ function drawGame() {
     nextBtn.visible = true;
     if (!roundScored) {
       roundScored = true;
+      if (window.SiteResults) SiteResults.record(piggySkill, true);
       solvedCount += 1;
       if (solvedCount >= 4) {
         showResultsScreen();
+        showPiggyResults();
         return;
       }
     }
@@ -707,8 +715,10 @@ function checkClicks() {
 
     if (previousTotal <= targetAmount && currentTotal > targetAmount) {
       overTargetCount++;
+      if (window.SiteResults) SiteResults.record(piggySkill, false);
       if (overTargetCount >= 2) {
         gameState = "gameover";
+        showPiggyResults();
         clearBtn.visible = false;
         undoBtn.visible = false;
         nextBtn.visible = false;

@@ -502,9 +502,11 @@
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-sr.js?v=790186e5"></script>
+<script src="../site-results.js?v=dddc14b7"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
-<script src="../site-stats.js?v=cf4a1e00"></script>
+<script src="../site-stats.js?v=432f56b2"></script>
 <script src="../site-layout.js?v=dc3e3464"></script>
 </head>
 <body>
@@ -920,7 +922,7 @@
   // bottom, and a thin stroke up that meets the bar (the bar is the top border of the number)
   const RAD_SVG = '<svg class="rs" viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true">' +
     '<path class="thin" d="M0.6 58 L2.6 51"/><path class="thick" d="M2.6 51 L5.4 97"/><path class="thin" d="M5.4 97 L9.3 1.2 L10.5 1.2"/></svg>';
-  const rad = inner => `<span class="rad" role="img" aria-label=tl("square root of ${plain(String(inner))}", "raíz cuadrada de ${plain(String(inner))}")>${RAD_SVG}<span class="ri">${inner}</span></span>`;
+  const rad = inner => `<span class="rad" role="img" aria-label="${tl('square root of ' + plain(String(inner)), 'raíz cuadrada de ' + plain(String(inner)))}">${RAD_SVG}<span class="ri">${inner}</span></span>`;
   const radHTML = text => text.replace(/√(\d+(?:\.\d+)?)/g, (m, n) => rad(n));
   // one line of the written solution: the right line plus one wrong line (with its hint), or a list of [wrong, hint] pairs
   const step = (key, name, right, wrong, hint) => {
@@ -1156,7 +1158,11 @@
     ledges.forEach((l, i) => { const n = ledges[i + 1]; if (n && !l.final) { l.nx = n.x; l.ny = n.y; } });
   }
 
+  // results by skill (site-results.js): each step of the theorem, shown when a world is finished
+  if (window.SiteResults) SiteResults.setup([{ id: 'countc', en: 'Counting squares on the rope', es: 'Contar cuadrados en la cuerda' }, { id: 'square', en: 'Squaring the sides', es: 'Elevar los lados al cuadrado' }, { id: 'add', en: 'Adding the squares (a² + b²)', es: 'Sumar los cuadrados (a² + b²)' }, { id: 'subtract', en: 'Subtracting to find a leg', es: 'Restar para hallar un cateto' }, { id: 'root', en: 'Taking the square root', es: 'Sacar la raíz cuadrada' }, { id: 'other', en: 'Other steps', es: 'Otros pasos' }]);
+  const PY_SKILLS = ['countc', 'square', 'add', 'subtract', 'root'];
   function startGame(m) {
+    if (window.SiteResults) SiteResults.reset();
     mode = m;
     const wi = WORLDS.findIndex(w => w.m === m);
     whereEl.innerHTML = tl(`World ${wi + 1} · ${WORLDS[wi].name}<small>${WORLDS[wi].short}</small>`, `Mundo ${wi + 1} · ${WORLDS[wi].name}<small>${WORLDS[wi].short}</small>`);
@@ -1283,6 +1289,7 @@
     const l = cur(); if (l.final || wrongs.has(ch.label)) return;
     const p = l.prob, s = p.steps[l.si];
     guess = ch; aimTime = st;
+    if (window.SiteResults) SiteResults.record(PY_SKILLS.indexOf(s.key) >= 0 ? s.key : 'other', !!ch.ok);
     if (ch.ok) {
       p.work.push(s.line);
       p.done = l.si + 1;
@@ -1613,6 +1620,8 @@
       work: snapped ? tl('You get a fresh rope - same step.', 'Tienes una cuerda nueva - mismo paso.') : tl(`Right step: ${plain(s.line)}`, `Paso correcto: ${plain(s.line)}`), full: '' };
     state = 'explain'; st = 0;
     refreshPanel();
+    // the explanation is drawn on the game; a screen reader hears it too
+    if (window.SiteSR) SiteSR.say([explain.title, explain.hint, explain.work, tl('Press Enter to try that step again.', 'Presiona Enter para intentar ese paso otra vez.')].filter(Boolean).map(function (t) { return plain(String(t).replace(/<span class="rad"[^>]*aria-label="([^"]*)"[^>]*>.*?<span class="ri">.*?<\/span><\/span>/g, ' $1 ')); }).join(' '));
   }
 
   // ---------- update ----------
@@ -1658,6 +1667,7 @@
         if (cur().final) {
           state = 'win'; st = 0; P.x = cur().x; P.y = cur().y; P.rot = 0;
           saveWin();
+          if (window.SiteResults) setTimeout(() => SiteResults.show({ title: tl('World results', 'Resultados del mundo') }), 1600);
           burst(cur().x + 2.5, cur().y - 1, ['#f2b530', '#fff1b8', '#e0734a', '#7ccf6b'], 50, 12);
           sfx.win();
         } else resetSwing(false);

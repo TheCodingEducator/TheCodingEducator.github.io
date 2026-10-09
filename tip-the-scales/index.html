@@ -668,9 +668,10 @@
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-sr.js?v=790186e5"></script>
+<script src="../site-results.js?v=dddc14b7"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
-<script src="../site-stats.js?v=cf4a1e00"></script>
+<script src="../site-stats.js?v=432f56b2"></script>
 <script src="../site-layout.js?v=dc3e3464"></script>
 </head>
 <body>
@@ -1544,7 +1545,10 @@
       return parts.length ? parts.join(' ') : `<span style="color: ${CONST_COLOR};">0</span>`;
     }
 
+    // results by skill (site-results.js): each kind of equation, shown when the student leaves the challenge
+    if (window.SiteResults) SiteResults.setup([{ id: '1-step', en: '1-step equations', es: 'Ecuaciones de 1 paso' }, { id: '2-step', en: '2-step equations', es: 'Ecuaciones de 2 pasos' }, { id: 'multi-step', en: 'Variables on both sides', es: 'Variables en ambos lados' }, { id: 'complex', en: 'Complex equations', es: 'Ecuaciones complejas' }]);
     function setMode(newMode) {
+      if (window.SiteResults && state.mode === 'challenge' && newMode !== 'challenge') { SiteResults.show({ title: tl('Your results', 'Tus resultados') }); SiteResults.reset(); }
       state.mode = newMode;
       document.getElementById('title-view').classList.toggle('hidden', newMode !== 'title');
       document.getElementById('difficulty-view').classList.toggle('hidden', newMode !== 'difficulty');
@@ -1894,6 +1898,7 @@
         return;
       }
 
+      if (window.SiteResults) SiteResults.record(state.difficulty, Math.abs(val - state.xValue) < 0.001);
       if (Math.abs(val - state.xValue) < 0.001) {
         state.isWin = true;
         updateUI();

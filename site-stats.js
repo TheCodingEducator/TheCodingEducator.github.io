@@ -33,10 +33,14 @@
       played: has('exprace_coins'), coins: readNum('exprace_coins', 0), hardMode: readBool('exprace_hard_unlocked'),
       items: (unl.cars || []).length + (unl.trails || []).length + (unl.boosts || []).length
     };
+    // Laser Heist keeps everything in one saved object: stars and cleared rooms by floor-room, diamonds, suits and lasers
+    var lhs = readJSON('laserheist_save', {}) || {}, lhStars = 0, lhRooms = 0, lk;
+    for (lk in (lhs.stars || {})) lhStars += +lhs.stars[lk] || 0;
+    for (lk in (lhs.cleared || {})) if (lhs.cleared[lk]) lhRooms++;
     var lh = {
-      played: has('laserheist_high_score') || has('laserheist_best_streak'),
-      highScore: readNum('laserheist_high_score', 0), bestStreak: readNum('laserheist_best_streak', 0),
-      skins: (readJSON('laserheist_unlocked_skins', [0]) || [0]).length
+      played: lhRooms > 0 || lhStars > 0, stars: lhStars, rooms: lhRooms,
+      diamonds: lhs.diamonds || 0, bestStreak: lhs.bestStreak || 0, skins: (lhs.owned || []).length,
+      topCleared: !!(lhs.cleared && lhs.cleared['4-2'])
     };
     // Math Billiards keeps everything in one saved object: coins, cosmetics, and running totals
     var mbs = readJSON('mathbilliards_save', {}) || {}, mbt = mbs.totals || {};
@@ -96,8 +100,9 @@
         best: false, coins: er.coins, rows: [
           ['Coins', er.coins], ['Items unlocked', er.items], ['Hard mode', er.hardMode ? 'Unlocked' : 'Locked']] },
       { key: 'laser', folder: 'laser-heist-angle-breaker', icon: '🔦', name: 'Laser Heist', played: lh.played,
-        best: lh.highScore > 0, coins: 0, rows: [
-          ['High score', lh.highScore], ['Best streak', lh.bestStreak], ['Skins unlocked', lh.skins + ' / 5']] },
+        best: lh.stars > 0, coins: 0, rows: [
+          ['Stars', lh.stars + ' / 39'], ['Rooms cleared', lh.rooms + ' / 13'], ['Diamonds', lh.diamonds], ['Best streak', lh.bestStreak],
+          ['Suits and lasers bought', lh.skins + ' / 10'], ['Golden Angle recovered', lh.topCleared ? 'Yes' : 'Not yet']] },
       { key: 'piggy', folder: 'piggy-bank-math', icon: '🐷', name: 'Piggy Bank Math', played: pb.played,
         best: pb.bestEasy !== null || pb.bestHard !== null, coins: 0, rows: [
           ['Best time (Penny Prospect)', secs(pb.bestEasy)], ['Best time (Coin Captain)', secs(pb.bestHard)]] },
@@ -143,7 +148,8 @@
       { game: 'lgttp', icon: '🎨', name: 'Style Icon', desc: 'Own 3+ skins', earned: lg.skins >= 3 },
       { game: 'lgttp', icon: '📐', name: 'Point Master', desc: 'Set a best time in Genius or Geometry mode', earned: lg.hsGenius > 0 || lg.hsGeometry > 0 },
       { game: 'exprace', icon: '🧠', name: 'Hard Mode Hero', desc: 'Unlock Hard Mode', earned: er.hardMode },
-      { game: 'laser', icon: '💎', name: 'Laser Legend', desc: 'Unlock 3+ laser skins', earned: lh.skins >= 3 },
+      { game: 'laser', icon: '💎', name: 'Laser Legend', desc: 'Buy 3+ suits or lasers', earned: lh.skins >= 3 },
+      { game: 'laser', icon: '🏆', name: 'Golden Angle', desc: 'Clear the top floor and recover the Golden Angle', earned: lh.topCleared },
       { game: 'piggy', icon: '🐷', name: 'Penny Pincher', desc: 'Set a best time', earned: pb.bestEasy !== null || pb.bestHard !== null },
       { game: 'bridge', icon: '🌉', name: 'First Bridge', desc: 'Play a run', earned: sb.played },
       { game: 'bridge', icon: '🏃', name: 'Marathon Runner', desc: 'Run 300+ meters in one run', earned: sb.bestMeters >= 300 },

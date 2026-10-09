@@ -40,8 +40,6 @@
   function store() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(save));
-      localStorage.setItem('laserheist_unlocked_skins', JSON.stringify(save.owned));   // read by My Stats
-      localStorage.setItem('laserheist_best_streak', String(save.bestStreak));
     } catch (e) {}
   }
   var reset = $('#reset-progress-btn');
