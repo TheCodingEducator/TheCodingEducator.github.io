@@ -14,11 +14,29 @@
 
   // ------------------------------------------------------------------ saved progress (this device only)
   var SAVE_KEY = 'laserheist_save';
-  function fresh() { return { v: 1, stars: {}, diamonds: 0, owned: ['agent', 'cyan'], suit: 'agent', laser: 'cyan', bestStreak: 0, sound: true }; }
+  function fresh() { return { v: 1, layout: 2, stars: {}, best: {}, diamonds: 0, owned: ['agent', 'cyan'], suit: 'agent', laser: 'cyan', bestStreak: 0, sound: true }; }
   var save = (function () {
-    try { var s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return Object.assign(fresh(), s); } catch (e) {}
+    try { var s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return migrate(Object.assign(fresh(), s), s.layout === 2); } catch (e) {}
     return fresh();
   })();
+  // Floors 4 and 5 became one floor (Freight Platform, The Vertex Express, The Golden Angle Room) and the Algebra Vault
+  // moved from floor 6 to floor 5: carry each kept room's stars and "cleared" mark over to its new spot.
+  function migrate(s, done) {
+    if (done) return s;
+    var moves = { '4-0': '4-0', '4-2': '4-1', '5-2': '4-2', '6-0': '5-0' };
+    ['stars', 'cleared', 'best'].forEach(function (k) {
+      if (!s[k]) return;
+      var o = {};
+      Object.keys(s[k]).forEach(function (key) {
+        var f = +key.split('-')[0];
+        if (f < 4) o[key] = s[k][key];
+        else if (moves[key]) o[moves[key]] = s[k][key];
+      });
+      s[k] = o;
+    });
+    s.layout = 2;
+    return s;
+  }
   function store() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(save));
@@ -136,7 +154,7 @@
   window.addEventListener('resize', fit);
   if (window.ResizeObserver) new ResizeObserver(fit).observe(app);
 
-  // ------------------------------------------------------------------ the story: five vaults, one floor of Vertex Tower each
+  // ------------------------------------------------------------------ the story: four floors of Vertex Tower, plus the bonus Algebra Vault on the roof
   // rels: the angle relationships on that floor. theme: the colors of its rooms in the sneak.
   var VAULTS = [
     { id: 1, name: T('The Gallery', 'La Galería'), rels: ['comp'], topic: T('Complementary angles', 'Ángulos complementarios'),
@@ -154,17 +172,12 @@
       brief: T('Floor 3 is the lab where Victor builds his lasers. Here two beams cross at every turret, making an X. The angles across from each other, called vertical angles, are always equal.',
         'El piso 3 es el laboratorio donde Victor fabrica sus láseres. Aquí dos rayos se cruzan en cada torreta y forman una X. Los ángulos opuestos, llamados opuestos por el vértice, siempre son iguales.'),
       theme: { f1: '#150d2a', f2: '#190f31', w1: '#281848', w2: '#33205a', edge: '181,123,255', c1: '#2a1c4e', c2: '#6a48b8', lamp: '200,140,255', crate: 'lab' } },
-    { id: 4, name: T('Rail Yard', 'Patio de trenes'), rels: ['par'], topic: T('Parallel lines: any of the eight angles', 'Paralelas: cualquiera de los ocho ángulos'),
+    { id: 4, name: T('Rail Yard and Penthouse', 'Patio de trenes y ático'), rels: ['par'], topic: T('Parallel lines: any of the eight angles', 'Paralelas: cualquiera de los ocho ángulos'),
       tip: T('Two parallel rails cut by a crossing track make eight angles. One is given; x can be any of the others. Each is equal to the given angle or adds with it to 180°.', 'Dos rieles paralelos cortados por una vía forman ocho ángulos. Uno es dado; x puede ser cualquiera de los otros. Cada uno es igual al dado o suma 180° con él.'),
-      brief: T('Floor 4 is Victor’s private rail yard, where his armored train loads the loot. A crossing track cuts two parallel rails, making eight angles. Each turret gives you one of them and asks for another: corresponding, alternate, vertical, on a straight line, or two steps away. Every one is either equal to the given angle or adds with it to 180°.',
-        'El piso 4 es el patio de trenes privado de Victor, donde su tren blindado carga el botín. Una vía cruza dos rieles paralelos y forma ocho ángulos. Cada torreta te da uno y te pide otro: correspondiente, alterno, opuesto, sobre una recta o a dos pasos. Cada uno es igual al ángulo dado o suma 180° con él.'),
+      brief: T('The top floor: Victor’s private rail yard, and above it his gold-and-marble penthouse, where the Golden Angle is kept in the last room. A crossing track cuts two parallel rails, making eight angles. Each turret gives you one of them and asks for another: corresponding, alternate, co-interior, vertical, on a straight line, or two steps away. Every one is either equal to the given angle or adds with it to 180°. The last room mixes every angle you’ve learned.',
+        'El último piso: el patio de trenes privado de Victor y, encima, su ático de oro y mármol, donde el Ángulo Dorado está en la última sala. Una vía cruza dos rieles paralelos y forma ocho ángulos. Cada torreta te da uno y te pide otro: correspondiente, alterno, colateral, opuesto, sobre una recta o a dos pasos. Cada uno es igual al ángulo dado o suma 180° con él. La última sala mezcla todos los ángulos que has aprendido.'),
       theme: { f1: '#1c130d', f2: '#21170f', w1: '#382214', w2: '#472c19', edge: '255,160,80', c1: '#5a2a1c', c2: '#b85a2f', lamp: '255,180,100', crate: 'container' } },
-    { id: 5, name: T('Penthouse Vault', 'Bóveda del ático'), rels: ['coint'], topic: T('Parallel lines: co-interior angles', 'Paralelas: ángulos colaterales internos'),
-      tip: T('Parallel lines again. Angles between the lines, on the same side of the crossing line, add to 180°.', 'Otra vez paralelas. Los ángulos entre las rectas, del mismo lado de la transversal, suman 180°.'),
-      brief: T('The top floor: Victor’s penthouse, all gold and marble. The Golden Angle is in the last room. These turrets use parallel lines too, but here the two angles between the lines on the same side of the crossing line are co-interior: they add to 180°. The last room mixes every angle you’ve learned.',
-        'El último piso: el ático de Victor, todo oro y mármol. El Ángulo Dorado está en la última sala. Estas torretas también usan paralelas, pero aquí los dos ángulos entre las rectas, del mismo lado de la transversal, son colaterales internos: suman 180°. La última sala mezcla todos los ángulos que has aprendido.'),
-      theme: { f1: '#14100a', f2: '#18130b', w1: '#2a2210', w2: '#382d14', edge: '255,209,102', c1: '#3a3018', c2: '#b8913e', lamp: '255,220,140', crate: 'statue' } },
-    { id: 6, name: T('The Algebra Vault', 'La bóveda de álgebra'), rels: ['comp', 'supp', 'vert', 'corr', 'alt', 'coint'], topic: T('Simple equations with every kind of angle', 'Ecuaciones sencillas con todo tipo de ángulos'),
+    { id: 5, name: T('The Algebra Vault', 'La bóveda de álgebra'), rels: ['comp', 'supp', 'vert', 'par'], topic: T('Simple equations with every kind of angle', 'Ecuaciones sencillas con todo tipo de ángulos'),
       tip: T('Victor’s last secret: one room where every turret uses a small equation like x + 3. Find the angle, then undo the + 3.', 'El último secreto de Victor: una sala donde cada torreta usa una ecuación pequeña como x + 3. Halla el ángulo y luego deshaz el + 3.'),
       brief: T('On the roof of Vertex Tower is one more vault. Its turrets use every kind of angle you’ve learned, but the unknown angle is written as a small equation, like x + 3 or x − 5. First find the whole angle, then undo the + 3 to get x.',
         'En la azotea de la Torre Vértice hay una bóveda más. Sus torretas usan todos los tipos de ángulos que aprendiste, pero el ángulo desconocido está escrito como una ecuación pequeña, como x + 3 o x − 5. Primero halla el ángulo completo y luego deshaz el + 3 para obtener x.'),
@@ -175,6 +188,7 @@
   // D shortcut door (opens when the blueprints panel is hit), . floor.
   // Guards: a list of [col,row] stops; loop: true walks the loop, otherwise back and forth.
   // Cameras: on a wall tile, facing dir (degrees, 0 = east, 90 = south), sweeping +/- sweep.
+  var TOP_FLOOR = 4;   // the last story floor (the Golden Angle is in its last room); the Algebra Vault is the bonus floor above it
   var ROOMS = {
     1: [
       { name: T('The Lobby', 'El vestíbulo'),   // small: 22 x 12
@@ -349,7 +363,8 @@
         cams: [{ c: 0, r: 8, dir: 0, sweep: 30 }],
         lamps: [[2, 3], [8, 3], [17, 3], [7, 7], [14, 8], [20, 8], [6, 11], [16, 11]] }
     ],
-    // Floor 4: the Rail Yard (corresponding and alternate angles). c = shipping containers, t = train tracks.
+    // Floor 4: the Rail Yard up to the Penthouse (parallel lines: any of the eight angles; the last room, where the
+    // Golden Angle is kept, mixes everything). c = shipping containers and statues, t = train tracks.
     4: [
       { name: T('Freight Platform', 'Andén de carga'), rels: ['par'],   // 24 x 11
         map: [
@@ -368,25 +383,6 @@
                  { path: [[22, 7], [1, 7]], loop: false }],
         cams: [{ c: 0, r: 6, dir: 0, sweep: 25 }],
         lamps: [[8, 2], [17, 2], [22, 2], [8, 6], [18, 6], [12, 9]] },
-      { name: T('Signal Box', 'Caseta de señales'), rels: ['par'], noExtraCam: true,   // 24 x 12
-        map: [
-          '########################',
-          '#P...#.........#......d#',
-          '#....#..cc.cc..#..cc...#',
-          '#....D.........D.......#',
-          '#....#..cc.cc..#..cc...#',
-          '#....#####..#######..###',
-          '#tttttttttttttttttttttt#',
-          '#......................#',
-          '###..######..######..###',
-          '#.......#......#.......#',
-          '#..d......cc.....#....E#',
-          '########################'],
-        guards: [{ path: [[1, 6], [22, 6]], loop: false },
-                 { path: [[6, 1], [14, 1], [14, 4], [6, 4]], loop: true },
-                 { path: [[9, 9], [14, 9], [14, 10], [9, 10]], loop: true }],
-        cams: [{ c: 23, r: 9, dir: 180, sweep: 30 }],
-        lamps: [[3, 3], [11, 3], [19, 3], [10, 7], [4, 10], [12, 10], [20, 10]] },
       { name: T('The Vertex Express', 'El Expreso Vértice'), rels: ['par'], noExtraCam: true,   // 24 x 12
         map: [
           '########################',
@@ -404,49 +400,8 @@
         guards: [{ path: [[7, 3], [22, 3]], loop: false },
                  { path: [[6, 6], [14, 6]], loop: false }],
         cams: [{ c: 23, r: 7, dir: 180, sweep: 25 }],
-        lamps: [[3, 2], [11, 1], [19, 2], [8, 6], [18, 6], [10, 10], [19, 10]] }
-    ],
-    // Floor 5: the Penthouse (co-interior angles; the last room mixes everything). c = statues and planters.
-    5: [
-      { name: T('Grand Foyer', 'Gran vestíbulo'),   // 24 x 12
-        map: [
-          '########################',
-          '#P...#..........#.....d#',
-          '#....#..c...c...#..c...#',
-          '#....D..........D......#',
-          '#..c.#..c...c...#..c...#',
-          '###..####..cc..####..###',
-          '#......................#',
-          '#..cc....c......c...cc.#',
-          '#......c....cc....c....#',
-          '#####..########..###..##',
-          '#..d......#..........E.#',
-          '########################'],
-        guards: [{ path: [[6, 1], [15, 1], [15, 4], [6, 4]], loop: true },
-                 { path: [[8, 6], [22, 6]], loop: false },
-                 { path: [[22, 8], [3, 8]], loop: false }],
-        cams: [{ c: 0, r: 7, dir: 0, sweep: 30 }],
-        lamps: [[3, 3], [11, 3], [20, 3], [7, 7], [17, 7], [5, 10], [17, 10]] },
-      { name: T('The Art Vault', 'La bóveda de arte'), noExitGuard: true,   // 24 x 12
-        map: [
-          '########################',
-          '#P..#..............#..d#',
-          '#...#..c....c....c.#...#',
-          '#...D..............D...#',
-          '#...#..c....c....c.#...#',
-          '#...######..#######....#',
-          '#......................#',
-          '#..cc.....cc.....cc....#',
-          '#......................#',
-          '######..######..####..##',
-          '#..d.....#..........E..#',
-          '########################'],
-        guards: [{ path: [[5, 1], [18, 1], [18, 4], [5, 4]], loop: true },
-                 { path: [[1, 6], [22, 6]], loop: false },
-                 { path: [[22, 8], [1, 8]], loop: false }],
-        cams: [{ c: 23, r: 7, dir: 180, sweep: 25 }],
-        lamps: [[9, 3], [15, 3], [21, 3], [7, 7], [15, 7], [5, 10], [15, 10]] },
-      { name: T('The Golden Angle Room', 'La sala del Ángulo Dorado'), rels: ['comp', 'supp', 'vert', 'corr', 'alt', 'coint'],   // 24 x 13
+        lamps: [[3, 2], [11, 1], [19, 2], [8, 6], [18, 6], [10, 10], [19, 10]] },
+      { name: T('The Golden Angle Room', 'La sala del Ángulo Dorado'), rels: ['comp', 'supp', 'vert', 'par'],   // 24 x 13
         map: [
           '########################',
           '#P..#..........#......d#',
@@ -468,7 +423,7 @@
         lamps: [[2, 3], [10, 3], [19, 3], [12, 6], [6, 8], [18, 8], [4, 10], [19, 11]] }
     ],
     // The Algebra Vault, on the roof: one room, every angle relationship, each unknown written as x + d or x − d
-    6: [
+    5: [
       { name: T('The Algebra Vault', 'La bóveda de álgebra'), boss: true, noExitGuard: true,   // 24 x 12
         map: [
           '########################',
@@ -754,12 +709,12 @@
         (here ? '<span class="you" aria-hidden="true"></span>' : '') + '</button>';
     }).join('');
     var doors = rooms.map(function (rm, i) {
-      var s = starsFor(v, i), ok = unlocked(v, i);
+      var s = starsFor(v, i), ok = unlocked(v, i), bt = (save.best || {})[v + '-' + i];   // bt: this room's best time
       return '<button class="door' + (rm.boss ? ' boss' : '') + (cleared(v, i) ? ' done' : '') + '" data-r="' + i + '"' + (ok ? '' : ' disabled') +
-        ' aria-label="' + (rm.boss ? T('Algebra room: ', 'Sala de álgebra: ') : T('Room ', 'Sala ') + (i + 1) + ': ') + rm.name + (ok ? ', ' + s + T(' of 3 stars', ' de 3 estrellas') : ', ' + T('locked', 'cerrada')) + '">' +
+        ' aria-label="' + (rm.boss ? T('Algebra room: ', 'Sala de álgebra: ') : T('Room ', 'Sala ') + (i + 1) + ': ') + rm.name + (ok ? ', ' + s + T(' of 3 stars', ' de 3 estrellas') + (bt !== undefined ? T(', best time ', ', mejor tiempo ') + bt.toFixed(1) + T(' seconds', ' segundos') : '') : ', ' + T('locked', 'cerrada')) + '">' +
         '<span class="wheel" aria-hidden="true">' + (ok ? (rm.boss ? 'x' : (i + 1)) : '&#128274;') + '</span>' +
         '<span class="dname">' + (rm.boss ? T('ALGEBRA', 'ÁLGEBRA') : T('ROOM ', 'SALA ') + (i + 1)) + '</span><span class="dsub">' + rm.name + '</span>' +
-        '<span class="dst" aria-hidden="true">' + [0, 1, 2].map(function (k) { return '<i class="' + (k < s ? 'on' : '') + '">&#9733;</i>'; }).join('') + '</span></button>';
+        '<span class="dst" aria-hidden="true">' + [0, 1, 2].map(function (k) { return '<i class="' + (k < s ? 'on' : '') + '">&#9733;</i>'; }).join('') + '</span>' + (bt !== undefined ? '<span class="dbest">&#9201; ' + bt.toFixed(1) + 's</span>' : '') + '</button>';
     }).join('');
     var html = '<div class="tower-screen">' +
       '<div class="tower"><div class="spire" aria-hidden="true"><div class="prism"></div></div>' + floors + '<div class="lobby" aria-hidden="true">' + T('VERTEX TOWER', 'TORRE VÉRTICE') + '</div></div>' +
@@ -879,10 +834,14 @@
   }
   function renderQ() {
     var P = G.puzzle, q = P.qs[P.i], pn = PANELS[(P.order || [0, 1, 2])[P.i]], last = P.i === 2;
+    // two misses in a row on this kind of angle: a refresher of the rule comes up before the next one (then it resets)
+    G.missBy = G.missBy || {};
+    var fresh2 = (G.missBy[relOf(q).name] || 0) >= 2;
+    if (fresh2) G.missBy[relOf(q).name] = 0;
     var box = $('#qpanel');
     box.innerHTML = '<div class="tag">' + (P.practice ? T('Practice · ', 'Práctica · ') + G.prac.right + T(' of ', ' de ') + G.prac.total + T(' right', ' bien')
         : T('Panel ', 'Panel ') + (P.i + 1) + T(' of 3', ' de 3') + ' · ' + pn.icon + ' ' + pn.name) + '</div>' +
-      '<h2>' + relOf(q).name + '</h2><p class="rule">' + relOf(q).rule + '</p>' +
+      '<h2>' + relOf(q).name + '</h2>' + (fresh2 ? refresher(relOf(q)) : '<p class="rule">' + relOf(q).rule + '</p>') +
       '<p class="ask">' + q.ask + '</p>' +
       '<div class="row"><label class="sr-only" for="ans">' + T('x in degrees', 'x en grados') + '</label><span style="font-size:28px;font-weight:900">x =</span><input id="ans" inputmode="numeric" autocomplete="off" maxlength="5"><span class="deg">°</span>' +
       '<button class="fire" id="b-fire">' + T('FIRE', 'DISPARAR') + '</button></div><div class="err" id="err" role="alert"></div>' +
@@ -897,6 +856,10 @@
     $('#b-fire').addEventListener('click', fire);
     say((P.practice ? '' : T('Panel ', 'Panel ') + (P.i + 1) + ', ' + pn.name + '. ') + q.sr);
     setTimeout(function () { inp.focus(); }, 30);
+  }
+  function refresher(R) {
+    return '<div class="refresh" role="note"><b>&#128161; ' + T('Refresher', 'Repaso') + '</b> ' + R.rule +
+      '<span>' + (R.sum ? T('So x = ' + R.sum + '° − the given angle.', 'Así que x = ' + R.sum + '° − el ángulo dado.') : T('So x is the same as the given angle.', 'Así que x es igual al ángulo dado.')) + '</span></div>';
   }
   function fire() {
     var P = G.puzzle; if (!P || P.phase !== 'ask') return;
@@ -914,6 +877,12 @@
     P.hits[P.i] = P.hit;
     if (!P.redo && P.first) P.first[P.i] = P.hit;   // stars count the panels hit on the first try
     if (P.practice) { G.prac.total++; if (P.hit) G.prac.right++; }
+    var kind = relOf(q).name;
+    G.missBy = G.missBy || {}; G.missBy[kind] = P.hit ? 0 : (G.missBy[kind] || 0) + 1;
+    if (!P.practice) {
+      G.review = G.review || {}; var rv = G.review[G.vault] = G.review[G.vault] || {};
+      rv[kind] = rv[kind] || { r: 0, w: 0, sum: relOf(q).sum }; rv[kind][P.hit ? 'r' : 'w']++;
+    }
     var fb = $('#fb');
     if (P.hit) {
       G.streak++; save.bestStreak = Math.max(save.bestStreak, G.streak); store();
@@ -1048,6 +1017,8 @@
     }); });
     S.plan = planTrouble(S, rm);
     resetSneak(S);
+    // the first time through the Lobby: short coaching prompts, one at a time (the clock waits until the first step)
+    if (G.vault === 1 && G.room === 0 && !save.tutDone && !P.practice) S.tut = { step: -1, t: 0 };
     staticLayer = null;
     hud(); gadgetsUI();
     var off = [], on = [];
@@ -1213,7 +1184,7 @@
     // one diamond per run, in one of the room's diamond spots; and a 20-second clock
     S.got = 0; S.gems.forEach(function (g) { g.got = false; g.on = false; });
     if (S.gems.length) S.gems[Math.floor(Math.random() * S.gems.length)].on = true;
-    S.time = SNEAK_SECONDS; S.tick = 6;
+    S.time = SNEAK_SECONDS; S.tick = 6; S.elapsed = 0;
     var spd = (S.radioOff ? 1.05 : 1.85) * TS, range = (S.radioOff ? 3.6 : 5.8) * TS;
     S.ring = S.radioOff ? RING : RING * 1.4;
     S.guards = rm.guards.concat(S.plan.guards).map(function (g) {
@@ -1254,11 +1225,41 @@
     }
     return dist;
   }
+  // The Lobby tutorial: each prompt shows for a few seconds; the first waits for the agent to move
+  var TUT = [
+    { id: 'move', text: T('Move with the arrow keys or WASD. The clock starts when you move.', 'Muévete con las flechas o WASD. El reloj empieza cuando te muevas.') },
+    { id: 'light', text: T('Stay out of the light: guards and cameras see you inside their cones.', 'No entres en la luz: los guardias y las cámaras te ven dentro de sus conos.') },
+    { id: 'wire', text: T('Red laser = tripwire. Wait for the tripwire to go dark, then cross.', 'Láser rojo = rayo trampa. Espera a que se apague y luego cruza.') },
+    { id: 'gem', text: T('Grab the diamonds on your way: spend them in the shop.', 'Recoge los diamantes en el camino: gástalos en la tienda.') },
+    { id: 'exit', text: T('Reach the green EXIT before the clock runs out!', '¡Llega a la SALIDA verde antes de que se acabe el tiempo!') }
+  ];
+  function tutStep(S, dt, moving) {
+    var u = S.tut, steps = TUT.filter(function (s) { return (s.id !== 'wire' || S.wires.length) && (s.id !== 'gem' || S.gems.length); });
+    if (u.step < 0) { u.step = 0; u.t = 0; say(steps[0].text); return; }
+    u.t += dt;
+    if (u.step === 0 ? moving && u.t > 0.6 : u.t > 4.2) {
+      u.step++; u.t = 0;
+      if (u.step >= steps.length) { S.tut = null; save.tutDone = true; store(); return; }
+      say(steps[u.step].text);
+    }
+    u.text = steps[u.step].text;
+  }
+  function drawTut(S) {
+    var u = S.tut; if (!u || !u.text) return;
+    ctx.save(); ctx.font = '700 24px Rajdhani, sans-serif'; ctx.textAlign = 'center';
+    var w = ctx.measureText(u.text).width + 56, x = W / 2, y = H - 92, a = Math.min(1, u.t * 4);
+    ctx.globalAlpha = a; ctx.fillStyle = 'rgba(10,22,48,0.92)'; ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, y - 26, w, 46, 23); else ctx.rect(x - w / 2, y - 26, w, 46); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffd166'; ctx.fillText('💡 ' + u.text, x, y + 5);   // (a light bulb)
+    ctx.restore();
+  }
   function sneakStep(dt) {
     var S = G.sneak; S.t += dt;
     if (S.zoom > 0) { S.zoom = Math.max(0, S.zoom - dt); return; }   // the opening zoom-out: everything waits
+    var tutWait = S.tut && S.tut.step <= 0;   // the tutorial's "move" prompt: the clock hasn't started yet
+    if (!(S.intro > 0) && !tutWait) S.elapsed = (S.elapsed || 0) + dt;   // the run's time, for the best time on each room
     if (S.intro > 0) { S.intro -= dt; }
-    else if (S.time > 0) {
+    else if (S.time > 0 && !tutWait) {
       S.time = Math.max(0, S.time - dt);
       if (S.time < S.tick && S.time > 0) { S.tick = Math.floor(S.time); Sound.play("tick"); }
       if (S.time === 0) {
@@ -1270,6 +1271,7 @@
     if (S.chase > 0) return chaseStep(S, dt);   // spotted: the chase plays out on its own
     // the agent
     var mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), my = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+    if (S.tut && !(S.intro > 0)) tutStep(S, dt, mx || my);
     if (mx || my) {
       var l = Math.sqrt(mx * mx + my * my), sp = 3.4 * TS * dt;
       var nx = S.px + mx / l * sp, ny = S.py + my / l * sp, R = 12;
@@ -1424,6 +1426,11 @@
     // one star for each panel answered right on the first try (the sneak doesn't change the stars)
     var earned = G.puzzle.first.slice(), n = earned.filter(Boolean).length, prev = save.stars[key] || 0;
     save.stars[key] = Math.max(prev, n); save.cleared = save.cleared || {}; save.cleared[key] = true; save.diamonds += S.got; store();
+    // the best time on this room (from the start of the clock to the exit)
+    var runT = Math.round((S.elapsed || 0) * 10) / 10, prevBest = (save.best || {})[key];
+    save.best = save.best || {};
+    var newBest = !G.puzzle.practice && (prevBest === undefined || runT < prevBest);
+    if (newBest) { save.best[key] = runT; store(); }
     Sound.play('exit');
     var last = G.room === ROOMS[G.vault].length - 1;
     var lines = G.puzzle.order.map(function (k) { return PANELS[k].name + T(': right on the first try', ': correcto al primer intento'); });
@@ -1431,11 +1438,12 @@
       '<div class="stars" aria-hidden="true">' + earned.map(function (e, i) { return '<i class="' + (e ? 'on' : '') + '" style="animation-delay:' + (0.2 + i * 0.35) + 's">&#9733;</i>'; }).join('') + '</div>' +
       '<ul class="starlist">' + lines.map(function (l, i) { return '<li class="' + (earned[i] ? 'on' : '') + '">' + l + '</li>'; }).join('') + '</ul>' +
       '<p>&#9670; +' + S.got + ' ' + T('diamonds', 'diamantes') + (S.caught ? ' · ' + T('caught ', 'atrapado ') + S.caught + '×' : '') + '</p>' +
+      '<p class="besttime">&#9201; ' + T('Time: ', 'Tiempo: ') + runT.toFixed(1) + 's · ' + (newBest ? (prevBest === undefined ? '<b>' + T('Your first time here: beat it next run!', 'Tu primer tiempo aquí: ¡mejóralo!') + '</b>' : '<b style="color:#ffd166">' + T('NEW BEST TIME!', '¡NUEVO MEJOR TIEMPO!') + '</b> (' + T('was ', 'antes ') + prevBest.toFixed(1) + 's)') : T('Best: ', 'Mejor: ') + prevBest.toFixed(1) + 's') + '</p>' +
       '<div class="btns">' + (last ? '<button class="bt primary" id="b-next">' + T('FLOOR CLEARED!', '¡PISO SUPERADO!') + '</button>' : '<button class="bt primary" id="b-next">' + T('NEXT ROOM', 'SIGUIENTE SALA') + ' &#9656;</button>') +
       '<button class="bt" id="b-again">' + T('REPLAY', 'REPETIR') + '</button><button class="bt" id="b-map">' + T('FLOOR MAP', 'MAPA') + '</button></div></div>');
     earned.forEach(function (e, i) { if (e) setTimeout(function () { Sound.play('star', i); }, 250 + i * 350); });
     say(T('Room cleared. ', 'Sala superada. ') + n + T(' of 3 stars. ', ' de 3 estrellas. ') + S.got + T(' diamonds.', ' diamantes.'));
-    on('b-next', function () { if (last && G.vault === 5) { G.cutDone = false; playEnding(); } else if (last) floorDone(); else startRoom(G.room + 1); });
+    on('b-next', function () { if (last && G.vault === TOP_FLOOR) { G.cutDone = false; playEnding(); } else if (last) floorDone(); else startRoom(G.room + 1); });
     on('b-again', function () { startRoom(G.room); });
     on('b-map', showMap);
     hud();
@@ -1443,15 +1451,15 @@
   function floorDone() {
     Sound.play('win');
     var v = G.vault, vt = VAULTS[v - 1];
-    if (v < 5) {
-      var up = VAULTS[v], left = 5 - v;
+    if (v < TOP_FLOOR) {
+      var up = VAULTS[v], left = TOP_FLOOR - v;
       showOv(ovMain, '<div class="card"><div class="tag">' + T('Floor ', 'Piso ') + v + T(' cleared', ' superado') + '</div><h2>' + vt.name + T(' is yours', ': ¡superado!') + '</h2>' +
         '<p>' + T('The stairs are open. Next up, Floor ' + (v + 1) + ': <b>' + up.name + '</b> (' + up.topic.toLowerCase() + '). The Golden Angle is ' + left + (left === 1 ? ' floor' : ' floors') + ' up.',
           'Las escaleras están abiertas. Sigue el piso ' + (v + 1) + ': <b>' + up.name + '</b> (' + up.topic.toLowerCase() + '). El Ángulo Dorado está ' + left + (left === 1 ? ' piso' : ' pisos') + ' más arriba.') + '</p>' +
         '<p>' + T('Go back for any stars you missed, or spend your diamonds in the shop.', 'Vuelve por las estrellas que te faltan o gasta tus diamantes en la tienda.') + '</p>' +
         '<div class="btns"><button class="bt primary" id="b-up">' + T('TO FLOOR ', 'AL PISO ') + (v + 1) + ' &#9650;</button><button class="bt" id="b-map">' + T('TOWER', 'TORRE') + '</button><button class="bt" id="b-shop">' + T('SHOP', 'TIENDA') + '</button></div></div>');
       on('b-up', function () { G.vault = v + 1; showMap(); });
-    } else if (v === 6) {   // the bonus Algebra Vault on the roof
+    } else if (v === TOP_FLOOR + 1) {   // the bonus Algebra Vault on the roof
       showOv(ovMain, '<div class="card"><div class="tag">' + T('Algebra Vault cracked', 'Bóveda de álgebra abierta') + '</div><h2>' + T('Equation master!', '¡Maestro de ecuaciones!') + '</h2>' +
         '<p>' + T('You solved equations with every kind of angle: find the whole angle, then undo the + or − to get x.', 'Resolviste ecuaciones con todo tipo de ángulos: halla el ángulo completo y luego deshaz el + o el − para obtener x.') + '</p>' +
         '<p>' + T('Replay it any time for more stars to earn more stars.', 'Repítela cuando quieras para ganar más estrellas para ganar más estrellas.') + '</p>' +
@@ -1459,7 +1467,7 @@
     } else {
       // the top of the tower: the Golden Angle is back
       var total = 0, max = 0;
-      VAULTS.slice(0, 5).forEach(function (f) { total += vaultStars(f.id); max += (ROOMS[f.id] || []).length * 3; });
+      VAULTS.slice(0, TOP_FLOOR).forEach(function (f) { total += vaultStars(f.id); max += (ROOMS[f.id] || []).length * 3; });
       showOv(ovMain, '<div class="card win-card"><div class="prism-big" aria-hidden="true"></div><div class="tag">' + T('Mission complete', 'Misión cumplida') + '</div>' +
         '<h2>' + T('You got the Golden Angle back!', '¡Recuperaste el Ángulo Dorado!') + '</h2>' +
         '<p>' + T('Vertex Victor never saw you coming. You cracked every floor of his tower with complementary, supplementary, vertical, corresponding, alternate and co-interior angles, and the Golden Angle of Angels is safe.',
@@ -1469,8 +1477,27 @@
         '<div class="btns"><button class="bt primary" id="b-map">' + T('TOWER', 'TORRE') + '</button><button class="bt" id="b-shop">' + T('SHOP', 'TIENDA') + '</button></div></div>');
       if (!G.calm) for (var i = 0; i < 6; i++) setTimeout(function () { burst(200 + Math.random() * 880, 120 + Math.random() * 300, pick(['#ffd166', '#4fe3ff', '#ff4fa3', '#7dffb0']), 30); }, i * 250);
     }
+    var rvw = reviewBox(v); if (rvw) { var card = $('#ov-main .card'); card.insertBefore(rvw, card.querySelector('.btns'));
+      card.style.zoom = ''; var fitH = ovMain.clientHeight * 0.92, ch = card.scrollHeight; if (ch > fitH) { card.style.maxHeight = 'none'; card.style.zoom = Math.max(0.6, Math.floor(fitH / ch * 100) / 100); } }   // shrink to fit, never scroll
+    if (G.review) delete G.review[v];
     say($('#ov-main .card').textContent);
     on('b-map', showMap); on('b-shop', function () { showShop(showMap); });
+  }
+  // What to review: right and wrong for each kind of angle on this floor (this visit only, shown on screen, never saved)
+  function reviewBox(v) {
+    var rv = (G.review || {})[v]; if (!rv) return null;
+    var kinds = Object.keys(rv); if (!kinds.length) return null;
+    var weak = kinds.filter(function (k) { return rv[k].w > rv[k].r || rv[k].w >= 2; });
+    var d = document.createElement('div'); d.className = 'review';
+    // with many kinds (the top floor), only the ones to work on get their own line; the rest share one
+    var many = kinds.length > 4, good = kinds.filter(function (k) { return weak.indexOf(k) < 0; }), shown = many ? weak : kinds;
+    var goodR = 0; good.forEach(function (k) { goodR += rv[k].r; });
+    d.innerHTML = '<div class="rt">' + T('What to review', 'Qué repasar') + '</div><ul>' + shown.map(function (k) {
+      var x = rv[k], weakOne = weak.indexOf(k) >= 0;
+      return '<li class="' + (weakOne ? 'weak' : 'ok') + '"><b>' + k + '</b> ' + x.r + T(' right', ' bien') + ' · ' + x.w + T(' wrong', ' mal') + (weakOne ? ' &#9888;' : ' &#10003;') + '</li>';
+    }).join('') + (many && good.length ? '<li class="ok"><b>' + good.length + T(' other kinds', ' otros tipos') + '</b> ' + goodR + T(' right: all good', ' bien: todo bien') + ' &#10003;</li>' : '') + '</ul><p>' + (weak.length ? T('Review: ', 'Repasa: ') + weak.join(', ') + T('. Practice mode (on the title screen) lets you drill just those.', '. El modo práctica (en la pantalla de inicio) te deja repasar solo esos.')
+      : T('Nothing to review: every kind of angle went well.', 'Nada que repasar: todos los tipos de ángulos salieron bien.')) + '</p>';
+    return d;
   }
 
 
@@ -1980,6 +2007,17 @@
     // lights out (blueprints missed): only a glow around the agent; the guards' flashlights, the cameras, the
     // tripwires and the exit still show through the dark
     if (!S.mapOn) drawDark(S, t);
+    // in the dark, a faint arrow by the agent points the way to the exit (as the crow flies, not around the walls)
+    if (!S.mapOn && S.zoom <= 0) {
+      var ea = Math.atan2(S.exit[1] - S.py, S.exit[0] - S.px), ed = Math.hypot(S.exit[0] - S.px, S.exit[1] - S.py);
+      if (ed > TS * 1.6) {
+        var ar = 40 + (G.calm ? 0 : Math.sin(t * 4) * 3);
+        ctx.save(); ctx.translate(S.px + Math.cos(ea) * ar, S.py + Math.sin(ea) * ar); ctx.rotate(ea);
+        ctx.globalAlpha = 0.6; ctx.fillStyle = '#7dffb0'; ctx.shadowColor = '#7dffb0'; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-9, -13); ctx.lineTo(-3, 0); ctx.lineTo(-9, 13); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+    }
     if (S.alarm) { ctx.fillStyle = 'rgba(255,40,80,' + (G.calm ? 0.12 : 0.1 + Math.abs(Math.sin(t * 6)) * 0.12) + ')'; ctx.fillRect(0, 0, W, H); }
     // the alert glow at the screen's edges
     if (S.meter > 0) {
@@ -2000,6 +2038,7 @@
       ctx.globalAlpha = Math.min(1, S.zoom * 2); ctx.font = '700 30px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#e6f0ff';
       ctx.fillText(T('YOU START HERE', 'EMPIEZAS AQUÍ'), ax, ay - 50 - 30 * ze); ctx.restore();
     }
+    if (S.tut && !(S.zoom > 0)) drawTut(S);
     if (S.intro > 0 && !(S.zoom > 0)) {
       ctx.save(); ctx.globalAlpha = Math.min(1, S.intro); ctx.font = '700 72px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#e6f0ff';
       ctx.shadowColor = '#4fe3ff'; ctx.shadowBlur = 24; ctx.fillText(T('SNEAK!', '¡ESCAPA!'), W / 2, H / 2 + 20); ctx.restore();

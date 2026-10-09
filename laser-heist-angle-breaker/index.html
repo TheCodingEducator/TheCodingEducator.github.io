@@ -86,6 +86,14 @@
   #qpanel .tag { font-family: 'Rajdhani', sans-serif; font-size: 18px; letter-spacing: 2px; color: #4fe3ff; text-transform: uppercase; }
   #qpanel h2 { margin: 6px 0 4px; font-size: 26px; font-weight: 900; }
   #qpanel .rule { margin: 0 0 14px; color: #9fb3d6; font-size: 18px; }
+  #qpanel .refresh { margin: 0 0 14px; padding: 10px 14px; border: 2px solid #ffd166; border-radius: 12px; background: rgba(255,209,102,0.12); color: #fff3cf; font-size: 18px; line-height: 1.35; animation: lh-in 0.4s ease-out; }
+  #qpanel .refresh b { color: #ffd166; } #qpanel .refresh span { display: block; margin-top: 4px; color: #ffd166; font-weight: 700; }
+  .review { margin: 10px auto 4px; padding: 10px 14px; border: 1px solid #2c4a7a; border-radius: 12px; background: rgba(10,22,48,0.6); text-align: left; max-width: 620px; }
+  .review .rt { font-weight: 900; color: #4fe3ff; letter-spacing: 1px; font-size: 15px; text-transform: uppercase; }
+  .review ul { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .review li { font-size: 15px; padding: 4px 10px; border-radius: 999px; background: rgba(125,255,176,0.12); color: #c9ffe0; }
+  .review li.weak { background: rgba(255,120,120,0.16); color: #ffd0d0; }
+  .review p { margin: 4px 0 0; font-size: 15px; }
   #qpanel .ask { font-size: 21px; margin: 0 0 14px; line-height: 1.4; }
   #qpanel .row { display: flex; gap: 12px; align-items: center; }
   #qpanel input { width: 170px; font: 900 30px 'Nunito', sans-serif; padding: 8px 14px; border-radius: 12px; border: 2px solid #4fe3ff; background: #050b18; color: #4fe3ff; outline: none; }
@@ -224,6 +232,7 @@
   .door.done .wheel { box-shadow: inset 0 0 0 4px #7dffb0, 0 0 18px rgba(125,255,176,0.4); }
   .door .dname { margin-top: 10px; font: 700 18px 'Rajdhani', sans-serif; letter-spacing: 2px; }
   .door .dsub { font-size: 14px; color: #9fb3d6; min-height: 2.4em; text-align: center; }
+  .door .dbest { display: block; font-size: 13px; color: #8fd3ff; margin-top: 2px; }
   .door .dst { font-size: 22px; letter-spacing: 3px; } .door .dst i { font-style: normal; color: #2a3a5e; } .door .dst i.on { color: #ffd166; text-shadow: 0 0 10px rgba(255,209,102,0.7); }
   .door[disabled] { opacity: 0.45; cursor: default; }
   .door:focus-visible, .floor:focus-visible { outline: 3px solid #ffd166; outline-offset: 3px; }
@@ -314,7 +323,7 @@
   </ul>
   <h3>Tips for using the game</h3>
   <ul>
-    <li><strong>One floor per relationship:</strong> Floor 1 complementary, 2 supplementary, 3 vertical, 4 any of the eight angles on parallel lines (one given, x any other), 5 co-interior. Floor 6, the Algebra Vault, is all small equations like x + 3 (7.G.B.5).</li>
+    <li><strong>One floor per relationship:</strong> Floor 1 complementary, 2 supplementary, 3 vertical, 4 any of the eight angles on parallel lines (one given, x any other; the last room mixes everything). Floor 5, the Algebra Vault, is all small equations like x + 3 (7.G.B.5).</li>
     <li><strong>The answer aims the laser:</strong> the laser fires at exactly the angle a student types, so a wrong answer visibly misses, and the steps to solve it are shown.</li>
     <li><strong>The math changes the sneak:</strong> each missed panel adds trouble (an extra camera, sharper guards, darkness, tripwires, more guards and an alarm clock). Students can redo missed questions any time with the R key, three catches after a miss sends them back to the questions, and 0 of 3 right means redoing all three before the sneak.</li>
     <li><strong>Stars measure the math:</strong> one star for each panel answered right on the first try.</li>
@@ -328,7 +337,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
 </section>
 
-<script src="laser-heist-game.js?v=d7d5fb07"></script>
+<script src="laser-heist-game.js?v=469948b5"></script>
 <script src="../site-controls.js?v=27028c32"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
