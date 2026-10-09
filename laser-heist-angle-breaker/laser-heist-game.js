@@ -2235,6 +2235,29 @@
 
   // ------------------------------------------------------------------ main loop
   var last = 0;
+  // Cheat code (same combo in every game): hold Shift and press T, A, V together at any time. Every floor and room opens
+  // with 3 stars, the diamonds go to the max, and every suit and laser is owned.
+  (function () {
+    var down = {};
+    addEventListener('keyup', function (e) { delete down[e.code]; });
+    addEventListener('blur', function () { down = {}; });
+    addEventListener('keydown', function (e) {
+      down[e.code] = true;
+      if (e.repeat || !e.shiftKey || !down.KeyT || !down.KeyA || !down.KeyV) return;
+      down = {};
+      save.cleared = save.cleared || {};
+      Object.keys(ROOMS).forEach(function (v) { ROOMS[v].forEach(function (_, i) { save.stars[v + '-' + i] = 3; save.cleared[v + '-' + i] = true; }); });
+      save.diamonds = 999999;
+      SUITS.forEach(function (s) { if (save.owned.indexOf('suit:' + s.id) < 0) save.owned.push('suit:' + s.id); });
+      LASERS.forEach(function (l) { if (save.owned.indexOf('laser:' + l.id) < 0) save.owned.push('laser:' + l.id); });
+      save.tutDone = true; store();
+      [0, 1, 2].forEach(function (i) { setTimeout(function () { Sound.play('star', i); }, i * 150); });
+      toast(T('ALL FLOORS UNLOCKED · MAX DIAMONDS · EVERYTHING IN THE SHOP', 'TODOS LOS PISOS ABIERTOS · DIAMANTES AL MÁXIMO · TODO EN LA TIENDA'), '#ffd166');
+      say(T('Cheat code: every floor unlocked, max diamonds, and everything in the shop is yours.', 'Código: todos los pisos abiertos, diamantes al máximo y todo lo de la tienda es tuyo.'));
+      if (G.screen === 'map') showMap(); else if (G.screen === 'puzzle' || G.screen === 'sneak') hud();
+    });
+  })();
+
   function frame(now) {
     requestAnimationFrame(frame);
     var dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
