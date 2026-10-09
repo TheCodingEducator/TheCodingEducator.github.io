@@ -38,6 +38,12 @@
       highScore: readNum('laserheist_high_score', 0), bestStreak: readNum('laserheist_best_streak', 0),
       skins: (readJSON('laserheist_unlocked_skins', [0]) || [0]).length
     };
+    // Math Billiards keeps everything in one saved object: coins, cosmetics, and running totals
+    var mbs = readJSON('mathbilliards_save', {}) || {}, mbt = mbs.totals || {};
+    var mb = {
+      played: has('mathbilliards_save') && (mbt.questions > 0 || (mbs.coins || 0) > 0), coins: mbs.coins || 0, items: (mbs.owned || []).length,
+      solved: mbt.questions || 0, firstTry: mbt.firstTry || 0, games: mbt.games || 0, wins: mbt.wins || 0
+    };
     var pb = {
       played: has('piggybank_best_easy') || has('piggybank_best_hard'),
       bestEasy: has('piggybank_best_easy') ? readNum('piggybank_best_easy', null) : null,
@@ -113,6 +119,10 @@
         best: ps.best > 0, coins: 0, rows: [
           ['Shootouts played', ps.games], ['Best shootout', ps.best + ' / 5 goals'], ['Total goals', ps.goals],
           ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] },
+      { key: 'billiards', folder: 'math-billiards', icon: '🎱', name: 'Math Billiards', played: mb.played,
+        best: mb.wins > 0, coins: mb.coins, rows: [
+          ['Coins', mb.coins], ['Shots solved', mb.solved], ['Solved on the first try', mb.solved ? Math.round(100 * mb.firstTry / mb.solved) + '%' : '—'],
+          ['8-ball games finished', mb.games], ['Wins against the computer', mb.wins], ['Cosmetics owned', mb.items + ' / 19']] },
       { key: 'golf', folder: 'bank-shot-angle-golf', icon: '⛳', name: 'Bank Shot: Angle Golf', played: bs.any,
         best: bs.played > 0, coins: 0, rows: [
           ['Rounds finished', bs.rounds], ['Holes in one', bs.aces], ['Stars', bs.stars + ' / 81']].concat(golfCourses.map(function (k) {
@@ -120,7 +130,7 @@
           })) }
     ];
     var played = games.filter(function (g) { return g.played; }).length;
-    var coinsAll = lg.coins + er.coins + sb.coins;
+    var coinsAll = lg.coins + er.coins + sb.coins + mb.coins;
     // badges: each belongs to one game, or to all games ('all')
     var badges = [
       { game: 'all', icon: '🎮', name: 'First Steps', desc: 'Play any game once', earned: played >= 1 },
@@ -156,6 +166,10 @@
       { game: 'penalty', icon: '🧠', name: 'Sharp Shooter', desc: 'Answer every question right in a shootout', earned: ps.allRight >= 1 },
       { game: 'penalty', icon: '🏆', name: 'Perfect Shootout', desc: 'Score all 5 goals', earned: ps.perfect >= 1 },
       { game: 'penalty', icon: '⭐', name: 'Goal Machine', desc: 'Score 25 goals in total', earned: ps.goals >= 25 },
+      { game: 'billiards', icon: '🎱', name: 'First Rack', desc: 'Finish a game of classroom 8-ball', earned: mb.games >= 1 },
+      { game: 'billiards', icon: '📐', name: 'Angle Ace', desc: 'Solve 25 shots', earned: mb.solved >= 25 },
+      { game: 'billiards', icon: '🖥️', name: 'Beat the Computer', desc: 'Win a game against the computer', earned: mb.wins >= 1 },
+      { game: 'billiards', icon: '✨', name: 'Table Stylist', desc: 'Own 5+ cosmetics', earned: mb.items >= 5 },
       { game: 'golf', icon: '⛳', name: 'First Round', desc: 'Finish a round of 9 holes', earned: bs.rounds >= 1 },
       { game: 'golf', icon: '🕳️', name: 'Hole in One', desc: 'Sink a ball in one stroke', earned: bs.aces >= 1 },
       { game: 'golf', icon: '🐦', name: 'Under Par', desc: 'Finish a round under par', earned: bs.underPar },
