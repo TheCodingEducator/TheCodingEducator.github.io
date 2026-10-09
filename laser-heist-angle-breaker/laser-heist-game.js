@@ -1625,7 +1625,7 @@
       SEC(t).forEach(function (s) {
         // the given angle and x keep their own labels: only fill in the angles that weren't shown
         if (sc.arcs.some(function (a) { return a.v[0] === v[0] && a.v[1] === v[1] && Math.abs(((a.a0 - s[0]) % 360 + 360) % 360) < 1; })) return;
-        tag(Math.round(s[1]) + '°', wpol(q, v, s[0] + s[1] / 2, 132), 'rgba(200,225,255,0.85)', 16); });
+        tag(Math.round(s[1]) + '°', wpol(q, v, s[0] + s[1] / 2, sc.par ? 64 : 132), 'rgba(200,225,255,0.85)', 16); });
     });
   }
   function drawPuzzle(t, dt) {
