@@ -663,7 +663,8 @@
     var d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
     bs[(i + d + bs.length) % bs.length].focus();
   });
-  function on(id, fn) { var b = document.getElementById(id); if (b) b.addEventListener('click', function () { Sound.play('click'); fn(); }); }
+  // (a hidden screen can still hold a button with the same id, so take the one that's showing)
+  function on(id, fn) { var all = document.querySelectorAll('[id="' + id + '"]'), b = null; for (var i = 0; i < all.length; i++) if (!all[i].closest('[hidden]')) b = all[i]; b = b || all[0]; if (b) b.addEventListener('click', function () { Sound.play('click'); fn(); }); }
 
   function showTitle() {
     G.screen = 'title'; G.paused = false;
