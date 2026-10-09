@@ -104,6 +104,33 @@ foreach ($p in $pages) {
   if ($visible -match '(?i)chromebook') { Problem "${rel}: says ""Chromebook"" (say ""student devices"")" }
   if ($visible -match '(?i)\b(codes|coded|coding)\s+(the\s+|these\s+|this\s+|each\s+|every\s+)?(game|games)\b') { Problem "${rel}: says the games are coded (say ""designs"")" }
   if ($visible -cmatch '\bAI\b') { Problem "${rel}: mentions AI" }
+  # search engines: every real page (not a redirect, the 404 page or Google's verification files) names itself as the
+  # canonical address, in the same form the sitemap uses (/about, /game/, /game/guide), and is listed in the sitemap
+  if ($text -match 'http-equiv="refresh"' -or $rel -eq '404.html' -or $rel -match '^google[0-9a-f]+\.html$') { continue }
+  $path = $rel -replace '\\', '/'
+  $url = 'https://studentmathgames.com/' + $(if ($path -eq 'index.html') { '' } elseif ($path -match '^(.*/)index\.html$') { $Matches[1] } else { $path -replace '\.html$', '' })
+  $canon = [regex]::Match($text, '<link rel="canonical" href="([^"]*)"').Groups[1].Value
+  if ($canon -ne $url) { Problem "${rel}: canonical should be $url (it is '$canon')" }
+  if ($sitemap -notmatch [regex]::Escape("<loc>$url</loc>")) { Problem "${rel}: not in sitemap.xml ($url)" }
+}
+
+# ---------- Sitemap dates ----------
+# Each sitemap entry's <lastmod> is the day its page last changed: today if it has changes not yet committed, otherwise
+# the date of its last commit. Fresh, honest dates help search engines know which pages to crawl again.
+$dirty = @{}
+(git status --porcelain) | ForEach-Object { $dirty[($_.Substring(3).Trim('"') -replace '\\', '/')] = $true }
+$today = (Get-Date).ToString('yyyy-MM-dd')
+$newMap = [regex]::Replace($sitemap, '<loc>https://studentmathgames\.com/([^<]*)</loc>(\s*)<lastmod>[^<]*</lastmod>', {
+  param($m)
+  $p = $m.Groups[1].Value
+  $file = if ($p -eq '') { 'index.html' } elseif ($p.EndsWith('/')) { $p + 'index.html' } else { $p + '.html' }
+  $date = if ($dirty[$file]) { $today } else { (git log -1 --format=%cs -- $file) }
+  if (-not $date) { $date = $today }
+  return "<loc>https://studentmathgames.com/$p</loc>" + $m.Groups[2].Value + "<lastmod>$date</lastmod>"
+})
+if ($newMap -ne $sitemap) {
+  if ($Fix) { [System.IO.File]::WriteAllText((Join-Path $root 'sitemap.xml'), $newMap, $utf8); Write-Host 'Sitemap: updated the last-changed dates.' }
+  else { Problem 'sitemap.xml: some last-changed dates are out of date (run with -Fix)' }
 }
 
 # ---------- Report ----------
