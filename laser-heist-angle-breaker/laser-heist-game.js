@@ -2201,9 +2201,9 @@
       if (!G.calm && Math.random() < 0.5) parts.push({ x: angle[0], y: angle[1], vx: (Math.random() - 0.5) * 30, vy: 20, life: 0.6, max: 0.6, col: '#ffd166', size: 3 });
     } else {                                         // 4. safe on a rooftop, holding it up
       agent = roof; angle = [roof[0], roof[1] - 58 - Math.sin(t * 2) * (G.calm ? 0 : 4)];
-      if (!fx.win) { fx.win = true; Sound.play('win'); }
+      if (!fx.win) { fx.win = true; fx.winAt = k; Sound.play('win'); }
       fx.fw = (fx.fw || 0) - dt;
-      if (!G.calm && fx.fw <= 0) { fx.fw = 0.45; burst(200 + Math.random() * 880, 90 + Math.random() * 240, pick(['#ffd166', '#4fe3ff', '#ff4fa3', '#7dffb0', '#b57bff']), 34); Sound.play('spark'); }
+      if (!G.calm && fx.fw <= 0) { fx.fw = 0.45; burst(200 + Math.random() * 880, 90 + Math.random() * 240, pick(['#ffd166', '#4fe3ff', '#ff4fa3', '#7dffb0', '#b57bff']), 34); if (k - fx.winAt < 2) Sound.play('spark'); }   // the fireworks crackle for 2 seconds, then keep going silently
       var a = Math.min(1, (k - 5) / 0.8);
       ctx.save(); ctx.globalAlpha = a; ctx.font = '700 64px Rajdhani, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe9a8';
       ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 26; ctx.fillText(T('MISSION COMPLETE', 'MISIÓN CUMPLIDA'), W / 2, 120); ctx.restore();
