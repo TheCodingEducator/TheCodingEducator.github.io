@@ -99,17 +99,30 @@
     side.hidden = false;
     side.innerHTML = turnCard() +
       '<div class="sp"><div class="phase">' + T('Your shot', 'Tu tiro') + '</div><div class="big">' + T('Aim · Power · Shoot', 'Apunta · Fuerza · Tira') + '</div>' +
-      '<ul class="keys"><li><b>' + T('Aim:', 'Apuntar:') + '</b> ' + T('move the pointer, or', 'mueve el puntero, o') + ' <span class="kbd">←</span> <span class="kbd">→</span> (' + T('Shift = fine', 'Mayús = fino') + ')</li>' +
+      '<ul class="keys k-touch"><li><b>' + T('Aim:', 'Apuntar:') + '</b> ' + T('drag on the table; ◀ ▶ to fine-tune', 'arrastra en la mesa; ◀ ▶ para afinar') + '</li><li><b>' + T('Power:', 'Fuerza:') + '</b> ' + T('the slider', 'el control deslizante') + '</li><li><b>' + T('Shoot:', 'Tirar:') + '</b> ' + T('the button below', 'el botón de abajo') + '</li></ul>' +
+      '<ul class="keys k-desk"><li><b>' + T('Aim:', 'Apuntar:') + '</b> ' + T('move the pointer, or', 'mueve el puntero, o') + ' <span class="kbd">←</span> <span class="kbd">→</span> (' + T('Shift = fine', 'Mayús = fino') + ')</li>' +
       '<li><b>' + T('Power:', 'Fuerza:') + '</b> ' + T('hold and drag back, or', 'mantén y arrastra hacia atrás, o') + ' <span class="kbd">↑</span> <span class="kbd">↓</span></li>' +
       '<li><b>' + T('Shoot:', 'Tirar:') + '</b> ' + T('let go, or', 'suelta, o') + ' <span class="kbd">Enter</span> / <span class="kbd">' + T('Space', 'Espacio') + '</span></li></ul></div>' +
       '<div class="sp power"><label for="pw"><span>' + T('Power', 'Fuerza') + '</span><span id="pwv">' + Math.round(G.aim.power * 100) + '%</span></label>' +
       '<input type="range" id="pw" min="5" max="100" step="1" value="' + Math.round(G.aim.power * 100) + '">' +
       '<div class="pbar" aria-hidden="true"><i id="pwbar" style="width:' + Math.round(G.aim.power * 100) + '%"></i></div></div>' +
+      '<div class="sp fine"><button class="hbtn" id="b-left" aria-label="' + T('Turn the aim left', 'Girar a la izquierda') + '">◀</button><span>' + T('Fine aim', 'Afinar') + '</span><button class="hbtn" id="b-right" aria-label="' + T('Turn the aim right', 'Girar a la derecha') + '">▶</button></div>' +
       '<div class="grow"></div><button class="go" id="b-shoot">' + T('TAKE THE SHOT ▶', 'TIRAR ▶') + '</button>';
     fillRacks();
     var pw = $('#pw');
     pw.addEventListener('input', function () { G.aim.power = pw.value / 100; powerShown(); });
     $('#b-shoot').addEventListener('click', function () { takeShot(); });
+    holdToTurn($('#b-left'), -1); holdToTurn($('#b-right'), 1);
+  }
+  // the fine-aim buttons: a tap turns the cue a quarter of a degree; holding keeps turning, faster after a moment
+  function holdToTurn(btn, sgn) {
+    if (!btn) return;
+    var timer = null, n = 0;
+    function turn() { if (G.phase === 'aim') G.aim.dir = V.rot(G.aim.dir, sgn * (n > 12 ? 1 : 0.25)); n++; }
+    function stop() { clearInterval(timer); timer = null; }
+    btn.addEventListener('pointerdown', function (e) { e.preventDefault(); n = 0; turn(); stop(); timer = setInterval(turn, 70); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { btn.addEventListener(ev, stop); });
+    btn.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; turn(); } });
   }
   function powerShown() {
     var v = Math.round(G.aim.power * 100), a = $('#pwv'), b = $('#pwbar'), c = $('#pw');
@@ -549,6 +562,10 @@
     var s = stagePoint(e), w = Rd.toWorld(s), c = cue();
     if (G.phase === 'place') { G.ghost = { x: MB.clamp(w.x, TB.x0 + R, TB.x1 - R), y: MB.clamp(w.y, TB.y0 + R, TB.y1 - R) }; return; }
     if (G.phase !== 'aim' || !c) return;
+    if (G.touchAim) {   // a finger on the table: the cue follows it (touch screens set the power with the slider)
+      if (V.dist(w, c) > R * 1.6) G.aim.dir = V.norm(V.sub(w, c));
+      return;
+    }
     if (G.drag) {
       // pulling back: the farther the pointer goes back from where it was pressed, the harder the shot
       var back = V.dot(V.sub(G.drag.start, w), G.aim.dir);
@@ -565,12 +582,19 @@
     if (G.phase === 'explain') { explainDone(); return; }
     if (G.phase.indexOf('ai-') === 0) { G.timer += 2; return; }
     if (G.phase !== 'aim' || !overTable(s)) return;
-    if (e.pointerType === 'touch' && V.dist(w, c) > R * 1.6) G.aim.dir = V.norm(V.sub(w, c));
-    G.drag = { start: w, p0: e.pointerType === 'touch' ? G.aim.power : 0.03, moved: false };
-    if (e.pointerType !== 'touch') { G.aim.power = 0.03; powerShown(); }
+    if (e.pointerType === 'touch') {
+      // touch: drag anywhere to aim; nothing fires until the Take the shot button (no accidental shots)
+      if (V.dist(w, c) > R * 1.6) G.aim.dir = V.norm(V.sub(w, c));
+      G.touchAim = true;
+      try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+      return;
+    }
+    G.drag = { start: w, p0: 0.03, moved: false };
+    G.aim.power = 0.03; powerShown();
     try { cv.setPointerCapture(e.pointerId); } catch (er) {}
   });
   function endDrag(e) {
+    G.touchAim = false;
     if (!G.drag) return;
     var d = G.drag; G.drag = null;
     if (G.phase === 'aim' && d.moved && G.aim.power > 0.05 && e.type === 'pointerup') takeShot();

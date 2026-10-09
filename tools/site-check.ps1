@@ -30,6 +30,9 @@ $problems = New-Object System.Collections.Generic.List[string]
 function Problem($msg) { $problems.Add($msg) | Out-Null }
 function ReadText($path) { [System.IO.File]::ReadAllText((Resolve-Path $path), $utf8) }
 
+# ---------- 0. Unit packs (built from the worksheets; see tools/unit-packs.ps1) ----------
+. (Join-Path $PSScriptRoot 'unit-packs.ps1')
+
 # ---------- 1. Versions ----------
 $hashCache = @{}
 function ShortHash($file) {
