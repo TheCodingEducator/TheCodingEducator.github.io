@@ -1024,6 +1024,8 @@
     return out;
   }
   var GUARD_FOV = 45 * D2R;   // half of a guard's cone of vision (90 degrees across)
+  var CAM_FOV = 19 * D2R;   // half of a camera's cone (38 degrees across)
+  var CAM_RANGE = 6.5;      // how far a camera sees, in tiles
   var ZOOM_LEN = 2.2;   // seconds of the opening zoom-out at the start of each sneak
   function tileAt(S, c, r) { if (!(r >= 0) || !(c >= 0)) return "#"; if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '#'; return S.grid[r][c]; }
   function solid(S, ch) { return ch === '#' || ch === 'c' || (ch === 'D' && !S.mapOn); }
@@ -1165,7 +1167,7 @@
       return { pts: pts, loop: g.loop, hold: g.hold, i: 1, dir: 1, x: pts[0][0], y: pts[0][1], face: Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]), wait: 0, spd: spd, range: range, sees: false, state: 'walk', look: 0 };
     });
     S.cams = rm.cams.concat(S.plan.cams).map(function (c) {
-      return { x: cpx(c.c), y: rpx(c.r), dir: c.dir * D2R, sweep: c.sweep * D2R, ph: (c.c * 7 + c.r) % 6, range: (S.camOff ? 6.5 : 8.5) * TS, spd: S.camOff ? 0.9 : 1.6, sees: false };
+      return { x: cpx(c.c), y: rpx(c.r), dir: c.dir * D2R, sweep: c.sweep * D2R, ph: (c.c * 7 + c.r) % 6, range: (S.camOff ? 5 : CAM_RANGE) * TS, spd: S.camOff ? 0.9 : 1.6, sees: false };
     });
     S.wires = S.plan.wires;
     S.hunt = null;
@@ -1270,7 +1272,7 @@
     // cameras
     S.cams.forEach(function (c) {
       c.ang = c.dir + Math.sin(S.t * c.spd + c.ph) * c.sweep;
-      c.sees = !S.camOff && canSee(S, c.x, c.y, c.ang, 24 * D2R, c.range);
+      c.sees = !S.camOff && canSee(S, c.x, c.y, c.ang, CAM_FOV, c.range);
       if (c.sees) { seen = true; feel(c.x, c.y, c.range); }
     });
     // tripwires: crossing one while it's lit sets off the alarm at once
@@ -1625,7 +1627,10 @@
       SEC(t).forEach(function (s) {
         // the given angle and x keep their own labels: only fill in the angles that weren't shown
         if (sc.arcs.some(function (a) { return a.v[0] === v[0] && a.v[1] === v[1] && Math.abs(((a.a0 - s[0]) % 360 + 360) % 360) < 1; })) return;
-        tag(Math.round(s[1]) + '°', wpol(q, v, s[0] + s[1] / 2, sc.par ? 64 : 132), 'rgba(200,225,255,0.85)', 16); });
+        // on parallel lines, the angles equal to the given one share its gold, and the ones equal to x share x's blue
+        var m = Math.round(s[1]), col = 'rgba(200,225,255,0.85)';
+        if (sc.par) col = m === Math.round(q.known) ? '#ffd166' : (m === Math.round(q.trueAngle) ? '#4fe3ff' : col);
+        tag(m + '°', wpol(q, v, s[0] + s[1] / 2, sc.par ? 64 : 132), col, 16); });
     });
   }
   function drawPuzzle(t, dt) {
@@ -1816,7 +1821,7 @@
     // what still shows in the dark: flashlight and camera cones (dimmer), lit tripwires and the exit
     S.guards.forEach(function (gd) { fillCone(cone(S, gd.x, gd.y, gd.face, GUARD_FOV, gd.range), gd.x, gd.y, gd.range, gd.sees ? '255,79,163' : '255,214,120', gd.sees ? 0.35 : 0.2);
       ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(gd.x + Math.cos(gd.face) * 12, gd.y + Math.sin(gd.face) * 12, 3, 0, TAU); ctx.fill(); });
-    if (!S.camOff) S.cams.forEach(function (c) { fillCone(cone(S, c.x, c.y, c.ang, 24 * D2R, c.range), c.x, c.y, c.range, c.sees ? '255,79,163' : '79,227,255', 0.16); });
+    if (!S.camOff) S.cams.forEach(function (c) { fillCone(cone(S, c.x, c.y, c.ang, CAM_FOV, c.range), c.x, c.y, c.range, c.sees ? '255,79,163' : '79,227,255', 0.16); });
     drawWires(S, t);
     var ex = S.exit;
     ctx.save(); ctx.strokeStyle = 'rgba(125,255,176,0.8)'; ctx.lineWidth = 3; ctx.shadowColor = '#7dffb0'; ctx.shadowBlur = 20;
@@ -1851,7 +1856,7 @@
     });
     // cameras and their cones
     S.cams.forEach(function (c) {
-      if (!S.camOff) { var pts = cone(S, c.x, c.y, c.ang, 24 * D2R, c.range); fillCone(pts, c.x, c.y, c.range, c.sees ? '255,79,163' : '79,227,255', c.sees ? 0.42 : 0.24); }
+      if (!S.camOff) { var pts = cone(S, c.x, c.y, c.ang, CAM_FOV, c.range); fillCone(pts, c.x, c.y, c.range, c.sees ? '255,79,163' : '79,227,255', c.sees ? 0.42 : 0.24); }
       ctx.save(); ctx.translate(c.x, c.y);
       ctx.save(); ctx.rotate(S.camOff ? c.dir + 0.5 : c.ang);   // a switched-off camera droops to one side
       ctx.fillStyle = S.camOff ? '#3a4258' : '#2b3d66'; ctx.strokeStyle = S.camOff ? '#8a93a8' : (c.sees ? '#ff4fa3' : '#4fe3ff'); ctx.lineWidth = 2.5;
