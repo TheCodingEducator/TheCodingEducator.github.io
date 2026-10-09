@@ -208,10 +208,10 @@
           '#.................E#',
           '####################'],
         guards: [{ path: [[10, 1], [17, 1], [17, 4], [10, 4]], loop: true },
-                 { path: [[1, 6], [18, 6]], loop: false }],
+                 { path: [[11, 8], [18, 8]], loop: false }],
         cams: [{ c: 19, r: 8, dir: 180, sweep: 30 }],
         lamps: [[4, 3], [14, 3], [6, 8], [14, 8]] },
-      { name: T('The Curator’s Office', 'La oficina del curador'),   // 22 x 12
+      { name: T('The Curator’s Office', 'La oficina del curador'), noExtraCam: true,   // 22 x 12
         map: [
           '######################',
           '#P...#.......#......d#',
@@ -226,8 +226,7 @@
           '#..d......#.........E#',
           '######################'],
         guards: [{ path: [[6, 1], [12, 1], [12, 4], [6, 4]], loop: true },
-                 { path: [[1, 6], [20, 6]], loop: false },
-                 { path: [[11, 10], [16, 10]], loop: false }],
+                 { path: [[8, 6], [20, 6]], loop: false }],
         cams: [{ c: 21, r: 7, dir: 180, sweep: 30 }],
         lamps: [[3, 3], [10, 3], [17, 2], [5, 7], [15, 7], [6, 10], [15, 10]] }
     ],
@@ -267,7 +266,7 @@
           '#........ccc........E#',
           '######################'],
         guards: [{ path: [[9, 1], [20, 1], [20, 5], [9, 5]], loop: true },
-                 { path: [[1, 7], [20, 7]], loop: false }],
+                 { path: [[12, 9], [20, 9]], loop: false }],
         cams: [{ c: 0, r: 9, dir: 0, sweep: 30 }],
         lamps: [[4, 2], [14, 3], [6, 8], [16, 8]] },
       { name: T('The Mainframe Core', 'El núcleo central'),   // 24 x 12
@@ -306,7 +305,7 @@
           '#####..#######..######',
           '#..d.....#..........E#',
           '######################'],
-        guards: [{ path: [[1, 6], [20, 6]], loop: false },
+        guards: [{ path: [[8, 6], [20, 6]], loop: false },
                  { path: [[13, 1], [20, 1], [20, 4], [13, 4]], loop: true },
                  { path: [[5, 7], [9, 7], [9, 8], [5, 8]], loop: true }],
         cams: [{ c: 0, r: 7, dir: 0, sweep: 30 }],
@@ -344,8 +343,8 @@
           '####..########..####..##',
           '#..d......#..........E.#',
           '########################'],
-        guards: [{ path: [[1, 6], [22, 6]], loop: false },
-                 { path: [[22, 9], [1, 9]], loop: false },
+        guards: [{ path: [[8, 6], [22, 6]], loop: false },
+                 { path: [[22, 9], [12, 9]], loop: false },
                  { path: [[13, 1], [21, 1], [21, 4], [13, 4]], loop: true }],
         cams: [{ c: 0, r: 8, dir: 0, sweep: 30 }],
         lamps: [[2, 3], [8, 3], [17, 3], [7, 7], [14, 8], [20, 8], [6, 11], [16, 11]] }
@@ -403,7 +402,7 @@
           '#..d..................E#',
           '########################'],
         guards: [{ path: [[7, 3], [22, 3]], loop: false },
-                 { path: [[1, 6], [14, 6]], loop: false }],
+                 { path: [[6, 6], [14, 6]], loop: false }],
         cams: [{ c: 23, r: 7, dir: 180, sweep: 25 }],
         lamps: [[3, 2], [11, 1], [19, 2], [8, 6], [18, 6], [10, 10], [19, 10]] }
     ],
@@ -424,7 +423,7 @@
           '#..d......#..........E.#',
           '########################'],
         guards: [{ path: [[6, 1], [15, 1], [15, 4], [6, 4]], loop: true },
-                 { path: [[1, 6], [22, 6]], loop: false },
+                 { path: [[8, 6], [22, 6]], loop: false },
                  { path: [[22, 8], [3, 8]], loop: false }],
         cams: [{ c: 0, r: 7, dir: 0, sweep: 30 }],
         lamps: [[3, 3], [11, 3], [20, 3], [7, 7], [17, 7], [5, 10], [17, 10]] },
@@ -463,8 +462,8 @@
           '#..d.......cc..#.....E.#',
           '########################'],
         guards: [{ path: [[5, 1], [14, 1], [14, 4], [5, 4]], loop: true },
-                 { path: [[1, 6], [22, 6]], loop: false },
-                 { path: [[22, 8], [1, 8]], loop: false }],
+                 { path: [[8, 6], [22, 6]], loop: false },
+                 { path: [[22, 8], [10, 8]], loop: false }],
         cams: [{ c: 0, r: 7, dir: 0, sweep: 30 }, { c: 23, r: 7, dir: 180, sweep: 30 }],
         lamps: [[2, 3], [10, 3], [19, 3], [12, 6], [6, 8], [18, 8], [4, 10], [19, 11]] }
     ],
@@ -484,7 +483,7 @@
           '#####..######..####..###',
           '#..d......cc.......#..E#',
           '########################'],
-        guards: [{ path: [[1, 6], [22, 6]], loop: false },
+        guards: [{ path: [[8, 6], [22, 6]], loop: false },
                  { path: [[22, 8], [1, 8]], loop: false },
                  { path: [[7, 1], [17, 1], [17, 4], [7, 4]], loop: true }],
         cams: [{ c: 23, r: 7, dir: 180, sweep: 30 }],
@@ -731,10 +730,10 @@
   }
   function showHow(back) {
     showOv(ovMain, '<div class="card" style="width:900px"><div class="tag">' + T('How to play', 'Cómo jugar') + '</div><h2>' + T('Every room has two parts', 'Cada sala tiene dos partes') + '</h2>' +
-      '<p style="font-size:19px"><b style="color:#4fe3ff">1. ' + T('Laser puzzle.', 'Rompecabezas láser.') + '</b> ' + T('Type the missing angle and fire: the laser goes exactly where you aim. Each hit switches off security: the <b>cameras</b>, the guards’ <b>radios</b>, or the <b>blueprints</b> (doors open, routes shown, lights stay on). Each answer right on the first try earns a <b>star</b>.',
-        'Escribe el ángulo que falta y dispara: el láser va justo a donde apuntas. Cada acierto apaga seguridad: las <b>cámaras</b>, las <b>radios</b> de los guardias o los <b>planos</b> (puertas abiertas, rutas visibles, luces encendidas). Cada respuesta correcta al primer intento gana una <b>estrella</b>.') + '</p>' +
-      '<p style="font-size:19px"><b style="color:#ff4fa3">2. ' + T('The sneak.', 'El escape.') + '</b> ' + T('Move with the arrow keys or WASD. Stay out of the light cones, keep out of the guards’ red rings, and hide behind cover. Cross a tripwire only while it’s dark. Grab the diamond and reach the exit.',
-        'Muévete con las flechas o WASD. Evita los conos de luz, no entres en los anillos rojos de los guardias y escóndete detrás de la cobertura. Cruza un rayo trampa solo cuando esté apagado. Toma el diamante y llega a la salida.') + '</p>' +
+      '<p style="font-size:19px"><b style="color:#4fe3ff">1. ' + T('Laser puzzle.', 'Rompecabezas láser.') + '</b> ' + T('Type the missing angle and fire: the laser goes exactly where you aim. Each hit switches off security: the <b>cameras</b>, the guards’ <b>radios</b>, or the <b>blueprints</b> (doors open, lights stay on). Each answer right on the first try earns a <b>star</b>.',
+        'Escribe el ángulo que falta y dispara: el láser va justo a donde apuntas. Cada acierto apaga seguridad: las <b>cámaras</b>, las <b>radios</b> de los guardias o los <b>planos</b> (puertas abiertas, luces encendidas). Cada respuesta correcta al primer intento gana una <b>estrella</b>.') + '</p>' +
+      '<p style="font-size:19px"><b style="color:#ff4fa3">2. ' + T('The sneak.', 'El escape.') + '</b> ' + T('Move with the arrow keys or WASD. Stay out of the light cones, keep out of the guards’ red rings, and hide behind cover. Every room has blinking tripwires on the way out: cross only while they’re dark. Grab the diamond and reach the exit in 20 seconds.',
+        'Muévete con las flechas o WASD. Evita los conos de luz, no entres en los anillos rojos de los guardias y escóndete detrás de la cobertura. Cada sala tiene rayos trampa que parpadean: crúzalos solo cuando estén apagados. Toma el diamante y llega a la salida en 20 segundos.') + '</p>' +
       '<p style="font-size:19px"><b style="color:#ffd166">' + T('Missed answers make it harder:', 'Las respuestas falladas lo hacen más difícil:') + '</b> ' + T('an extra camera, sharper guards, lights out, tripwires, more guards, and a 20-second clock that sets off the alarm. Press <b>R</b> (or the button) to redo the missed questions any time. Caught 3 times? It’s back to the questions.',
         'una cámara extra, guardias más atentos, luces apagadas, rayos trampa, más guardias y un reloj de 20 segundos que activa la alarma. Pulsa <b>R</b> (o el botón) para repetir las preguntas falladas cuando quieras. ¿Te atraparon 3 veces? Vuelves a las preguntas.') + '</p>' +
       '<p style="font-size:19px">' + T('Get 3 right in a row for a <b>smoke bomb</b> (key 1), 5 in a row for a <b>decoy</b> (key 2). Spend diamonds in the shop.', 'Acierta 3 seguidas para ganar una <b>bomba de humo</b> (tecla 1) y 5 seguidas para un <b>señuelo</b> (tecla 2). Gasta diamantes en la tienda.') + '</p>' +
@@ -829,7 +828,7 @@
       html += '<span class="chip' + (S.camOff ? ' off' : '') + '" title="' + T('Cameras', 'Cámaras') + '">&#128249; ' + (S.camOff ? T('OFF', 'NO') : T('ON', 'SÍ')) + '</span>' +
         '<span class="chip' + (S.radioOff ? ' off' : '') + '">&#128225; ' + (S.radioOff ? T('JAMMED', 'BLOQ.') : T('ON', 'SÍ')) + '</span>' +
         '<span class="chip' + (S.mapOn ? ' off' : '') + '">&#128682; ' + (S.mapOn ? T('OPEN', 'ABIERTAS') : T('LOCKED', 'CERRADAS')) + '</span>' +
-        '<span class="chip timer" id="timer" role="timer" aria-label="' + T('Time left', 'Tiempo restante') + '">0:30</span>' +
+        '<span class="chip timer" id="timer" role="timer" aria-label="' + T('Time left', 'Tiempo restante') + '">0:' + SNEAK_SECONDS + '</span>' +
         '<span>' + T('ALERT', 'ALERTA') + '</span><span class="meter"><i id="meter"></i></span>'
     }
     html += '<span class="chip gem">&#9670; <b id="gems">' + (save.diamonds + (G.sneak && G.screen === 'sneak' ? G.sneak.got : 0)) + '</b></span>' +
@@ -851,7 +850,7 @@
   var PANELS = [
     { id: 'cam', name: T('Cameras', 'Cámaras'), icon: '&#128249;', short: 'CAM', tip: T('Cameras off', 'Cámaras apagadas'), effect: T('The cameras are offline.', 'Las cámaras están apagadas.') },
     { id: 'radio', name: T('Guard radios', 'Radios'), icon: '&#128225;', short: 'RADIO', tip: T('Slower guards', 'Guardias lentos'), effect: T('Radios jammed: the guards are slower and can’t see as far.', 'Radios bloqueadas: los guardias son más lentos y no ven tan lejos.') },
-    { id: 'map', name: T('Blueprints', 'Planos'), icon: '&#128506;', short: 'MAP', tip: T('Doors open', 'Puertas abiertas'), effect: T('Blueprints stolen: the shortcut doors are open and the guards’ routes are shown.', 'Planos robados: las puertas de atajo están abiertas y se ven las rutas de los guardias.') }
+    { id: 'map', name: T('Blueprints', 'Planos'), icon: '&#128506;', short: 'MAP', tip: T('Doors open', 'Puertas abiertas'), effect: T('Blueprints stolen: the shortcut doors are open and the lights stay on.', 'Planos robados: las puertas de atajo están abiertas y las luces siguen encendidas.') }
   ];
   // a random mirroring for this play of the room, leaving out any that were checked and found unbeatable
   function pickFlip(rm) {
@@ -1026,6 +1025,7 @@
   var GUARD_FOV = 45 * D2R;   // half of a guard's cone of vision (90 degrees across)
   var CAM_FOV = 19 * D2R;   // half of a camera's cone (38 degrees across)
   var CAM_RANGE = 6.5;      // how far a camera sees, in tiles
+  var SNEAK_SECONDS = 20;   // the sneak clock (every room is checked to be beatable with at least 3 seconds to spare)
   var ZOOM_LEN = 2.2;   // seconds of the opening zoom-out at the start of each sneak
   function tileAt(S, c, r) { if (!(r >= 0) || !(c >= 0)) return "#"; if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '#'; return S.grid[r][c]; }
   function solid(S, ch) { return ch === '#' || ch === 'c' || (ch === 'D' && !S.mapOn); }
@@ -1054,8 +1054,10 @@
     if (S.camOff) off.push(T('cameras off', 'cámaras apagadas')); else on.push(T('extra camera', 'cámara extra'));
     if (S.radioOff) off.push(T('radios jammed', 'radios bloqueadas')); else on.push(T('sharp-eyed guards', 'guardias atentos'));
     if (S.mapOn) off.push(T('shortcut doors open', 'puertas de atajo abiertas')); else on.push(T('lights out', 'luces apagadas'));
-    if (S.miss) on.push(S.miss + (S.miss === 1 ? T(' tripwire', ' rayo trampa') : T(' tripwires', ' rayos trampa')), T('the timer is real', 'el reloj cuenta'));
-    toast(S.miss ? (S.miss === 3 ? T('ALL SECURITY ACTIVE: STAY SHARP', 'TODA LA SEGURIDAD ACTIVA: CUIDADO') : off.join(' · ').toUpperCase()) : T('ALL SECURITY OFF', 'TODA LA SEGURIDAD APAGADA'), S.miss === 3 ? '#ff9ad0' : '#7dffb0');
+    var nw = S.plan.wires.length;
+    if (nw) on.push(nw + (nw === 1 ? T(' tripwire', ' rayo trampa') : T(' tripwires', ' rayos trampa')));
+    if (S.miss) on.push(T('the timer is real', 'el reloj cuenta'));
+    toast(S.miss ? (S.miss === 3 ? T('ALL SECURITY ACTIVE: STAY SHARP', 'TODA LA SEGURIDAD ACTIVA: CUIDADO') : off.join(' · ').toUpperCase()) : T('SECURITY OFF · TRIPWIRES STILL ON', 'SEGURIDAD APAGADA · LOS RAYOS TRAMPA SIGUEN'), S.miss === 3 ? '#ff9ad0' : '#7dffb0');
     say(T('The sneak. ', 'El escape. ') + (off.length ? off.join(', ') + '. ' : '') + (on.length ? T('Watch out: ', 'Cuidado: ') + on.join(', ') + '. ' : '') +
       T('Reach the exit. ', 'Llega a la salida. ') + S.guards.length + T(' guards.', ' guardias.'));
     cv.setAttribute('aria-label', T('Top-down map of the room: reach the exit without being seen', 'Mapa de la sala visto desde arriba: llega a la salida sin que te vean'));
@@ -1069,22 +1071,44 @@
   // can be checked that every room can still be finished with all three missed.
   //   cameras missed: the cameras sweep faster and see farther, and one more camera is added
   //   radios missed: guards are faster and see farther, their red rings are bigger and the alert fills faster near them
-  //   blueprints missed: the doors stay locked, the routes stay hidden, and the lights go out
+  //   blueprints missed: the doors stay locked and the lights go out
   //   each miss: one blinking laser tripwire across a doorway, and one more guard on patrol
   //   all three missed: a guard keeps watch beside the exit
   function planTrouble(S, rm) {
-    var plan = { cams: [], guards: [], wires: [] }, g = S.grid, st = S.startT, ex = S.exitT;
+    var plan = { cams: [], guards: [], wires: [] }, g = S.grid, st = S.startT, ex = S.exitT, r, c;
     var open = function (c, r) { var ch = (g[r] || [])[c]; return ch === '.' || ch === 't'; };
     var man = function (a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]); };
-    if (!S.camOff && !rm.noExtraCam) {   // the extra camera: on a wall, looking down the longest clear stretch of floor, away from the start
-      var best = null, D4 = [[1, 0, 0], [0, 1, 90], [-1, 0, 180], [0, -1, 270]];
+    // No camera may watch the exit: if a camera's sweep could reach the exit or a tile beside it, the exit is close to
+    // impossible to reach while the cameras are on. (Walls aren't counted, so this errs on the safe side.)
+    var seesExit = function (c, r, dirDeg, sweepDeg) {
+      var dx = ex[0] - c, dy = ex[1] - r, d = Math.hypot(dx, dy);
+      if (d > CAM_RANGE + 1.5) return false;
+      var diff = Math.abs(((Math.atan2(dy, dx) / D2R - dirDeg) % 360 + 540) % 360 - 180);
+      return diff <= sweepDeg + CAM_FOV / D2R + Math.atan2(1.6, Math.max(d, 0.5)) / D2R + 4;   // (wider up close: the tiles beside the exit too)
+    };
+    // the best wall spot for a camera: looking down the longest clear stretch of floor, away from the start and the exit
+    var D4 = [[1, 0, 0], [0, 1, 90], [-1, 0, 180], [0, -1, 270]];
+    var camSpot = function (taken) {
+      var best = null;
       for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
-        if (g[r][c] !== '#' || man([c, r], st) < 8 || rm.cams.some(function (k) { return k.c === c && k.r === r; })) continue;
+        if (g[r][c] !== '#' || man([c, r], st) < 8 || taken.some(function (k) { return k.c === c && k.r === r; })) continue;
         D4.forEach(function (d) {
+          if (seesExit(c, r, d[2], 30)) return;
           var n = 0; while (open(c + d[0] * (n + 1), r + d[1] * (n + 1))) n++;
-          if (n >= 6 && (!best || n > best.n)) best = { c: c, r: r, dir: d[2], n: n };
+          if (n >= 6 && (!best || n > best.n)) best = { c: c, r: r, dir: d[2], sweep: 30, n: n };
         });
       }
+      return best;
+    };
+    // the room's own cameras: any that could watch the exit moves to the best other spot (or is left out)
+    plan.roomCams = [];
+    rm.cams.forEach(function (k) {
+      if (!seesExit(k.c, k.r, k.dir, k.sweep)) { plan.roomCams.push(k); return; }
+      var alt = camSpot(rm.cams.concat(plan.roomCams));
+      if (alt) plan.roomCams.push(alt);
+    });
+    if (!S.camOff && !rm.noExtraCam) {   // the extra camera
+      var best = camSpot(plan.roomCams);
       if (best) plan.cams.push({ c: best.c, r: best.r, dir: best.dir, sweep: 30 });
     }
     // one more guard per miss: on the longest open rows, away from the start and from the other guards' rows
@@ -1131,9 +1155,39 @@
     }
     function range(a, b) { var o = []; for (var k = a; k <= b; k++) o.push(k); return o; }
     spans = spans.filter(function (s) { var m = s.cells[0]; return man(m, st) >= 5 && man(m, ex) >= 4; });
-    spans.sort(function (a, b) { return man(b.cells[0], st) - man(a.cells[0], st); });
+    // Tripwires go where the agent will really walk: doorways on (or right beside) the shortest route from the start
+    // to the exit come first, nearest the exit first; any other doorways only after those.
+    var prev = {}, q2 = [st], key = function (p) { return p[0] + ',' + p[1]; };
+    prev[key(st)] = null;
+    while (q2.length) {
+      var cur2 = q2.shift();
+      if (cur2[0] === ex[0] && cur2[1] === ex[1]) break;
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+        var nx = [cur2[0] + d[0], cur2[1] + d[1]];
+        if (open(nx[0], nx[1]) && !(key(nx) in prev)) { prev[key(nx)] = cur2; q2.push(nx); }
+      });
+    }
+    var onRoute = {}, route = [];
+    for (var pk = ex; pk; pk = prev[key(pk)]) { onRoute[key(pk)] = true; route.unshift(pk); }
+    // ...and beams straight across the route, wall to wall (across a corridor or a whole room), where the route
+    // runs straight: the agent can't step around those, only time the blink
+    for (var ri = 2; ri < route.length - 2; ri += 2) {
+      var p0 = route[ri - 1], p1 = route[ri], p2 = route[ri + 1];
+      if (!(p0[0] === p2[0] || p0[1] === p2[1])) continue;   // only where the route runs straight
+      var horizRun = p0[1] === p2[1], cellsX = [p1];
+      var dx2 = horizRun ? 0 : 1, dy2 = horizRun ? 1 : 0;   // the beam crosses the route at a right angle
+      for (var s2 = -1; s2 <= 1; s2 += 2) for (var e4 = 1; open(p1[0] + s2 * dx2 * e4, p1[1] + s2 * dy2 * e4); e4++) {
+        var cx2 = [p1[0] + s2 * dx2 * e4, p1[1] + s2 * dy2 * e4];
+        if (s2 < 0) cellsX.unshift(cx2); else cellsX.push(cx2);
+      }
+      if (cellsX.length < 2 || cellsX.length > 12) continue;
+      if (man(p1, st) < 5 || man(p1, ex) < 4) continue;
+      spans.push({ cells: cellsX, horiz: !horizRun, across: true });
+    }
+    var nearRoute = function (s) { return s.cells.some(function (cl) { return [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(function (d) { return onRoute[(cl[0] + d[0]) + ',' + (cl[1] + d[1])]; }); }); };
+    spans.sort(function (a, b) { return (nearRoute(b) ? 1 : 0) - (nearRoute(a) ? 1 : 0) || man(b.cells[0], st) - man(a.cells[0], st); });
     spans.forEach(function (s) {
-      if (plan.wires.length >= Math.min(S.miss === 3 ? 5 : S.miss, rm.maxWires || 5)) return;   // zero right: five tripwires
+      if (plan.wires.length >= Math.min(S.miss === 3 ? 5 : 1 + S.miss, rm.maxWires || 5)) return;   // always one (no panel turns tripwires off), one more per miss; zero right: five
       if (plan.wires.some(function (w) { return man(w.cells[0], s.cells[0]) < 6; })) return;
       plan.wires.push({ cells: s.cells, horiz: s.horiz, ph: plan.wires.length * 1.1 });
     });
@@ -1159,14 +1213,14 @@
     // one diamond per run, in one of the room's diamond spots; and a 20-second clock
     S.got = 0; S.gems.forEach(function (g) { g.got = false; g.on = false; });
     if (S.gems.length) S.gems[Math.floor(Math.random() * S.gems.length)].on = true;
-    S.time = 20; S.tick = 6;
+    S.time = SNEAK_SECONDS; S.tick = 6;
     var spd = (S.radioOff ? 1.05 : 1.85) * TS, range = (S.radioOff ? 3.6 : 5.8) * TS;
     S.ring = S.radioOff ? RING : RING * 1.4;
     S.guards = rm.guards.concat(S.plan.guards).map(function (g) {
       var pts = g.path.map(function (p) { return [cpx(p[0]), rpx(p[1])]; });
       return { pts: pts, loop: g.loop, hold: g.hold, i: 1, dir: 1, x: pts[0][0], y: pts[0][1], face: Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]), wait: 0, spd: spd, range: range, sees: false, state: 'walk', look: 0 };
     });
-    S.cams = rm.cams.concat(S.plan.cams).map(function (c) {
+    S.cams = S.plan.roomCams.concat(S.plan.cams).map(function (c) {
       return { x: cpx(c.c), y: rpx(c.r), dir: c.dir * D2R, sweep: c.sweep * D2R, ph: (c.c * 7 + c.r) % 6, range: (S.camOff ? 5 : CAM_RANGE) * TS, spd: S.camOff ? 0.9 : 1.6, sees: false };
     });
     S.wires = S.plan.wires;
@@ -1835,12 +1889,6 @@
     ctx.save();
     if (ze > 0) { ctx.translate(S.px + (W / 2 - S.px) * ze, S.py + (H / 2 - S.py) * ze); ctx.scale(zs, zs); ctx.translate(-S.px, -S.py); }
     ctx.drawImage(staticLayer.c, 0, 0, W, H);
-    // guard routes, when the blueprints panel was hit
-    if (S.mapOn) S.guards.forEach(function (g) {
-      ctx.save(); ctx.strokeStyle = 'rgba(255,209,102,0.35)'; ctx.lineWidth = 2; ctx.setLineDash([3, 9]); ctx.beginPath();
-      g.pts.forEach(function (p, i) { if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); });
-      if (g.loop) ctx.closePath(); ctx.stroke(); ctx.restore();
-    });
     // the exit
     var ex = S.exit, pulse = G.calm ? 0.6 : 0.5 + Math.sin(t * 4) * 0.3;
     ctx.save(); ctx.shadowColor = '#7dffb0'; ctx.shadowBlur = 24; ctx.strokeStyle = 'rgba(125,255,176,' + (0.5 + pulse * 0.5) + ')'; ctx.lineWidth = 3;
