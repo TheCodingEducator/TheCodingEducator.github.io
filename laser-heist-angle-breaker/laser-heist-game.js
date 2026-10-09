@@ -845,36 +845,10 @@
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); fire(); } });
     $('#b-fire').addEventListener('click', fire);
     say((P.practice ? '' : T('Panel ', 'Panel ') + (P.i + 1) + ', ' + pn.name + '. ') + q.sr);
-    // crossing lines and parallel lines: first decide whether the two angles are equal or add to 180°, then type x
-    if (RELS[q.rel].eq || q.rel === 'coint') {
-      var row = $('#qpanel .row'); row.style.display = 'none'; P.checking = true;
-      var ck = document.createElement('div'); ck.className = 'check';
-      ck.innerHTML = '<p class="cq">' + T('First: are the two marked angles <b>equal</b>, or do they <b>add to 180°</b>?', 'Primero: ¿los dos ángulos marcados son <b>iguales</b> o <b>suman 180°</b>?') + '</p>' +
-        '<div class="cb"><button class="bt" data-eq="1"><span aria-hidden="true">1</span> ' + T('Equal', 'Iguales') + '</button><button class="bt" data-eq="0"><span aria-hidden="true">2</span> ' + T('Add to 180°', 'Suman 180°') + '</button></div><p class="cfb" aria-live="polite"></p>';
-      row.before(ck);
-      var choose = function (eq) {
-        if (!P.checking) return;
-        P.checking = false;
-        var right = eq === !!RELS[q.rel].eq;
-        Sound.play(right ? 'click' : 'miss');
-        [].forEach.call(ck.querySelectorAll('button'), function (b) { b.disabled = true; if ((b.getAttribute('data-eq') === '1') === !!RELS[q.rel].eq) b.classList.add('primary'); });
-        var fbk = ck.querySelector('.cfb');
-        fbk.className = 'cfb ' + (right ? 'good' : 'bad');
-        fbk.innerHTML = (right ? '&#10003; ' : '&#10007; ') + (RELS[q.rel].eq ? T(RELS[q.rel].name + ' are equal. So x is the same as the given angle.', 'Los ' + RELS[q.rel].name.toLowerCase() + ' son iguales. Así que x es igual al ángulo dado.')
-          : T('Co-interior angles add to 180°. So x is 180° minus the given angle.', 'Los ángulos colaterales internos suman 180°. Así que x es 180° menos el ángulo dado.'));
-        say(fbk.textContent);
-        row.style.display = ''; fitQ();
-        setTimeout(function () { inp.focus(); }, 30);
-      };
-      [].forEach.call(ck.querySelectorAll('button'), function (b) { b.addEventListener('click', function () { choose(b.getAttribute('data-eq') === '1'); }); });
-      P.checkKeys = function (k) { if (k === '1' || k === '2') { choose(k === '1'); return true; } return false; };
-      fitQ();
-      setTimeout(function () { var b = ck.querySelector('button'); if (b) b.focus(); }, 30);
-    } else { P.checking = false; setTimeout(function () { inp.focus(); }, 30); }
+    setTimeout(function () { inp.focus(); }, 30);
   }
   function fire() {
     var P = G.puzzle; if (!P || P.phase !== 'ask') return;
-    if (P.checking) return;   // the equal-or-180 question comes first
     var inp = $('#ans'), v = parseFloat(inp.value);
     if (inp.value === '' || isNaN(v)) { $('#err').textContent = T('Type an angle first.', 'Escribe primero un ángulo.'); inp.focus(); return; }
     if (v < 0 || v > 180) { $('#err').textContent = T('This turret turns from 0° to 180°.', 'Esta torreta gira de 0° a 180°.'); inp.focus(); return; }
@@ -1467,7 +1441,6 @@
       if (G.screen === 'puzzle' || G.screen === 'sneak') { e.preventDefault(); openPause(); }
       return;
     }
-    if (!G.paused && G.screen === 'puzzle' && G.puzzle && G.puzzle.checking && G.puzzle.checkKeys && G.puzzle.checkKeys(e.key)) { e.preventDefault(); return; }
     if (G.paused || G.screen !== 'sneak') return;
     var k = KEYMAP[e.code];
     if (k) { keys[k] = true; e.preventDefault(); }
@@ -2138,7 +2111,6 @@
     SiteControls.create({
       joystick: true, numpad: ['backspace', 'enter'], keys: keys,
       onKey: function (k) {
-        if (G.puzzle && G.puzzle.checking && G.puzzle.checkKeys) { G.puzzle.checkKeys(k); return; }   // the equal-or-180 question first
         var inp = $('#ans');
         if (k === 'enter') { if (G.puzzle && G.puzzle.phase === 'done') nextPanel(); else fire(); return; }
         if (!inp || inp.disabled) return;
