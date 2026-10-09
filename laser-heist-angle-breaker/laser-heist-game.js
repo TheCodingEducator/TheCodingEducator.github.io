@@ -878,6 +878,7 @@
     P.hits[P.i] = P.hit;
     if (!P.redo && P.first) P.first[P.i] = P.hit;   // stars count the panels hit on the first try
     if (P.practice) { G.prac.total++; if (P.hit) G.prac.right++; }
+    if (P.hit) P.needHit = false;
     var kind = relOf(q).name;
     G.missBy = G.missBy || {}; G.missBy[kind] = P.hit ? 0 : (G.missBy[kind] || 0) + 1;
     if (!P.practice) {
@@ -917,7 +918,12 @@
     var row = document.createElement('div'); row.className = 'btns'; row.style.marginTop = '14px';
     row.innerHTML = '<button class="fire" id="b-next">' + (P.practice ? T('NEXT QUESTION', 'SIGUIENTE') : last ? T('START THE SNEAK', 'EMPEZAR EL ESCAPE') : T('NEXT PANEL', 'SIGUIENTE PANEL')) + ' &#9656;</button>';
     fb.after(row);
-    if (!P.practice && last && missed === 3) {
+    if (P.redo && last && P.needHit && missed < 3) {   // caught 3 times and still no new right answer
+      row.innerHTML = '<button class="fire" id="b-next">&#8634; ' + T('TRY AGAIN', 'OTRA VEZ') + '</button>';
+      var lk = document.createElement('p'); lk.className = 'fb bad'; lk.style.marginTop = '8px';
+      lk.innerHTML = '&#128274; ' + T('Get at least 1 more right before you try the sneak again. Here come the missed panels again, with new angles.', 'Acierta al menos 1 más antes de volver a intentar el escape. Vuelven los paneles fallados, con ángulos nuevos.');
+      row.before(lk); say(lk.textContent);
+    } else if (!P.practice && last && missed === 3) {
       // zero right: the sneak stays locked. All three panels again, with new angles, until at least one is hit.
       row.innerHTML = '<button class="fire" id="b-next">&#8634; ' + T('TRY ALL 3 AGAIN', 'REPETIR LAS 3') + '</button>';
       var lock = document.createElement('p'); lock.className = 'fb bad'; lock.style.marginTop = '8px';
@@ -958,7 +964,7 @@
     Sound.play('click');
     var none = !P.hits.some(Boolean), lastOne = P.redo ? !P.queue.length : P.i === 2;
     if (lastOne && none) return redoMissed();   // zero right: all three again before the sneak
-    if (P.redo) { if (P.queue.length) loadPanel(P.queue.shift()); else startSneak(); return; }
+    if (P.redo) { if (P.queue.length) loadPanel(P.queue.shift()); else if (P.needHit) redoMissed(); else startSneak(); return; }
     if (P.i < 2) {
       P.i++; P.phase = 'ask'; P.typed = null; P.hit = false;
       var q = P.qs[P.i]; P.aim = wa(q, q.scene.turret.rest);
@@ -1401,6 +1407,7 @@
       Sound.play('caught');
       toast(T('CAUGHT 3 TIMES: BACK TO THE LASERS', 'ATRAPADO 3 VECES: DE VUELTA A LOS LÁSERES'), '#ff4fa3');
       say(T('Caught three times. Back to the laser puzzles: fix the panels you missed to make the sneak easier.', 'Te atraparon tres veces. De vuelta a los rompecabezas láser: arregla los paneles que fallaste para que el escape sea más fácil.'));
+      G.puzzle.needHit = true;   // back from the sneak: at least one more right answer before trying it again
       return redoMissed();
     }
     Sound.play("caught");
