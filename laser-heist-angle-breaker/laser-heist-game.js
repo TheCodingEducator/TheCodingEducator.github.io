@@ -1684,7 +1684,7 @@
         else { burst(end[0], end[1], '#ffd166', 12); Sound.play('miss'); }
       }
       if (Pz.phase === 'beam' && Pz.anim > 1.0) { Pz.phase = 'done'; Pz.boom = false; puzzleResult(); }
-      if (Pz.phase === 'done' && Pz.hit && q.scene.all) labelAll(q);
+      if (Pz.phase === 'done' && q.scene.all) labelAll(q);   // right or wrong, every angle's measure is shown once the shot is done
       if (Pz.phase === 'done' && !Pz.hit) {   // the right line, so the miss can be compared
         var ga = wa(q, sc.panel.dir), good = [tv[0] + Math.cos(ga * D2R) * (dist - 34), tv[1] - Math.sin(ga * D2R) * (dist - 34)];
         ctx.save(); ctx.setLineDash([6, 8]); glowLine(tv[0], tv[1], good[0], good[1], 'rgba(125,255,176,0.8)', 3, 8); ctx.restore();
