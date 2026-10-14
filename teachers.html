@@ -18,7 +18,7 @@
 <meta property="og:url" content="https://studentmathgames.com/teachers">
 <meta property="og:image" content="https://studentmathgames.com/og/site.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="stylesheet" href="site-pages.css?v=ace2e869">
+<link rel="stylesheet" href="site-pages.css?v=3d589e19">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893" crossorigin="anonymous"></script>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -40,15 +40,34 @@
 
 <main class="pg">
 
-  <nav class="jump" aria-label="On this page">
-    <p class="jump-title">Jump to a unit</p>
-    <div class="jump-group"><b>Middle school:</b> <a href="#lines-and-slope">Lines and slope</a> <a href="#angle-relationships">Angle relationships</a> <a href="#transformations-and-similarity">Transformations and similarity</a> <a href="#pythagorean-theorem">The Pythagorean theorem</a> <a href="#exponents-and-roots">Exponents and roots</a> <a href="#solving-equations">Solving equations</a> <a href="#ratios-and-proportions">Ratios and proportions</a></div>
-    <div class="jump-group"><b>Elementary:</b> <a href="#coordinate-plane">The coordinate plane</a> <a href="#multiplication-and-area">Multiplication and area</a> <a href="#money">Money</a></div>
-    <div class="jump-group"><b>Also on this page:</b> <a href="#in-class">Using the games in class</a> <a href="#standards">Standards</a> <a href="#good-to-know">School filters and accessibility</a></div>
-  </nav>
+  <ol class="start-here" aria-label="Start here">
+    <li><b>Pick your unit</b> below.</li>
+    <li><b>Print</b> the pre-assessment or the whole unit pack.</li>
+    <li><b>Play</b> the game in class, then check with the exit ticket.</li>
+  </ol>
 
-  <h2>Games by unit</h2>
-  <p>Each unit has a <b>unit pack</b>: every worksheet and exit ticket for the unit on one printable page, with the answer keys at the end. Each game has its own teacher guide and printables.</p>
+  <h2 id="units">Pick a unit</h2>
+  <div class="unit-picker">
+    <div class="band-filter" role="group" aria-label="Show grades">
+      <button type="button" data-band="all" aria-pressed="true">All grades</button>
+      <button type="button" data-band="elem" aria-pressed="false">Elementary (2&ndash;5)</button>
+      <button type="button" data-band="ms" aria-pressed="false">Middle school (6&ndash;8)</button>
+    </div>
+    <div class="unit-tiles">
+      <a class="unit-tile" href="#lines-and-slope" data-unit="lines-and-slope" data-band="ms"><b>Lines and slope</b><span>Grade 8 &middot; 1 game</span></a>
+      <a class="unit-tile" href="#angle-relationships" data-unit="angle-relationships" data-band="ms"><b>Angle relationships</b><span>Grades 7&ndash;8 &middot; 3 games</span></a>
+      <a class="unit-tile" href="#transformations-and-similarity" data-unit="transformations-and-similarity" data-band="ms"><b>Transformations and similarity</b><span>Grade 8 &middot; 2 games</span></a>
+      <a class="unit-tile" href="#pythagorean-theorem" data-unit="pythagorean-theorem" data-band="ms"><b>The Pythagorean theorem</b><span>Grade 8 &middot; 1 game</span></a>
+      <a class="unit-tile" href="#exponents-and-roots" data-unit="exponents-and-roots" data-band="ms"><b>Exponents and roots</b><span>Grades 6&ndash;8 &middot; 3 games</span></a>
+      <a class="unit-tile" href="#solving-equations" data-unit="solving-equations" data-band="ms"><b>Solving equations</b><span>Grades 6&ndash;8 &middot; 1 game</span></a>
+      <a class="unit-tile" href="#ratios-and-proportions" data-unit="ratios-and-proportions" data-band="ms"><b>Ratios and proportions</b><span>Grades 6&ndash;7 &middot; 1 game</span></a>
+      <a class="unit-tile" href="#coordinate-plane" data-unit="coordinate-plane" data-band="elem"><b>The coordinate plane</b><span>Grades 5&ndash;6 &middot; 1 game</span></a>
+      <a class="unit-tile" href="#multiplication-and-area" data-unit="multiplication-and-area" data-band="elem"><b>Multiplication and area</b><span>Grade 3 &middot; 1 game</span></a>
+      <a class="unit-tile" href="#money" data-unit="money" data-band="elem"><b>Money</b><span>Grade 2 &middot; 1 game</span></a>
+    </div>
+  </div>
+  <p class="unit-note">Each unit has a <b>unit pack</b>: every worksheet and exit ticket for the unit on one printable page, with the answer keys at the end.</p>
+  <p class="unit-showing" hidden><span></span> <button type="button" class="show-all">Show all units</button></p>
 
   <h3 class="unit-group">Middle school</h3>
 
@@ -131,7 +150,9 @@
 
 
 
-  <h2 id="in-class">Using the games in class</h2>
+  <h2 id="more">More for teachers</h2>
+  <details class="more-details" id="in-class">
+    <summary>Ideas for using the games in class</summary>
   <ul>
     <li><strong>Printables.</strong> Every game has a worksheet with an answer key and a two-to-a-page exit ticket; several also have a pre-assessment, visual notes and an entry ticket. Print a whole unit at once with its unit pack.</li>
     <li><strong>Warm-ups (5 minutes).</strong> Most games have a quick mode or a first level that fits the start of class.</li>
@@ -140,10 +161,10 @@
     <li><strong>Review days.</strong> Exponent Hoops, Linear World Cup and Let's Get to the Point have two-player modes for a friendly competition.</li>
     <li><strong>Connect back to paper.</strong> Ask students to write down each move or step the game asks for. The game becomes a worked solution in their notebook.</li>
   </ul>
+  </details>
 
-  <h2 id="standards">Standards at a glance</h2>
-  <details class="std-details">
-    <summary>Show every standard and the games that teach it</summary>
+  <details class="more-details" id="standards">
+    <summary>Every standard and the games that teach it</summary>
   <div class="table-wrap">
     <table class="pg-table">
       <thead><tr><th>Standard</th><th>What it covers</th><th>Game</th></tr></thead>
@@ -172,13 +193,16 @@
   </div>
   </details>
 
-  <h2 id="good-to-know">Good to know</h2>
+  <details class="more-details" id="good-to-know">
+    <summary>School filters and accessibility</summary>
   <h3>Getting the games past school filters</h3>
   <p>This site was built so it can run on school networks. There are no accounts and no chat, and nothing students type is sent anywhere. Progress (like best times and coins) saves only in that browser on that device, and students can erase it any time with the Reset progress button.</p>
   <p>If your school's filter blocks the site, ask your technology department to allow <strong>studentmathgames.com</strong>. It may also help to mention that the site keeps no student data, uses a cookie-free visitor counter, and that any ads are non-personalized because the site is registered with Google as directed to children. The <a href="privacy-policy">privacy policy</a> explains exactly what the site does and doesn't collect.</p>
 
   <h3>Accessibility</h3>
   <p>Every game can be played in Spanish with the 🌐 Español button in its top bar (the choice is remembered for all the games on that device). Every game can be played with the keyboard alone: arrow keys move between buttons, Enter or Space presses them. Games fill the screen on a computer, and on phones and tablets the page never scrolls. Read more on the <a href="accessibility">accessibility page</a>.</p>
+
+  </details>
 
   <h3>Suggestions and requests</h3>
   <p>If there's a standard you'd like a game for, or something that would make a game work better in your classroom, please <a href="contact">get in touch</a>. You can see every recent change on the <a href="whats-new">What's new</a> page.</p>
@@ -187,5 +211,40 @@
 <footer class="pg-foot">
   &copy; 2026 Mr. H &middot; <a href="./">All games</a> &middot; <a href="whats-new">What's new</a> &middot; <a href="about">About</a> &middot; <a href="privacy-policy">Privacy Policy</a> &middot; <a href="terms">Terms</a> &middot; <a href="accessibility">Accessibility</a> &middot; <a href="contact">Contact</a>
 </footer>
+<script>
+// Pick a unit: a tile shows just that unit (remembered in the address, so Back works); the grade buttons narrow the tiles.
+(function () {
+  var units = [].slice.call(document.querySelectorAll('section.unit'));
+  var groups = [].slice.call(document.querySelectorAll('h3.unit-group'));
+  var tiles = [].slice.call(document.querySelectorAll('.unit-tile'));
+  var showing = document.querySelector('.unit-showing');
+  function show(id) {
+    var one = units.some(function (u) { return u.id === id; });
+    units.forEach(function (u) { u.hidden = one && u.id !== id; });
+    groups.forEach(function (g) { g.hidden = one; });
+    tiles.forEach(function (t) { if (t.dataset.unit === id) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
+    showing.hidden = !one;
+    if (one) showing.firstChild.textContent = 'Showing one unit.';
+    return one;
+  }
+  function fromHash(scroll) {
+    var id = location.hash.slice(1);
+    var d = id && document.getElementById(id);
+    if (d && d.tagName === 'DETAILS') { d.open = true; show(''); return; }
+    if (show(id) && scroll) showing.scrollIntoView({ block: 'start' });
+  }
+  window.addEventListener('hashchange', function () { fromHash(true); });
+  fromHash(false);
+  showing.querySelector('.show-all').addEventListener('click', function () {
+    history.pushState(null, '', location.pathname + '#units'); show(''); document.getElementById('units').scrollIntoView();
+  });
+  [].forEach.call(document.querySelectorAll('.band-filter button'), function (b) {
+    b.addEventListener('click', function () {
+      [].forEach.call(b.parentNode.children, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); });
+      tiles.forEach(function (t) { t.hidden = b.dataset.band !== 'all' && t.dataset.band !== b.dataset.band; });
+    });
+  });
+})();
+</script>
 </body>
 </html>

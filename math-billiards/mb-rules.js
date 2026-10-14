@@ -55,7 +55,7 @@
   // It always solves the angle problem correctly, but its aim is only human. On some shots (missChance) its aim is
   // slightly off, by missBy degrees either way, which usually misses the pocket; every other shot gets only a tiny
   // wobble (steady). Turn missChance up or down for an easier or harder opponent.
-  MB.AI = { missChance: { beginner: 0.55, intermediate: 0.45, challenge: 0.35 }, missBy: [1.2, 2.6], steady: 0.12, powerError: 0.12 };
+  MB.AI = { missChance: { beginner: 0.55, intermediate: 0.45, challenge: 0.15 }, missBy: [1.2, 2.6], steady: 0.12, powerError: 0.12 };
   function gauss() { var u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
   function clearPath(balls, a, b, skip) {
     var ab = V.sub(b, a), L = V.len(ab), u = V.mul(ab, 1 / (L || 1));

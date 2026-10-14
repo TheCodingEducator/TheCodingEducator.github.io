@@ -127,3 +127,21 @@ main.pg .card-print { flex: none; margin: 0; padding-top: 8px; border-top: 1px d
 .card-print b { color: var(--muted); }
 .std-details summary { cursor: pointer; font-weight: 700; color: var(--accent); padding: 6px 0; }
 .std-details[open] summary { margin-bottom: 8px; }
+.start-here { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; counter-reset: step; padding: 0; margin: 8px 0 0; }
+.start-here li { flex: 1 1 180px; counter-increment: step; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 10px 46px; position: relative; font-size: 15px; margin: 0; }
+.start-here li::before { content: counter(step); position: absolute; left: 12px; top: 9px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 900; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.band-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.band-filter button { font: inherit; font-size: 14px; font-weight: 800; background: var(--panel); color: var(--accent); border: 2px solid var(--line); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+.band-filter button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.unit-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.unit-tile { display: flex; flex-direction: column; gap: 2px; background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; text-decoration: none; }
+.unit-tile b { color: var(--text); font-size: 16px; }
+.unit-tile span { color: var(--muted); font-size: 13px; }
+.unit-tile:hover, .unit-tile[aria-current] { border-color: var(--accent); }
+.unit-tile[aria-current] { background: var(--panel-2); }
+.unit-tile[hidden], .unit[hidden], h3.unit-group[hidden], .unit-showing[hidden] { display: none; }
+main.pg .unit-note { font-size: 14px; color: var(--muted); }
+.unit-showing { scroll-margin-top: 12px; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.show-all { font: inherit; font-size: 14px; font-weight: 800; background: var(--panel); color: var(--accent); border: 2px solid var(--line); border-radius: 9px; padding: 4px 12px; cursor: pointer; }
+.more-details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px; margin: 8px 0; scroll-margin-top: 16px; }
+.more-details > summary { cursor: pointer; font-weight: 800; color: var(--accent); padding: 8px 0; font-size: 16px; }
