@@ -14,6 +14,12 @@
       '" stroke-width="' + (w || 2) + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + ' stroke-linecap="round"/>';
   }
   function size(s, w, h) { s.setAttribute('width', w); s.setAttribute('height', h); s.setAttribute('viewBox', '0 0 ' + w + ' ' + h); }
+  // a shaded angle at (x, y) from a0 to a1 degrees (counterclockwise, math style: 0 = right, 90 = up)
+  function wedge(x, y, r, a0, a1, col, op) {
+    var p = function (a) { return r1(x + r * Math.cos(rad(a))) + ' ' + r1(y - r * Math.sin(rad(a))); };
+    return '<path d="M' + r1(x) + ' ' + r1(y) + ' L' + p(a0) + ' A' + r + ' ' + r + ' 0 ' + (a1 - a0 > 180 ? 1 : 0) + ' 0 ' + p(a1) +
+      ' Z" fill="' + col + '" fill-opacity="' + (op || 0.22) + '" stroke="' + col + '" stroke-width="1.6"/>';
+  }
   var draw = {};
 
   // right triangle: leg a across the bottom, leg b up the left, hypotenuse c. data-a/b/c are the labels; when a leg's
@@ -29,18 +35,23 @@
 
   // two angles that make a right angle (data-kind="comp") or a straight line (data-kind="supp").
   // data-given is the known angle in degrees (used to draw it); data-l1 / data-l2 are the labels (default "35°" and "?").
+  // data-fill shades the two angles in two colors.
   draw.pair = function (s, d) {
-    var g = +d.given, l1 = d.l1 || g + '°', l2 = d.l2 || '?', h = '';
+    var g = +d.given, l1 = d.l1 || g + '°', l2 = d.l2 || '?', h = '', fill = 'fill' in d;
     if (d.kind === 'comp') {
       var x0 = 18, y0 = 112, R = 104;
       size(s, 150, 122);
+      if (fill) h += wedge(x0, y0, 40, 0, g, A) + wedge(x0, y0, 40, g, 90, B);
       h += line(x0, y0, x0 + R, y0) + line(x0, y0, x0, y0 - R) + line(x0, y0, x0 + R * Math.cos(rad(g)), y0 - R * Math.sin(rad(g)), C);
       h += '<path d="M' + x0 + ' ' + (y0 - 10) + ' h10 v10" fill="none" stroke="' + INK + '" stroke-width="1.2"/>';
-      h += txt(x0 + 58 * Math.cos(rad(g / 2)), y0 - 58 * Math.sin(rad(g / 2)) + 4, l1, A);
+      // (a long label like "(3x + 10)°" starts just outside the shading instead of sitting on it)
+      if (l1.length > 5) h += txt(x0 + 46 * Math.cos(rad(g / 2)), y0 - 46 * Math.sin(rad(g / 2)) + 4, l1, A, 'start');
+      else h += txt(x0 + 58 * Math.cos(rad(g / 2)), y0 - 58 * Math.sin(rad(g / 2)) + 4, l1, A);
       h += txt(x0 + 58 * Math.cos(rad((g + 90) / 2)), y0 - 58 * Math.sin(rad((g + 90) / 2)) + 4, l2, B);
     } else {
       var cx = 110, cy = 86, L = 96;
       size(s, 220, 100);
+      if (fill) h += wedge(cx, cy, 30, 0, g, A) + wedge(cx, cy, 30, g, 180, B);
       h += line(cx - L, cy, cx + L, cy) + line(cx, cy, cx + 84 * Math.cos(rad(g)), cy - 84 * Math.sin(rad(g)), C);
       h += txt(cx + 46 * Math.cos(rad(g / 2)), cy - 46 * Math.sin(rad(g / 2)) + 4, l1, A);
       h += txt(cx + 46 * Math.cos(rad((g + 180) / 2)), cy - 46 * Math.sin(rad((g + 180) / 2)) + 4, l2, B);
@@ -49,10 +60,11 @@
   };
 
   // two crossing lines. data-given is the angle between them (drawn); labels: data-l1 (that angle), data-l2 (the angle
-  // across from it) and data-l3 (the angle beside it).
+  // across from it) and data-l3 (the angle beside it). data-fill shades the two vertical angles in one color.
   draw.cross = function (s, d) {
     var g = +d.given, cx = 110, cy = 66, L = 90, h = '';
     size(s, 220, 132);
+    if ('fill' in d) h += wedge(cx, cy, 24, 0, g, A) + wedge(cx, cy, 24, 180, 180 + g, A);
     h += line(cx - L, cy, cx + L, cy) + line(cx - L * Math.cos(rad(g)), cy + L * Math.sin(rad(g)), cx + L * Math.cos(rad(g)), cy - L * Math.sin(rad(g)), C);
     var at = function (deg, s2, col) { return txt(cx + 34 * Math.cos(rad(deg)), cy - 34 * Math.sin(rad(deg)) + 4, s2, col); };
     h += at(g / 2, d.l1 || g + '°', A) + at(180 + g / 2, d.l2 || 'x', B) + at((g + 180) / 2, d.l3 || 'y', C);
@@ -61,13 +73,23 @@
 
   // two parallel lines cut by a transversal, with the eight angles numbered 1-8
   // (1 upper-left, 2 upper-right, 3 lower-left, 4 lower-right at the top line; 5-8 the same at the bottom line).
+  // data-shade="2,6" shades those angles (equal ones in one color; data-shade2 adds a second color);
+  // data-nonum leaves the numbers off.
   draw.parallel = function (s, d) {
     var g = +d.given || 65, y1 = 40, y2 = 118, x1 = 150, dx = (y2 - y1) / Math.tan(rad(g)), x2 = x1 - dx, h = '';
     size(s, 250, 158);
+    var span = [null, [g, 180], [0, g], [180, 180 + g], [180 + g, 360]];
+    [[d.shade, A], [d.shade2, B]].forEach(function (sh) {
+      (sh[0] || '').split(',').filter(Boolean).forEach(function (n) {
+        n = +n; var at = n > 4 ? [x2, y2] : [x1, y1], q = span[(n - 1) % 4 + 1];
+        h += wedge(at[0], at[1], 22, q[0], q[1], sh[1]);
+      });
+    });
     h += line(10, y1, 240, y1) + line(10, y2, 240, y2);
     h += '<path d="M200 ' + (y1 - 5) + ' l6 5 l-6 5 M200 ' + (y2 - 5) + ' l6 5 l-6 5" fill="none" stroke="' + INK + '" stroke-width="1.5"/>';
     var ext = 30 / Math.sin(rad(g));
     h += line(x1 + ext * Math.cos(rad(g)), y1 - 30, x2 - ext * Math.cos(rad(g)), y2 + 30, C);
+    if ('nonum' in d) { s.innerHTML = h; return; }
     [[x1, y1, 1], [x2, y2, 5]].forEach(function (p) {
       [[(g + 180) / 2, 0], [g / 2, 1], [180 + g / 2, 2], [(180 + g + 360) / 2, 3]].forEach(function (q) {
         h += txt(p[0] + 20 * Math.cos(rad(q[0])), p[1] - 20 * Math.sin(rad(q[0])) + 4, String(p[2] + q[1]), A, 'middle', 12);
@@ -137,6 +159,54 @@
       x += w + 40;
     });
     size(s, x, H);
+    s.innerHTML = h;
+  };
+
+  // one angle of data-deg degrees, shaded, with an optional label data-l
+  draw.angle = function (s, d) {
+    var g = +d.deg, cx = 60, cy = 62, L = 50, h = '';
+    size(s, 120, 74);
+    h += wedge(cx, cy, 16, 0, g, A) + line(cx, cy, cx + L, cy) + line(cx, cy, cx + L * Math.cos(rad(g)), cy - L * Math.sin(rad(g)));
+    if (g === 90) h += '<path d="M' + (cx + 9) + ' ' + cy + ' v-9 h-9" fill="none" stroke="' + INK + '" stroke-width="1.2"/>';
+    if (d.l) h += txt(cx + 30 * Math.cos(rad(g / 2)), cy - 30 * Math.sin(rad(g / 2)) + 4, d.l, A, 'middle', 12);
+    s.innerHTML = h;
+  };
+
+  // a pair of lines: data-kind="par" (parallel), "perp" (perpendicular) or "int" (crossing, not at a right angle)
+  draw.lines = function (s, d) {
+    var h = '';
+    size(s, 110, 80);
+    if (d.kind === 'par') h += line(12, 26, 98, 14) + line(12, 64, 98, 52);
+    else if (d.kind === 'perp') h += line(10, 46, 100, 46) + line(55, 6, 55, 76) + '<path d="M55 37 h9 v9" fill="none" stroke="' + INK + '" stroke-width="1.2"/>';
+    else h += line(10, 62, 100, 22) + line(20, 12, 92, 72);
+    s.innerHTML = h;
+  };
+
+  // an angle split into two parts: data-a and data-b are the parts' real sizes (to draw them); data-la / data-lb label
+  // the parts and data-lt labels the whole angle
+  draw.split = function (s, d) {
+    var a = +d.a, b = +d.b, cx = 20, cy = 96, L = 92, h = '';
+    size(s, 170, 108);
+    h += wedge(cx, cy, 44, 0, a, A) + wedge(cx, cy, 44, a, a + b, B);
+    [0, a, a + b].forEach(function (q, i) { h += line(cx, cy, cx + L * Math.cos(rad(q)), cy - L * Math.sin(rad(q)), i === 1 ? C : INK); });
+    h += txt(cx + 60 * Math.cos(rad(a / 2)), cy - 60 * Math.sin(rad(a / 2)) + 4, d.la || '', A, 'middle', 12);
+    h += txt(cx + 60 * Math.cos(rad(a + b / 2)), cy - 60 * Math.sin(rad(a + b / 2)) + 4, d.lb || '', B, 'middle', 12);
+    if (d.lt) h += txt(cx + 22 * Math.cos(rad((a + b) / 2)), cy - 22 * Math.sin(rad((a + b) / 2)) + 4, d.lt, INK, 'middle', 10);
+    s.innerHTML = h;
+  };
+
+  // the letter shapes that spot parallel-line angle pairs: data-kind="z" (alternate interior: equal), "f"
+  // (corresponding: equal) or "c" (same-side interior: add to 180). The shape is drawn thick over the lines.
+  draw.zfc = function (s, d) {
+    var k = d.kind, h = '', top = 41.1, bot = 25.3;
+    size(s, 90, 66);
+    h += line(4, 15, 86, 15, MUTED, 1.4) + line(4, 50, 86, 50, MUTED, 1.4) + line(19, 64, 47, 2, MUTED, 1.4);
+    if (k === 'z') h += wedge(top, 15, 13, 180, 245.7, A, 0.35) + wedge(bot, 50, 13, 0, 65.7, A, 0.35) +
+      '<path d="M8 15 H' + top + ' L' + bot + ' 50 H62" fill="none" stroke="' + C + '" stroke-width="3.5" stroke-linejoin="round"/>';
+    else if (k === 'f') h += wedge(top, 15, 13, 0, 65.7, A, 0.35) + wedge(bot, 50, 13, 0, 65.7, A, 0.35) +
+      '<path d="M76 15 H' + top + ' M62 50 H' + bot + ' M19 64 L47 2" fill="none" stroke="' + C + '" stroke-width="3.5" stroke-linecap="round"/>';
+    else h += wedge(top, 15, 13, 245.7, 360, A, 0.35) + wedge(bot, 50, 13, 0, 65.7, B, 0.35) +
+      '<path d="M76 15 H' + top + ' L' + bot + ' 50 H62" fill="none" stroke="' + C + '" stroke-width="3.5" stroke-linejoin="round"/>';
     s.innerHTML = h;
   };
 

@@ -34,7 +34,9 @@ foreach ($u in $units) {
   $gameNames = @()
   foreach ($g in $u.games) {
     $gameNames += [regex]::Match((ReadText "$g/guide.html"), '<a class="play-btn" href="\./">&#9654; Play ([^<]+)</a>').Groups[1].Value
-    foreach ($part in 'worksheet', 'exit-ticket') {
+    # in teaching order; a game that doesn't have one of these yet just skips it
+    foreach ($part in 'pre-assessment', 'notes', 'entry-ticket', 'worksheet', 'exit-ticket') {
+      if (-not (Test-Path "$g/$part.html")) { continue }
       $text = ReadText "$g/$part.html"
       foreach ($m in [regex]::Matches($text, '(?s)<article class="sheet[^"]*".*?</article>')) {
         # ids are per page; in a pack each one gets its game and part in front so none repeat
@@ -84,13 +86,14 @@ foreach ($u in $units) {
   <a href="../teachers">For teachers</a>
   <button type="button" id="print-btn">&#128424; Print or save as PDF</button>
 </div>
-<p class="note"><b>$($u.name) unit pack</b> ($($u.grades) &middot; CCSS $($u.std)): every worksheet and exit ticket for this unit, ready to print in one go.$extraNote The answer keys print at the end, each on its own page, so you can leave them off. To make a PDF, click Print and choose "Save as PDF." Games: $links</p>
+<p class="note"><b>$($u.name) unit pack</b> ($($u.grades) &middot; CCSS $($u.std)): every printable for this unit (worksheets and exit tickets, plus pre-assessments, visual notes and entry tickets where a game has them), ready to print in one go.$extraNote The answer keys print at the end, each on its own page, so you can leave them off. To make a PDF, click Print and choose "Save as PDF." Games: $links</p>
 
 $($sheets -join "`n`n")
 
 $($keys -join "`n`n")
 
 <script src="../worksheet.js"></script>
+<script src="../worksheet-art.js"></script>
 </body>
 </html>
 "@

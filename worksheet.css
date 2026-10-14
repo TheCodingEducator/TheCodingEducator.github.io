@@ -47,6 +47,50 @@ table.fill th { background: #f3f6fb; }
 .vocab ul { columns: 2; column-gap: 24px; margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.4; }
 .vocab li { break-inside: avoid; margin-bottom: 2px; }
 
+/* real-life pictures (drawn by worksheet-art.js): one captioned picture, or a strip of them under a small title */
+.strip { margin: 12px 0 4px; break-inside: avoid; }
+.strip > b { display: block; font-size: 13px; margin-bottom: 6px; }
+.strip > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(1.25in, 1fr)); gap: 10px; }
+.art { margin: 0; border: 1px solid var(--line); border-radius: 10px; padding: 5px; background: #fffdf7; break-inside: avoid; }
+.art svg { display: block; width: 100%; height: auto; border-radius: 7px; }
+.art figcaption { font-size: 11.5px; line-height: 1.35; margin-top: 4px; text-align: center; }
+.art.side { float: right; width: 1.6in; margin: 0 0 6px 12px; }
+.prob .art { margin: 4px 0; max-width: 1.7in; }
+.mini-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
+.mini-strip b { color: var(--ink); }
+.mini-strip svg { width: 0.75in; height: auto; border-radius: 5px; }
+.mini-strip span { margin-right: 8px; }
+
+/* banner at the top of a sheet: a picture and the big idea */
+.banner { display: flex; gap: 14px; align-items: center; background: #f3f6fb; border-radius: 10px; padding: 10px 12px; margin-top: 12px; break-inside: avoid; }
+.banner svg { flex: none; width: 1.7in; height: auto; border-radius: 8px; }
+.banner p { margin: 0; font-size: 14px; line-height: 1.5; }
+
+/* visual notes: vocabulary cards, rule boxes and worked examples */
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cards.three { grid-template-columns: repeat(3, 1fr); }
+.vcard { border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 8px; break-inside: avoid; }
+.vcard h3 { margin: 0; font-size: 13.5px; color: var(--accent); }
+.vcard svg { display: block; margin: 3px auto; max-width: 100%; height: auto; }
+.vcard p { margin: 0; font-size: 11.5px; line-height: 1.35; }
+.rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rule { border-radius: 10px; padding: 7px 9px; background: #f3f6fb; font-size: 12px; line-height: 1.4; break-inside: avoid; text-align: center; }
+.rule svg { display: block; margin: 0 auto 2px; max-width: 100%; height: auto; }
+.rule b { display: block; font-size: 13px; }
+.example { display: grid; grid-template-columns: 2in 1fr; gap: 12px; align-items: start; border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 12px; margin-bottom: 9px; break-inside: avoid; }
+.example svg { display: block; width: 100%; height: auto; }
+.example h3 { margin: 0 0 4px; font-size: 14px; }
+.example ol { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.5; }
+.example .check { margin-top: 4px; font-size: 12.5px; color: var(--b); font-weight: 700; }
+.examples { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.examples .example { grid-template-columns: 1fr; margin: 0; }
+.examples .example svg { max-height: 1.05in; width: auto; max-width: 100%; margin: 0 auto; }
+.watch { margin: 10px 0 0; padding: 7px 12px; border-left: 4px solid var(--a); background: #fdf1ee; border-radius: 6px; font-size: 12.5px; line-height: 1.45; break-inside: avoid; }
+.watch ul { margin: 2px 0 0; padding-left: 18px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; color: var(--muted); background: #f3f6fb; border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+.feel { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.feel span { display: inline-block; border: 1.5px solid var(--line); border-radius: 999px; padding: 0 8px; margin-left: 4px; }
+
 /* answer keys */
 .key h1 { font-size: 22px; }
 .key ol { padding-left: 22px; font-size: 14px; line-height: 1.55; }
@@ -70,6 +114,11 @@ table.fill th { background: #f3f6fb; }
 @media (max-width: 640px) {
   .sheet { padding: 20px 16px; }
   .sheet.station { padding: 8px; }
+  .cards, .cards.three, .rules { grid-template-columns: repeat(2, 1fr); }
+  .example { grid-template-columns: 1fr; }
+  .examples { grid-template-columns: 1fr; }
+  .banner { flex-direction: column; }
+  .art.side { float: none; width: auto; margin: 6px 0; }
   .head { flex-direction: column; align-items: flex-start; }
   .grid, .grid.three { grid-template-columns: 1fr; }
 }
@@ -79,6 +128,8 @@ table.fill th { background: #f3f6fb; }
   .toolbar, .note, .no-print { display: none !important; }
   .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
   .key { break-before: page; }
+  .newpage { break-before: page; }
+  h2 { break-after: avoid; }
   .sheet.station { page: station; break-before: page; padding: 0; }
   .station svg { max-height: 7.7in; }
   a { color: inherit; text-decoration: none; }
