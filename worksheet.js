@@ -123,7 +123,11 @@
       var pts = p[0].split(';').map(function (q) { var v = num(q); return at(v[0], v[1]).map(r1).join(','); });
       h += '<polygon points="' + pts.join(' ') + '" fill="' + p[1] + '" fill-opacity="0.18" stroke="' + p[1] + '" stroke-width="2"/>';
     });
-    if (d.line && d.line.split(",")[0] !== d.line.split(",")[2]) {
+    if (d.line && d.line.split(",")[0] === d.line.split(",")[2]) {
+      // a vertical line: x = that number
+      var vx = +d.line.split(",")[0], q1 = at(vx, lo), q2 = at(vx, hi);
+      h += line(q1[0], q1[1], q2[0], q2[1], C, 2.5);
+    } else if (d.line) {
       var v = num(d.line), m = (v[3] - v[1]) / (v[2] - v[0]), xa = lo, xb = hi;
       var y = function (x) { return v[1] + m * (x - v[0]); };
       // keep the drawn line inside the grid
