@@ -1093,6 +1093,32 @@
     });
   }
 
+  // a giant banana lying on the ledge, tips up (about 3.2 feet across), at ground level y = top
+  function drawGiantBanana(cx, top) {
+    const L = { x: cx - 1.6 * S, y: top - 1.3 * S }, Rt = { x: cx + 1.6 * S, y: top - 1.5 * S };
+    const g = ctx.createLinearGradient(0, top - 1.5 * S, 0, top);
+    g.addColorStop(0, '#fff07a'); g.addColorStop(0.55, '#ffd21f'); g.addColorStop(1, '#e0a800');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(L.x, L.y);
+    ctx.quadraticCurveTo(cx, top + 1.4 * S, Rt.x, Rt.y);       // the outside of the curve, resting on the ground
+    ctx.quadraticCurveTo(cx, top - 0.2 * S, L.x, L.y);          // the inside of the curve
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#b07d00'; ctx.lineWidth = Math.max(1.5, 0.07 * S); ctx.stroke();
+    // a ridge along the banana and a soft shine
+    ctx.strokeStyle = 'rgba(176,125,0,0.55)'; ctx.lineWidth = Math.max(1, 0.05 * S);
+    ctx.beginPath(); ctx.moveTo(L.x + 0.25 * S, L.y + 0.18 * S); ctx.quadraticCurveTo(cx, top + 0.55 * S, Rt.x - 0.3 * S, Rt.y + 0.2 * S); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = Math.max(1.5, 0.1 * S); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx - 0.9 * S, top - 0.55 * S); ctx.quadraticCurveTo(cx, top - 0.3 * S, cx + 0.8 * S, top - 0.62 * S); ctx.stroke();
+    // a few brown freckles
+    ctx.fillStyle = 'rgba(120,80,20,0.55)';
+    [[-0.6, -0.28], [0.35, -0.2], [0.95, -0.45]].forEach(p => { ctx.beginPath(); ctx.ellipse(cx + p[0] * S, top + p[1] * S, 0.07 * S, 0.05 * S, 0, 0, 7); ctx.fill(); });
+    // the stem on one end and the dark tip on the other
+    ctx.fillStyle = '#6b4a1e';
+    ctx.save(); ctx.translate(Rt.x, Rt.y); ctx.rotate(-0.9); rrect(-0.1 * S, -0.42 * S, 0.22 * S, 0.5 * S, 0.06 * S); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#4a3212'; ctx.beginPath(); ctx.arc(L.x + 0.04 * S, L.y + 0.04 * S, 0.11 * S, 0, 7); ctx.fill();
+  }
+
   function drawLedges(time) {
     ledges.forEach(l => {
       const x = sx(l.x); const top = sy(l.y + BODY);
@@ -1109,9 +1135,10 @@
         ctx.fillStyle = '#a6ab93'; ctx.fillRect(left + 3.2 * S, top - 4.6 * S, 3.4 * S, 4.6 * S);
         ctx.fillStyle = '#3b3d31'; ctx.beginPath(); ctx.moveTo(left + 4.1 * S, top); ctx.lineTo(left + 4.1 * S, top - 2.8 * S);
         ctx.arc(left + 4.9 * S, top - 2.8 * S, 0.8 * S, Math.PI, 0); ctx.lineTo(left + 5.7 * S, top); ctx.fill();
-        // chest
+        // the prize at the end: a treasure chest for the explorer, a giant banana for the monkey
         const cx = x + 2.2 * S;
         if (!reduceMotion) { ctx.shadowColor = '#ffd55a'; ctx.shadowBlur = S * (1 + 0.4 * Math.sin(time * 3)); }
+        if (character === 'monkey') { drawGiantBanana(cx, top); ctx.shadowBlur = 0; return; }
         ctx.fillStyle = '#8a4e22'; ctx.fillRect(cx - 0.8 * S, top - 1.1 * S, 1.6 * S, 1.1 * S);
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#f2b530'; ctx.fillRect(cx - 0.8 * S, top - 0.75 * S, 1.6 * S, 0.16 * S); ctx.fillRect(cx - 0.12 * S, top - 0.9 * S, 0.24 * S, 0.34 * S);
@@ -1778,7 +1805,8 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const y = H * 0.32 + (reduceMotion ? 0 : Math.sin(time * 2) * 4);
     ctx.lineWidth = fs * 0.2; ctx.strokeStyle = '#3b2208'; ctx.lineJoin = 'round';
-    ctx.strokeText(tl('Temple treasure reached!', '¡Llegaste al tesoro del templo!'), W / 2, y); ctx.fillStyle = '#f2b530'; ctx.fillText(tl('Temple treasure reached!', '¡Llegaste al tesoro del templo!'), W / 2, y);
+    const prize = character === 'monkey' ? tl('Giant banana reached!', '¡Llegaste al plátano gigante!') : tl('Temple treasure reached!', '¡Llegaste al tesoro del templo!');
+    ctx.strokeText(prize, W / 2, y); ctx.fillStyle = '#f2b530'; ctx.fillText(prize, W / 2, y);
     ctx.font = `800 ${fs * 0.45}px Nunito, system-ui, sans-serif`;
     const line = tl(`${perfects} perfect · ${misses} misses · best combo x${bestCombo} · score ${score}`, `${perfects} perfectos · ${misses} fallos · mejor combo x${bestCombo} · puntaje ${score}`);
     ctx.lineWidth = fs * 0.12; ctx.strokeText(line, W / 2, y + fs * 0.9); ctx.fillStyle = '#fff6d8'; ctx.fillText(line, W / 2, y + fs * 0.9);
