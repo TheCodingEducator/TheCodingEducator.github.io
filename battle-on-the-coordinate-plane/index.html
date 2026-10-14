@@ -544,7 +544,7 @@
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
-<script src="../site-layout.js?v=dc3e3464"></script>
+<script src="../site-layout.js?v=627e2fba"></script>
 <script src="../site-sound.js?v=4daed956"></script>
 </head>
 <body>
@@ -552,7 +552,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Battle on the Coordinate Plane</h1>
-<p class="sr-only">A sea battle game on the coordinate plane. Place two ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink both enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
+<p class="sr-only" data-es="Un juego de batalla naval en el plano de coordenadas. Coloca dos barcos en tu tablero y luego túrnate con la computadora. En tu turno, escribe un par ordenado para disparar; un avión sale del origen, primero a la izquierda o a la derecha según x, y luego hacia arriba o hacia abajo según y. En el turno de la computadora, encuentra su par ordenado en tu propio tablero y selecciónalo. Hunde los dos barcos enemigos para ganar. Todo funciona con el teclado: Tab para pasar entre controles, las flechas para moverte por un tablero, Enter para seleccionar, R para girar un barco y Escape para abrir el menú.">A sea battle game on the coordinate plane. Place two ships on your board, then take turns with the computer. On your turn, type an ordered pair to fire; a plane flies from the origin, first left or right for x, then up or down for y. On the computer's turn, find its ordered pair on your own board and select it. Sink both enemy ships to win. Everything works with the keyboard: Tab between controls, arrow keys move around a board, Enter selects, R rotates a ship, Escape opens the menu.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -660,7 +660,7 @@
           <div class="turn" id="turn"><span id="turn-ico" aria-hidden="true">&#127919;</span> <span id="turn-txt">YOUR TURN</span></div>
           <div class="fleet" id="fleet-me"></div>
           <div class="fleet" id="fleet-foe"></div>
-          <div class="timer" id="timer" hidden role="timer" aria-label="Time left"><span id="timer-n">30</span></div>
+          <div class="timer" id="timer" hidden role="timer" aria-label="Time left" data-es-aria="Tiempo restante"><span id="timer-n">30</span></div>
         </header>
         <div class="pin" id="pin" hidden aria-hidden="true"></div>
         <div class="arena" id="arena">

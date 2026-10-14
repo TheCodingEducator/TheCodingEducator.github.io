@@ -508,7 +508,7 @@
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=432f56b2"></script>
-<script src="../site-layout.js?v=dc3e3464"></script>
+<script src="../site-layout.js?v=627e2fba"></script>
 </head>
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
@@ -522,7 +522,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Pythagorean Platforms</h1>
-<p class="sr-only">A jungle game about the Pythagorean theorem. Each canyon is a right triangle: leg a is the distance straight across to the next platform, leg b is how high the vine's anchor is above you, and the hypotenuse c is your rope, all measured in feet. Solve one step of the Pythagorean theorem at a time by choosing the correct line of the written solution (tap it, or press the left or right arrow key); each correct step swings you to the next platform, and a wrong step drops you in the quicksand with a hint. The last step is the big swing: time slows down for a close-up that labels all three sides and reveals the missing length, and you land one rope length below the anchor, so short ropes keep you high in the trees and long ropes swing you low. World 1 asks one question per canyon: count the 1-foot squares along the edge of the square on the rope and type the rope length. World 2 walks through every step with tile squares, World 3 is a timed challenge that starts by counting the squares along one side with whole-number sides, and World 4 finds a missing leg, the distance to the next platform, from numbers carved on a temple door. World 5 mixes bigger triangles and has students type the missing number in each line of the solution.</p>
+<p class="sr-only" data-es="Un juego en la selva sobre el teorema de Pitágoras. Cada cañón es un triángulo rectángulo: el cateto a es la distancia en línea recta hasta la siguiente plataforma, el cateto b es la altura del ancla de la liana sobre ti, y la hipotenusa c es tu cuerda, todo medido en pies. Resuelve un paso del teorema de Pitágoras a la vez eligiendo la línea correcta de la solución escrita (tócala o pulsa la flecha izquierda o derecha); cada paso correcto te balancea a la siguiente plataforma, y un paso incorrecto te deja caer en las arenas movedizas con una pista. El último paso es el gran balanceo: el tiempo se hace lento para un acercamiento que marca los tres lados y revela la longitud que falta, y aterrizas una cuerda por debajo del ancla, así que las cuerdas cortas te mantienen alto en los árboles y las largas te bajan. El mundo 1 hace una pregunta por cañón: cuenta los cuadrados de 1 pie a lo largo del lado del cuadrado de la cuerda y escribe la longitud de la cuerda. El mundo 2 recorre cada paso con cuadrados de fichas, el mundo 3 es un reto con tiempo que empieza contando los cuadrados de un lado con lados enteros, y el mundo 4 encuentra un cateto que falta, la distancia a la siguiente plataforma, con números tallados en la puerta de un templo. El mundo 5 mezcla triángulos más grandes y pide escribir el número que falta en cada línea de la solución.">A jungle game about the Pythagorean theorem. Each canyon is a right triangle: leg a is the distance straight across to the next platform, leg b is how high the vine's anchor is above you, and the hypotenuse c is your rope, all measured in feet. Solve one step of the Pythagorean theorem at a time by choosing the correct line of the written solution (tap it, or press the left or right arrow key); each correct step swings you to the next platform, and a wrong step drops you in the quicksand with a hint. The last step is the big swing: time slows down for a close-up that labels all three sides and reveals the missing length, and you land one rope length below the anchor, so short ropes keep you high in the trees and long ropes swing you low. World 1 asks one question per canyon: count the 1-foot squares along the edge of the square on the rope and type the rope length. World 2 walks through every step with tile squares, World 3 is a timed challenge that starts by counting the squares along one side with whole-number sides, and World 4 finds a missing leg, the distance to the next platform, from numbers carved on a temple door. World 5 mixes bigger triangles and has students type the missing number in each line of the solution.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -536,7 +536,7 @@
 
   <div class="main">
     <div class="stage">
-      <canvas id="game" aria-label="Pythagorean Platforms game. An explorer swings on ropes between jungle platforms. Each correct step of the Pythagorean theorem swings the explorer to the next platform."></canvas>
+      <canvas id="game" aria-label="Pythagorean Platforms game. An explorer swings on ropes between jungle platforms. Each correct step of the Pythagorean theorem swings the explorer to the next platform." data-es-aria="Juego Pythagorean Platforms. Un explorador se balancea en cuerdas entre plataformas de la selva. Cada paso correcto del teorema de Pitágoras lo lleva a la siguiente plataforma."></canvas>
       <div class="help" id="help" hidden>
         <section>
           <h2 data-es="Cómo jugar">How to play</h2>
@@ -760,9 +760,9 @@
 </section>
 
 <section class="reset-progress">
-  <h2>Reset Progress</h2>
-  <p>Erases your saved best score, best combo, and completed worlds for Pythagorean Platforms on this device only. Other games are not affected. This cannot be undone.</p>
-  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+  <h2 data-es="Borrar progreso">Reset Progress</h2>
+  <p data-es="Borra tu mejor puntuación, tu mejor combo y los mundos completados de Pythagorean Platforms solo en este dispositivo. Los demás juegos no se ven afectados. Esto no se puede deshacer.">Erases your saved best score, best combo, and completed worlds for Pythagorean Platforms on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
 </section>
 
 <script src="pythagorean-platforms-game.js?v=42be732b"></script>

@@ -24,7 +24,8 @@
     var erase = document.createElement('button');
     erase.type = 'button'; erase.className = 'sb-erase'; erase.disabled = true;
     var timer = null;
-    function label(n) { erase.textContent = n > 0 ? 'Erase all progress (' + n + ')' : 'Erase all progress'; }
+    var word = document.documentElement.lang === 'es' ? 'Borrar todo el progreso' : 'Erase all progress';
+    function label(n) { erase.textContent = n > 0 ? word + ' (' + n + ')' : word; }
     erase.startCountdown = function () {
       clearInterval(timer);
       var n = 5; erase.disabled = true; label(n);
@@ -64,7 +65,7 @@
     panel.id = id; panel.hidden = true;
     panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', label);
     var close = document.createElement('button');
-    close.type = 'button'; close.className = 'sb-close'; close.setAttribute('aria-label', 'Close ' + label); close.innerHTML = '&times;';
+    close.type = 'button'; close.className = 'sb-close'; close.setAttribute('aria-label', (document.documentElement.lang === 'es' ? 'Cerrar: ' : 'Close ') + label); close.innerHTML = '&times;';
     if (tip) close.tabIndex = -1;
     close.addEventListener('click', function () { closeAll(); });
     panel.appendChild(close);

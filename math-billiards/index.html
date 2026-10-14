@@ -216,7 +216,7 @@
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=432f56b2"></script>
-<script src="../site-layout.js?v=dc3e3464"></script>
+<script src="../site-layout.js?v=627e2fba"></script>
 </head>
 <body>
 <a class="back-link" href="../">&larr; All games</a>
@@ -229,13 +229,13 @@
   <a href="../">&larr; All games</a>
 </div>
 <h1 class="sr-only">Math Billiards</h1>
-<p class="sr-only">A pool game about angle relationships. Aim the cue ball, set the power, then solve for x: the missing angle in a diagram drawn on your shot (complementary, supplementary, vertical, or parallel lines cut by a transversal). The right answer plays your shot; a wrong answer plays the shot that angle would really make, then shows how to fix it. Controls: left and right arrows aim (hold Shift for fine aim), up and down arrows set the power, Enter or Space takes the shot; type the number for x and press Enter or Space. Escape opens the menu.</p>
+<p class="sr-only" data-es="Un juego de billar sobre relaciones entre ángulos. Apunta la bola blanca, elige la fuerza y luego resuelve x: el ángulo que falta en un diagrama dibujado sobre tu tiro (complementarios, suplementarios, opuestos por el vértice, o rectas paralelas cortadas por una transversal). La respuesta correcta hace tu tiro; una respuesta incorrecta hace el tiro que ese ángulo daría de verdad y luego muestra cómo corregirlo. Controles: las flechas izquierda y derecha apuntan (mantén Mayús para apuntar con precisión), las flechas arriba y abajo eligen la fuerza, Enter o Espacio tira; escribe el número de x y pulsa Enter o Espacio. Escape abre el menú.">A pool game about angle relationships. Aim the cue ball, set the power, then solve for x: the missing angle in a diagram drawn on your shot (complementary, supplementary, vertical, or parallel lines cut by a transversal). The right answer plays your shot; a wrong answer plays the shot that angle would really make, then shows how to fix it. Controls: left and right arrows aim (hold Shift for fine aim), up and down arrows set the power, Enter or Space takes the shot; type the number for x and press Enter or Space. Escape opens the menu.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
     <div class="app" id="mb">
       <div id="stage">
-        <canvas id="cv" width="1280" height="720" tabindex="0" aria-label="The pool table"></canvas>
+        <canvas id="cv" width="1280" height="720" tabindex="0" aria-label="The pool table" data-es-aria="La mesa de billar"></canvas>
         <div id="hud" hidden></div>
         <div id="side" hidden></div>
         <div id="toast" aria-hidden="true"></div>
@@ -290,9 +290,9 @@
 </section>
 
 <section class="reset-progress">
-  <h2>Reset Progress</h2>
-  <p>Erases your coins, cues, tables, ball styles and shot effects for Math Billiards on this device only. Other games are not affected. Your progress is saved only in this browser and is never sent anywhere. This cannot be undone.</p>
-  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+  <h2 data-es="Borrar progreso">Reset Progress</h2>
+  <p data-es="Borra tus monedas, tacos, mesas, estilos de bolas y efectos de tiro de Math Billiards solo en este dispositivo. Los demás juegos no se ven afectados. Tu progreso se guarda solo en este navegador y nunca se envía a ningún lugar. Esto no se puede deshacer.">Erases your coins, cues, tables, ball styles and shot effects for Math Billiards on this device only. Other games are not affected. Your progress is saved only in this browser and is never sent anywhere. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
 </section>
 
 <script src="mb-core.js?v=cf9eefc4"></script>

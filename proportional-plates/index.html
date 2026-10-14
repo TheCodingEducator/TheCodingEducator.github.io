@@ -615,7 +615,7 @@
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=432f56b2"></script>
-<script src="../site-layout.js?v=dc3e3464"></script>
+<script src="../site-layout.js?v=627e2fba"></script>
 </head>
 <body>
 <div class="rotate-prompt" id="rotate-prompt" role="alert">
@@ -629,7 +629,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Proportional Plates</h1>
-<p class="sr-only">A fast-paced cooking game about proportions. You are the chef. Walk around the diner with the arrow keys (or click the floor). The kitchen is in the back-left corner and the tables are spread around the dining room. When a customer sits down and raises a hand, walk to their table and press Space to take the order, then walk back to the kitchen, where the order goes up on the ticket rail. Press Space at the stove to cook: read the recipe (or the market price), work out how much is needed for the size of the order, type the amount, and press Enter. You can cook several orders in a row. The chef carries up to two plates at once, each with a trail to its table; any more wait on the kitchen counter, where Space picks them up. Carry each plate to its customer, following the arrow and the glowing spot under their table, and press Space to serve it. The food on the plate is sized by your answer. Customers arrive smiling and slowly get angrier the longer they wait; if one waits too long, they leave and post a 1-star review. A correct order makes the customer happy and earns a star. An answer within 25 percent upsets the customer, and one that is way off makes the customer furious; either way a pop-up shows the right method next to what you did, with a tape diagram, and the order goes back on the rail so you can remake it while the customer keeps waiting. Three 1-star reviews close the restaurant. Levels: scaling a recipe up, scaling up and down, ratio tables, unit prices, and fractional scale factors. Practice mode has no waiting and no reviews. At the stove, the up and down arrow keys switch between orders and Escape steps away; otherwise Escape or the Menu button pauses.</p>
+<p class="sr-only" data-es="Un juego de cocina rápido sobre proporciones. Tú eres el chef. Camina por el restaurante con las flechas (o haz clic en el piso). La cocina está en la esquina del fondo a la izquierda y las mesas están repartidas por el comedor. Cuando un cliente se sienta y levanta la mano, camina a su mesa y pulsa Espacio para tomar el pedido; luego vuelve a la cocina, donde el pedido se cuelga en el riel de comandas. Pulsa Espacio en la estufa para cocinar: lee la receta (o el precio del mercado), calcula cuánto se necesita para el tamaño del pedido, escribe la cantidad y pulsa Enter. Puedes cocinar varios pedidos seguidos. El chef lleva hasta dos platos a la vez, cada uno con un rastro hasta su mesa; los demás esperan en el mostrador de la cocina, donde Espacio los recoge. Lleva cada plato a su cliente siguiendo la flecha y el punto brillante bajo su mesa, y pulsa Espacio para servirlo. La comida del plato tiene el tamaño de tu respuesta. Los clientes llegan sonriendo y se enojan poco a poco mientras más esperan; si uno espera demasiado, se va y deja una reseña de 1 estrella. Un pedido correcto alegra al cliente y gana una estrella. Una respuesta que se aleja hasta un 25 por ciento molesta al cliente, y una muy equivocada lo enfurece; en ambos casos una ventana muestra el método correcto junto a lo que hiciste, con un diagrama de cinta, y el pedido vuelve al riel para que lo prepares otra vez mientras el cliente sigue esperando. Tres reseñas de 1 estrella cierran el restaurante. Niveles: aumentar una receta, aumentar y reducir, tablas de razones, precios unitarios y factores de escala fraccionarios. El modo de práctica no tiene esperas ni reseñas. En la estufa, las flechas arriba y abajo cambian de pedido y Escape te aleja; si no, Escape o el botón Menú pausa el juego.">A fast-paced cooking game about proportions. You are the chef. Walk around the diner with the arrow keys (or click the floor). The kitchen is in the back-left corner and the tables are spread around the dining room. When a customer sits down and raises a hand, walk to their table and press Space to take the order, then walk back to the kitchen, where the order goes up on the ticket rail. Press Space at the stove to cook: read the recipe (or the market price), work out how much is needed for the size of the order, type the amount, and press Enter. You can cook several orders in a row. The chef carries up to two plates at once, each with a trail to its table; any more wait on the kitchen counter, where Space picks them up. Carry each plate to its customer, following the arrow and the glowing spot under their table, and press Space to serve it. The food on the plate is sized by your answer. Customers arrive smiling and slowly get angrier the longer they wait; if one waits too long, they leave and post a 1-star review. A correct order makes the customer happy and earns a star. An answer within 25 percent upsets the customer, and one that is way off makes the customer furious; either way a pop-up shows the right method next to what you did, with a tape diagram, and the order goes back on the rail so you can remake it while the customer keeps waiting. Three 1-star reviews close the restaurant. Levels: scaling a recipe up, scaling up and down, ratio tables, unit prices, and fractional scale factors. Practice mode has no waiting and no reviews. At the stove, the up and down arrow keys switch between orders and Escape steps away; otherwise Escape or the Menu button pauses.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -655,7 +655,7 @@
             <span class="pf" id="propL"></span>
             <span class="peq">=</span>
             <span class="pf pfAns">
-              <span class="pn"><span id="ansPre"></span><input id="ans" inputmode="decimal" autocomplete="off" maxlength="9" aria-label="Your answer"><span id="ansUnit"></span></span>
+              <span class="pn"><span id="ansPre"></span><input id="ans" inputmode="decimal" autocomplete="off" maxlength="9" aria-label="Your answer" data-es-aria="Tu respuesta"><span id="ansUnit"></span></span>
               <span class="pd" id="propR"></span>
             </span>
             <button data-es="¡Servir! &#127869;&#65039;" class="btn" id="btnServe">Serve! &#127869;&#65039;</button>
@@ -808,9 +808,9 @@
 </section>
 
 <section class="reset-progress">
-  <h2>Reset Progress</h2>
-  <p>Erases your saved best shift, highest level, stars, and practice choices for Proportional Plates on this device only. Other games are not affected. This cannot be undone.</p>
-  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+  <h2 data-es="Borrar progreso">Reset Progress</h2>
+  <p data-es="Borra tu mejor turno, tu nivel más alto, tus estrellas y tus opciones de práctica de Proportional Plates solo en este dispositivo. Los demás juegos no se ven afectados. Esto no se puede deshacer.">Erases your saved best shift, highest level, stars, and practice choices for Proportional Plates on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
 </section>
 
 <script src="../site-results.js?v=dddc14b7"></script>

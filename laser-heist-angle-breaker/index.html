@@ -267,7 +267,7 @@
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
 <script src="../site-stats.js?v=432f56b2"></script>
-<script src="../site-layout.js?v=dc3e3464"></script>
+<script src="../site-layout.js?v=627e2fba"></script>
 </head>
 <body>
 <a class="back-link" href="../">&larr; All games</a>
@@ -280,13 +280,13 @@
   <a href="../">&larr; All games</a>
 </div>
 <h1 class="sr-only">Laser Heist: Angle Breaker</h1>
-<p class="sr-only">A spy game about angle relationships. In each room, type the missing angle to aim a laser at a security panel: the laser fires at exactly the angle you type. Every panel you hit switches off part of the room's security (the cameras, the guards' radios, or the locked shortcut doors). Then sneak past the guards to the exit, collecting diamonds. Controls: type a number and press Enter to fire; arrow keys or WASD to move; 1 for a smoke bomb, 2 for a decoy; Escape opens the menu.</p>
+<p class="sr-only" data-es="Un juego de espías sobre relaciones entre ángulos. En cada sala, escribe el ángulo que falta para apuntar un láser a un panel de seguridad: el láser dispara exactamente con el ángulo que escribes. Cada panel que aciertas apaga parte de la seguridad de la sala (las cámaras, las radios de los guardias o las puertas de los atajos). Luego pasa a escondidas junto a los guardias hasta la salida, recogiendo diamantes. Controles: escribe un número y pulsa Enter para disparar; las flechas o WASD para moverte; 1 para una bomba de humo, 2 para un señuelo; Escape abre el menú.">A spy game about angle relationships. In each room, type the missing angle to aim a laser at a security panel: the laser fires at exactly the angle you type. Every panel you hit switches off part of the room's security (the cameras, the guards' radios, or the locked shortcut doors). Then sneak past the guards to the exit, collecting diamonds. Controls: type a number and press Enter to fire; arrow keys or WASD to move; 1 for a smoke bomb, 2 for a decoy; Escape opens the menu.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
     <div class="app" id="lh">
       <div id="stage">
-        <canvas id="cv" width="1280" height="720" tabindex="0" aria-label="The heist room"></canvas>
+        <canvas id="cv" width="1280" height="720" tabindex="0" aria-label="The heist room" data-es-aria="La sala del atraco"></canvas>
         <div id="hud" hidden></div>
         <div id="qpanel" hidden></div>
         <div id="gadgets" hidden></div>
@@ -342,9 +342,9 @@
 </section>
 
 <section class="reset-progress">
-  <h2>Reset Progress</h2>
-  <p>Erases your saved stars, diamonds, and unlocked suits and lasers for Laser Heist on this device only. Other games are not affected. Your progress is saved only in this browser and is never sent anywhere. This cannot be undone.</p>
-  <button type="button" class="reset-progress-btn" id="reset-progress-btn">Reset My Progress</button>
+  <h2 data-es="Borrar progreso">Reset Progress</h2>
+  <p data-es="Borra tus estrellas, diamantes y trajes y láseres desbloqueados de Laser Heist solo en este dispositivo. Los demás juegos no se ven afectados. Tu progreso se guarda solo en este navegador y nunca se envía a ningún lugar. Esto no se puede deshacer.">Erases your saved stars, diamonds, and unlocked suits and lasers for Laser Heist on this device only. Other games are not affected. Your progress is saved only in this browser and is never sent anywhere. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
 </section>
 
 <script src="laser-heist-game.js?v=cb92fa20"></script>
