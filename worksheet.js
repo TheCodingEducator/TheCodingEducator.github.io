@@ -110,9 +110,36 @@
       if (i && i % step === 0) h += txt(o + i * u, o + 12, i, MUTED, 'middle', 9) + txt(o - 4, o - i * u + 3, i, MUTED, 'end', 9);
     }
     h += line(15, o, W - 15, o, INK, 1.5) + line(o, 15, o, W - 15, INK, 1.5) + txt(W - 10, o - 4, 'x', INK, 'middle', 11) + txt(o + 7, 12, 'y', INK, 'start', 11);
-    h += gridPts(d, function (x, y) { return [o + x * u, o - y * u]; });
+    h += gridExtras(d, function (x, y) { return [o + x * u, o - y * u]; }, -r, r) + gridPts(d, function (x, y) { return [o + x * u, o - y * u]; });
     s.innerHTML = h;
   };
+  // extras on a grid: data-line="x1,y1,x2,y2" draws the whole line through two points (across the grid);
+  // data-rr="x1,y1,x2,y2" draws the rise and run between two points as dashed legs, labeled with their sizes;
+  // data-poly="x,y;x,y;..." and data-poly2 draw shaded shapes (a pre-image and its image)
+  function gridExtras(d, at, lo, hi) {
+    var h = '', num = function (s) { return s.split(',').map(Number); };
+    [[d.poly, A], [d.poly2, C]].forEach(function (p) {
+      if (!p[0]) return;
+      var pts = p[0].split(';').map(function (q) { var v = num(q); return at(v[0], v[1]).map(r1).join(','); });
+      h += '<polygon points="' + pts.join(' ') + '" fill="' + p[1] + '" fill-opacity="0.18" stroke="' + p[1] + '" stroke-width="2"/>';
+    });
+    if (d.line && d.line.split(",")[0] !== d.line.split(",")[2]) {
+      var v = num(d.line), m = (v[3] - v[1]) / (v[2] - v[0]), xa = lo, xb = hi;
+      var y = function (x) { return v[1] + m * (x - v[0]); };
+      // keep the drawn line inside the grid
+      if (y(xa) > hi || y(xa) < lo) xa = v[0] + ((y(xa) > hi ? hi : lo) - v[1]) / m;
+      if (y(xb) > hi || y(xb) < lo) xb = v[0] + ((y(xb) > hi ? hi : lo) - v[1]) / m;
+      var p1 = at(xa, y(xa)), p2 = at(xb, y(xb));
+      h += line(p1[0], p1[1], p2[0], p2[1], C, 2.5);
+    }
+    if (d.rr) {
+      var w = num(d.rr), a = at(w[0], w[1]), c = at(w[2], w[3]), b = [c[0], a[1]];
+      h += line(a[0], a[1], b[0], b[1], A, 2.2, '4 3') + line(b[0], b[1], c[0], c[1], B, 2.2, '4 3');
+      h += txt((a[0] + b[0]) / 2, a[1] + (c[1] < a[1] ? 13 : -5), 'run ' + (w[2] - w[0]), A, 'middle', 10);
+      h += txt(b[0] + 5, (b[1] + c[1]) / 2 + 4, 'rise ' + (w[3] - w[1]), B, 'start', 10);
+    }
+    return h;
+  }
   function gridPts(d, at) {
     var h = '';
     (d.pts || '').split(';').filter(Boolean).forEach(function (p) {
@@ -129,7 +156,7 @@
       if (i % step === 0) h += txt(L + i * u, oy + 13, i, MUTED, 'middle', 9) + (i ? txt(L - 5, oy - i * u + 3, i, MUTED, 'end', 9) : '');
     }
     h += line(L, oy, L + r * u + 10, oy, INK, 1.5) + line(L, oy, L, T - 8, INK, 1.5) + txt(L + r * u + 13, oy - 4, 'x', INK, 'middle', 11) + txt(L + 6, T - 4, 'y', INK, 'start', 11);
-    h += gridPts(d, function (x, y) { return [L + x * u, oy - y * u]; });
+    h += gridExtras(d, function (x, y) { return [L + x * u, oy - y * u]; }, 0, r) + gridPts(d, function (x, y) { return [L + x * u, oy - y * u]; });
     s.innerHTML = h;
   }
 
@@ -192,6 +219,54 @@
     h += txt(cx + 60 * Math.cos(rad(a / 2)), cy - 60 * Math.sin(rad(a / 2)) + 4, d.la || '', A, 'middle', 12);
     h += txt(cx + 60 * Math.cos(rad(a + b / 2)), cy - 60 * Math.sin(rad(a + b / 2)) + 4, d.lb || '', B, 'middle', 12);
     if (d.lt) h += txt(cx + 22 * Math.cos(rad((a + b) / 2)), cy - 22 * Math.sin(rad((a + b) / 2)) + 4, d.lt, INK, 'middle', 10);
+    s.innerHTML = h;
+  };
+
+  // a protractor with an angle on it: one side along 0° and the other at data-deg (labels every 30°)
+  draw.protractor = function (s, d) {
+    var g = +d.deg, cx = 110, cy = 114, R = 86, h = '';
+    size(s, 220, 124);
+    h += '<path d="M' + (cx - R) + ' ' + cy + ' A' + R + ' ' + R + ' 0 0 1 ' + (cx + R) + ' ' + cy + ' Z" fill="#eef4fd" stroke="' + INK + '" stroke-width="1.4"/>';
+    for (var a = 0; a <= 180; a += 10) {
+      var L = a % 30 ? 7 : 12;
+      h += line(cx + R * Math.cos(rad(a)), cy - R * Math.sin(rad(a)), cx + (R - L) * Math.cos(rad(a)), cy - (R - L) * Math.sin(rad(a)), INK, 1.1);
+      if (a % 30 === 0) h += txt(cx + (R + 12) * Math.cos(rad(a)), cy - (R + 12) * Math.sin(rad(a)) + 4, a, MUTED, 'middle', 10);
+    }
+    h += line(cx, cy, cx + R, cy, A, 2.5) + line(cx, cy, cx + R * Math.cos(rad(g)), cy - R * Math.sin(rad(g)), A, 2.5) + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="' + INK + '"/>';
+    s.innerHTML = h;
+  };
+
+  // a rectangle of unit squares: data-r rows by data-c columns (data-u = square size, default 16). data-dots draws an
+  // array of dots instead of squares. data-lr / data-lc label the side lengths (rows on the left, columns below).
+  // data-split="4" draws a dashed line after that many columns (breaking a rectangle into two).
+  draw.array = function (s, d) {
+    var R = +d.r, Cn = +d.c, u = +(d.u || 16), x0 = d.lr ? 26 : 4, y0 = 4, h = '';
+    size(s, x0 + Cn * u + 4, y0 + R * u + (d.lc ? 20 : 4));
+    for (var i = 0; i < R; i++) for (var j = 0; j < Cn; j++) {
+      if ('dots' in d) h += '<circle cx="' + (x0 + j * u + u / 2) + '" cy="' + (y0 + i * u + u / 2) + '" r="' + (u * 0.3) + '" fill="' + C + '"/>';
+      else h += '<rect x="' + (x0 + j * u) + '" y="' + (y0 + i * u) + '" width="' + u + '" height="' + u + '" fill="' + (d.split && j >= +d.split ? '#e3f2e8' : '#fde9e4') + '" stroke="' + INK + '" stroke-width="1"/>';
+    }
+    if (d.split) h += line(x0 + d.split * u, y0 - 2, x0 + d.split * u, y0 + R * u + 2, INK, 2.5, '5 3');
+    if (d.lr) h += txt(x0 - 6, y0 + R * u / 2 + 4, d.lr, A, 'end', 12);
+    if (d.lc) h += txt(x0 + Cn * u / 2, y0 + R * u + 16, d.lc, C, 'middle', 12);
+    s.innerHTML = h;
+  };
+
+  // a number line from data-min to data-max with a tick every data-step (labels every data-every ticks, default 1).
+  // data-pts="A:2.5;B:-3" marks points; data-w is the width (default 300).
+  draw.numline = function (s, d) {
+    var lo = +d.min, hi = +d.max, st = +(d.step || 1), ev = +(d.every || 1), W = +(d.w || 300), h = '';
+    var X = function (v) { return 14 + (v - lo) / (hi - lo) * (W - 28); };
+    size(s, W, 52);
+    h += line(6, 26, W - 6, 26, INK, 1.8) + '<path d="M6 26 l7 -5 v10 Z M' + (W - 6) + ' 26 l-7 -5 v10 Z" fill="' + INK + '"/>';
+    for (var k = 0, v = lo; v <= hi + 1e-9; k++, v = lo + k * st) {
+      h += line(X(v), 20, X(v), 32, INK, 1.4);
+      if (k % ev === 0) h += txt(X(v), 46, String(Math.round(v * 100) / 100).replace('-', '−'), MUTED, 'middle', 10);
+    }
+    (d.pts || '').split(';').filter(Boolean).forEach(function (p) {
+      var m = p.split(':'), x = X(+m[1]);
+      h += '<circle cx="' + r1(x) + '" cy="26" r="4.5" fill="' + A + '"/>' + txt(x, 14, m[0], A, 'middle', 11);
+    });
     s.innerHTML = h;
   };
 
