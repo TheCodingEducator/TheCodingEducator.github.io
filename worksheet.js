@@ -23,9 +23,9 @@
   var draw = {};
 
   // right triangle: leg a across the bottom, leg b up the left, hypotenuse c. data-a/b/c are the labels; when a leg's
-  // label is "?", data-ra / data-rb give its real length so the triangle is still drawn to scale.
+  // label isn't its length (like "?" or a letter), data-ra / data-rb give the real length so it's still drawn to scale.
   draw.tri = function (s, d) {
-    var a = +(d.a === '?' ? d.ra : d.a), b = +(d.b === '?' ? d.rb : d.b);
+    var a = +(d.ra !== undefined ? d.ra : d.a), b = +(d.rb !== undefined ? d.rb : d.b);
     var k = Math.min(150 / a, 64 / b), w = a * k, h = b * k, x0 = 22, y0 = 8 + h;
     size(s, w + 60, h + 30);
     s.innerHTML = line(x0, y0, x0 + w, y0, A, 3) + line(x0, y0, x0, y0 - h, B, 3) + line(x0, y0 - h, x0 + w, y0, C, 3) +

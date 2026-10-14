@@ -79,8 +79,6 @@ main.pg li { margin: 4px 0; }
 .pg-card h3 { margin: 0 0 4px !important; font-size: 17px; }
 .pg-card p { margin: 0 0 8px; font-size: 14px !important; color: var(--muted); line-height: 1.45 !important; }
 .pg-card .links { font-size: 14px; display: flex; gap: 14px; flex-wrap: wrap; }
-.unit-line { margin: 4px 0 0; font-size: 14px; color: var(--muted); line-height: 1.6; }
-.unit-line b { color: var(--text, inherit); }
 
 /* What's new timeline */
 .log-day { margin: 26px 0 0; }
@@ -100,3 +98,32 @@ footer.pg-foot a { color: var(--muted); }
 .print-links .play-btn { margin: 0; }
 .play-btn.alt { background: #fff; color: var(--accent); border: 2px solid var(--line); font-size: 15px; padding: 10px 18px; }
 .play-btn.alt:hover { background: var(--panel-2); }
+
+/* For Teachers page: jump menu, units, game cards */
+.jump { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin: 8px 0 0; }
+.jump-title { margin: 0 0 6px !important; font-size: 13px !important; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.jump-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 4px 0; font-size: 14px; }
+.jump-group b { min-width: 118px; color: var(--muted); font-size: 13px; }
+.jump-group a { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px; text-decoration: none; font-weight: 700; color: var(--accent); }
+.jump-group a:hover { border-color: var(--accent); }
+main.pg h3.unit-group { margin: 34px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.unit { border-top: 2px solid var(--line); padding-top: 14px; margin-top: 16px; scroll-margin-top: 16px; }
+.unit-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
+main.pg .unit-head h3 { margin: 0; font-size: 20px; }
+main.pg .unit-meta { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.unit-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.unit-btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 10px; }
+.unit-btn:hover { background: #a63a14; }
+.unit-btn.alt { background: var(--panel); color: var(--accent); border: 2px solid var(--line); padding: 6px 12px; }
+.game-card { display: flex; flex-direction: column; }
+.game-card h4 { margin: 0 0 4px; font-size: 17px; }
+.game-card p { flex: 1; }
+.card-btns { display: flex; gap: 8px; margin: 2px 0 10px; }
+.card-btns a { font-size: 14px; font-weight: 800; text-decoration: none; padding: 6px 12px; border-radius: 9px; }
+.card-play { background: var(--accent); color: #fff; }
+.card-play:hover { background: #a63a14; }
+.card-guide { border: 2px solid var(--line); color: var(--accent); padding: 4px 10px !important; }
+main.pg .card-print { flex: none; margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px !important; line-height: 1.7 !important; }
+.card-print b { color: var(--muted); }
+.std-details summary { cursor: pointer; font-weight: 700; color: var(--accent); padding: 6px 0; }
+.std-details[open] summary { margin-bottom: 8px; }
