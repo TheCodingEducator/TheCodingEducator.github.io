@@ -4,10 +4,16 @@
 # longer matches its worksheets is reported. Never edit units/*.html by hand: change a game's worksheet instead.
 #
 # To add a unit or a game to a unit, edit $units below (and the matching unit on teachers.html).
+#
+# A unit can also have extra printables that aren't from a game (like station activities): put their <article
+# class="sheet ..."> pages in tools/unit-extras/<slug>.html and name them in the unit's 'extra' below. They print after
+# the worksheets, and their answer keys (class "key") after the other keys. tools/unit-extras/angle-relationships.html
+# holds the Angle Puzzle Stations, drawn from printables/angle-puzzle-stations-with-answer-key.pdf; if that PDF
+# changes, redraw the stations there too.
 
 $units = @(
   @{ slug = 'lines-and-slope'; name = 'Lines and Slope'; grades = 'Grade 8'; std = '8.EE.B.6, 8.F.A.3'; games = @('linear-world-cup') },
-  @{ slug = 'angle-relationships'; name = 'Angle Relationships'; grades = 'Grades 7-8'; std = '7.G.B.5, 8.G.A.5'; games = @('bank-shot-angle-golf', 'math-billiards', 'laser-heist-angle-breaker') },
+  @{ slug = 'angle-relationships'; name = 'Angle Relationships'; grades = 'Grades 7-8'; std = '7.G.B.5, 8.G.A.5'; games = @('bank-shot-angle-golf', 'math-billiards', 'laser-heist-angle-breaker'); extra = 'the Angle Puzzle Stations (one landscape page per station, to print and laminate)' },
   @{ slug = 'transformations-and-similarity'; name = 'Transformations and Similarity'; grades = 'Grade 8'; std = '8.G.A.1, 8.G.A.3, 8.G.A.4'; games = @('lets-get-to-the-point', 'similarity-builder') },
   @{ slug = 'pythagorean-theorem'; name = 'The Pythagorean Theorem'; grades = 'Grade 8'; std = '8.G.B.6, 8.G.B.7'; games = @('pythagorean-platforms') },
   @{ slug = 'solving-equations'; name = 'Solving Equations'; grades = 'Grades 6-8'; std = '6.EE.B.7, 7.EE.B.4a, 8.EE.C.7b'; games = @('tip-the-scales') },
@@ -37,9 +43,16 @@ foreach ($u in $units) {
       }
     }
   }
+  if ($u.extra) {
+    foreach ($m in [regex]::Matches((ReadText "tools/unit-extras/$($u.slug).html"), '(?s)<article class="sheet[^"]*".*?</article>')) {
+      if ($m.Value -match '^<article class="sheet[^"]*\bkey\b') { $keys.Add($m.Value) } else { $sheets.Add($m.Value) }
+    }
+  }
   $title = "$($u.name) Unit Pack: Worksheets and Exit Tickets, $($u.grades) (Free, Printable, with Answer Keys)"
   $list = ($gameNames | ForEach-Object { $_ }) -join ', '
   $desc = "Every free printable worksheet and exit ticket for $($u.name.ToLower()) ($($u.grades.ToLower()), CCSS $($u.std)) in one page, with all the answer keys at the end. From the games: $list."
+  if ($u.extra) { $short = $u.extra -replace ' \(.*', ''; $desc = $desc.Replace(' in one page,', ", plus $short, in one page,") }
+  $extraNote = if ($u.extra) { " It also has $($u.extra)." } else { "" }
   $url = "https://studentmathgames.com/units/$($u.slug)"
   $links = ($u.games | ForEach-Object { $i = [array]::IndexOf($u.games, $_); "<a href=""../$_/"">$($gameNames[$i])</a>" }) -join ' &middot; '
   $html = @"
@@ -71,7 +84,7 @@ foreach ($u in $units) {
   <a href="../teachers">For teachers</a>
   <button type="button" id="print-btn">&#128424; Print or save as PDF</button>
 </div>
-<p class="note"><b>$($u.name) unit pack</b> ($($u.grades) &middot; CCSS $($u.std)): every worksheet and exit ticket for this unit, ready to print in one go. The answer keys print at the end, each on its own page, so you can leave them off. To make a PDF, click Print and choose "Save as PDF." Games: $links</p>
+<p class="note"><b>$($u.name) unit pack</b> ($($u.grades) &middot; CCSS $($u.std)): every worksheet and exit ticket for this unit, ready to print in one go.$extraNote The answer keys print at the end, each on its own page, so you can leave them off. To make a PDF, click Print and choose "Save as PDF." Games: $links</p>
 
 $($sheets -join "`n`n")
 
