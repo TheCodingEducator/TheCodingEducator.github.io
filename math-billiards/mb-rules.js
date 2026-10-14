@@ -52,10 +52,10 @@
   MB.groupSingle = function (g) { return g === 'red' ? T('red', 'roja') : g === 'blue' ? T('blue', 'azul') : ''; };
 
   // ------------------------------------------------------------------ the computer player
-  // It always solves the angle problem correctly, but its aim and its feel for power are only human: a small random
-  // error on every shot, so it misses sometimes. aimError (degrees) can be turned up or down for an easier or harder
-  // opponent.
-  MB.AI = { aimError: { beginner: 0.8, intermediate: 0.6, challenge: 0.45 }, powerError: 0.12 };
+  // It always solves the angle problem correctly, but its aim is only human. On some shots (missChance) its aim is
+  // slightly off, by missBy degrees either way, which usually misses the pocket; every other shot gets only a tiny
+  // wobble (steady). Turn missChance up or down for an easier or harder opponent.
+  MB.AI = { missChance: { beginner: 0.55, intermediate: 0.45, challenge: 0.35 }, missBy: [1.2, 2.6], steady: 0.12, powerError: 0.12 };
   function gauss() { var u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
   function clearPath(balls, a, b, skip) {
     var ab = V.sub(b, a), L = V.len(ab), u = V.mul(ab, 1 / (L || 1));
@@ -108,7 +108,8 @@
     return finish(g, pick.dir, pick.power);
   };
   function finish(g, dir, power) {
-    var err = MB.AI.aimError[g.diff] || 1;
-    return { dir: V.rot(dir, gauss() * err * 0.6), power: MB.clamp(power * (1 + gauss() * MB.AI.powerError * 0.5), 0.12, 1) };
+    var off = gauss() * MB.AI.steady, miss = Math.random() < (MB.AI.missChance[g.diff] || 0.45);
+    if (miss && !g.breakShot) off = (Math.random() < 0.5 ? -1 : 1) * MB.rand(MB.AI.missBy[0], MB.AI.missBy[1]);
+    return { dir: V.rot(dir, off), power: MB.clamp(power * (1 + gauss() * MB.AI.powerError * 0.5), 0.12, 1), offTarget: miss };
   }
 })();

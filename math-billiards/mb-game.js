@@ -426,15 +426,34 @@
   }
 
   // ------------------------------------------------------------------ the computer's turn: think, solve (showing every step), aim, shoot
+  // The computer's turn, in order: it picks its shot and aims (the cue turns, the power builds), then the angle problem
+  // for that aim is drawn and it solves it step by step (always correctly), then it shoots.
   function aiStep(dt) {
     var A = G.ai;
     if (G.phase === 'ai-think') {
       if (G.timer < 0.8) return;
-      var shot = MB.aiChoose(G), p = MB.makeProblem(cue(), shot.dir, G.diff, chooseSkill(), G.balls);
-      G.problem = p; G.ai = { power: shot.power, step: 0, t: 0, lines: buildAiLines(p), fromDir: G.aim.dir, fromPow: G.aim.power };
-      frameProblem(); G.phase = 'ai-solve'; G.timer = 0;
-      $('#ai-head').textContent = T('Solving for x', 'Hallando x');
-      MB.say(T('The computer aims and gets this angle problem. ', 'La computadora apunta y le toca este problema. ') + p.sr);
+      var shot = MB.aiChoose(G);
+      G.ai = { dir: shot.dir, power: shot.power, step: 0, fromDir: G.aim.dir, fromPow: G.aim.power };
+      G.phase = 'ai-aim'; G.timer = 0; Rd.camHome();
+      $('#ai-head').textContent = T('Aiming…', 'Apuntando…');
+      MB.say(T('The computer is aiming.', 'La computadora está apuntando.'));
+      return;
+    }
+    if (G.phase === 'ai-aim') {
+      // the cue turns to its line and the power builds
+      var k = Math.min(1, G.timer / 1.1), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      var a0 = V.ang(A.fromDir), a1 = V.ang(A.dir), da = ((a1 - a0) % 360 + 540) % 360 - 180;
+      G.aim.dir = V.dir(a0 + da * e);
+      G.aim.power = A.fromPow + (A.power - A.fromPow) * Math.min(1, Math.max(0, (G.timer - 0.6) / 0.6));
+      if (G.timer > 1.6) {
+        // aimed: now the angle problem for exactly this shot
+        var p = MB.makeProblem(cue(), A.dir, G.diff, chooseSkill(), G.balls);
+        G.problem = p; A.lines = buildAiLines(p); A.step = 0;
+        G.aim.dir = p.aim; G.aim.power = A.power;
+        frameProblem(); G.phase = 'ai-solve'; G.timer = 0;
+        $('#ai-head').textContent = T('Solving for x', 'Hallando x');
+        MB.say(T('The computer has aimed. Its angle problem: ', 'La computadora ya apuntó. Su problema de ángulos: ') + p.sr);
+      }
       return;
     }
     if (G.phase === 'ai-solve') {
@@ -445,19 +464,12 @@
           if (ol) { var el = document.createElement('li'); el.className = li.cls || ''; el.textContent = li.text; ol.appendChild(el); }
           MB.Sound.play('think'); MB.say(li.text); A.step++;
         } else {
-          G.phase = 'ai-aim'; G.timer = 0; Rd.camHome();
-          $('#ai-head').textContent = T('Aiming…', 'Apuntando…');
+          // solved: the shot goes
+          $('#ai-head').textContent = T('Shooting!', '¡Tirando!');
+          G.closed = false; G.demoWrong = false; G.cpuShots = (G.cpuShots || 0) + 1;
+          strike(G.problem.aim, A.power);
         }
       }
-      return;
-    }
-    if (G.phase === 'ai-aim') {
-      // the cue turns to the line, the power builds, then the strike
-      var k = Math.min(1, G.timer / 1.1), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      var a0 = V.ang(A.fromDir), a1 = V.ang(G.problem.aim), da = ((a1 - a0) % 360 + 540) % 360 - 180;
-      G.aim.dir = V.dir(a0 + da * e);
-      G.aim.power = A.fromPow + (A.power - A.fromPow) * Math.min(1, Math.max(0, (G.timer - 0.6) / 0.6));
-      if (G.timer > 1.5) { G.aim.dir = G.problem.aim; G.aim.power = A.power; G.closed = false; G.demoWrong = false; G.cpuShots = (G.cpuShots || 0) + 1; strike(G.problem.aim, A.power); }
     }
   }
   function buildAiLines(p) {
