@@ -24,6 +24,7 @@ h2 { font-size: 16px; margin: 18px 0 8px; padding-top: 6px; border-top: 1px soli
 h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; }
 .grid.three { grid-template-columns: repeat(3, 1fr); }
+.grid > * { min-width: 0; }
 .prob { break-inside: avoid; font-size: 14px; line-height: 1.45; }
 .prob .n { font-weight: 800; margin-right: 4px; }
 .prob svg { display: block; margin: 4px 0; max-width: 100%; }
@@ -115,6 +116,10 @@ table.fill th { background: #f3f6fb; }
   .sheet { padding: 20px 16px; }
   .sheet.station { padding: 8px; }
   .cards, .cards.three, .rules { grid-template-columns: repeat(2, 1fr); }
+  /* (inline column counts on printables are for paper; on a phone everything drops to two columns) */
+  .grid[style], .rules[style] { grid-template-columns: repeat(2, 1fr) !important; }
+  table.fill { display: block; overflow-x: auto; max-width: 100%; }
+  .vcard p, .rule { overflow-wrap: anywhere; }
   .example { grid-template-columns: 1fr; }
   .examples { grid-template-columns: 1fr; }
   .banner { flex-direction: column; }
