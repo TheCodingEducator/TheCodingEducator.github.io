@@ -441,6 +441,8 @@
   #sb #tUp { grid-column:2; grid-row:1; } #sb #tLeft { grid-column:1; grid-row:2; } #sb #tRight { grid-column:3; grid-row:2; } #sb #tDown { grid-column:2; grid-row:3; }
   #sb #touch button:active { transform:translateY(0.4cqw); box-shadow:0 0.1cqw 0 #3b2416; }
   @media (hover: none) and (pointer: coarse) { #sb #touch:not(.hidden) { display:flex; } }
+  /* phones and tablets: no arrow pad; the chef walks wherever the floor is tapped, and only the Take / Cook / Serve button shows */
+  @media (hover: none) and (pointer: coarse) { #sb .dpad { display:none !important; } #sb #touch { justify-content:flex-end !important; } }
   /* touch screens: the arrow pad sits to the left of the kitchen and the Take / Cook / Serve button to its right - beside the game, never on top of it */
   #sb #stageRow { position:relative; }
   @media (hover: none) and (pointer: coarse) {
@@ -821,7 +823,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="proportional-plates-game.js?v=c5d12c7e"></script>
+<script src="proportional-plates-game.js?v=c4320be8"></script>
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>

@@ -1512,9 +1512,9 @@ $('ans').addEventListener('input', () => {                             // catche
 });
 // phones and tablets: the help line names the on-screen buttons and the keypad instead of keys
 if (window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches && $('help')) {
-  const es = '<b>Flechas</b> (o toca el piso) para caminar &middot; <b>Tomar / Cocinar / Servir</b> toma un pedido, cocina en la estufa y sirve &middot; en la estufa, escribe la cantidad en el teclado y toca <b>Enter</b>.';
+  const es = '<b>Toca el piso</b> donde quieres que camine el chef &middot; <b>Tomar / Cocinar / Servir</b> toma un pedido, cocina en la estufa y sirve &middot; en la estufa, escribe la cantidad en el teclado y toca <b>Enter</b>.';
   $('help').setAttribute('data-es', es);   // the page's language switch uses this, so it keeps the touch wording too
-  $('help').innerHTML = L('<b>Arrows</b> (or tap the floor) walk &middot; <b>Take / Cook / Serve</b> takes an order, cooks at the stove and serves &middot; at the stove, type the amount on the keypad and tap <b>Enter</b>.', es);
+  $('help').innerHTML = L('<b>Tap the floor</b> where you want the chef to walk &middot; <b>Take / Cook / Serve</b> takes an order, cooks at the stove and serves &middot; at the stove, type the amount on the keypad and tap <b>Enter</b>.', es);
 }
 (function keypad() {
   const kp = $('keypad');
