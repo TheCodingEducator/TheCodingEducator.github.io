@@ -879,7 +879,7 @@
   function shootAtKeeper() {
     var s = pickShot(), speed = 22 + 6 * oppStr, g = 9.81, t = Math.sqrt(s.x * s.x + PENALTY_DIST * PENALTY_DIST) / speed;
     fly = { p: new THREE.Vector3(0, BALL_RADIUS, PENALTY_DIST), v: new THREE.Vector3(s.x / t, (s.y - BALL_RADIUS + 0.5 * g * t * t) / t, -PENALTY_DIST / t),
-      scale: slowMo ? (hintUsed ? 0.5 : 0.3) : 1, target: s, inNet: false, crossed: false };
+      scale: slowMo ? (hintUsed ? 0.55 : 0.38) : 1, target: s, inNet: false, crossed: false };
     lastLandX = s.x; lastLandY = s.y;
     state = STATE.SAVING;
     saveRes = ''; heldT = 0;
