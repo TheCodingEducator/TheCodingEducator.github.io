@@ -823,14 +823,15 @@
   // the keeper's eyes follow the gloves (see above)
   function keeperCam() {
     var d = GLOVE_Z - KEEP_CAM_Z, H = d * Math.tan(camera.fov * Math.PI / 360), W = H * camera.aspect;
-    var cx = aimS.x * Math.max(0, 3.5 - W), cy = 1.3 + aimS.y * Math.max(0, 1.15 - H);
-    gloveW.x = Math.max(-3.9, Math.min(3.9, cx + aimS.x * W));
+    var ax = -aimS.x;   // looking out from the goal, the screen's right is -x in the stadium
+    var cx = ax * Math.max(0, 3.5 - W), cy = 1.3 + aimS.y * Math.max(0, 1.15 - H);
+    gloveW.x = Math.max(-3.9, Math.min(3.9, cx + ax * W));
     gloveW.y = Math.max(0.1, Math.min(2.7, cy + aimS.y * H));
     camera.position.set(cx, cy, KEEP_CAM_Z);
     camera.lookAt(cx, cy, 20);
     camera.rotateZ(aimS.x * 0.06);   // leaning into the dive
     glovesG.position.set(gloveW.x, gloveW.y, GLOVE_Z);
-    glovesG.rotation.z = aimS.x * 0.35;
+    glovesG.rotation.z = -aimS.x * 0.35;   // the tops lean into the dive
   }
   function aimFromPointer(clientX, clientY) {
     var rect = canvas.getBoundingClientRect();
