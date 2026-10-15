@@ -879,7 +879,7 @@
   function shootAtKeeper() {
     var s = pickShot(), speed = 22 + 6 * oppStr, g = 9.81, t = Math.sqrt(s.x * s.x + PENALTY_DIST * PENALTY_DIST) / speed;
     fly = { p: new THREE.Vector3(0, BALL_RADIUS, PENALTY_DIST), v: new THREE.Vector3(s.x / t, (s.y - BALL_RADIUS + 0.5 * g * t * t) / t, -PENALTY_DIST / t),
-      scale: slowMo ? (hintUsed ? 0.55 : 0.38) : 0.85,   // a wrong answer: a little slower than a real penalty target: s, inNet: false, crossed: false };
+      scale: slowMo ? (hintUsed ? 0.55 : 0.38) : 0.85, target: s, inNet: false, crossed: false };   // scale 0.85 after a wrong answer: a little slower than a real penalty
     lastLandX = s.x; lastLandY = s.y;
     state = STATE.SAVING;
     saveRes = ''; heldT = 0;
