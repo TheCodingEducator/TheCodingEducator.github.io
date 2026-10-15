@@ -283,7 +283,7 @@
     var frame = new THREE.MeshLambertMaterial({ color: 0x1f2937 });
     var board = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 1),
       [frame, frame, frame, frame, new THREE.MeshBasicMaterial({ map: boardTex }), frame]);
-    board.position.set(0, 19, -40);
+    board.position.set(0, 15, -40);   // low enough that the whole board is in view from the penalty spot
     scene.add(board);
     [-7, 7].forEach(function (x) {   // the posts it stands on
       var post = new THREE.Mesh(new THREE.BoxGeometry(0.8, 14, 0.8), frame); post.position.set(x, 7, -40.2); scene.add(post);
@@ -834,8 +834,11 @@
     GLOVE_Z = G;
     var d = G - KEEP_CAM_Z, W = d * tanH, H = d * tanV, cy = 1.25;
     gloveScale = d / 1.4;
-    gloveW.x = -aimS.x * W;   // looking out from the goal, the screen's right is -x in the stadium
-    gloveW.y = Math.max(0.1, cy + aimS.y * H);
+    // looking out from the goal, the screen's right is -x in the stadium. Both gloves stay fully on screen (the pair
+    // reaches 0.3 of a glove scale out from its middle), and never dip into the grass, nor does a ball held in them.
+    var mx = Math.max(0, W - 0.3 * gloveScale), my = Math.max(0, H - 0.22 * gloveScale);
+    gloveW.x = -aimS.x * mx;
+    gloveW.y = Math.max(0.2 * gloveScale, cy + aimS.y * my);
     camera.position.set(0, cy, KEEP_CAM_Z);
     camera.lookAt(0, cy, 20);
     glovesG.scale.setScalar(gloveScale);
@@ -1870,6 +1873,50 @@
     keeperBox.setFromObject(keeperGroup);
     if (keeperBox.min.y < 0.005) keeperGroup.position.y += 0.005 - keeperBox.min.y;
   }
+  // ---------- Standing catches ----------
+  // Poses are blended rather than snapped. A pose is a list of numbers: the torso's height and lean, then the turn of each
+  // arm, forearm, leg and shin (see snapPose).
+  function keeperParts() { return [kLArm, kRArm, kLArm.userData.fore, kRArm.userData.fore, kLLeg, kRLeg, kLLeg.userData.shin, kRLeg.userData.shin]; }
+  function snapPose() {
+    var a = [kTorso.position.y, kTorso.rotation.x];
+    keeperParts().forEach(function (p) { a.push(p.rotation.x, p.rotation.y, p.rotation.z); });
+    return a;
+  }
+  function setPose(a) {
+    kTorso.position.y = a[0]; kTorso.rotation.set(a[1], 0, 0);
+    keeperParts().forEach(function (p, i) { p.rotation.set(a[2 + i * 3], a[3 + i * 3], a[4 + i * 3]); });
+  }
+  function blendPose(a, b, k) { setPose(a.map(function (v, i) { return v + (b[i] - v) * k; })); }
+  function holdArms(a) {   // the ball pulled into the chest: upper arms forward and in, forearms folded up
+    a[2] = -0.55; a[3] = 0; a[4] = 0.32; a[5] = -0.55; a[6] = 0; a[7] = -0.32;
+    a[8] = -1.9; a[9] = 0; a[10] = 0; a[11] = -1.9; a[12] = 0; a[13] = 0;
+    return a;
+  }
+  function loadPose(k) {   // the ready crouch before a save
+    kTorso.position.y = 1.0 - 0.16 * k; kTorso.rotation.set(0.25 * k, 0, 0);
+    kLLeg.rotation.set(-0.45 * k, 0, -0.12); kRLeg.rotation.set(-0.45 * k, 0, 0.12);
+    kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0.85 * k;
+    kLArm.rotation.set(-0.5 * k, 0, -0.5); kRArm.rotation.set(-0.5 * k, 0, 0.5);
+    kLArm.userData.fore.rotation.set(-0.4, 0, 0); kRArm.userData.fore.rotation.set(-0.4, 0, 0);
+  }
+  // A shot near him: he shuffles across into line as his hands move into the catch (high, chest-height, low, or scooped
+  // off the grass), arriving just as the ball does; his arms give a little to take the pace off it; he pulls it into his
+  // chest; and from a low or ground catch he rises back up holding it.
+  function standingCatchPose(tt, D, LOAD) {
+    if (tt < LOAD) { loadPose(smooth01(tt / LOAD)); return; }
+    loadPose(1); var ready = snapPose();
+    applyCatchPose(catchKind, catchDir); var catchP = snapPose();
+    if (tt <= D) { blendPose(ready, catchP, smooth01((tt - LOAD) / Math.max(0.05, D - LOAD))); return; }
+    var f = tt - D, give = catchP.slice();
+    give[1] -= 0.08; give[8] -= 0.35; give[11] -= 0.35;                  // the hands give back, the chest leans back
+    var hold = holdArms(catchP.slice()); hold[1] = Math.max(0.1, catchP[1] * 0.6);
+    var stand = holdArms(snapPose().map(function () { return 0; }));     // standing tall, ball held at the chest
+    stand[0] = 1.0; stand[1] = 0.05; stand[16] = -0.08; stand[19] = 0.08; stand[20] = stand[23] = 0.1;
+    if (f < 0.12) blendPose(catchP, give, smooth01(f / 0.12));
+    else if (f < 0.5) blendPose(give, hold, smooth01((f - 0.12) / 0.38));
+    else blendPose(hold, stand, smooth01(Math.min(1, (f - 0.5) / 0.6)));
+  }
+
   // ---------- The dive ----------
   // Like a real keeper: a quick load (knees bend, a short side-step toward the ball), then a low leap that ends with his
   // gloves at the ball (planned so they meet it exactly: see planCatch), then he keeps falling, lands on his side on the
@@ -1899,8 +1946,17 @@
     var LOAD = Math.min(0.12, D * 0.25), step = isDive ? dir * 0.18 : 0;
     var x, y, tilt, k;
 
-    kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
     if (kHead) kHead.rotation.set(0, 0, 0);
+    if (standing) {
+      var sx = keeperTarget.x - keeperStartX, su = Math.max(0, Math.min(1, (tt - LOAD) / Math.max(0.05, D - LOAD)));
+      standingCatchPose(tt, D, LOAD);
+      keeperBody.position.set(keeperStartX + sx * (1 - (1 - su) * (1 - su)), 0, keeperBody.position.z);
+      keeperBody.quaternion.set(0, 0, 0, 1);
+      keeperGroup.position.copy(keeperBody.position);
+      keeperGroup.quaternion.copy(keeperBody.quaternion);
+      return;
+    }
+    kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
     if (tt < LOAD) {                                   // the load: crouch and step toward the ball
       k = smooth01(tt / LOAD);
       x = keeperStartX + step * k; y = keeperStartY; tilt = 0;
@@ -1935,6 +1991,7 @@
         var s = landT >= 0 ? smooth01(Math.min(1, (f - landT) / 0.5)) : 0;
         diveLegs(dir, 1 - 0.5 * s);
         if (!caught) { kLArm.rotation.x = kRArm.rotation.x = -0.2 - 0.6 * s; }
+        else if (s > 0) { var now = snapPose(); blendPose(now, holdArms(now.slice()), s); }
       }
     }
     keeperBody.position.set(x, y, keeperBody.position.z);
