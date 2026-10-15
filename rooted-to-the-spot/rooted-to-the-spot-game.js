@@ -770,6 +770,15 @@
     });
     glovesG.visible = false;
     scene.add(glovesG);
+    // the target marker: after a right answer, a glowing ring shows where the ball will reach the gloves
+    saveMark = new THREE.Group();
+    var ringM = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthTest: false });
+    var fillM = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
+    var ring = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.18, 40), ringM), fill = new THREE.Mesh(new THREE.CircleGeometry(0.15, 40), fillM);
+    ring.renderOrder = 996; fill.renderOrder = 995;
+    saveMark.add(fill, ring);
+    saveMark.visible = false;
+    scene.add(saveMark);
   }
 
   // The other team: its shooter, and four of its players at the halfway line on the keeper's left. The student's own
@@ -810,7 +819,8 @@
     keeperGroup.visible = !keep;
     glovesG.visible = keep;
     shooterP.root.visible = keep;
-    if (confetti) { confetti.visible = false; confettiT = -1; }   // a goal's confetti doesn't follow into the next view
+    if (confetti) { confetti.visible = false; confettiT = -1; }
+    saveMark.visible = false;   // a goal's confetti doesn't follow into the next view
     if (keep) { placeShooter(0); aimS.x = 0; aimS.y = -0.55; }   // gloves start low, so the shooter is in view
     canvas.style.cursor = keep ? 'none' : '';
     canvas.setAttribute('aria-label', keep
@@ -848,7 +858,7 @@
 
   // The other team's kick. A right answer means slow motion (a hint makes it a little less slow); a wrong answer means
   // full speed, which is very hard (but not impossible) to save. Shots get faster and more accurate in later cup rounds.
-  var keyHold = 0, runT = -1, slowMo = false, kickT = -1, fly = null, saveRes = '', heldT = 0;
+  var saveMark = null, keyHold = 0, runT = -1, slowMo = false, kickT = -1, fly = null, saveRes = '', heldT = 0;
   var srLive = null;
   function startRunUp() {
     resetBall();
@@ -872,6 +882,12 @@
     lastLandX = s.x; lastLandY = s.y;
     state = STATE.SAVING;
     saveRes = ''; heldT = 0;
+    if (slowMo) {   // where the ball will cross the gloves' plane: the same place the save is decided
+      var tz = (PENALTY_DIST - GLOVE_Z) / -fly.v.z;
+      saveMark.position.set(fly.v.x * tz, BALL_RADIUS + fly.v.y * tz - 0.5 * g * tz * tz, GLOVE_Z);
+      saveMark.scale.setScalar(gloveScale);
+      saveMark.visible = true;
+    }
     playSound('kick');
     if (srLive && slowMo) srLive.textContent = (s.y > 1.4 ? T('High ', 'Alto ') : T('Low ', 'Bajo ')) +
       (s.x > 0.8 ? T('to your left', 'a tu izquierda') : s.x < -0.8 ? T('to your right', 'a tu derecha') : T('down the middle', 'por el centro')) + '!';
@@ -880,6 +896,7 @@
     if (saveRes) return;
     saveRes = kind;
     state = STATE.SAVED;
+    saveMark.visible = false;
     $('slow-badge').hidden = true;
     var scored = kind === 'goal';
     match.res[1].push(scored);
@@ -919,6 +936,7 @@
       }
     }
     keeperCam();
+    if (saveMark.visible) { var pu = 1 + Math.sin(clock.elapsedTime * 10) * 0.08; saveMark.scale.setScalar(gloveScale * pu); }
     var t = clock.elapsedTime, sp = shooterP;
     // the shooter: waits, rocking on his toes; runs up; strikes with his right foot
     if (state === STATE.RUNUP) {
@@ -1804,7 +1822,17 @@
     keeperDiveTime = 0;
   }
 
+  // Every frame: pose the keeper, then lift him just enough that no part of him (a boot, a knee, a hand in a dive) is
+  // ever below the grass. The pose is set fresh from keeperBody each frame, so the lift never adds up.
+  var keeperBox = new THREE.Box3();
   function updateKeeper(delta) {
+    poseKeeper(delta);
+    if (!keeperGroup.visible) return;
+    keeperGroup.updateMatrixWorld(true);
+    keeperBox.setFromObject(keeperGroup);
+    if (keeperBox.min.y < 0.005) keeperGroup.position.y += 0.005 - keeperBox.min.y;
+  }
+  function poseKeeper(delta) {
     if (!keeperDiving) { keeperIdle(delta); return; }
     keeperDiveTime += delta;
     if (keeperStay || keeperDiveTime < keeperReactionDelay) { keeperIdle(delta); return; }   // rooted: watches it go by
@@ -2300,7 +2328,7 @@
     hideAimHud();
     targetCrosshair.visible = errorCircle.visible = false;
     legGroup.visible = false;
-    fly = null; runT = -1; $('slow-badge').hidden = true; $('caption').hidden = true;
+    fly = null; runT = -1; $('slow-badge').hidden = true; saveMark.visible = false; $('caption').hidden = true;
     clock.getDelta();
   }
 
