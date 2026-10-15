@@ -964,11 +964,18 @@
     if ((state === STATE.SAVING || state === STATE.SAVED) && fly) flyBall(delta * (state === STATE.SAVING ? fly.scale : 1));
   }
   // The ball, moved by hand (no physics engine here): gravity, a bounce on the grass, and the net.
+  // The gloves are drawn bigger, out on their plane (see keeperCam), so the ball grows to match as it comes in: real size
+  // on the spot, glove size at the gloves. It always looks the right size to fit in the keeper's hands.
+  function ballLook(z) {   // (and back to real size by the goal line, so a goal doesn't put a giant ball in the net)
+    var k = z >= GLOVE_Z ? (PENALTY_DIST - z) / (PENALTY_DIST - GLOVE_Z) : z / GLOVE_Z;
+    return 1 + (gloveScale - 1) * Math.max(0, Math.min(1, k));
+  }
   function flyBall(dt) {
     var p = fly.p, v = fly.v, g = 9.81;
     if (saveRes === 'caught') {   // held in the gloves
-      p.set(gloveW.x, gloveW.y, GLOVE_Z + 0.12 * gloveScale);
+      p.set(gloveW.x, gloveW.y + 0.02 * gloveScale, GLOVE_Z + 0.05 * gloveScale);   // between the palms
       ballMesh.position.copy(p);
+      ballMesh.scale.setScalar(gloveScale);
       return;
     }
     var prevZ = p.z;
@@ -979,9 +986,9 @@
     if (!saveRes && !fly.crossed && prevZ > GLOVE_Z && p.z <= GLOVE_Z) {
       fly.crossed = true;
       var dx = p.x - gloveW.x, dy = p.y - gloveW.y;
-      var gs = gloveScale;
-      if (Math.abs(dx) < 0.12 * gs + BALL_RADIUS && Math.abs(dy) < 0.1 * gs + BALL_RADIUS) { playSound('catch'); saveDone('caught'); return; }
-      if (Math.abs(dx) < 0.27 * gs + BALL_RADIUS && Math.abs(dy) < 0.15 * gs + BALL_RADIUS) {   // anywhere on the gloves, as drawn   // fingertips: pushed away to the side
+      var gs = gloveScale, br = BALL_RADIUS * gs;   // the ball as drawn at the gloves (see ballLook)
+      if (Math.abs(dx) < 0.12 * gs + br && Math.abs(dy) < 0.1 * gs + br) { playSound('catch'); saveDone('caught'); return; }
+      if (Math.abs(dx) < 0.27 * gs + br && Math.abs(dy) < 0.15 * gs + br) {   // anywhere on the gloves, as drawn   // fingertips: pushed away to the side
         playSound('catch');
         v.set((dx >= 0 ? 1 : -1) * (1.5 + Math.random() * 2.5) + v.x * 0.15, 2 + Math.random() * 2, 5 + Math.random() * 3);
         saveDone('saved');
@@ -1001,6 +1008,7 @@
       if (p.y > GOAL_HEIGHT - BALL_RADIUS) { p.y = GOAL_HEIGHT - BALL_RADIUS; v.y = 0; }
     }
     ballMesh.position.copy(p);
+    ballMesh.scale.setScalar(ballLook(p.z));
     ballMesh.rotation.x -= v.z * dt * 4;
   }
   function animateMidfield() {
@@ -2388,6 +2396,7 @@
     ballBody.quaternion.set(0, 0, 0, 1);
     ballMesh.position.copy(ballBody.position);
     ballMesh.quaternion.set(0, 0, 0, 1);
+    ballMesh.scale.setScalar(1);
   }
 
   function resetKeeper() {
