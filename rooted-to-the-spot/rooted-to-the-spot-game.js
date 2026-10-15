@@ -746,8 +746,7 @@
   // ---------- In goal (first person) ----------
   // When the other team shoots, the student is the keeper. The camera is the keeper's eyes, just behind the goal line, and
   // only the keeper's gloves show. The gloves ARE the mouse pointer (or finger, or the arrow keys): they sit exactly where
-  // the pointer is, on a plane GLOVE_Z in front of the line, and the keeper's head follows them, sliding and dropping
-  // like a real keeper diving, so the gloves can reach every corner. aimS is the pointer, from -1 to 1 across the screen.
+  // the pointer is (see keeperCam). aimS is the pointer, from -1 to 1 across the screen.
   var view = 'shoot', glovesG = null, shooterP = null, midfield = [], aimS = { x: 0, y: 0 }, gloveW = { x: 0, y: 1.3 };
   var KEEP_CAM_Z = -0.4, GLOVE_Z = 1.0, oppTeam = 0, oppStr = 0.25;
 
@@ -811,6 +810,7 @@
     keeperGroup.visible = !keep;
     glovesG.visible = keep;
     shooterP.root.visible = keep;
+    if (confetti) { confetti.visible = false; confettiT = -1; }   // a goal's confetti doesn't follow into the next view
     if (keep) { placeShooter(0); aimS.x = 0; aimS.y = -0.55; }   // gloves start low, so the shooter is in view
     canvas.style.cursor = keep ? 'none' : '';
     canvas.setAttribute('aria-label', keep
@@ -821,15 +821,22 @@
   }
 
   // the keeper's eyes follow the gloves (see above)
+  // The keeper's view stays still, so the ball and the gloves line up exactly as they look. The gloves move on a plane
+  // GLOVE_Z out from the line, far enough that the whole width the ball can reach there is on screen; they are scaled up
+  // with that distance so they look like the keeper's own hands (gloveScale). A save is decided on that plane, by the
+  // gloves' size as drawn: what you see is what counts.
+  var gloveScale = 1;
   function keeperCam() {
-    var d = GLOVE_Z - KEEP_CAM_Z, H = d * Math.tan(camera.fov * Math.PI / 360), W = H * camera.aspect;
-    var ax = -aimS.x;   // looking out from the goal, the screen's right is -x in the stadium
-    var cx = ax * Math.max(0, 3.5 - W), cy = 1.3 + aimS.y * Math.max(0, 1.15 - H);
-    gloveW.x = Math.max(-3.9, Math.min(3.9, cx + ax * W));
-    gloveW.y = Math.max(0.1, Math.min(2.7, cy + aimS.y * H));
-    camera.position.set(cx, cy, KEEP_CAM_Z);
-    camera.lookAt(cx, cy, 20);
-    camera.rotateZ(aimS.x * 0.06);   // leaning into the dive
+    var tanV = Math.tan(camera.fov * Math.PI / 360), tanH = tanV * camera.aspect, G = 1.5;
+    while (G < 6 && (G - KEEP_CAM_Z) * tanH < 3.66 * (PENALTY_DIST - G) / PENALTY_DIST + 0.2) G += 0.25;
+    GLOVE_Z = G;
+    var d = G - KEEP_CAM_Z, W = d * tanH, H = d * tanV, cy = 1.25;
+    gloveScale = d / 1.4;
+    gloveW.x = -aimS.x * W;   // looking out from the goal, the screen's right is -x in the stadium
+    gloveW.y = Math.max(0.1, cy + aimS.y * H);
+    camera.position.set(0, cy, KEEP_CAM_Z);
+    camera.lookAt(0, cy, 20);
+    glovesG.scale.setScalar(gloveScale);
     glovesG.position.set(gloveW.x, gloveW.y, GLOVE_Z);
     glovesG.rotation.z = -aimS.x * 0.35;   // the tops lean into the dive
   }
@@ -841,7 +848,7 @@
 
   // The other team's kick. A right answer means slow motion (a hint makes it a little less slow); a wrong answer means
   // full speed, which is very hard (but not impossible) to save. Shots get faster and more accurate in later cup rounds.
-  var runT = -1, slowMo = false, kickT = -1, fly = null, saveRes = '', heldT = 0;
+  var keyHold = 0, runT = -1, slowMo = false, kickT = -1, fly = null, saveRes = '', heldT = 0;
   var srLive = null;
   function startRunUp() {
     resetBall();
@@ -902,9 +909,13 @@
     if (state === STATE.MATH || state === STATE.EXPLANATION || state === STATE.WHISTLE || state === STATE.RUNUP || state === STATE.SAVING || state === STATE.SAVED) {
       var kx = (keysDown.ArrowRight || keysDown.KeyD ? 1 : 0) - (keysDown.ArrowLeft || keysDown.KeyA ? 1 : 0);
       var ky = (keysDown.ArrowUp || keysDown.KeyW ? 1 : 0) - (keysDown.ArrowDown || keysDown.KeyS ? 1 : 0);
+      // held arrow keys speed up (from slow, for small moves, to a dive across the goal in under half a second), so a
+      // keyboard-only save is possible, even if the shot is quick and wide; a quick shot to a corner needs a good guess
+      keyHold = (kx || ky) ? keyHold + delta : 0;
+      var ks = 1.2 + 3.6 * Math.min(1, keyHold / 0.3);
       if (state !== STATE.MATH && (kx || ky)) {
-        aimS.x = Math.max(-1, Math.min(1, aimS.x + kx * 1.8 * delta));
-        aimS.y = Math.max(-1, Math.min(1, aimS.y + ky * 1.8 * delta));
+        aimS.x = Math.max(-1, Math.min(1, aimS.x + kx * ks * delta));
+        aimS.y = Math.max(-1, Math.min(1, aimS.y + ky * ks * delta));
       }
     }
     keeperCam();
@@ -938,7 +949,7 @@
   function flyBall(dt) {
     var p = fly.p, v = fly.v, g = 9.81;
     if (saveRes === 'caught') {   // held in the gloves
-      p.set(gloveW.x, gloveW.y, GLOVE_Z + 0.12);
+      p.set(gloveW.x, gloveW.y, GLOVE_Z + 0.12 * gloveScale);
       ballMesh.position.copy(p);
       return;
     }
@@ -950,8 +961,9 @@
     if (!saveRes && !fly.crossed && prevZ > GLOVE_Z && p.z <= GLOVE_Z) {
       fly.crossed = true;
       var dx = p.x - gloveW.x, dy = p.y - gloveW.y;
-      if (Math.abs(dx) < 0.21 && Math.abs(dy) < 0.21) { playSound('catch'); saveDone('caught'); return; }
-      if (Math.abs(dx) < 0.42 && Math.abs(dy) < 0.38) {   // fingertips: pushed away to the side
+      var gs = gloveScale;
+      if (Math.abs(dx) < 0.12 * gs + BALL_RADIUS && Math.abs(dy) < 0.1 * gs + BALL_RADIUS) { playSound('catch'); saveDone('caught'); return; }
+      if (Math.abs(dx) < 0.27 * gs + BALL_RADIUS && Math.abs(dy) < 0.15 * gs + BALL_RADIUS) {   // anywhere on the gloves, as drawn   // fingertips: pushed away to the side
         playSound('catch');
         v.set((dx >= 0 ? 1 : -1) * (1.5 + Math.random() * 2.5) + v.x * 0.15, 2 + Math.random() * 2, 5 + Math.random() * 3);
         saveDone('saved');
