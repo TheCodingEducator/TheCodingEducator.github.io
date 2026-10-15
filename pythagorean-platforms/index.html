@@ -299,6 +299,16 @@
   .btn.t-start { align-self: flex-start; font-size: 30px; padding: 12px 44px; border-radius: 999px; box-shadow: 0 6px 14px rgba(0,0,0,0.25); }
   .t-start:focus-visible, .map-screen button:focus-visible { outline: 4px solid #fff4d6; outline-offset: 3px; }
   .t-hint { margin: 0; font-weight: 900; font-size: 15px; color: #143a26; animation: tBlink 1.4s ease-in-out infinite; }
+  @media (hover: none) and (pointer: coarse) { .t-hint, .map-keys { display: none; } }   /* keyboard hints: not on phones and tablets */
+  .tpad { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; margin-top: 6px; }
+  /* landscape phones: the keys sit beside the answer (two rows of six), so the jungle keeps its height */
+  @media (max-height: 500px) {
+    .choices:has(.tpad) .typed { grid-column: 1; }
+    .choices:has(.tpad) .tpad { grid-column: 2; grid-template-columns: repeat(6, 1fr); margin-top: 0; align-self: center; }
+    .choices .tpad button { height: 30px; font-size: 16px; }
+  }
+  .tpad button { height: 40px; border-radius: 8px; border: 2px solid var(--line); background: #143020; color: var(--text); font: inherit; font-size: 20px; font-weight: 900; touch-action: manipulation; }
+  .tpad button:active { background: #1f4a31; }
   .t-hint kbd, .map-keys kbd { font-family: inherit; background: rgba(0,0,0,0.35); color: #fff4d6; border: 1px solid rgba(255,255,255,0.35); border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; }
   @keyframes tBlink { 50% { opacity: 0.45; } }
   .t-pick { align-self: flex-start; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 999px; background: rgba(16,38,26,0.78); }
@@ -481,6 +491,12 @@
   @media (max-height: 640px) and (min-width: 761px) {
     .strip, .cap { display: none; }
   }
+  /* landscape phones: the World Map card keeps its name, blurb, progress and button, and drops the extras, so the button
+     is always on screen */
+  @media (max-height: 420px) {
+    .wc-chips, .wc-sample { display: none; }
+    .world-card h3 { font-size: 20px; } .world-card { gap: 4px; }
+  }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
   /* Rotate-device prompt: small touchscreens held upright only (the scene is wide, so it needs landscape) */
   .rotate-prompt {
@@ -506,7 +522,7 @@
 <script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-results.js?v=85c4ff8b"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
 <script src="../site-stats.js?v=8d28b82f"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 </head>
@@ -765,7 +781,7 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
 </section>
 
-<script src="pythagorean-platforms-game.js?v=42be732b"></script>
+<script src="pythagorean-platforms-game.js?v=955cc98a"></script>
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>

@@ -1114,3 +1114,26 @@
     }
 
     setMode('title');
+
+    // Phones and tablets: a row of keys in the answer panel (digits, / for a fraction, minus, delete), so the phone's own
+    // keyboard never opens over the scale
+    (function () {
+      if (!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches)) return;
+      const panel = document.getElementById('challenge-answer-panel'), input = document.getElementById('user-answer-input');
+      if (!panel || !input) return;
+      input.readOnly = true; input.setAttribute('inputmode', 'none');
+      const pad = document.createElement('div');
+      pad.className = 'tpad';
+      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '/', '-', 'del'].forEach(function (k) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = k === 'del' ? '&#9003;' : k === '-' ? '&minus;' : k;
+        if (k === 'del') b.setAttribute('aria-label', 'Delete');
+        b.addEventListener('click', function () {
+          input.value = k === 'del' ? input.value.slice(0, -1) : (input.value + k).slice(0, 8);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        pad.appendChild(b);
+      });
+      panel.appendChild(pad);
+    })();

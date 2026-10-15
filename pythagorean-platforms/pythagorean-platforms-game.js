@@ -489,6 +489,23 @@
         inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^0-9.]/g, ''); });
         f.addEventListener('submit', e => { e.preventDefault(); submitTyped(inp); });
         choicesEl.appendChild(f);
+        // phones and tablets: a row of number keys under the answer, so the phone's own keyboard never covers the jungle
+        if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
+          inp.readOnly = true; inp.setAttribute('inputmode', 'none');
+          const pad = document.createElement('div');
+          pad.className = 'tpad';
+          ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', 'del'].forEach(k => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.disabled = !aiming;
+            b.innerHTML = k === 'del' ? '&#9003;' : k;
+            if (k === 'del') b.setAttribute('aria-label', tl('Delete', 'Borrar'));
+            b.addEventListener('click', () => {
+              inp.value = k === 'del' ? inp.value.slice(0, -1) : (inp.value + k).replace(/[^0-9.]/g, '').slice(0, 6);
+            });
+            pad.appendChild(b);
+          });
+          choicesEl.appendChild(pad);
+        }
         if (aiming && !screenOpen() && !matchMedia('(hover: none) and (pointer: coarse)').matches) setTimeout(() => inp.focus({ preventScroll: true }), 30);
       }
       choicesEl.classList.toggle('four', s.choices.length > 2);

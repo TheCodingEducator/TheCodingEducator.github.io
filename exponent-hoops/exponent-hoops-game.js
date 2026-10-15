@@ -1,3 +1,5 @@
+// phones and tablets: the on-screen labels name the joystick and GO button instead of keys
+var TOUCH_UI = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
 var playerBody = createSprite(200, 350, 32, 55);
 var playerHead = createSprite(200, 315, 22, 22);
 var playerLarm = createSprite(180, 340, 8, 35);
@@ -426,7 +428,7 @@ function draw() {
     var hoverMenu = (mx > 100 && mx < 300 && my > 260 && my < 310);
     fill(hoverMenu ? "#c0392b" : "#e74c3c"); stroke("white"); strokeWeight(2); rect(100, 260, 200, 50, 10);
     fill("white"); noStroke(); text(tl("MAIN MENU", "MENÚ PRINCIPAL"), 200, 293); textStyle(NORMAL);
-    fill("rgba(255,255,255,0.8)"); textSize(12); text(tl("SPACE / ENTER = resume   |   ESC = main menu", "ESPACIO / ENTER = continuar   |   ESC = menú principal"), 200, 340);
+    fill("rgba(255,255,255,0.8)"); textSize(12); text(TOUCH_UI ? tl("GO = resume", "GO = continuar") : tl("SPACE / ENTER = resume   |   ESC = main menu", "ESPACIO / ENTER = continuar   |   ESC = menú principal"), 200, 340);
 
     if (keyWentDown("space") || keyWentDown("enter")) { hasInteractedThisPossession = true; afkStreak = 0; gameState = prePauseState; }
     else if (mouseWentDown("leftButton")) {
@@ -649,10 +651,10 @@ function drawControlsUI() {
   fill("rgba(0, 0, 0, 0.85)"); noStroke(); rect(0, 360, 400, 40);
   if (gameMode === "1P") {
     fill("#1d428a"); stroke("white"); strokeWeight(1.5); rect(15, 365, 150, 30, 5);
-    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text(tl("ARROWS: Move", "FLECHAS: Moverse"), 90, 385);
+    fill("white"); noStroke(); textSize(11); textAlign(CENTER, BASELINE); textStyle(BOLD); text(TOUCH_UI ? tl("JOYSTICK: Move", "PALANCA: Moverse") : tl("ARROWS: Move", "FLECHAS: Moverse"), 90, 385);
 
     fill("#c0392b"); stroke("white"); strokeWeight(1.5); rect(235, 365, 150, 30, 5);
-    fill("white"); noStroke(); text(tl("SPACE/ENTER : Shoot", "ESPACIO/ENTER: Tirar"), 310, 385); textStyle(NORMAL);
+    fill("white"); noStroke(); text(TOUCH_UI ? tl("GO: Shoot", "GO: Tirar") : tl("SPACE/ENTER : Shoot", "ESPACIO/ENTER: Tirar"), 310, 385); textStyle(NORMAL);
   } else {
     var p1Text = (possession === 1) ? tl("SPACE Shoot", "ESPACIO: tirar") : tl("SPACE Steal", "ESPACIO: robar");
     var p2Text = (possession === 2) ? tl("ENTER Shoot", "ENTER: tirar") : tl("ENTER Steal", "ENTER: robar");
@@ -697,7 +699,7 @@ function drawExitConfirmOverlay() {
   fill(exitSel === 1 ? "#229954" : "#27ae60"); strokeWeight(exitSel === 1 ? 4 : 2); rect(210, 230, 130, 50, 10);
   fill("white"); noStroke(); textSize(17); textStyle(BOLD);
   text(tl("YES, EXIT", "SÍ, SALIR"), 125, 255); text(tl("CANCEL", "CANCELAR"), 275, 255); textStyle(NORMAL);
-  fill("lightgray"); textSize(12); text(tl("◀ ▶ choose  |  SPACE / ENTER confirm  |  ESC cancel", "◀ ▶ elegir  |  ESPACIO / ENTER confirmar  |  ESC cancelar"), 200, 320);
+  fill("lightgray"); textSize(12); text(TOUCH_UI ? tl("Joystick: choose  |  GO: confirm", "Palanca: elegir  |  GO: confirmar") : tl("◀ ▶ choose  |  SPACE / ENTER confirm  |  ESC cancel", "◀ ▶ elegir  |  ESPACIO / ENTER confirmar  |  ESC cancelar"), 200, 320);
 
   var go = keyWentDown("space") || keyWentDown("enter");
   if ((mouseWentDown("leftButton") && hoverYes) || (go && exitSel === 0)) {
@@ -1173,7 +1175,7 @@ function drawTitleScreen() {
   fill("white"); noStroke(); textSize(18); textStyle(BOLD); text(tl("SOLO MODE", "MODO SOLO"), 105, 331);
   fill(on2 ? "#f1c40f" : "#ce1141"); stroke("white"); strokeWeight(on2 ? 4 : 2); rect(210, 300, 170, 50, 10);
   fill("white"); noStroke(); textSize(18); text(tl("VERSUS MODE", "MODO VERSUS"), 295, 331); textStyle(NORMAL);
-  fill("rgba(255,255,255,0.75)"); textSize(12); text(tl("◀ ▶ choose  |  SPACE / ENTER to play", "◀ ▶ elegir  |  ESPACIO / ENTER para jugar"), 200, 375);
+  fill("rgba(255,255,255,0.75)"); textSize(12); text(TOUCH_UI ? tl("Tap a mode, or use the joystick and GO", "Toca un modo, o usa la palanca y GO") : tl("◀ ▶ choose  |  SPACE / ENTER to play", "◀ ▶ elegir  |  ESPACIO / ENTER para jugar"), 200, 375);
 
   var go = keyWentDown("space") || keyWentDown("enter");
   var pick1 = (mouseWentDown("leftButton") && hover1P) || keyWentDown("1") || (go && on1);

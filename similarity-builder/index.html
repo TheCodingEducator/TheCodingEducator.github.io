@@ -275,6 +275,21 @@
   /* touch screens: the Jump button sits beside the game, never on top of it */
   #sb #stageRow { position:relative; }
   @media (hover: none) and (pointer: coarse) { #sb #stage { width:min(var(--stage-w), calc(100% - 180px)); } #sb #jumpBtn { right:4px; bottom:4px; } }
+  /* landscape phones: no keyboard help line and a tighter top row, so the run gets more of the short screen */
+  @media (hover: none) and (pointer: coarse) and (max-height: 500px) {
+    #sb { --stage-w: min(100%, calc((100vh - 120px) * 16 / 9)); padding: 6px 8px 8px; }
+    html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) #sb { --stage-w: min(100%, calc((100dvh - 44px - 76px) * 16 / 9)); }
+    #sb #help { display: none !important; }
+    #sb #hud { margin-bottom: 4px; min-height: 34px; gap: 6px; }
+    #sb .pill { padding: 3px 10px; font-size: 14px; }
+    /* the question card: the figures on the left, the answer and keypad on the right, so the card shrinks far less */
+    #sb #problem .card { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 14px; align-items: start; max-width: none; width: 96%; padding: 12px 16px; }
+    #sb #problem .card > .ptop, #sb #problem .card > .bar, #sb #problem .card > #pPrompt { grid-column: 1 / -1; }
+    #sb #problem .card > #pairWrap { grid-column: 1; grid-row: 4 / span 2; }
+    #sb #problem .card > #ansRow, #sb #problem .card > #simRow { grid-column: 2; grid-row: 4; }
+    #sb #problem .card > #keypad { grid-column: 2; grid-row: 5; }
+    #sb .kbdTip { display: none; }
+  }
   #sb #help { color:#aab2dd; font-size:14px; margin-top:8px; text-align:center; }
 
   #sb .overlay { position:absolute; inset:0; background:rgba(10,12,30,.74); display:flex; align-items:center; justify-content:center; padding:12px; z-index:10; overflow:hidden; }
@@ -406,7 +421,7 @@
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
 <script src="../site-stats.js?v=8d28b82f"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 </head>

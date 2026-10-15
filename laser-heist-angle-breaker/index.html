@@ -256,6 +256,15 @@
   .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
   .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
   .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  /* phones held sideways: the number pad (two columns) and the joystick share a slim strip down the right edge, and the
+     game takes the rest of the width, so neither ever covers the question or the room */
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    html.site-lock body.site-fit #game-canvas-slot:not(:fullscreen):not(.pseudo-fullscreen) .app,
+    html.site-lock #game-canvas-slot:fullscreen .app, html.site-lock #game-canvas-slot.pseudo-fullscreen .app { width: calc(100vw - 124px) !important; }
+    html.site-lock.site-pad #mobile-controls #mc-numpad { grid-template-columns: repeat(2, 52px) !important; grid-auto-rows: 44px !important; gap: 4px !important; left: auto !important; right: 8px !important; transform: none !important; bottom: 8px !important; }
+    html.site-lock.site-pad #mobile-controls #mc-joy-base { left: auto !important; right: 4px !important; bottom: 12px !important; width: 116px !important; height: 116px !important; }
+    html.site-lock.site-pad #mobile-controls #mc-joy-stick { left: 32px !important; top: 32px !important; }
+  }
   @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
     .rotate-prompt { display: flex; }
   }
@@ -265,7 +274,7 @@
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
 <script src="../site-stats.js?v=8d28b82f"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 </head>
@@ -348,7 +357,7 @@
 </section>
 
 <script src="laser-heist-game.js?v=cb92fa20"></script>
-<script src="../site-controls.js?v=27028c32"></script>
+<script src="../site-controls.js?v=14b793d7"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
 </html>

@@ -109,6 +109,10 @@
   .go.alt { background: rgba(255,255,255,0.1); color: var(--text); border: 1px solid rgba(255,255,255,0.25); font-size: 17px; min-height: 42px; }
   .ansrow { display: flex; align-items: center; gap: 6px; font-size: 34px; font-weight: 900; margin: 6px 0 8px; }
   .ansrow .xx { color: var(--accent); }
+  .mbpad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 0 0 4px; }
+  @media (hover: none) and (pointer: coarse) { #side .sp .phase { display: none; } }   /* the heading below says the same */
+  .mbpad button { height: 52px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.25); background: #1e293b; color: #fff; font-family: inherit; font-size: 32px; font-weight: 900; touch-action: manipulation; }
+  .mbpad button:active { background: #334155; }
   .ansrow input { width: 108px; height: 58px; font-size: 34px; font-weight: 900; text-align: center; border-radius: 12px; border: 3px solid var(--accent); background: #0b1428; color: #fff; }
   .msg { min-height: 22px; font-size: 16px; color: var(--bad); }
   .hint { border-left: 4px solid var(--cyan); background: rgba(98,227,255,0.08); padding: 8px 10px; border-radius: 8px; font-size: 16px; line-height: 1.4; margin-top: 6px; }
@@ -214,7 +218,7 @@
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
 <script src="../site-stats.js?v=8d28b82f"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 </head>
@@ -301,7 +305,7 @@
 <script src="mb-shop.js?v=d14e3120"></script>
 <script src="mb-render.js?v=1726bae1"></script>
 <script src="mb-rules.js?v=0d22995a"></script>
-<script src="mb-game.js?v=20563898"></script>
+<script src="mb-game.js?v=72284b44"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>
 </html>

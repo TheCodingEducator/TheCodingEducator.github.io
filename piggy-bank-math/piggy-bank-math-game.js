@@ -1,3 +1,5 @@
+// phones and tablets: the hints name taps and the big coin buttons (piggy-bank-math-touch.js) instead of keys
+var TOUCH_UI = window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
 var gameState = "menu";
 var exitConfirmPending = false;
 var difficulty = "easy";
@@ -155,8 +157,11 @@ function drawMenu() {
   noFill(); stroke(255, 214, 60); strokeWeight(4);
   rect(sel.x - sel.width / 2 - 6, sel.y - sel.height / 2 - 6, sel.width + 12, sel.height + 12, 10);
   noStroke(); fill("black"); textSize(12);
-  text(tl("▲ ▼ choose  ·  ENTER / SPACE to start", "▲ ▼ elegir  ·  ENTER / ESPACIO para empezar"), 200, 318);
-  text(tl("Keys in play: 1 penny · 2 nickel · 3 dime · 4 quarter · U undo · C clear", "Teclas: 1 centavo · 2 níquel · 3 dime · 4 cuarto · U quitar · C borrar"), 200, 338);
+  if (TOUCH_UI) text(tl("Tap a level to start. Then tap the big coins below.", "Toca un nivel para empezar. Luego toca las monedas grandes de abajo."), 200, 318);
+  else {
+    text(tl("▲ ▼ choose  ·  ENTER / SPACE to start", "▲ ▼ elegir  ·  ENTER / ESPACIO para empezar"), 200, 318);
+    text(tl("Keys in play: 1 penny · 2 nickel · 3 dime · 4 quarter · U undo · C clear", "Teclas: 1 centavo · 2 níquel · 3 dime · 4 cuarto · U quitar · C borrar"), 200, 338);
+  }
 
   var go = keyWentDown("enter") || keyWentDown("space");
   if ((mouseWentDown("leftButton") && mouseIsOver(easyBtn)) || (go && menuSel === 0)) {
@@ -873,13 +878,13 @@ function drawText() {
 
   textSize(14);
   fill("white");
-  text(tl("CLEAR (C)", "BORRAR"), clearBtn.x, clearBtn.y);
-  text(tl("UNDO (U)", "QUITAR"), undoBtn.x, undoBtn.y);
+  text(TOUCH_UI ? tl("CLEAR", "BORRAR") : tl("CLEAR (C)", "BORRAR"), clearBtn.x, clearBtn.y);
+  text(TOUCH_UI ? tl("UNDO", "QUITAR") : tl("UNDO (U)", "QUITAR"), undoBtn.x, undoBtn.y);
 
   // the key for each coin, under it
   fill(40, 60, 80); textSize(11);
   [[penny, "penny", "1"], [nickel, "nickel", "2"], [dime, "dime", "3"], [quarter, "quarter", "4"]].forEach(function (c) {
-    if (allowedCoins.indexOf(c[1]) !== -1) text(tl("key ", "tecla ") + c[2], c[0].x, c[0].y + 33);
+    if (!TOUCH_UI && allowedCoins.indexOf(c[1]) !== -1) text(tl("key ", "tecla ") + c[2], c[0].x, c[0].y + 33);
   });
 
   fill("black");

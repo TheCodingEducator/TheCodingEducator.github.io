@@ -5,6 +5,8 @@
   var W = MB.W, H = MB.H;
   var app = $('#mb'), stage = $('#stage'), cv = $('#cv'), hud = $('#hud'), side = $('#side'), ov = $('#ov');
   MB.calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // phones and tablets: x is typed on a number pad in the panel, so the phone's keyboard never covers the table
+  var TOUCH = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
   if (MB.calm) stage.classList.add('calm');
   Rd.init(cv);
 
@@ -163,7 +165,11 @@
       '<div class="sp"><div class="phase">' + (G.wrongs ? T('Try again', 'Inténtalo de nuevo') : T('Solve for x', 'Halla x')) + '</div>' +
       '<div class="big">' + T('Solve for x', 'Halla x') + '</div>' + lead +
       '<div class="ansrow"><label for="ans" class="xx">x =</label><input id="ans" inputmode="numeric" autocomplete="off" maxlength="3" aria-label="' + T('x in degrees', 'x en grados') + '"><span>°</span></div>' +
-      '<div class="msg" id="msg" role="alert"></div>' + hintHtml(p, G.wrongs) + '</div>' +
+      '<div class="msg" id="msg" role="alert"></div>' +
+      (TOUCH ? '<div class="mbpad">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'del'].map(function (k) {
+        return k ? '<button type="button" data-k="' + k + '"' + (k === 'del' ? ' aria-label="' + T('Delete', 'Borrar') + '">&#9003;' : '>' + k) + '</button>' : '<span></span>';
+      }).join('') + '</div>' : '') +
+      hintHtml(p, G.wrongs) + '</div>' +
       '<div class="grow"></div><button class="go" id="b-sub">' + T('SHOOT ▶', 'TIRAR ▶') + '</button>' +
       (G.wrongs === 0 ? '<button class="go alt" id="b-reaim">' + T('◀ Change my aim (Esc)', '◀ Cambiar el tiro (Esc)') + '</button>' : '');
     fillRacks();
@@ -175,7 +181,16 @@
     });
     $('#b-sub').addEventListener('click', submit);
     on('b-reaim', reAim);
-    setTimeout(function () { inp.focus(); }, 40);
+    if (TOUCH) {   // the pad types into the box; the box itself never opens the phone's keyboard
+      inp.readOnly = true; inp.setAttribute('inputmode', 'none');
+      Array.prototype.forEach.call(side.querySelectorAll('.mbpad button'), function (b) {
+        b.addEventListener('click', function () {
+          var k = b.getAttribute('data-k');
+          inp.value = k === 'del' ? inp.value.slice(0, -1) : (inp.value + k).slice(0, 3);
+          $('#msg').textContent = ''; MB.Sound.play('type');
+        });
+      });
+    } else setTimeout(function () { inp.focus(); }, 40);
   }
   function sideExplain() {
     var p = G.problem, x = G.wrongX, two = G.mode === 'two', slip = MB.slip(p, x);

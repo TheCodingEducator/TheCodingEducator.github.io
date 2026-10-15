@@ -746,7 +746,8 @@
     buildDock();
     renderPlace();
     layout();   // size the board around the ship dock now that the dock is built
-    placeMsg(T('Drag a ship onto the board, or press Enter on a ship to put it on the board.', 'Arrastra un barco al tablero, o pulsa Enter en un barco para ponerlo en el tablero.'));
+    placeMsg(TOUCH ? T('Drag a ship onto the board. Tap a ship on the board to turn it.', 'Arrastra un barco al tablero. Toca un barco del tablero para girarlo.')
+      : T('Drag a ship onto the board, or press Enter on a ship to put it on the board.', 'Arrastra un barco al tablero, o pulsa Enter en un barco para ponerlo en el tablero.'));
     focusLater($('.ship-pick'));
   }
   function buildDock() {

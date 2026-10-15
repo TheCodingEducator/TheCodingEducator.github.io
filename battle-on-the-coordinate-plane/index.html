@@ -261,6 +261,16 @@
   #bc .pmsg.bad { background: #ffe1e1; color: #8f1414; border: 2px solid var(--red); }
   #bc .pmsg.good { background: #ddf6e8; color: #0d5c37; }
   #bc .dock .row { margin-top: 0; justify-content: flex-start; }
+  /* phones: a compact dock (the two ships side by side, smaller pictures, no keyboard help), so the board above it is big
+     enough to place ships with a finger */
+  #bc .place-wrap.stack #dock-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  #bc .place-wrap.stack .ship-card { padding: 4px 6px; }
+  #bc .place-wrap.stack .ship-card .sc-top { flex-wrap: wrap; gap: 2px 6px; }
+  #bc .place-wrap.stack .ship-card .sc-name { font-size: 16px; }
+  #bc .place-wrap.stack .ship-card .sc-pts { font-size: 11px; }
+  #bc .place-wrap.stack .ship-pick { padding: 2px; }
+  #bc .place-wrap.stack .dock .dhelp { font-size: 12.5px; }
+  @media (hover: none) and (pointer: coarse) { #bc .keys-help { display: none; } }
   #bc .keys-help { font-size: 12px; color: var(--ink2); line-height: 1.4; margin: 0; }
   #bc kbd { font: 800 12px 'Nunito', sans-serif; background: #fff; border: 1px solid #9fb3c8; border-bottom-width: 3px; border-radius: 6px; padding: 0 6px; color: var(--ink); }
   #bc .drag-ghost { position: absolute; z-index: 60; pointer-events: none; opacity: 0.85; filter: drop-shadow(0 8px 10px rgba(11,37,69,0.35)); }
@@ -543,7 +553,7 @@
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
 <script src="../site-layout.js?v=627e2fba"></script>
 <script src="../site-sound.js?v=4daed956"></script>
 </head>
@@ -639,7 +649,7 @@
           </div>
           <div class="dock">
             <h2 id="place-h" data-es="Ubica tu flota">Place Your Fleet</h2>
-            <p class="dhelp" data-es="Arrastra cada barco a los puntos del tablero. Haz clic en un barco del tablero para girarlo.">Drag each ship onto the points of your board. Click a ship on the board to rotate it.</p>
+            <p class="dhelp" data-es="Arrastra cada barco a los puntos del tablero. Toca o haz clic en un barco del tablero para girarlo.">Drag each ship onto the points of your board. Tap or click a ship on the board to turn it.</p>
             <div id="dock-cards"></div>
             <div class="pmsg" id="place-msg" aria-live="polite"></div>
             <div class="row">
@@ -773,7 +783,7 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=cfb8d16c"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=5ed1be87"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>

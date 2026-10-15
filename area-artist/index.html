@@ -190,7 +190,11 @@
     #aa .keypad { grid-template-columns: repeat(6, 1fr); }
     #aa .keypad .kbtn { font-size: 18px; padding: 6px 0; }
     #aa .choices { grid-template-columns: 1fr; }
-    #aa .choices.cats { grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); }
+    #aa .choices.cats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }   /* phones: the setup card fits one screen */
+    #aa .choices.cats .choice { padding: 6px 2px; } #aa .choices.cats .choice .ic { font-size: 22px; } #aa .choices.cats .choice b { font-size: 13px; }
+    #aa .choices.cats .choice small { font-size: 11px; }
+    #aa #lenChoices { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 8px 0; }
+    #aa #lenChoices .choice { padding: 8px 4px; } #aa #lenChoices .choice b { font-size: 16px; } #aa #lenChoices .choice small { font-size: 11px; }
   }
   @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
     #aa #side { flex-basis: 300px; padding: 6px 10px; }
@@ -206,7 +210,7 @@
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=2dc18537">
+<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
 <script src="../site-stats.js?v=8d28b82f"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 </head>

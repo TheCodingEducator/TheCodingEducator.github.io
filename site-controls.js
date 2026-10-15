@@ -110,13 +110,18 @@
     // ---- GO button: holds Space and Enter (whichever the game reads) ----
     var act = document.getElementById('mc-action');
     if (act) {
-      var actDown = false, actPressed = false;   // actPressed: this press went out as a real Enter key (menu screen)
+      // A press always lasts at least HOLD ms, even a very quick tap, so the game's next frame is sure to see it (a game that
+      // checks its keys once a frame could miss a press and release that both fall between two frames).
+      var HOLD = 120, actDown = false, actPressed = false, actAt = 0;   // actPressed: this press went out as a real Enter key (menu screen)
       var actOn = function (e) {
-        e.preventDefault(); actDown = true; actPressed = menuMode;
+        e.preventDefault(); actDown = true; actPressed = menuMode; actAt = performance.now();
         if (menuMode) press('Enter', true); else { keys.space = true; keys.enter = true; }
       };
       var actOff = function () {
-        if (!actDown) return; actDown = false;
+        if (!actDown) return;
+        var left = HOLD - (performance.now() - actAt);
+        if (left > 0) { setTimeout(actOff, left); return; }
+        actDown = false;
         if (actPressed) press('Enter', false);   // even if GO just started the game and the screen is no longer a menu
         keys.space = false; keys.enter = false;
       };
@@ -132,7 +137,11 @@
         e.preventDefault();
         if (o.onKey) o.onKey(key); else keys[key] = true;
       });
-      if (!o.onKey) ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { btn.addEventListener(ev, function () { keys[key] = false; }); });
+      var at = 0;
+      btn.addEventListener('pointerdown', function () { at = performance.now(); });
+      if (!o.onKey) ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+        btn.addEventListener(ev, function () { setTimeout(function () { keys[key] = false; }, Math.max(0, 120 - (performance.now() - at))); });   // held long enough for a frame to see it
+      });
     });
 
     // ---- Every frame: which parts are showing, and whether they take touches ----
