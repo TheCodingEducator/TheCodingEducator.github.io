@@ -229,8 +229,8 @@ function draw(){
 
   // Menu arrow-key navigation
   if(STATE==="START"){
-    if(keyWentDown("right")) modeIndex = (modeIndex+1)%4;
-    if(keyWentDown("left"))  modeIndex = (modeIndex+3)%4;
+    if(keyWentDown("right")) modeIndex = (modeIndex+1)%modeIds.length;
+    if(keyWentDown("left"))  modeIndex = (modeIndex+modeIds.length-1)%modeIds.length;
     gameMode = modeIds[modeIndex];
     if(keyWentDown("down")) startFocusIsShop = true;
     if(keyWentDown("up"))   startFocusIsShop = false;

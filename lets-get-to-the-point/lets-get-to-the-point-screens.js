@@ -314,8 +314,9 @@ function drawStart(){
      r:160,g:25,  b:25}
   ];
 
-  var bw=92, bh=293, gap=4, startX=8, cardTop=57;
-  for(var mi=0;mi<4;mi++){
+  if (TOUCH_ONLY) modes = modes.filter(function (m) { return m.id !== "HEADTOHEAD"; });   // see modeIds
+  var bw=TOUCH_ONLY ? 124 : 92, bh=293, gap=4, startX=8, cardTop=57;
+  for(var mi=0;mi<modes.length;mi++){
     var m=modes[mi];
     var bx2=startX+mi*(bw+gap), by2=cardTop;
     var cx=bx2+bw/2;

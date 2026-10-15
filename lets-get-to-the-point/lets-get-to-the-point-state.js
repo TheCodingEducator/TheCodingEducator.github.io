@@ -41,6 +41,9 @@ var skillRotations    = true;
 var skillFocusIdx = 0; // 0=Translations 1=Rotations 2=Reflections 3=StartButton
 var modeIndex = 1;
 var modeIds = ["PRACTICE", "GENIUS", "GEOMETRY", "HEADTOHEAD"];
+// Head to Head has both players moving at once on one keyboard, so phones and tablets (one joystick) don't offer it
+var TOUCH_ONLY = window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
+if (TOUCH_ONLY) modeIds = modeIds.filter(function (id) { return id !== "HEADTOHEAD"; });
 // Start screen keyboard focus: false = one of the 4 mode cards
 // (left/right cycles modeIndex, as before), true = the Shop bar below
 // them (DOWN moves focus there, UP moves back).

@@ -1167,19 +1167,25 @@ function drawTitleScreen() {
   // keyboard: left/right (or A/D) choose a mode, Space/Enter starts it; 1 and 2 pick directly
   if (keyWentDown("left") || keyWentDown("a")) titleSel = 0;
   if (keyWentDown("right") || keyWentDown("d")) titleSel = 1;
-  var hover1P = (mx > 20 && mx < 190 && my > 300 && my < 350);
-  var hover2P = (mx > 210 && mx < 380 && my > 300 && my < 350);
+  // Versus Mode has both players moving at once on one keyboard, so phones and tablets (one joystick) get Solo Mode only
+  if (TOUCH_UI) titleSel = 0;
+  var hover1P = TOUCH_UI ? (mx > 115 && mx < 285 && my > 300 && my < 350) : (mx > 20 && mx < 190 && my > 300 && my < 350);
+  var hover2P = !TOUCH_UI && (mx > 210 && mx < 380 && my > 300 && my < 350);
   if (hover1P) titleSel = 0; else if (hover2P) titleSel = 1;
   var on1 = titleSel === 0, on2 = titleSel === 1;
-  fill(on1 ? "#f1c40f" : "#1d428a"); stroke("white"); strokeWeight(on1 ? 4 : 2); rect(20, 300, 170, 50, 10);
-  fill("white"); noStroke(); textSize(18); textStyle(BOLD); text(tl("SOLO MODE", "MODO SOLO"), 105, 331);
-  fill(on2 ? "#f1c40f" : "#ce1141"); stroke("white"); strokeWeight(on2 ? 4 : 2); rect(210, 300, 170, 50, 10);
-  fill("white"); noStroke(); textSize(18); text(tl("VERSUS MODE", "MODO VERSUS"), 295, 331); textStyle(NORMAL);
-  fill("rgba(255,255,255,0.75)"); textSize(12); text(TOUCH_UI ? tl("Tap a mode, or use the joystick and GO", "Toca un modo, o usa la palanca y GO") : tl("◀ ▶ choose  |  SPACE / ENTER to play", "◀ ▶ elegir  |  ESPACIO / ENTER para jugar"), 200, 375);
+  var soloX = TOUCH_UI ? 115 : 20;
+  fill(on1 ? "#f1c40f" : "#1d428a"); stroke("white"); strokeWeight(on1 ? 4 : 2); rect(soloX, 300, 170, 50, 10);
+  fill("white"); noStroke(); textSize(18); textStyle(BOLD); text(tl("SOLO MODE", "MODO SOLO"), soloX + 85, 331);
+  if (!TOUCH_UI) {
+    fill(on2 ? "#f1c40f" : "#ce1141"); stroke("white"); strokeWeight(on2 ? 4 : 2); rect(210, 300, 170, 50, 10);
+    fill("white"); noStroke(); textSize(18); text(tl("VERSUS MODE", "MODO VERSUS"), 295, 331);
+  }
+  textStyle(NORMAL);
+  fill("rgba(255,255,255,0.75)"); textSize(12); text(TOUCH_UI ? tl("Tap Solo Mode, or press GO", "Toca Modo solo, o pulsa GO") : tl("◀ ▶ choose  |  SPACE / ENTER to play", "◀ ▶ elegir  |  ESPACIO / ENTER para jugar"), 200, 375);
 
   var go = keyWentDown("space") || keyWentDown("enter");
   var pick1 = (mouseWentDown("leftButton") && hover1P) || keyWentDown("1") || (go && on1);
-  var pick2 = (mouseWentDown("leftButton") && hover2P) || keyWentDown("2") || (go && on2);
+  var pick2 = !TOUCH_UI && ((mouseWentDown("leftButton") && hover2P) || keyWentDown("2") || (go && on2));
   if (pick1) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "1P"; scoreBlue = 0; gameState = "play"; resetBall(); }
   else if (pick2) { playSound("sound://category_tap/vibrant_ui_tap_1.mp3"); gameMode = "2P"; scoreBlue = 0; scoreRed = 0; possession = 1; gameState = "instructions_2p"; resetBall(); }
 }
