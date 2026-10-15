@@ -55,8 +55,9 @@ foreach ($png in Get-ChildItem (Join-Path $root 'og') -Filter *.png) {
   Write-Host "Thumbnail: og/thumbs/$($png.BaseName).jpg"
 }
 $homeText = ReadText 'index.html'
-foreach ($m in [regex]::Matches($homeText, 'src="og/thumbs/([a-z0-9-]+)\.jpg"')) {
-  if (-not (Test-Path (Join-Path $thumbDir ($m.Groups[1].Value + '.jpg')))) { Problem "index.html: thumbnail og/thumbs/$($m.Groups[1].Value).jpg doesn't exist" }
+# (the cards now show real screenshots of each game, og/cards/<game>.jpg at 800 x 420, taken by hand; either kind must exist)
+foreach ($m in [regex]::Matches($homeText, 'src="og/(thumbs|cards)/([a-z0-9-]+)\.jpg"')) {
+  if (-not (Test-Path (Join-Path $root ('og\' + $m.Groups[1].Value + '\' + $m.Groups[2].Value + '.jpg')))) { Problem "index.html: card picture og/$($m.Groups[1].Value)/$($m.Groups[2].Value).jpg doesn't exist" }
 }
 if ($homeText -match 'class="thumb" src="og/[a-z0-9-]+\.png"') { Problem 'index.html: a game card uses a full-size og/*.png picture (use og/thumbs/<game>.jpg)' }
 
