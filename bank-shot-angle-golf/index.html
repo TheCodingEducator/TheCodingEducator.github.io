@@ -35,7 +35,7 @@
     min-height: 100%;
   }
   body {
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh;
     display: flex;
     flex-direction: column;
     font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -74,7 +74,7 @@
      leftover slot height into one large, ordinary (scrollable) empty
      area right below it. */
   @media (hover: none) and (pointer: coarse) {
-    #game-canvas-slot { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; }
+    #game-canvas-slot { min-height: 100vh; min-height: 100dvh; display: flex; align-items: flex-start; justify-content: center; }
     /* Fullscreen/pseudo-fullscreen centered the canvas vertically and let it grow
        up to 100vh, so on a tall/portrait phone its bottom edge could land inside
        (or right up against) the fixed 240px numpad strip - the exact overlap the
@@ -87,8 +87,8 @@
       align-items: flex-start;
     }
     html #game-canvas-slot:fullscreen canvas, html #game-canvas-slot:-webkit-full-screen canvas, html #game-canvas-slot.pseudo-fullscreen canvas {
-      width: min(100vw, calc(100vh - 240px)) !important;
-      height: min(100vw, calc(100vh - 240px)) !important;
+      width: min(100vw, calc(100vh - 240px)) !important; width: min(100vw, calc(100dvh - 240px)) !important;
+      height: min(100vw, calc(100vh - 240px)) !important; height: min(100vw, calc(100dvh - 240px)) !important;
     }
   }
   .standards-panel {
@@ -228,11 +228,11 @@
     background: rgba(0,0,0,0.8);
     border-color: rgba(255,255,255,0.6);
   }
-  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #0c1410; width: 100vw; height: 100vh; }
-  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #0c1410; width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: #0c1410; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: #0c1410; width: 100vw; height: 100vh; height: 100dvh; }
   #game-canvas-slot:fullscreen canvas, #game-canvas-slot:-webkit-full-screen canvas {
-    width: min(100vw, 100vh) !important;
-    height: min(100vw, 100vh) !important;
+    width: min(100vw, 100vh) !important; width: min(100vw, 100dvh) !important;
+    height: min(100vw, 100vh) !important; height: min(100vw, 100dvh) !important;
     max-width: none;
     max-height: none;
   }
@@ -242,11 +242,11 @@
   #game-canvas-slot.pseudo-fullscreen {
     position: fixed; top: 0; left: 0; margin: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
-    background: #0c1410; width: 100vw; height: 100vh;
+    background: #0c1410; width: 100vw; height: 100vh; height: 100dvh;
   }
   #game-canvas-slot.pseudo-fullscreen canvas {
-    width: min(100vw, 100vh) !important;
-    height: min(100vw, 100vh) !important;
+    width: min(100vw, 100vh) !important; width: min(100vw, 100dvh) !important;
+    height: min(100vw, 100vh) !important; height: min(100vw, 100dvh) !important;
     max-width: none;
     max-height: none;
   }

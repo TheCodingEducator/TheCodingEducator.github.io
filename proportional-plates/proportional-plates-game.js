@@ -1517,11 +1517,21 @@ if (window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').match
   $('help').innerHTML = L('<b>Tap the floor</b> where you want the chef to walk &middot; <b>Take / Cook / Serve</b> takes an order, cooks at the stove and serves &middot; at the stove, type the amount on the keypad and tap <b>Enter</b>.', es);
 }
 (function keypad() {
-  const kp = $('keypad');
-  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', '/', 'space', '⌫'].forEach(k => {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = k === 'space' ? '␣' : k;
-    b.setAttribute('aria-label', k === 'space' ? L('space', 'espacio') : k === '⌫' ? L('delete', 'borrar') : k);
-    b.onclick = () => { const a = $('ans'); if (k === '⌫') a.value = a.value.slice(0, -1); else a.value += k === 'space' ? ' ' : k; };
+  const kp = $('keypad'), touch = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
+  // on a touch screen the keys move beside the kitchen (see the CSS), in a phone-style 3-wide block with a Serve key
+  const keys = touch ? ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '.', '/', 'space', '⌫', 'serve']
+                     : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', '/', 'space', '⌫'];
+  if (touch) $('stageRow').appendChild(kp);
+  keys.forEach(k => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.textContent = k === 'space' ? '␣' : k === 'serve' ? L('Serve ✓', 'Servir ✓') : k;
+    if (k === 'serve') b.className = 'kpWide';
+    if (k !== 'serve') b.setAttribute('aria-label', k === 'space' ? L('space', 'espacio') : k === '⌫' ? L('delete', 'borrar') : k);
+    b.onclick = () => {
+      const a = $('ans');
+      if (k === 'serve') $('btnServe').click();
+      else if (k === '⌫') a.value = a.value.slice(0, -1); else a.value += k === 'space' ? ' ' : k;
+    };
     kp.appendChild(b);
   });
 })();

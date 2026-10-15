@@ -12,15 +12,42 @@
 
   // ------------------------------------------------------------------ fitting the 1280 x 720 stage into its box
   var scale = 1, Q = 1;
+  // A phone held sideways is wider than the stage: while x is being typed, the table moves over to the left and big number
+  // keys fill the empty strip on the right (they press the panel's own small keys, which hide meanwhile)
+  var sidePad = null;
+  if (TOUCH) {
+    sidePad = document.createElement('div');
+    sidePad.id = 'mbSidePad';
+    sidePad.setAttribute('role', 'group');
+    sidePad.setAttribute('aria-label', T('Number keys', 'Teclas de números'));
+    ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'del', '0', 'go'].forEach(function (k) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      if (k === 'go') { b.className = 'go'; b.textContent = T('SHOOT ▶', 'TIRAR ▶'); }
+      else if (k === 'del') { b.innerHTML = '&#9003;'; b.setAttribute('aria-label', T('Delete', 'Borrar')); }
+      else b.textContent = k;
+      b.addEventListener('click', function () {
+        var t = k === 'go' ? $('#b-sub') : side.querySelector('.mbpad button[data-k="' + k + '"]');
+        if (t) t.click();
+      });
+      sidePad.appendChild(b);
+    });
+    app.appendChild(sidePad);
+  }
   function fit() {
     var r = app.getBoundingClientRect(); if (!r.width || !r.height) return;
     scale = Math.min(r.width / W, r.height / H);
-    stage.style.transform = 'translate(' + (-W * scale / 2) + 'px,' + (-H * scale / 2) + 'px) scale(' + scale + ')';
+    var spare = r.width - W * scale, padW = sidePad && spare >= 130 && side.querySelector('.mbpad') ? Math.min(spare, 240) : 0;
+    var left = padW ? (spare - padW) / 2 : spare / 2;
+    app.classList.toggle('sidepad', !!padW);
+    if (sidePad) { sidePad.style.left = (left + W * scale) + 'px'; sidePad.style.width = padW + 'px'; }
+    stage.style.transform = 'translate(' + (left - r.width / 2) + 'px,' + (-H * scale / 2) + 'px) scale(' + scale + ')';
     var q = Math.min(2, Math.max(1, (window.devicePixelRatio || 1) * scale));
     if (Math.abs(q - Q) > 0.05 || cv.width !== Math.round(W * q)) { Q = q; cv.width = Math.round(W * Q); cv.height = Math.round(H * Q); Rd.setQ(Q); }
   }
   window.addEventListener('resize', fit);
   if (window.ResizeObserver) new ResizeObserver(fit).observe(app);
+  if (sidePad && window.MutationObserver) new MutationObserver(fit).observe(side, { childList: true });   // the keys come and go with the question
   fit();
 
   var resetBtn = $('#reset-progress-btn');

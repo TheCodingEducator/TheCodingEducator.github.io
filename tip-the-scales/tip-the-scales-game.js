@@ -1136,4 +1136,10 @@
         pad.appendChild(b);
       });
       panel.appendChild(pad);
+      // a phone held sideways: the keys move under the scale, into the empty space at the bottom of its column, so
+      // they never fall below the bottom of the short screen (and come back into the answer panel otherwise)
+      const side = matchMedia('(orientation: landscape) and (max-height: 520px)'), area = panel.parentNode;
+      const place = function () { if (side.matches) area.appendChild(pad); else panel.appendChild(pad); setTimeout(fitScale, 10); };
+      place();
+      if (side.addEventListener) side.addEventListener('change', place);
     })();

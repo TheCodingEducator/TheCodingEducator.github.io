@@ -24,7 +24,7 @@
   :root { --panel: #1b1e27; --text: #f2f3f7; --muted: #9aa0ae; --accent: #ff8a5b; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: #1d1830; min-height: 100%; }
-  body { min-height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .play-area { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 24px; padding: 64px 16px 24px; }
   .standards-panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 20px; width: 250px; max-width: 90vw; color: var(--text); font-size: 13px; line-height: 1.55; }
   .standards-panel h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
@@ -50,11 +50,11 @@
   .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
 
   /* fullscreen: the whole game box fills the screen */
-  #game-canvas-slot:fullscreen { display: flex; background: #1d1830; width: 100vw; height: 100vh; }
-  #game-canvas-slot:-webkit-full-screen { display: flex; background: #1d1830; width: 100vw; height: 100vh; }
-  #game-canvas-slot.pseudo-fullscreen { position: fixed; inset: 0; margin: 0; z-index: 9999; display: flex; background: #1d1830; width: 100vw; height: 100vh; }
-  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw !important; height: 100vh !important; border-radius: 0; }
-  #game-canvas-slot:-webkit-full-screen .app { width: 100vw !important; height: 100vh !important; border-radius: 0; }
+  #game-canvas-slot:fullscreen { display: flex; background: #1d1830; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; background: #1d1830; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot.pseudo-fullscreen { position: fixed; inset: 0; margin: 0; z-index: 9999; display: flex; background: #1d1830; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw !important; height: 100vh !important; height: 100dvh !important; border-radius: 0; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw !important; height: 100vh !important; height: 100dvh !important; border-radius: 0; }
   #game-canvas-slot:fullscreen #aa .ptop, #game-canvas-slot.pseudo-fullscreen #aa .ptop { padding-top: 44px; }
 
   /* ===== The game. Everything is scoped under #aa. ===== */
@@ -179,7 +179,8 @@
   #aa .confirmBox { background: #fff1ec; border-radius: 14px; padding: 10px; margin-top: 10px; }
 
   /* narrow or tall screens: the panel goes under the picture */
-  @media (max-aspect-ratio: 1/1), (max-width: 700px) {
+  /* (a phone held sideways is short as well as narrow: it keeps the panel beside the picture - see the next rule) */
+  @media (max-aspect-ratio: 1/1), (max-width: 700px) and (min-height: 521px) {
     #aa { flex-direction: column; }
     #aa #side { flex: 0 0 auto; max-height: 52%; border-left: 0; border-top: 4px solid #c8963e; padding: 8px 10px; }
     #aa .qEq { min-height: 0; margin: 2px 0 6px; font-size: 28px; }
@@ -204,6 +205,55 @@
     #aa .fb { min-height: 0; margin-top: 4px; font-size: 14px; }
     #aa .titleSub { margin-bottom: 8px; }
     #aa .card { padding: 8px 12px; }
+    /* the start menu: two cards across and a smaller title, so all four cards fit above the bottom of the screen */
+    #aa .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #aa .titleName { font-size: clamp(34px, 11vh, 60px); }
+    #aa .card .ic { font-size: 24px; }
+    /* the picture setup card: all the kinds in one row, compact, so the lengths and the Start button stay on screen */
+    #aa .ovCard { padding: 8px 14px; }
+    #aa .ovCard h2 { font-size: 22px; margin: 0; }
+    #aa .ovCard > p { margin: 2px 0; font-size: 13px; }
+    #aa .choices.cats { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin: 4px 0; }
+    #aa .choices.cats .choice { padding: 4px 2px; } #aa .choices.cats .choice .ic { font-size: 18px; } #aa .choices.cats .choice b { font-size: 12px; }
+    #aa .choices.cats .choice small { display: none; }
+    #aa .choices.cats .choice b { font-size: 11px; }
+    #aa .ovCard .lbl { margin: 2px 0 0; font-size: 13px; }
+    #aa #lenChoices { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 4px 0; }
+    #aa #lenChoices .choice { padding: 4px; } #aa #lenChoices .choice b { font-size: 15px; } #aa #lenChoices .choice small { display: none; }
+    #aa #lenChoices .choice { font-size: 13px; }
+    #aa #lenOv, #aa #csOv { padding-top: 6px; padding-bottom: 6px; }
+    #aa #csOv .choices { margin: 4px 0; } #aa #csOv .choice { padding: 5px 6px; } #aa #csOv .choice small { font-size: 11px; }
+    #aa #csOv .row, #aa #lenOv .row { margin-top: 6px; } #aa #csOv .row .btn, #aa #lenOv .row .btn { padding-top: 7px; padding-bottom: 7px; }
+    /* the art studio: a wider panel in two columns (the rectangle, the question and the number keys on the left; the
+       colors and the tools on the right), so every control is on screen at once */
+    #aa:has(#createPanel:not(.hidden)) #side { flex-basis: 56%; overflow: hidden; padding-top: 4px; padding-bottom: 4px; }
+    #aa #createPanel:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+      gap: 4px 8px; align-items: start; }
+    #aa #createPanel > * { margin: 0; min-width: 0; }
+    #aa #createPanel > .ptop { grid-column: 1; grid-row: 1; }
+    #aa #createPanel > .sec:nth-child(2) { grid-column: 1; grid-row: 2; }
+    #aa #createPanel > .sec:nth-child(3) { grid-column: 1; grid-row: 3; }
+    #aa #createPanel > .keypad { grid-column: 2; grid-row: 1; }
+    #aa #createPanel > .sec:nth-child(4) { grid-column: 2; grid-row: 2; }
+    #aa #createPanel > .tools, #aa #createPanel > .confirmBox { grid-column: 2; grid-row: 3; }
+    #aa #createPanel .modeTag { font-size: 15px; white-space: nowrap; }
+    #aa #createPanel #cDone { padding: 4px 8px; font-size: 13px; }
+    #aa #createPanel .sec { padding: 3px 6px; }
+    #aa #createPanel .sec h4 { margin: 0 0 2px; font-size: 12px; line-height: 1.15; }
+    #aa #createPanel .sizeCtl { gap: 3px; margin: 0; }
+    #aa #createPanel .stepper { padding: 1px 4px; gap: 3px; font-size: 12px; }
+    #aa #createPanel .stepper b { min-width: 16px; font-size: 16px; }
+    #aa #createPanel .stepper button { width: 24px; height: 24px; font-size: 15px; }
+    #aa #createPanel #cRot { padding: 2px 6px; font-size: 12px; }
+    #aa #createPanel .sec .qEq { font-size: 20px; margin: 0; }
+    #aa #createPanel .sec .ans { width: 56px; font-size: 18px; }
+    #aa #createPanel .sec .fb { font-size: 12px; margin-top: 0; }
+    #aa.touch #createPanel .checkRow { display: none; }   /* the ✓ key does the checking */
+    #aa #createPanel .swatches { gap: 2px; }
+    #aa #createPanel .tools { gap: 3px; }
+    #aa #createPanel .tools .btn { font-size: 11px; padding: 3px 4px; line-height: 1.1; }
+    #aa #createPanel .keypad { gap: 3px; }
+    #aa #createPanel .keypad .kbtn { padding: 2px 0; font-size: 14px; }
   }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"

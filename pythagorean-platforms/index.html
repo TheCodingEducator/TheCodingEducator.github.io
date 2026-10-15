@@ -46,7 +46,7 @@
     min-height: 100%;
   }
   body {
-    min-height: 100vh;
+    min-height: 100vh; min-height: 100dvh;
     display: flex;
     flex-direction: column;
     color: var(--text);
@@ -228,16 +228,16 @@
     border-color: rgba(255,255,255,0.6);
   }
   /* The game box (the site's back link and fullscreen buttons sit above it). In fullscreen it fills the screen. */
-  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; }
-  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; }
+  #game-canvas-slot:fullscreen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; align-items: center; justify-content: center; background: var(--ground); width: 100vw; height: 100vh; height: 100dvh; }
   #game-canvas-slot.pseudo-fullscreen {
     position: fixed; top: 0; left: 0; margin: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
-    background: var(--ground); width: 100vw; height: 100vh;
+    background: var(--ground); width: 100vw; height: 100vh; height: 100dvh;
   }
   .app {
     width: min(94vw, 980px);
-    height: clamp(460px, calc(100vh - 88px), 720px);
+    height: clamp(460px, calc(100vh - 88px), 720px); height: clamp(460px, calc(100dvh - 88px), 720px);
     background: var(--ground);
     border: 2px solid var(--line);
     border-radius: 18px;
@@ -251,8 +251,8 @@
     font-size: 15px;
     line-height: 1.4;
   }
-  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
-  #game-canvas-slot:-webkit-full-screen .app { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw; height: 100vh; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw; height: 100vh; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
   #game-canvas-slot:fullscreen .app header, #game-canvas-slot.pseudo-fullscreen .app header { padding-left: 160px; }   /* room for the Exit Fullscreen button */
   #game-canvas-slot:-webkit-full-screen .app header { padding-left: 160px; }
   .app header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
@@ -496,6 +496,14 @@
   @media (max-height: 420px) {
     .wc-chips, .wc-sample { display: none; }
     .world-card h3 { font-size: 20px; } .world-card { gap: 4px; }
+    .map-screen { padding: 6px 10px; gap: 6px; } .map-head h2 { font-size: 20px; } .map-head .btn { padding: 4px 10px; font-size: 14px; }
+    .world-card { padding: 8px 10px; } .btn.wc-go { font-size: 16px; padding: 6px; }
+    .trail { min-height: 180px; }
+    /* ...and the title screen: a smaller sign and Start button, so Start never falls below the bottom of the screen */
+    .t-content { gap: 8px; }
+    .sign { margin-top: 20px; padding: 10px 18px 9px; }
+    .sign-big { font-size: 34px; } .sign-top { font-size: 18px; }
+    .btn.t-start { font-size: 22px; padding: 8px 32px; }
   }
   @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
   /* Rotate-device prompt: small touchscreens held upright only (the scene is wide, so it needs landscape) */
@@ -514,6 +522,20 @@
   .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
   @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
     .rotate-prompt { display: flex; }
+  }
+  /* phones held sideways: the question panel stands to the right of the jungle instead of under it, so the jungle keeps
+     the full height of the screen and the panel (with its keys) uses the side */
+  @media (max-height: 500px) and (orientation: landscape) and (min-width: 600px) {
+    .main { grid-template-columns: minmax(0, 1fr) minmax(240px, 34%); grid-template-rows: minmax(0, 1fr); }
+    .bar { grid-template-columns: minmax(0, 1fr); align-content: center; overflow-y: auto; padding: 6px 8px; gap: 4px; }
+    .work { max-height: 30vh; }
+    .choices:has(.tpad) .typed, .choices:has(.tpad) .tpad { grid-column: 1 / -1; }
+    .choices:has(.tpad) .tpad { grid-template-columns: repeat(6, 1fr); margin-top: 2px; }
+    .prompt { font-size: 13px; }
+    .typed { flex-wrap: nowrap; gap: 5px; }
+    .typed input { width: 64px; min-width: 0; font-size: 18px; padding: 4px 6px; }
+    .typed .btn { padding: 6px 10px; font-size: 17px; flex: 1 1 auto; min-width: 0; }
+    .choices .tpad button { height: 28px; }
   }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"

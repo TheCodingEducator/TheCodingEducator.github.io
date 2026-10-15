@@ -2180,6 +2180,18 @@
       // the board beside the ship dock, or (on a narrow screen) above it; the board gets whatever room the dock leaves
       var wrap = $('#place-wrap'), dock = $('#place-wrap .dock'), dockW = 330;
       wrap.style.zoom = '';
+      // a phone held sideways: the board on the left at the full height, a compact dock beside it, and the Menu button's
+      // corner kept clear - so nothing has to be shrunk to fit
+      var short = H < 460 && W > H * 1.4;
+      $('#scr-place').classList.toggle('short', short);
+      wrap.classList.toggle('short', short);
+      if (short) {
+        wrap.classList.remove('stack');
+        var bsS = Math.min(W - 118 - 12 - 290 - 12 - 24, H - 16 - 34 - 18) - frame;
+        $('#place-zone').style.setProperty('--bsz', Math.floor(Math.max(140, bsS)) + 'px');
+        fitScreen();
+        return;
+      }
       var s1 = Math.min(W - dockW - 60, H - 52 - 40) - frame;
       wrap.classList.add('stack');
       var dockH = dock.offsetHeight;

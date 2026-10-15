@@ -1,4 +1,4 @@
-// Phones and tablets: big coin buttons under the game (the coins drawn in the game are small for a finger), plus Undo and
+// Phones and tablets: big coin buttons under the game, or beside it when the phone is sideways (the coins drawn in the game are small for a finger), plus Undo and
 // Clear. Each button presses the same key a keyboard player would (1-4, U, C), so the game needs no changes. The bar shows
 // only while a round is being played, and only the coins allowed in this round. It uses the id mobile-controls, so the
 // page's layout keeps the game above it and fullscreen takes it along (see ../site-layout.js).
@@ -21,7 +21,17 @@
     '#pb-coins button:active .c { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.35); }' +
     '#pb-coins button[hidden] { display: none; }' +
     '#pb-tools { display: flex; gap: 12px; }' +
-    '#pb-tools button { min-width: 110px; height: 40px; border-radius: 10px; border: 0; color: #fff; font: 800 16px sans-serif; }';
+    '#pb-tools button { min-width: 110px; height: 40px; border-radius: 10px; border: 0; color: #fff; font: 800 16px sans-serif; }' +
+    // a phone held sideways: the game is a square in the middle, so the coins go in the empty strips beside it (penny and
+    // nickel, then Undo, on the left; dime and quarter, then Clear, on the right) instead of over the bottom of the game
+    '@media (orientation: landscape) and (max-height: 500px) {' +
+    ' #mobile-controls { top: 48px; height: auto; display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 1fr 1fr auto; align-items: center; justify-items: center; padding: 6px 18px 10px; gap: 6px 0; pointer-events: none; }' +
+    ' #pb-coins, #pb-tools { display: contents; }' +
+    ' #mobile-controls button { pointer-events: auto; }' +
+    ' #pb-coins [data-coin="penny"] { grid-column: 1; grid-row: 1; } #pb-coins [data-coin="nickel"] { grid-column: 1; grid-row: 2; }' +
+    ' #pb-coins [data-coin="dime"] { grid-column: 3; grid-row: 1; } #pb-coins [data-coin="quarter"] { grid-column: 3; grid-row: 2; }' +
+    ' #pb-tools [data-key="u"] { grid-column: 1; grid-row: 3; } #pb-tools [data-key="c"] { grid-column: 3; grid-row: 3; }' +
+    '}';
   document.head.appendChild(css);
   var bar = document.createElement('div');
   bar.id = 'mobile-controls'; bar.className = 'off';
