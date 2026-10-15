@@ -28,7 +28,7 @@
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };
   var app = $('ps'), canvas = $('ps-canvas');
-  var scrTitle = $('scr-title'), scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
+  var scrPre = $('scr-pre'), scrTitle = $('scr-title'), scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
   var qIn = $('q-in'), qIn2 = $('q-in2'), activeIn = null, msg = $('msg'), chance = $('chance'), aimHint = $('aimhint'), hud = $('hud');
   var isTouch = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (isTouch) [qIn, qIn2].forEach(function (el) { el.readOnly = true; el.setAttribute('inputmode', 'none'); });   // the on-screen pad instead of the phone keyboard
@@ -42,7 +42,7 @@
 
   // ---------- Game state ----------
   // RUNUP, SAVING and SAVED are the student's turns in goal (the computer's shooter runs up, the shot flies, the result)
-  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8, TITLE: 9, RUNUP: 10, SAVING: 11, SAVED: 12 };
+  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8, TITLE: 9, RUNUP: 10, SAVING: 11, SAVED: 12, PRE: 13 };
   var ENV = { DAY: 0, NIGHT: 1, RAIN: 2 };
   var state = STATE.TITLE, env = ENV.DAY;
 
@@ -53,7 +53,7 @@
   // match.side is whose turn it is (0 = the student or player 1, 1 = the computer or player 2).
   var ROUNDS = 5, MAX_ROUNDS = 15;
   var match = null, role = 'kick';   // role: 'kick' (the student shoots) or 'save' (the student is the keeper)
-  var hintUsed = false, asked = 0, saves = 0;
+  var lastKickCat = '', hintUsed = false, asked = 0, saves = 0;
   var kickNum = 0, goals = 0, rightCount = 0, results = [], missed = [], usedQ = {}, question = null, lastKey = '';
   // The cup: a knockout of three matches (quarterfinal, semifinal, final), each against a stronger team. A cup run in
   // progress is saved, so a student can pick it up next class.
@@ -64,6 +64,16 @@
     { en: 'Dortmund', es: 'Dortmund', c: 0xfde100 }
   ];
   var CUP_ROUNDS = [T('Quarterfinal', 'Cuartos de final'), T('Semifinal', 'Semifinal'), T('Final', 'Final')];
+  // Each team's goalkeeper has a style, shown before the match, that changes where shots go in (beatChance): 'big' stays
+  // big in the middle, 'early' dives early (so the middle is open), 'high' is strong on high shots, 'low' quick to get down.
+  TEAMS.forEach(function (t, i) { t.style = ['big', 'early', 'high', 'low'][i % 4]; });
+  var KEEPER_STYLES = {
+    big: { en: 'stays big in the middle. Aim for the corners!', es: 'se queda grande en el centro. ¡Apunta a las esquinas!' },
+    early: { en: 'dives early. A shot down the middle can beat him!', es: 'se lanza pronto. ¡Un tiro al centro puede ganarle!' },
+    high: { en: 'is tall and strong on high shots. Aim low!', es: 'es alto y fuerte por arriba. ¡Apunta abajo!' },
+    low: { en: 'is quick to get down. Aim high!', es: 'es rápido abajo. ¡Apunta arriba!' }
+  };
+  function keeperStyle() { return match && match.mode !== 'two' ? TEAMS[match.opp].style : ''; }
   function teamName(i) { return T(TEAMS[i].en, TEAMS[i].es); }
   var aimPower = 0, hitKeeper = false, kickPhase = 0, isAutoMiss = false, resultDecided = false, enforceSave = false;
   var resultTimeout = null, keysDown = {};
@@ -936,6 +946,10 @@
     placeShooter(0);
     $('slow-badge').hidden = !slowMo;
     runT = -1;
+    // where he will shoot is decided now, so his body can give it away: on his last strides his hips and head turn toward
+    // his side (4 times in 5; the other time it's a dummy). A shot down the middle gives nothing away.
+    plannedShot = pickShot();
+    tellSide = Math.abs(plannedShot.x) < 0.8 ? 0 : (plannedShot.x > 0 ? 1 : -1) * (Math.random() < 0.8 ? 1 : -1);
     refWhistle(function () { state = STATE.RUNUP; runT = 0; shooterKicked = false; });
   }
   function pickShot() {
@@ -947,15 +961,16 @@
     else { x = side * Math.min(3.45, 1.3 + Math.random() * (1.9 + 0.4 * oppStr)); y = 0.15 + Math.random() * 2.05; }
     return { x: x, y: y };
   }
+  var plannedShot = null, tellSide = 0;
   function shootAtKeeper() {
-    var s = pickShot(), speed = 22 + 6 * oppStr, g = 9.81, t = Math.sqrt(s.x * s.x + PENALTY_DIST * PENALTY_DIST) / speed;
+    var s = plannedShot || pickShot(), speed = 22 + 6 * oppStr, g = 9.81, t = Math.sqrt(s.x * s.x + PENALTY_DIST * PENALTY_DIST) / speed;
     fly = { p: new THREE.Vector3(0, BALL_RADIUS, PENALTY_DIST), v: new THREE.Vector3(s.x / t, (s.y - BALL_RADIUS + 0.5 * g * t * t) / t, -PENALTY_DIST / t),
       scale: slowMo ? (hintUsed ? 0.55 : 0.38) : 0.85, target: s, inNet: false, crossed: false };   // scale 0.85 after a wrong answer: a little slower than a real penalty
     lastLandX = s.x; lastLandY = s.y;
     state = STATE.SAVING;
     saveRes = ''; heldT = 0;
     playSound('kick');
-    if (srLive && slowMo) srLive.textContent = (s.y > 1.4 ? T('High ', 'Alto ') : T('Low ', 'Bajo ')) +
+    if (srLive) srLive.textContent = (s.y > 1.4 ? T('High ', 'Alto ') : T('Low ', 'Bajo ')) +
       (s.x > 0.8 ? T('to your left', 'a tu izquierda') : s.x < -0.8 ? T('to your right', 'a tu derecha') : T('down the middle', 'por el centro')) + '!';
   }
   function saveDone(kind) {   // kind: 'saved', 'caught', 'goal', 'wide' or 'over'
@@ -976,7 +991,8 @@
     if (kind === 'saved') line = pick([T('What a save!', '¡Qué atajada!'), T('Great reflexes!', '¡Grandes reflejos!'), T('Pushed away!', '¡Despejada!')]);
     else if (kind === 'caught') line = T('Safe hands! Caught it.', '¡Manos seguras! La atrapaste.');
     else if (!scored) line = T('Off target. Lucky!', 'Fuera. ¡Qué suerte!');
-    else if (!slowMo) line = T('Too fast! A right answer slows the shot down.', '¡Muy rápido! Una respuesta correcta hace el tiro más lento.');
+    else if (!slowMo) line = pick([T('Too fast! A right answer slows the shot down.', '¡Muy rápido! Una respuesta correcta hace el tiro más lento.'),
+      T('Watch his hips: they turn toward his side just before the kick.', 'Mira sus caderas: giran hacia su lado justo antes del tiro.')]);
     else if (ax > 2.4) line = T('Into the corner. Stretch for it next time!', 'A la esquina. ¡Estírate más la próxima vez!');
     else line = T('Get your gloves in front of the ball!', '¡Pon los guantes delante del balón!');
     $('caption').textContent = line; $('caption').hidden = false;
@@ -1117,7 +1133,11 @@
     if (T >= CONTACT && !shooterKicked && state === STATE.RUNUP) { shooterKicked = true; shootAtKeeper(); }
     sp.root.position.z -= fwd;
     sp.hips.position.y = y;
-    sp.hips.rotation.set(lean, 0, 0);
+    // the tell: from his last strides through the strike, hips and head turn toward the side he will shoot (facing the goal,
+    // a turn toward +x is a negative yaw)
+    var tk = T < 0.75 ? 0 : T < STRIKE ? smooth01((T - 0.75) / (STRIKE - 0.75)) : Math.max(0, 1 - (T - STRIKE_END) / 0.4);
+    sp.hips.rotation.set(lean, -tellSide * 0.28 * tk, 0);
+    sp.head.rotation.y = -tellSide * 0.35 * tk;
     kick.rotation.set(kHip, 0, -0.05); kick.userData.shin.rotation.x = kKnee;
     plant.rotation.set(pHip, 0, 0.05); plant.userData.shin.rotation.x = pKnee;
     kArm.rotation.set(kArmX, 0, kArmZ); pArm.rotation.set(pArmX, 0, pArmZ);
@@ -1194,11 +1214,14 @@
     var big = function () { return hard && Math.random() < 0.3; };
     var wordy = function () { return Math.random() < (hard ? 0.6 : 0.35); };
     for (var tries = 0; tries < 40; tries++) {
-      var skill = active[Math.floor(Math.random() * active.length)], q = { cat: skill, bonus: !!hard }, r, a, n;
+      // in goal, a different skill from the last kick's question (when more than one skill is chosen)
+      var pool = role === 'save' && active.length > 1 && lastKickCat ? active.filter(function (c) { return c !== lastKickCat; }) : active;
+      var skill = pool[Math.floor(Math.random() * pool.length)], q = { cat: skill, bonus: !!hard }, r, a, n;
       // each combined skill asks both ways: a root (√81, ∛64) or a power (9², 4³)
       if (skill === 'sqrt') skill = pick(['sqrt', 'square', 'area']);   // √81, 9², or the side of a square
       if (skill === 'cube') skill = pick(['cube', 'cubed', 'cubeside']);   // ∛64, 4³, or the edge of a cube
-      if (skill === 'estimate' && hard) skill = 'closest';               // challenge: "Which whole number is closest to √50?"
+      if (skill === 'estimate' && hard) skill = 'closest';
+      else if (skill === 'estimate' && Math.random() < 0.3) skill = 'compare';   // "Which is bigger: √40 or 6.5?"               // challenge: "Which whole number is closest to √50?"
       q.skill = skill;
       if (skill === 'sqrt') {
         r = big() ? bigSq() : rnd(LOW_SQ, MAX_SQ); q.r = r; q.answer = r;
@@ -1216,6 +1239,19 @@
             'Un cuadrado tiene un área de <b>' + fmt(r * r) + '</b> unidades cuadradas.<br>¿Cuánto mide cada lado?') + '</span>';
           q.plain = T('A square with area ' + fmt(r * r) + ' has sides of ?', 'Un cuadrado de área ' + fmt(r * r) + ' tiene lados de ?');
         }
+      } else if (skill === 'compare') {
+        // a square root against a decimal between the same two whole numbers, never too close to call
+        a = rnd(2, 9);
+        var dec = a + 0.5, n2 = a * a + 1;
+        for (var ct = 0; ct < 30; ct++) { dec = a + pick([2, 3, 4, 5, 6, 7, 8]) / 10; n2 = rnd(a * a + 1, (a + 1) * (a + 1) - 1); if (Math.abs(dec * dec - n2) >= 1.5) break; }
+        q.n = n2; q.a = a; q.dec = dec; q.compare = true;
+        var rootFirst = Math.random() < 0.5, rootBig = Math.sqrt(n2) > dec, dS = decTxt(dec);
+        q.labels = rootFirst ? ['√' + n2, dS] : [dS, '√' + n2];
+        q.labelsHTML = rootFirst ? [rad(n2), dS] : [dS, rad(n2)];
+        q.answer = rootBig === rootFirst ? 1 : 2;
+        q.html = '<span class="qsm">' + T('Which is bigger?', '¿Cuál es mayor?') + '</span>' + nw(q.labelsHTML[0] + ' <span class="qor">' + T('or', 'o') + '</span> ' + q.labelsHTML[1]);
+        q.plain = T('The bigger of ' + q.labels[0] + ' and ' + q.labels[1] + ' is ?', 'El mayor de ' + q.labels[0] + ' y ' + q.labels[1] + ' es ?');
+        q.sub = T('Pick the bigger number.', 'Elige el número mayor.');
       } else if (skill === 'estimate') {
         if (Math.random() < (hard ? 0.5 : 0.3)) {
           // "Is √50 closer to 7 or to 8?" (never a near-tie)
@@ -1310,6 +1346,10 @@
       txt = T('Which number, used 3 times, multiplies to ', '¿Qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + T('? Count the little cubes along one edge.', '? Cuenta los cubitos de una arista.');
     } else if (q.skill === 'cubed') {
       txt = r + '³ = ' + r + ' × ' + r + ' × ' + r + T('. Start with ', '. Empieza con ') + r + ' × ' + r + ' = ' + (r * r) + T(', then multiply by ', ', luego multiplica por ') + r + '.';
+    } else if (q.compare) {
+      var hd = +(q.dec * q.dec).toFixed(2);
+      txt = T('Square the decimal: ', 'Eleva el decimal al cuadrado: ') + decTxt(q.dec) + ' × ' + decTxt(q.dec) + ' = ' + decTxt(hd) +
+        T('. Is that more or less than ' + q.n + '?', '. ¿Es más o menos que ' + q.n + '?');
     } else if (q.closer) {
       txt = '√' + q.n + T(' is between ', ' está entre ') + q.a + T(' and ', ' y ') + (q.a + 1) + ', ' + T('because ', 'porque ') + q.a + '² = ' + q.lo + T(' and ', ' y ') + (q.a + 1) + '² = ' + q.hi +
         T('. Is ' + q.n + ' closer to ' + q.lo + ' or to ' + q.hi + '?', '. ¿' + q.n + ' está más cerca de ' + q.lo + ' o de ' + q.hi + '?');
@@ -1334,7 +1374,7 @@
 
   function askQuestion(bonus) {
     question = makeQuestion(!!bonus);
-    if (!bonus) { asked++; hintUsed = false; }
+    if (!bonus) { asked++; hintUsed = false; if (role === 'kick') lastKickCat = question.cat; }
     $('q-kick').textContent = bonus ? T('⚡ BONUS QUESTION · POWER SHOT', '⚡ PREGUNTA EXTRA · TIRO POTENTE')
       : turnLabel() + ' · ' + skillName(question.cat).toUpperCase();
     $('q-kick').classList.toggle('bonus', !!bonus);
@@ -1354,15 +1394,16 @@
     $('q-ans').classList.toggle('two', !!question.two);
     setActiveBox(qIn);
     // "Is √150 closer to 12 or 13?" is answered by picking one of two buttons (click, tap, or arrow keys and Enter)
-    var choice = !!(question.closer && !question.closest);
+    var choice = !!(question.closer && !question.closest) || !!question.compare;
     scrQ.querySelector('.card').classList.toggle('choice', choice);
     var box = $('q-choices');
     box.innerHTML = ''; box.hidden = !choice;
     if (choice) {
-      $('q-sub').textContent = T('Pick the whole number it is closer to.', 'Elige el número entero más cercano.');
-      [question.a, question.a + 1].forEach(function (v) {
+      $('q-sub').textContent = question.compare ? question.sub : T('Pick the whole number it is closer to.', 'Elige el número entero más cercano.');
+      (question.compare ? [1, 2] : [question.a, question.a + 1]).forEach(function (v, i) {
         var b = document.createElement('button');
-        b.type = 'button'; b.className = 'btn choice'; b.textContent = v;
+        b.type = 'button'; b.className = 'btn choice';
+        if (question.compare) b.innerHTML = question.labelsHTML[i]; else b.textContent = v;
         b.addEventListener('click', function () { if (state !== STATE.MATH) return; qIn.value = String(v); submitAnswer(); });
         box.appendChild(b);
       });
@@ -1381,7 +1422,9 @@
     qIn2.classList.toggle('active', el === qIn2);
   }
   function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
-  function answerText(ans) { return Array.isArray(ans) ? ans[0] + T(' and ', ' y ') + ans[1] : fmt(ans); }
+  function decTxt(x) { var s = String(x); return T(s, s.replace('.', ',')); }   // 6.5, or 6,5 in Spanish
+  function ansOf(q) { return q.compare ? q.labels[q.answer - 1] : q.answer; }
+  function answerText(ans) { if (question && question.compare && typeof ans === 'number') return question.labels[ans - 1]; return Array.isArray(ans) ? ans[0] + T(' and ', ' y ') + ans[1] : fmt(ans); }
 
   function submitAnswer() {
     if (state !== STATE.MATH) return;
@@ -1404,19 +1447,19 @@
     if (role === 'save') {   // in goal: right = the shot comes in slow motion; wrong = see why, then full speed
       slowMo = ok;
       if (ok) { rightCount++; playSound('blip'); startRunUp(); }
-      else { missed.push({ q: question.plain, you: answerText(given), ans: question.answer }); showExplanation(answerText(given), given); }
+      else { missed.push({ q: question.plain, you: answerText(given), ans: ansOf(question) }); showExplanation(answerText(given), given); }
       return;
     }
     if (question.bonus) {   // the bonus question: right earns a power shot; wrong just shows why, then a normal shot
       if (ok) { powerShot = true; playSound('blip'); goShoot(); }
-      else { missed.push({ q: question.plain, you: answerText(given), ans: question.answer }); showExplanation(answerText(given), given); }
+      else { missed.push({ q: question.plain, you: answerText(given), ans: ansOf(question) }); showExplanation(answerText(given), given); }
       return;
     }
     if (ok) {
       rightCount++;
       askQuestion(true);   // offer the bonus question (it can be skipped)
     } else {
-      missed.push({ q: question.plain, you: answerText(given), ans: question.answer });
+      missed.push({ q: question.plain, you: answerText(given), ans: ansOf(question) });
       showExplanation(answerText(given), given);
     }
   }
@@ -1546,6 +1589,18 @@
         lines.push(T('A cube root asks: which number, used 3 times, multiplies to ', 'Una raíz cúbica pregunta: ¿qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + '?');
         lines.push(r + ' × ' + r + ' × ' + r + ' = ' + fmt(r * r * r) + T(', so ', ', entonces ') + '∛' + fmt(r * r * r) + ' = <b class="ok">' + r + '</b>');
       }
+    } else if (q.compare) {
+      // √n against the decimal d: square the decimal and compare it with n, on a number line from a² to (a + 1)²
+      var d2 = +(q.dec * q.dec).toFixed(2), lo3 = q.a * q.a, hi3 = (q.a + 1) * (q.a + 1), rb = Math.sqrt(q.n) > q.dec, sg = rb ? ' > ' : ' < ';
+      var at = function (v) { return Math.round((v - lo3) / (hi3 - lo3) * 100); };
+      body = '<div class="nl"><div class="nl-bar"></div>' +
+        '<div class="nl-tick" style="left:0"><b>' + lo3 + '</b><span>' + q.a + '²</span></div>' +
+        '<div class="nl-tick" style="left:100%"><b>' + hi3 + '</b><span>' + (q.a + 1) + '²</span></div>' +
+        '<div class="nl-pt" style="left:' + at(q.n) + '%"><b>' + q.n + '</b></div>' +
+        '<div class="nl-pt alt" style="left:' + at(d2) + '%"><b>' + decTxt(d2) + '</b></div></div>';
+      lines.push(T('Square the decimal: ', 'Eleva el decimal al cuadrado: ') + decTxt(q.dec) + ' × ' + decTxt(q.dec) + ' = ' + decTxt(d2) + '.');
+      lines.push(q.n + sg + decTxt(d2) + T(', so ', ', así que ') + '√' + q.n + sg + decTxt(q.dec) + '.');
+      lines.push(T('The bigger number is ', 'El número mayor es ') + '<b class="ok">' + q.labels[q.answer - 1] + '</b>.');
     } else if (q.closer) {
       var ca = q.a, cb = ca + 1, clo = q.lo, chi = q.hi, cpct = Math.round((q.n - clo) / (chi - clo) * 100);
       var cp = q.cube ? '³' : '²', cs = q.cube ? '∛' : '√', ct = function (x) { return x + ' × ' + x + (q.cube ? ' × ' + x : ''); };
@@ -1705,6 +1760,11 @@
     var strike = 0.7 + 0.3 * power;
     // level 1: a generous keeper (even a shot at him goes in about 2 times in 3); level 10: a sharp one
     var p = (place * strike * (1.2 - 0.45 * skillRating) + 0.12 * (1 - skillRating)) * (1.06 - 0.16 * oppStr);   // later cup rounds: a better keeper
+    var st = keeperStyle(), mid = dx < 0.3;   // this team's keeper (see KEEPER_STYLES)
+    if (st === 'big') p += mid ? -0.1 : 0.04;
+    else if (st === 'early') p += mid ? 0.14 : -0.05;
+    else if (st === 'high') p += dy > 0.6 ? -0.08 : dy < 0.4 ? 0.06 : 0;
+    else if (st === 'low') p += dy < 0.4 ? -0.08 : dy > 0.6 ? 0.06 : 0;
     return Math.max(0.05, Math.min(0.98, p));
   }
 
@@ -2365,6 +2425,19 @@
     rightCount = 0; asked = 0; saves = 0; missed = []; usedQ = {};
     if (window.SiteResults) window.SiteResults.reset();
     hide(scrMenu); hide(scrOver);
+    if (mode === 'two') { beginMatch(); return; }
+    state = STATE.PRE;
+    $('pre-title').textContent = mode === 'cup' ? CUP_ROUNDS[cupRound].toUpperCase() : T('FRIENDLY', 'AMISTOSO');
+    $('pre-vs').textContent = T('You', 'Tú') + ' vs ' + teamName(opp);
+    $('pre-bracket').innerHTML = mode === 'cup' ? bracketHTML(loadCup()) : '';
+    $('pre-bracket').hidden = mode !== 'cup';
+    var ks = KEEPER_STYLES[TEAMS[opp].style];
+    $('pre-scout').innerHTML = '&#129508; ' + T('Scouting report: the ' + teamName(opp) + ' keeper ' + ks.en, 'Informe: el portero de ' + teamName(opp) + ' ' + ks.es);
+    show(scrPre);
+    $('pre-go').focus({ preventScroll: true });
+  }
+  function beginMatch() {
+    hide(scrPre);
     hud.hidden = false;
     drawHud();
     nextKick();
@@ -2401,14 +2474,43 @@
   }
 
   // ---------- The cup ----------
+  // A cup is an 8-team knockout. The student's three opponents are opps[0..2]; the other four teams (others) fill the
+  // bracket, and their results (sims, winner's score first) are decided when the cup starts, then shown as the student
+  // reaches each round. mine holds the student's own results.
+  //   Quarterfinals: you v opps[0], opps[1] v others[0], opps[2] v others[1], others[2] v others[3]
+  //   Semifinals:    you v opps[1], opps[2] v others[2]
+  //   Final:         you v opps[2]
   function loadCup() {
     var cup = load('cup', null);
-    if (!cup || !Array.isArray(cup.opps) || cup.opps.length !== 3 || !(cup.round >= 0 && cup.round < 3) || cup.opps.some(function (o) { return !TEAMS[o]; })) {
+    var ok = cup && Array.isArray(cup.opps) && cup.opps.length === 3 && cup.round >= 0 && cup.round < 3 &&
+      Array.isArray(cup.others) && cup.others.length === 4 && cup.sims && Array.isArray(cup.mine) &&
+      cup.opps.concat(cup.others).every(function (o) { return !!TEAMS[o]; });
+    if (!ok) {
       var all = TEAMS.map(function (t, i) { return i; }).sort(function () { return Math.random() - 0.5; });
-      cup = { round: 0, opps: all.slice(0, 3) };
+      var sim = function () { var w = rnd(3, 5); return [w, rnd(Math.max(0, w - 3), w - 1)]; };
+      cup = { round: 0, opps: all.slice(0, 3), others: all.slice(3, 7), sims: { qf2: sim(), qf3: sim(), qf4: sim(), sf2: sim() }, mine: [] };
       save('cup', cup);
     }
     return cup;
+  }
+  function bracketHTML(cup) {
+    var you = T('You', 'Tú'), N = function (i) { return teamName(i); };
+    var m = function (a, b, sc, now) {   // a match: the winner (if played) is the first team
+      return '<div class="bm' + (now ? ' now' : '') + '"><span class="' + (sc ? 'w' : '') + '">' + a + '</span><span class="' + (sc ? 'l' : '') + '">' + b + '</span>' +
+        (sc ? '<b>' + sc + '</b>' : '') + '</div>';
+    };
+    var sc = function (p) { return p[0] + '–' + p[1]; }, r = cup.round, mine = cup.mine || [];
+    var yours = function (k, opp) {   // the student's own match: they won it if it has a result (a loss ends the cup)
+      return mine[k] ? m(you, N(opp), mine[k]) : m(you, r >= k ? N(opp) : '?', '', r === k);
+    };
+    return '<div class="bracket">' +
+      '<div class="bcol"><h3>' + CUP_ROUNDS[0] + '</h3>' + yours(0, cup.opps[0]) +
+        (r >= 1 ? m(N(cup.opps[1]), N(cup.others[0]), sc(cup.sims.qf2)) + m(N(cup.opps[2]), N(cup.others[1]), sc(cup.sims.qf3)) + m(N(cup.others[2]), N(cup.others[3]), sc(cup.sims.qf4))
+          : m(N(cup.opps[1]), N(cup.others[0])) + m(N(cup.opps[2]), N(cup.others[1])) + m(N(cup.others[2]), N(cup.others[3]))) + '</div>' +
+      '<div class="bcol"><h3>' + CUP_ROUNDS[1] + '</h3>' + yours(1, cup.opps[1]) +
+        (r >= 2 ? m(N(cup.opps[2]), N(cup.others[2]), sc(cup.sims.sf2)) : m(r >= 1 ? N(cup.opps[2]) : '?', r >= 1 ? N(cup.others[2]) : '?')) + '</div>' +
+      '<div class="bcol"><h3>' + CUP_ROUNDS[2] + '</h3>' + yours(2, cup.opps[2]) + '</div>' +
+    '</div>';
   }
   function cupLine() {
     var won = load('cups', 0), cup = load('cup', null), s = '';
@@ -2442,7 +2544,7 @@
         save('cups', load('cups', 0) + 1); save('cup', null); again = T('NEW CUP', 'NUEVA COPA');
         celebrate(); crowdCheer = 4;
       } else if (win) {
-        var cup = loadCup(); cup.round = cupR + 1; save('cup', cup);
+        var cup = loadCup(); cup.mine[cupR] = a + '–' + b; cup.round = cupR + 1; save('cup', cup);
         title = T('ON TO THE ', '¡A LA ') + CUP_ROUNDS[cupR + 1].toUpperCase() + '!';
         again = T('NEXT MATCH', 'SIGUIENTE PARTIDO');
         note = T('Next: ', 'Siguiente: ') + teamName(cup.opps[cupR + 1]) + T(', a tougher team.', ', un equipo más fuerte.');
@@ -2547,7 +2649,7 @@
     state = STATE.MENU;
     if (view !== 'shoot') setView('shoot');
     $('cup-line').textContent = cupLine();
-    hide(scrOver); hide(scrQ); hide(scrExp);
+    hide(scrOver); hide(scrQ); hide(scrExp); hide(scrPre);
     hud.hidden = true;
     updateBoard();
     hideAimHud();
@@ -2717,7 +2819,7 @@
   // On every screen (menu, question, explanation, final whistle, pause), the arrow keys move between its buttons and
   // answer boxes; Enter or Space presses the one that's highlighted. While aiming, the arrows move the aim instead.
   function moveFocus(dir) {
-    var screen = paused ? scrPause : [scrTitle, scrMenu, scrQ, scrExp, scrOver].filter(function (s) { return !s.hidden; })[0];
+    var screen = paused ? scrPause : [scrTitle, scrMenu, scrPre, scrQ, scrExp, scrOver].filter(function (s) { return !s.hidden; })[0];
     if (!screen) return false;
     var items = Array.prototype.filter.call(screen.querySelectorAll('button, input'), function (el) {
       return !el.hidden && !el.disabled && el.offsetParent !== null;
@@ -2760,6 +2862,7 @@
     e.preventDefault();
     if (e.repeat) return;
     if (state === STATE.MENU) tryStart('friendly');
+    else if (state === STATE.PRE) beginMatch();
     else if (state === STATE.EXPLANATION) closeExplanation();
     else if (state === STATE.OVER) startShootout();
     else if (state === STATE.SAVED) skipResult();
@@ -2790,6 +2893,7 @@
   $('btn-cup').addEventListener('click', function () { unlockAudio(); tryStart('cup'); });
   $('btn-two').addEventListener('click', function () { unlockAudio(); tryStart('two'); });
   $('q-hint').addEventListener('click', showHint);
+  $('pre-go').addEventListener('click', beginMatch);
   $('over-again').addEventListener('click', function () { startShootout(); });
   $('over-menu').addEventListener('click', showMenu);
   $('btn-menu').addEventListener('click', function () { if (paused) closePause(); else openPause(); });

@@ -209,6 +209,22 @@
   #ps .modes .btn { font-size: clamp(22px, 4.2cqmin, 32px); padding: 4px 22px 0; }
   #ps .cupline { color: #fde68a; font-size: clamp(13px, 2.4cqmin, 15px); margin: 8px 0 0; }
   #ps .stat.wide { min-width: 200px; }
+  /* Before a match */
+  #ps .card.pre { border-top: 5px solid var(--green); width: min(100%, 720px); }
+  #ps .card.pre h2 { margin: 0 0 8px; font: 700 clamp(34px, 7cqmin, 56px) 'Teko', sans-serif; line-height: 1; }
+  #ps .scout { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.4); color: #dcfce7; border-radius: 12px; padding: 8px 12px; margin: 10px 0 0; font-weight: 600; font-size: clamp(14px, 2.6cqmin, 17px); }
+  #ps .bracket { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1.6cqmin, 14px); text-align: left; }
+  #ps .bcol { display: flex; flex-direction: column; gap: 6px; }
+  #ps .bcol .bm { margin: auto 0; }   /* the headings stay at the top; the matches spread out below */
+  #ps .bcol h3 { margin: 0; font: 600 clamp(15px, 2.8cqmin, 20px) 'Teko', sans-serif; letter-spacing: 0.06em; color: var(--yellow); text-transform: uppercase; }
+  #ps .bm { position: relative; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 8px; padding: 3px 34px 3px 8px; font-size: clamp(11px, 2.1cqmin, 14px); line-height: 1.35; }
+  #ps .bm span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ps .bm span.w { font-weight: 800; color: #fff; } #ps .bm span.l { color: var(--soft); }
+  #ps .bm b { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--yellow); font-size: 0.95em; }
+  #ps .bm.now { border-color: var(--yellow); box-shadow: 0 0 10px rgba(250,204,21,0.4); }
+  #ps .qor { font-size: 0.6em; font-weight: 600; color: var(--soft); margin: 0 0.2em; }
+  #ps .choices .btn .rt { vertical-align: middle; }
+  #ps .nl-pt.alt { top: 34px; } #ps .nl-pt.alt b { color: #60a5fa; } #ps .nl-pt.alt::after { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
   /* Wrong answer */
   #ps .exp h2 { margin: 0; color: #f87171; font: 700 clamp(38px, 8cqmin, 64px) 'Teko', sans-serif; line-height: 1; }
   #ps .exp .you { font-size: clamp(15px, 3cqmin, 20px); margin: 4px 0 10px; }
@@ -318,6 +334,17 @@
         </div>
       </div>
 
+      <!-- Before a match against the computer: the opponent, the cup bracket, a scouting report on their keeper -->
+      <div class="scr" id="scr-pre" hidden>
+        <div class="card pre">
+          <div class="kicker" id="pre-title">FRIENDLY</div>
+          <h2 id="pre-vs">You vs Paris</h2>
+          <div id="pre-bracket" hidden></div>
+          <p class="scout" id="pre-scout"></p>
+          <div class="go-row"><button type="button" class="btn green" id="pre-go" data-es="¡A JUGAR!">KICK OFF</button></div>
+        </div>
+      </div>
+
       <!-- Question -->
       <div class="scr" id="scr-q" hidden>
         <div class="card q">
@@ -416,7 +443,7 @@
 <section class="teaching-notes">
   <h2>Quick Teacher Tips</h2>
   <h3>What students practice</h3>
-  <p class="practice-summary"><b>Grade 8 &middot; CCSS 8.EE.A.2, 8.NS.A.2.</b> Students earn penalty kicks by answering root questions, then aim for the corner of the goal.</p>
+  <p class="practice-summary"><b>Grade 8 &middot; CCSS 8.EE.A.2, 8.NS.A.2.</b> Students earn penalty kicks by answering root questions, then go in goal to save the other team&rsquo;s penalties.</p>
   <ul>
     <li>Squares and square roots</li>
     <li>Cubes and cube roots</li>
@@ -431,17 +458,15 @@
     <li><strong>cube root (&#8731;)</strong>: the number that, used three times as a factor, gives the original number: &#8731;64 = 4</li>
   </ul>
   <h3>Tips for using the game</h3>
-  <p>Students earn each penalty kick by answering a question about squares and roots, then aim and time their shot in a 3D stadium. A shootout is five kicks.</p>
+  <p>A match is a real penalty shootout: 5 rounds, and in each round students take a kick, then go in goal for the other team&rsquo;s kick. Tied after 5 rounds, it goes to sudden death. Every kick and every save starts with a question.</p>
   <ul>
-    <li><strong>Three skills to choose from:</strong> Squares and Square Roots (&radic;81 = ?, 9&sup2; = ?, and the side of a square from its area), Cubes and Cube Roots (&#8731;64 = ?, 4&sup3; = ?, and the edge of a cube from its volume), and Estimating Square and Cube Roots (which whole numbers a root is between, or which one it is closer to; the power-shot challenge asks for the closest whole number).</li>
-    <li><strong>Numbers:</strong> regular questions use 0 to 10 for square roots, squares and sides of squares, and 0 to 5 for cube roots. The optional bonus (power shot) questions are the challenge: 11 to 16, cube roots of 6 to 10, and powers of ten such as &radic;10,000, 100&sup2; and &#8731;1,000,000.</li>
-    <li><strong>Wrong answers:</strong> the game shows why. Squares and square roots are drawn as a square of unit squares, cube roots as a 3D cube built from little cubes, and estimates on a number line between two perfect squares or cubes. That kick then goes wild, so accuracy matters more than speed.</li>
-    <li><strong>Bonus question:</strong> after each right answer, students can take a slightly harder bonus question (or skip it). Getting it right earns a power shot with a smaller aiming circle; a wrong bonus answer is explained, then the student takes a normal shot.</li>
-    <li><strong>Word problems and "closer to":</strong> Squares and Cubes sometimes become word problems (a square garden, rug or tiled floor; a cube-shaped box or tank), and Estimating Square and Cube Roots sometimes asks whether a root is closer to one whole number or the next.</li>
-    <li><strong>Mistake-aware feedback:</strong> when a wrong answer matches a classic mistake (halving for a square root, dividing by 3 for a cube root, doubling instead of squaring, dividing an area by 4, giving the square root for a cube root, or choosing two whole numbers that aren't next to each other), the explanation names that mistake first.</li>
-    <li><strong>Adapts to each student:</strong> the keeper starts out easy to beat, gets a little sharper after each goal (more after a goal from a hard spot) and a little easier after each miss, so confident students soon need precise, well-timed corner shots while students who are struggling keep scoring. Students aren't shown this; the scoring chance on screen always reflects it.</li>
-    <li><strong>The shot:</strong> the scoring chance is shown live as students aim and power up, and it is a real probability: the chance the shot is on target times the chance it beats the keeper. Corners are hardest to save; a shot right at the keeper, or a weak one, gets caught. The game decides each shot with that same chance, so the percentage is honest.</li>
-    <li><strong>Review:</strong> the final screen shows goals, questions right, and every missed question beside its correct answer.</li>
+    <li><strong>Three skills to choose from:</strong> Squares and Square Roots (&radic;81 = ?, 9&sup2; = ?, and the side of a square from its area), Cubes and Cube Roots (&#8731;64 = ?, 4&sup3; = ?, and the edge of a cube from its volume), and Estimating Square and Cube Roots (which whole numbers a root is between, which one it is closer to, and which is bigger, like &radic;40 or 6.5).</li>
+    <li><strong>Kicking:</strong> a right answer earns the kick, and an optional bonus question earns a power shot. A wrong answer is explained with a picture (a square of unit squares, a cube of little cubes, or a number line), and that kick goes wild.</li>
+    <li><strong>In goal:</strong> students see through the keeper&rsquo;s eyes and move the gloves with the mouse, a finger or the arrow keys. A right answer brings the shot in slow motion; a wrong one shows why, then the shot comes almost at full speed. With more than one skill chosen, the save question comes from a different skill than the kick.</li>
+    <li><strong>Hints:</strong> before answering, students can ask for a hint (the picture behind the question, without the answer). It costs a little: a weaker kick, or less slow motion in goal.</li>
+    <li><strong>Three ways to play:</strong> a friendly against the computer; a cup of three knockout matches against tougher teams, with a bracket and a scouting report on each team&rsquo;s goalkeeper (a cup in progress is saved for next class); or two players taking turns on one device.</li>
+    <li><strong>An honest scoring chance:</strong> the chance shown while aiming is a real probability (the chance the shot is on target times the chance it beats the keeper), and the computer&rsquo;s keeper adapts to each student.</li>
+    <li><strong>Review:</strong> the final screen shows the score, questions right, saves, and missed questions beside their correct answers.</li>
   </ul>
 </section>
 
@@ -452,7 +477,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="rooted-to-the-spot-game.js?v=ba1d86cb"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="rooted-to-the-spot-game.js?v=45bb92b7"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
