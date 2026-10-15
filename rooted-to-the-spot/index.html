@@ -70,7 +70,7 @@
   #ps b.ok { color: var(--green); }
 
   /* HUD */
-  #ps #hud { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; z-index: 5; }
+  #ps #hud { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; z-index: 11;   /* above the question screens, so the MENU button works there too */ }
   #ps .hudbox { background: var(--glass); border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px; display: flex; align-items: center; gap: 12px; font-size: clamp(20px, 4.2cqmin, 34px); line-height: 1.1; }
   #ps .hudbox .gl { color: var(--yellow); font-weight: 700; }
   #ps #hud-dots { display: flex; gap: 5px; }
@@ -282,7 +282,7 @@
       <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div></div>
       <div id="msg" hidden aria-live="assertive"></div>
       <div id="caption" hidden aria-live="polite"></div>
-      <div id="slow-badge" hidden data-es="&#9201; CÁMARA LENTA: ¡mueve los guantes al anillo!">&#9201; SLOW MOTION: get your gloves on the ring!</div>
+      <div id="slow-badge" hidden data-es="&#9201; CÁMARA LENTA: ¡mueve los guantes al balón!">&#9201; SLOW MOTION: move your gloves to the ball!</div>
       <div id="sr-live" class="sr-only" aria-live="assertive"></div>
       <div id="power-badge" hidden data-es="&#9889; TIRO POTENTE: círculo más pequeño">&#9889; POWER SHOT: smaller circle</div>
       <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Haz clic (o pulsa Espacio) para cargar, y otra vez para tirar">Aim with the mouse, a finger or the arrow keys &middot; Click, tap or press Space to power up, then again to shoot</div>
@@ -451,8 +451,8 @@
   <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
 </section>
 
-<script src="../site-results.js?v=dddc14b7"></script>
-<script src="rooted-to-the-spot-game.js?v=21548414"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="../site-results.js?v=85c4ff8b"></script>
+<script src="rooted-to-the-spot-game.js?v=3dc931f0"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>

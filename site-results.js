@@ -1,7 +1,7 @@
 // Results by skill, shared by the games (window.SiteResults).
 //
 // A game names its skills once, records every answer as right or wrong under its skill, and shows the results when a
-// game or round ends: for each skill practiced, how many answers, how many right, and the percent right, with a word
+// game or round ends: for each skill practiced, how many questions, how many right, and the percent right, with a word
 // and a color band (80% and up "Strong", 40-79% "Growing", under 40% "Keep practicing"). Nothing is saved or sent
 // anywhere: the counts last only while the page is open, and start over with each new game.
 //
@@ -55,8 +55,8 @@
     panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true'); panel.setAttribute('aria-labelledby', 'sres-h');
     panel.innerHTML = '<div class="sres-card"><h2 id="sres-h">' + (opts.title || tl('Your results', 'Tus resultados')) + '</h2>' +
       '<p class="sres-sub">' + tl('How each skill went this game.', 'Cómo te fue en cada habilidad en este juego.') + '</p>' +
-      '<div class="sres-tot"><div><b>' + t.n + '</b><span>' + tl('Answers', 'Respuestas') + '</span></div><div><b>' + t.right + '</b><span>' + tl('Correct', 'Correctas') + '</span></div><div><b>' + tp + '%</b><span>' + tl('Accuracy', 'Precisión') + '</span></div></div>' +
-      '<table><thead><tr><th>' + tl('Skill', 'Habilidad') + '</th><th>' + tl('Answers', 'Respuestas') + '</th><th>' + tl('Correct', 'Correctas') + '</th><th>' + tl('Percent correct', 'Porcentaje') + '</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="sres-tot"><div><b>' + t.n + '</b><span>' + tl('Questions', 'Preguntas') + '</span></div><div><b>' + t.right + '</b><span>' + tl('Correct', 'Correctas') + '</span></div><div><b>' + tp + '%</b><span>' + tl('Accuracy', 'Precisión') + '</span></div></div>' +
+      '<table><thead><tr><th>' + tl('Skill', 'Habilidad') + '</th><th>' + tl('Questions', 'Preguntas') + '</th><th>' + tl('Correct', 'Correctas') + '</th><th>' + tl('Percent correct', 'Porcentaje') + '</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       '<button type="button" class="sres-btn">' + (opts.button || tl('Continue', 'Continuar')) + '</button></div>';
     var host = document.getElementById('game-canvas-slot') || document.body;
     host.appendChild(panel);

@@ -771,15 +771,6 @@
     });
     glovesG.visible = false;
     scene.add(glovesG);
-    // the target marker: after a right answer, a glowing ring shows where the ball will reach the gloves
-    saveMark = new THREE.Group();
-    var ringM = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthTest: false });
-    var fillM = new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
-    var ring = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.18, 40), ringM), fill = new THREE.Mesh(new THREE.CircleGeometry(0.15, 40), fillM);
-    ring.renderOrder = 996; fill.renderOrder = 995;
-    saveMark.add(fill, ring);
-    saveMark.visible = false;
-    scene.add(saveMark);
   }
 
   // The other team: its shooter, and four of its players at the halfway line on the keeper's left. The student's own
@@ -820,8 +811,8 @@
     keeperGroup.visible = !keep;
     glovesG.visible = keep;
     shooterP.root.visible = keep;
-    if (confetti) { confetti.visible = false; confettiT = -1; }
-    saveMark.visible = false;   // a goal's confetti doesn't follow into the next view
+    if (confetti) { confetti.visible = false; confettiT = -1; }   // a goal's confetti doesn't follow into the next view
+    runT = -1;
     if (keep) { placeShooter(0); aimS.x = 0; aimS.y = -0.55; }   // gloves start low, so the shooter is in view
     canvas.style.cursor = keep ? 'none' : '';
     canvas.setAttribute('aria-label', keep
@@ -859,13 +850,14 @@
 
   // The other team's kick. A right answer means slow motion (a hint makes it a little less slow); a wrong answer means
   // full speed, which is very hard (but not impossible) to save. Shots get faster and more accurate in later cup rounds.
-  var saveMark = null, keyHold = 0, runT = -1, slowMo = false, kickT = -1, fly = null, saveRes = '', heldT = 0;
+  var keyHold = 0, runT = -1, slowMo = false, fly = null, saveRes = '', heldT = 0;
   var srLive = null;
   function startRunUp() {
     resetBall();
     placeShooter(0);
     $('slow-badge').hidden = !slowMo;
-    refWhistle(function () { state = STATE.RUNUP; runT = 0; kickT = -1; });
+    runT = -1;
+    refWhistle(function () { state = STATE.RUNUP; runT = 0; shooterKicked = false; });
   }
   function pickShot() {
     var side = Math.random() < 0.5 ? -1 : 1, r = Math.random(), x, y;
@@ -883,12 +875,6 @@
     lastLandX = s.x; lastLandY = s.y;
     state = STATE.SAVING;
     saveRes = ''; heldT = 0;
-    if (slowMo) {   // where the ball will cross the gloves' plane: the same place the save is decided
-      var tz = (PENALTY_DIST - GLOVE_Z) / -fly.v.z;
-      saveMark.position.set(fly.v.x * tz, BALL_RADIUS + fly.v.y * tz - 0.5 * g * tz * tz, GLOVE_Z);
-      saveMark.scale.setScalar(gloveScale);
-      saveMark.visible = true;
-    }
     playSound('kick');
     if (srLive && slowMo) srLive.textContent = (s.y > 1.4 ? T('High ', 'Alto ') : T('Low ', 'Bajo ')) +
       (s.x > 0.8 ? T('to your left', 'a tu izquierda') : s.x < -0.8 ? T('to your right', 'a tu derecha') : T('down the middle', 'por el centro')) + '!';
@@ -897,7 +883,6 @@
     if (saveRes) return;
     saveRes = kind;
     state = STATE.SAVED;
-    saveMark.visible = false;
     $('slow-badge').hidden = true;
     var scored = kind === 'goal';
     match.res[1].push(scored);
@@ -937,31 +922,7 @@
       }
     }
     keeperCam();
-    if (saveMark.visible) { var pu = 1 + Math.sin(clock.elapsedTime * 10) * 0.08; saveMark.scale.setScalar(gloveScale * pu); }
-    var t = clock.elapsedTime, sp = shooterP;
-    // the shooter: waits, rocking on his toes; runs up; strikes with his right foot
-    if (state === STATE.RUNUP) {
-      runT += delta;
-      var RUN = 1.0, k = Math.min(1, runT / RUN);
-      placeShooter(k);
-      var ph = runT * 13;
-      if (k < 1) {
-        sp.lLeg.rotation.x = Math.sin(ph) * 0.7; sp.rLeg.rotation.x = -Math.sin(ph) * 0.7;
-        sp.lArm.rotation.x = -Math.sin(ph) * 0.6; sp.rArm.rotation.x = Math.sin(ph) * 0.6;
-        sp.hips.position.y = 1.0 + Math.abs(Math.sin(ph)) * 0.05;
-      } else {
-        if (kickT < 0) kickT = 0;
-        kickT += delta;
-        var w = Math.min(1, kickT / 0.16);
-        sp.rLeg.rotation.x = 0.7 - 2.0 * w; sp.lLeg.rotation.x = 0.1;   // the right leg swings through
-        sp.lArm.rotation.set(-0.5, 0, -0.6); sp.rArm.rotation.set(0.4, 0, 0.3);
-        if (w >= 1) shootAtKeeper();
-      }
-    } else if (state !== STATE.SAVING && state !== STATE.SAVED) {
-      sp.hips.position.y = 1.0 + Math.sin(t * 2.4) * 0.012;
-      sp.lLeg.rotation.x = sp.rLeg.rotation.x = 0;
-      sp.lArm.rotation.set(0, 0, -0.12 + Math.sin(t * 1.3) * 0.03); sp.rArm.rotation.set(0, 0, 0.12 - Math.sin(t * 1.3) * 0.03);
-    }
+    animateShooter(delta);
     if ((state === STATE.SAVING || state === STATE.SAVED) && fly) flyBall(delta * (state === STATE.SAVING ? fly.scale : 1));
   }
   // The ball, moved by hand (no physics engine here): gravity, a bounce on the grass, and the net.
@@ -1011,6 +972,77 @@
     ballMesh.position.copy(p);
     ballMesh.scale.setScalar(ballLook(p.z));
     ballMesh.rotation.x -= v.z * dt * 4;
+  }
+  // ---------- The other team's penalty taker ----------
+  // A right-footed taker, so he comes in from his left. (His model's limbs are named for a player facing the other way:
+  // facing the goal, his right leg and arm are lLeg and lArm.) Times are seconds after the whistle:
+  //   0    - 1.0   the run-up: a first short step, then quicker strides (knees bending on each swing, arms pumping
+  //                opposite the legs, a forward lean and a bob on every step)
+  //   1.0  - 1.15  the last, longer stride: the standing foot plants beside the ball, the kicking leg swings back with the
+  //                knee bent, the other arm goes out for balance
+  //   1.15 - 1.27  the strike: the kicking leg whips through as the knee straightens (contact at 1.21)
+  //   after        the follow-through: the leg carries on up, he takes a step on, then stands
+  var RUN_END = 1.0, STRIKE = 1.15, CONTACT = 1.21, STRIKE_END = 1.27, shooterKicked = false;
+  function mixN(a, b, k) { return a + (b - a) * k; }
+  function animateShooter(delta) {
+    var sp = shooterP, t = clock.elapsedTime, kick = sp.lLeg, plant = sp.rLeg, kArm = sp.lArm, pArm = sp.rArm;
+    var kHip, kKnee, pHip, pKnee, kArmX, kArmZ = -0.15, pArmX, pArmZ = 0.15, elbow = -1.0, lean, y, fwd = 0;
+    sp.head.rotation.set(0, 0, 0);
+    if (runT < 0) {   // waiting behind the ball: weight shifting, a glance at the goal now and then
+      placeShooter(0);
+      var w = Math.sin(t * 1.1);
+      sp.hips.position.y = 1.0 + Math.sin(t * 2.2) * 0.008;
+      sp.hips.rotation.set(0.04, 0, w * 0.03);
+      kick.rotation.set(0, 0, -0.06 + w * 0.03); plant.rotation.set(0, 0, 0.06 + w * 0.03);
+      kick.userData.shin.rotation.x = plant.userData.shin.rotation.x = 0.05;
+      kArm.rotation.set(0.05, 0, -0.15); pArm.rotation.set(0.05, 0, 0.15);
+      kArm.userData.fore.rotation.x = pArm.userData.fore.rotation.x = -0.3;
+      sp.head.rotation.y = Math.sin(t * 0.5) * 0.25;
+      return;
+    }
+    runT += delta;
+    var T = runT;
+    placeShooter(T < STRIKE ? Math.pow(T / STRIKE, 1.3) : 1);   // a slow first step, then quicker
+
+    // the running stride, by distance covered (about 0.5 m a step)
+    var dist = Math.pow(Math.min(T, RUN_END) / STRIKE, 1.3) * 2.35, ph = Math.PI * dist / 0.5;
+    var A = 0.55 * Math.min(1, 0.4 + T / 0.3), sn = Math.sin(ph), cs = Math.cos(ph);
+    var runK = { kHip: A * sn, kKnee: 0.15 + 1.0 * Math.max(0, -cs), pHip: -A * sn, pKnee: 0.15 + 1.0 * Math.max(0, cs),
+      kArmX: -0.8 * A * sn, pArmX: 0.8 * A * sn, lean: 0.16, y: 0.97 + 0.05 * Math.abs(sn) };
+    if (T < RUN_END) {
+      kHip = runK.kHip; kKnee = runK.kKnee; pHip = runK.pHip; pKnee = runK.pKnee;
+      kArmX = runK.kArmX; pArmX = runK.pArmX; lean = runK.lean * Math.min(1, T / 0.2); y = runK.y;
+    } else if (T < STRIKE) {   // the last stride: plant, and the kicking leg swings back
+      var u = (T - RUN_END) / (STRIKE - RUN_END), s = u * u * (3 - 2 * u);
+      kHip = mixN(runK.kHip, 0.8, s); kKnee = mixN(runK.kKnee, 1.6, s);
+      pHip = mixN(runK.pHip, -0.3, s); pKnee = mixN(runK.pKnee, 0.3, s);
+      kArmX = mixN(runK.kArmX, -0.6, s); kArmZ = mixN(-0.15, -0.35, s);
+      pArmX = mixN(runK.pArmX, -0.3, s); pArmZ = mixN(0.15, 1.2, s);
+      lean = mixN(0.16, -0.06, s); y = mixN(runK.y, 0.95, s);
+    } else if (T < STRIKE_END) {   // the strike
+      var v = (T - STRIKE) / (STRIKE_END - STRIKE);
+      kHip = 0.8 - 1.95 * Math.pow(v, 1.4); kKnee = 1.6 * (1 - v * v * (3 - 2 * v)) + 0.08;
+      pHip = -0.3 + 0.2 * v; pKnee = 0.3;
+      kArmX = -0.6; kArmZ = -0.35; pArmX = -0.3; pArmZ = 1.2;
+      lean = -0.06 - 0.06 * v; y = 0.95;
+    } else {   // the follow-through, then standing
+      var f = T - STRIKE_END, up = Math.min(1, f / 0.12), down = smooth01(Math.max(0, Math.min(1, (f - 0.15) / 0.55)));
+      kHip = mixN(mixN(-1.15, -1.35, up), 0, down); kKnee = mixN(0.15, 0.05, down);
+      pHip = mixN(-0.1, 0, down); pKnee = mixN(0.3, 0.05, down);
+      kArmX = mixN(-0.6, 0.05, down); kArmZ = mixN(-0.35, -0.15, down);
+      pArmX = mixN(-0.3, 0.05, down); pArmZ = mixN(1.2, 0.15, down);
+      lean = mixN(-0.12, 0.04, down); y = mixN(0.95, 1.0, down);
+      fwd = 0.45 * (1 - Math.exp(-3 * f));   // a step on after the ball
+      elbow = mixN(-1.0, -0.3, down);
+    }
+    if (T >= CONTACT && !shooterKicked && state === STATE.RUNUP) { shooterKicked = true; shootAtKeeper(); }
+    sp.root.position.z -= fwd;
+    sp.hips.position.y = y;
+    sp.hips.rotation.set(lean, 0, 0);
+    kick.rotation.set(kHip, 0, -0.05); kick.userData.shin.rotation.x = kKnee;
+    plant.rotation.set(pHip, 0, 0.05); plant.userData.shin.rotation.x = pKnee;
+    kArm.rotation.set(kArmX, 0, kArmZ); pArm.rotation.set(pArmX, 0, pArmZ);
+    kArm.userData.fore.rotation.x = pArm.userData.fore.rotation.x = elbow;
   }
   function animateMidfield() {
     var t = clock.elapsedTime;
@@ -2370,7 +2402,7 @@
     hideAimHud();
     targetCrosshair.visible = errorCircle.visible = false;
     legGroup.visible = false;
-    fly = null; runT = -1; $('slow-badge').hidden = true; saveMark.visible = false; $('caption').hidden = true;
+    fly = null; runT = -1; $('slow-badge').hidden = true; $('caption').hidden = true;
     clock.getDelta();
   }
 
