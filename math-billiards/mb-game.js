@@ -171,7 +171,7 @@
       }).join('') + '</div>' : '') +
       hintHtml(p, G.wrongs) + '</div>' +
       '<div class="grow"></div><button class="go" id="b-sub">' + T('SHOOT ▶', 'TIRAR ▶') + '</button>' +
-      (G.wrongs === 0 ? '<button class="go alt" id="b-reaim">' + T('◀ Change my aim (Esc)', '◀ Cambiar el tiro (Esc)') + '</button>' : '');
+      (G.wrongs === 0 ? '<button class="go alt" id="b-reaim">' + (TOUCH ? T('◀ Change my aim', '◀ Cambiar el tiro') : T('◀ Change my aim (Esc)', '◀ Cambiar el tiro (Esc)')) + '</button>' : '');
     fillRacks();
     var inp = $('#ans');
     inp.addEventListener('input', function () { var v = inp.value.replace(/[^0-9]/g, '').slice(0, 3); if (v !== inp.value) inp.value = v; $('#msg').textContent = ''; MB.Sound.play('type'); });
@@ -734,7 +734,8 @@
       svg: '<line x1="40" y1="130" x2="260" y2="130" stroke="#fff" stroke-width="2.5"/><line x1="150" y1="130" x2="230" y2="45" stroke="#ffd23f" stroke-width="3"/><path d="M185 130 A35 35 0 0 0 174 104" fill="none" stroke="#ffd23f" stroke-width="3"/><path d="M120 130 A30 30 0 0 1 162 102" fill="none" stroke="#62e3ff" stroke-width="3"/><text x="196" y="120" fill="#ffd23f" font-size="18" font-weight="900">x°</text><text x="98" y="112" fill="#62e3ff" font-size="18" font-weight="900">133°</text><circle cx="150" cy="130" r="9" fill="#f6f3ea"/>' },
     { h: T('4. Solve for x', '4. Halla x'), p: T('Use the angle relationship. Here the two angles make a straight line: x + 133° = 180°, so x = 47°.', 'Usa la relación entre ángulos. Aquí forman una recta: x + 133° = 180°, así que x = 47°.'),
       svg: '<text x="150" y="85" fill="#fff" font-size="26" font-weight="900" text-anchor="middle">x + 133° = 180°</text><text x="150" y="130" fill="#ffd23f" font-size="30" font-weight="900" text-anchor="middle">x = 47°</text>' },
-    { h: T('5. Enter x', '5. Escribe x'), p: T('Type just the number; the ° is already there. Press Enter or Space (or click Shoot).', 'Escribe solo el número; el ° ya está. Pulsa Enter o Espacio (o haz clic en Tirar).'),
+    { h: T('5. Enter x', '5. Escribe x'), p: (TOUCH ? T('Tap the number on the keys; the ° is already there. Then tap Shoot.', 'Toca el número en las teclas; el ° ya está. Luego toca Tirar.')
+      : T('Type just the number; the ° is already there. Press Enter or Space (or click Shoot).', 'Escribe solo el número; el ° ya está. Pulsa Enter o Espacio (o haz clic en Tirar).')),
       svg: '<text x="70" y="112" fill="#ffd23f" font-size="34" font-weight="900">x =</text><rect x="140" y="76" width="80" height="50" rx="10" fill="#0b1428" stroke="#ffd23f" stroke-width="3"/><text x="180" y="112" fill="#fff" font-size="30" font-weight="900" text-anchor="middle">47</text><text x="226" y="110" fill="#fff" font-size="30" font-weight="900">°</text>' },
     { h: T('6. Watch the shot', '6. Mira el tiro'), p: T('The right answer plays your shot exactly as you aimed. Real pool physics decides the rest; a good angle can still miss!', 'La respuesta correcta juega tu tiro tal como apuntaste. La física decide el resto; ¡un buen ángulo puede fallar!'),
       svg: '<circle cx="70" cy="140" r="9" fill="#f6f3ea"/><path d="M70 140 L200 70" stroke="#7dffb0" stroke-width="3" stroke-dasharray="8 6"/><circle cx="210" cy="64" r="9" fill="#d3202f"/><circle cx="268" cy="22" r="14" fill="#000"/>' },

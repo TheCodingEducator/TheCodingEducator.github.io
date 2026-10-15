@@ -386,7 +386,7 @@ function drawCourseSelect() {
   var bx = width / 2 - SELECT_BACK.w / 2;
   fill(0, 0, 0, 150); rect(bx, SELECT_BACK.y, SELECT_BACK.w, SELECT_BACK.h, 23);
   fill(255); textSize(16); textStyle(BOLD); text(tl('← Back', '← Volver'), width / 2, SELECT_BACK.y + SELECT_BACK.h / 2 + 1); textStyle(NORMAL);
-  fill(140, 155, 140); textSize(13); text(tl('← → to choose · Enter to play · Esc to go back', '← → para elegir · Enter para jugar · Esc para volver'), width / 2, 636);
+  fill(140, 155, 140); textSize(13); text((window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches) ? tl('Tap a course to play', 'Toca un campo para jugar') : tl('← → to choose · Enter to play · Esc to go back', '← → para elegir · Enter para jugar · Esc para volver'), width / 2, 636);
   textAlign(LEFT, BASELINE);
 }
 function courseSelectHit(mx, my) {

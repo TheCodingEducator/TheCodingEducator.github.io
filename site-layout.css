@@ -176,6 +176,8 @@ body.site-fit { padding-top: 44px; box-sizing: border-box; }
 /* phones and tablets: every bar button is at least 38px square, an easier target for a finger */
 @media (hover: none) and (pointer: coarse) {
   html .site-bar .back-link, html .site-bar .fullscreen-btn, .site-bar .sb-toggle { min-height: 38px; min-width: 38px; justify-content: center; }
+  /* keyboard-only tips in the games (Press Enter, Esc goes back ...) aren't shown on phones and tablets */
+  .kbdTip, .keys-help, .hint.keys { display: none !important; }
 }
 /* the Teacher guide link looks like the bar's other buttons */
 .site-topbar a.sb-guide { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; }

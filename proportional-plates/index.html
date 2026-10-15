@@ -607,13 +607,20 @@
   @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) {
     .rotate-prompt { display: flex; }
   }
+  /* short landscape screens (phones held sideways): the menu board puts Dinner Rush and Practice side by side, so the
+     board shrinks far less to fit the height */
+  @media (max-height: 500px) and (orientation: landscape) {
+    #sb #menu .card.board { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; max-width: 900px !important; }
+    #sb #menu .boardHead, #sb #menu .boardFoot { grid-column: 1 / -1; }
+    #sb #menu .menuRow { border-bottom: 0; }
+  }
 </style>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-sr.js?v=790186e5"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
-<link rel="stylesheet" href="../site-layout.css?v=49ee5a38">
+<link rel="stylesheet" href="../site-layout.css?v=161658df">
 <script src="../site-stats.js?v=8d28b82f"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 </head>

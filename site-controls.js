@@ -43,8 +43,30 @@
 
   var LABEL = { backspace: '&#9003;', enter: '&#9166;', sign: '+/&minus;' };
 
+  // On a phone or tablet with a joystick and a GO button, the game's own words about keys (drawn through tl(), in
+  // English and Spanish) name those controls instead: Space / Enter is GO, the arrow keys are the joystick, and the
+  // "Esc ..." parts of a hint are left out (the bar's Menu button does that job).
+  function touchWords() {
+    if (!window.tl || window.tl.touchWords) return;
+    var orig = window.tl;
+    var swap = function (s) {
+      if (typeof s !== 'string') return s;
+      return s
+        .replace(/\s*\|\s*(?:ESC|Esc)(?=[ :])[^|\n]*/g, '')
+        .replace(/(?:SPACE or ENTER|ENTER or SPACE|SPACE \/ ENTER|ENTER \/ SPACE|SPACE\/ENTER|Enter\/Space|Enter \/ Space|Space\/Enter|Space or Enter|Enter or Space)/g, 'GO')
+        .replace(/(?:ESPACIO o ENTER|ENTER o ESPACIO|ESPACIO \/ ENTER|ESPACIO\/ENTER|Enter\/Espacio|Enter \/ Espacio|Espacio\/Enter|Espacio o Enter|Enter o Espacio)/g, 'GO')
+        .replace(/\bSPACE\b/g, 'GO').replace(/\bESPACIO\b/g, 'GO')
+        .replace(/\bArrow keys\b/g, 'Joystick').replace(/\barrow keys\b/g, 'the joystick').replace(/\bArrows\b/g, 'Joystick')
+        .replace(/\blas flechas\b/g, 'la palanca').replace(/\bFlechas\b/g, 'Palanca')
+        .replace(/[◄◀] [►▶]/g, 'Joystick');
+    };
+    window.tl = function (en, es) { return swap(orig(en, es)); };
+    window.tl.touchWords = true;
+  }
+
   function create(o) {
     if (!isTouch) return null;
+    if (o.joystick && o.action === 'GO') touchWords();
     var keys = o.keys || {};
     var wrap = document.createElement('div');
     wrap.id = 'mobile-controls';

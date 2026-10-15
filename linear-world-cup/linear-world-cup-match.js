@@ -742,7 +742,7 @@ function drawBracketScreen() {
   fill(255, 210, 80); noStroke(); textSize(9); textAlign(CENTER);
   text(tl("YOUR MATCH  ►  vs ", "TU PARTIDO  ►  vs ") + countries[oppIdx].name.toUpperCase(), 200, 336);
   fill(140, 155, 190); textSize(8);
-  text(tl("Click or press Enter / Space to start", "Haz clic o presiona Enter / Espacio para empezar"), 200, 352);
+  text(SiteControls.isTouch ? tl("Tap to start", "Toca para empezar") : tl("Click or press Enter / Space to start", "Haz clic o presiona Enter / Espacio para empezar"), 200, 352);
 }
 
 function startMatch() {

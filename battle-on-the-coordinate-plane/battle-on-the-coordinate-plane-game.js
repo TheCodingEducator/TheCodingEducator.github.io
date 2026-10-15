@@ -1522,7 +1522,8 @@
       var head = '<h2 class="foe">' + T('ENEMY FIRE!', '¡FUEGO ENEMIGO!') + '</h2>' +
         (G.hard ? '<p>' + T('The computer&rsquo;s target:', 'El objetivo de la computadora:') + '</p><div class="words" id="enemy-words">' + words + '</div>'
           : '<p>' + T('The computer is firing at:', 'La computadora dispara a:') + '</p><div class="target-big" id="enemy-pair">' + pair(tx, ty) + '</div>') +
-        '<p>' + T('Find this point on <b>YOUR BOARD</b> and click it. Keyboard: arrow keys, then <kbd>Enter</kbd>.', 'Busca este punto en <b>TU TABLERO</b> y haz clic. Teclado: flechas y luego <kbd>Enter</kbd>.') + '</p>';
+        '<p>' + (TOUCH ? T('Find this point on <b>YOUR BOARD</b> and tap it.', 'Busca este punto en <b>TU TABLERO</b> y tócalo.')
+          : T('Find this point on <b>YOUR BOARD</b> and click it. Keyboard: arrow keys, then <kbd>Enter</kbd>.', 'Busca este punto en <b>TU TABLERO</b> y haz clic. Teclado: flechas y luego <kbd>Enter</kbd>.')) + '</p>';
       panel(head + '<div id="loc-fb" aria-live="polite"></div>');
       var cur = { x: G.mode === 'easy' ? 0 : 0, y: 0 }, hover = null;
       var curG = svgEl('g', { 'class': 'kcur-g' }, b.L.ui);
