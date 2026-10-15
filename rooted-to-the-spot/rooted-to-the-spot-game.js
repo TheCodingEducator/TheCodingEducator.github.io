@@ -879,7 +879,7 @@
   function shootAtKeeper() {
     var s = pickShot(), speed = 22 + 6 * oppStr, g = 9.81, t = Math.sqrt(s.x * s.x + PENALTY_DIST * PENALTY_DIST) / speed;
     fly = { p: new THREE.Vector3(0, BALL_RADIUS, PENALTY_DIST), v: new THREE.Vector3(s.x / t, (s.y - BALL_RADIUS + 0.5 * g * t * t) / t, -PENALTY_DIST / t),
-      scale: slowMo ? (hintUsed ? 0.55 : 0.38) : 1, target: s, inNet: false, crossed: false };
+      scale: slowMo ? (hintUsed ? 0.55 : 0.38) : 0.85,   // a wrong answer: a little slower than a real penalty target: s, inNet: false, crossed: false };
     lastLandX = s.x; lastLandY = s.y;
     state = STATE.SAVING;
     saveRes = ''; heldT = 0;
@@ -1700,7 +1700,7 @@
       });
       catchKind = best.kind; off = best.off; p = best.p; z = best.z;
     }
-    keeperTarget = { x: p.x - off.x, y: catchKind === 'dive' ? Math.max(0, p.y - off.y) : 0 };   // only a dive leaves the ground
+    keeperTarget = { x: p.x - off.x, y: catchKind === 'dive' ? Math.min(0.6, Math.max(0, p.y - off.y)) : 0 };   // feet no more than 0.6 m up   // only a dive leaves the ground
     catchZ = z;
     keeperReactionDelay = p.t * 0.1;
     keeperDiveDuration = p.t * 0.9;   // the gloves arrive just as the ball does
@@ -1788,7 +1788,7 @@
     return '';
   }
 
-  var keeperStay = false;
+  var keeperStay = false, savePlanned = false;
   function keeperDecision(targetX, targetY, flight) {
     lastLandX = targetX; lastLandY = targetY;
     keeperStartX = keeperGroup.position.x;   // wherever his side-to-side lean left him
@@ -1802,13 +1802,8 @@
       // a save: the keeper gets there just as the ball does. A shot right at the keeper, or a weak one, is caught.
       catching = Math.abs(targetX) < 1.1 || aimPower < 0.45;
       standingCatch = catching && Math.abs(targetX) < 1.1;
-      if (catching) planCatch(targetX, targetY);
-      else {
-        keeperTarget = { x: targetX, y: Math.min(targetY, GOAL_HEIGHT) };
-        var intercept = flight * ((PENALTY_DIST - 0.5) / PENALTY_DIST);
-        keeperReactionDelay = intercept * 0.1;
-        keeperDiveDuration = intercept * 0.9;
-      }
+      planCatch(targetX, targetY);   // caught or pushed away, his gloves meet the ball (see poseKeeper)
+      savePlanned = true;
       enforceSave = true;
       keeperBody.collisionResponse = !catching;
     } else {
@@ -1824,11 +1819,13 @@
         keeperTarget = { x: targetX * 0.5, y: 0 };
         keeperReactionDelay = flight * 0.5; keeperDiveDuration = flight * 1.5;
       }
+      savePlanned = false;
       enforceSave = false;
       keeperBody.collisionResponse = false;   // the roll said goal, so the keeper can't block it by accident
     }
     keeperDiving = true;
     keeperDiveTime = 0;
+    landT = -1;
   }
 
   // Every frame: pose the keeper, then lift him just enough that no part of him (a boot, a knee, a hand in a dive) is
@@ -1841,41 +1838,77 @@
     keeperBox.setFromObject(keeperGroup);
     if (keeperBox.min.y < 0.005) keeperGroup.position.y += 0.005 - keeperBox.min.y;
   }
+  // ---------- The dive ----------
+  // Like a real keeper: a quick load (knees bend, a short side-step toward the ball), then a low leap that ends with his
+  // gloves at the ball (planned so they meet it exactly: see planCatch), then he keeps falling, lands on his side on the
+  // grass with a small bounce, and stays down. (updateKeeper keeps every part of him above the grass.) A shot near him is
+  // a standing catch with no dive.
+  var landT = -1;
+  function diveLegs(dir, k) {   // push-off leg straight, the other leg trailing with a bent knee
+    var push = dir > 0 ? kLLeg : kRLeg, trail = dir > 0 ? kRLeg : kLLeg;
+    push.rotation.set(0.15 * k, 0, -dir * 0.25 * k); push.userData.shin.rotation.x = 0.1 * k;
+    trail.rotation.set(-0.5 * k, 0, dir * 0.35 * k); trail.userData.shin.rotation.x = 0.9 * k;
+  }
+  function reachArms(dir) {   // both arms stretched over his head toward the ball
+    kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.15;
+    if (dir < 0) { kLArm.rotation.set(-0.2, 0, -(Math.PI - 0.3)); kRArm.rotation.set(-0.2, 0, -(Math.PI - 0.75)); }
+    else { kRArm.rotation.set(-0.2, 0, Math.PI - 0.3); kLArm.rotation.set(-0.2, 0, Math.PI - 0.75); }
+  }
   function poseKeeper(delta) {
     if (!keeperDiving) { keeperIdle(delta); return; }
     keeperDiveTime += delta;
     if (keeperStay || keeperDiveTime < keeperReactionDelay) { keeperIdle(delta); return; }   // rooted: watches it go by
 
-    var diveT = (keeperDiveTime - keeperReactionDelay) / keeperDiveDuration, t = Math.min(1, diveT);
-    var ease = 1 - Math.pow(1 - t, 3);
-    var x = keeperStartX + (keeperTarget.x - keeperStartX) * ease;
-    if (!catching) x = Math.max(-GOAL_WIDTH / 2 + 0.4, Math.min(GOAL_WIDTH / 2 - 0.4, x));   // a catch goes exactly where planned
-    var y = keeperStartY + (keeperTarget.y - keeperStartY) * Math.sin(t * Math.PI / 2);
-    if (diveT > 1) {
-      var fall = keeperDiveTime - keeperReactionDelay - keeperDiveDuration;
-      y = Math.max(0, y - 0.5 * 15 * fall * fall);
+    var tt = keeperDiveTime - keeperReactionDelay, D = Math.max(0.2, keeperDiveDuration);
+    var planned = savePlanned, standing = planned && catchKind !== 'dive';
+    var dir = planned ? catchDir : (keeperTarget.x < keeperStartX ? -1 : 1);
+    var isDive = !standing && Math.abs(keeperTarget.x - keeperStartX) > 0.6;
+    var contactTilt = planned ? (catchKind === 'dive' ? catchTilt : 0) : (isDive ? diveTilt(keeperTarget.x) * 0.85 : 0);
+    var LOAD = Math.min(0.12, D * 0.25), step = isDive ? dir * 0.18 : 0;
+    var x, y, tilt, k;
+
+    kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
+    if (kHead) kHead.rotation.set(0, 0, 0);
+    if (tt < LOAD) {                                   // the load: crouch and step toward the ball
+      k = smooth01(tt / LOAD);
+      x = keeperStartX + step * k; y = keeperStartY; tilt = 0;
+      kTorso.position.y = 1.0 - 0.16 * k; kTorso.rotation.x = 0.25 * k;
+      kLLeg.rotation.set(-0.45 * k, 0, -0.12); kRLeg.rotation.set(-0.45 * k, 0, 0.12);
+      kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0.85 * k;
+      kLArm.rotation.set(-0.5 * k, 0, -0.5); kRArm.rotation.set(-0.5 * k, 0, 0.5);
+      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.4;
+    } else if (tt <= D) {                              // the leap: a low arc that ends at the ball
+      var u = (tt - LOAD) / Math.max(0.05, D - LOAD), ex = 1 - (1 - u) * (1 - u);
+      var arc = isDive ? 0.1 + 0.12 * Math.min(1, Math.abs(keeperTarget.x - keeperStartX) / 3) : 0;
+      x = keeperStartX + step + (keeperTarget.x - keeperStartX - step) * ex;
+      y = keeperStartY + (keeperTarget.y - keeperStartY) * u + arc * Math.sin(Math.PI * u);
+      tilt = contactTilt * smooth01(Math.min(1, u * 1.15));
+      if (planned) applyCatchPose(catchKind, catchDir);   // gloves where the ball is going
+      else if (isDive) reachArms(dir);
+      if (isDive) diveLegs(dir, 1);
+    } else {                                           // after the save: falling, landing on his side, staying down
+      var f = tt - D;
+      x = keeperTarget.x + (isDive ? dir * 0.35 * (1 - Math.exp(-4 * f)) : 0);
+      y = isDive ? Math.max(0, keeperTarget.y + 0.4 * f - 4.9 * f * f) : keeperTarget.y;
+      var landTilt = (contactTilt !== 0 ? Math.sign(contactTilt) : -dir) * (Math.PI / 2 - 0.12);
+      tilt = isDive ? contactTilt + (landTilt - contactTilt) * smooth01(Math.min(1, f / 0.4)) : contactTilt;
+      if (isDive && y === 0) {                         // down on the grass: a thud and a small bounce
+        if (landT < 0) { landT = f; playSound('catch'); }
+        var b = f - landT;
+        y = 0.07 * Math.exp(-7 * b) * Math.abs(Math.sin(12 * b));
+      }
+      if (planned) applyCatchPose(catchKind, catchDir);
+      else if (isDive) reachArms(dir);
+      if (isDive) {                                    // arms and legs settle once he is down
+        var s = landT >= 0 ? smooth01(Math.min(1, (f - landT) / 0.5)) : 0;
+        diveLegs(dir, 1 - 0.5 * s);
+        if (!caught) { kLArm.rotation.x = kRArm.rotation.x = -0.2 - 0.6 * s; }
+      }
     }
-    var tilt = catching ? (catchKind === 'dive' ? catchTilt * ease : 0)
-      : Math.abs(keeperTarget.x) > 0.5 ? diveTilt(x) : 0;
     keeperBody.position.set(x, y, keeperBody.position.z);
     keeperBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), tilt);
-
     keeperGroup.position.copy(keeperBody.position);
     keeperGroup.quaternion.copy(keeperBody.quaternion);
-    kTorso.position.y = 1.0; kTorso.rotation.set(0, 0, 0);
-    kLLeg.userData.shin.rotation.x = kRLeg.userData.shin.rotation.x = 0;   // straight knees for dives and catches
-    if (kHead) kHead.rotation.set(0, 0, 0);
-    if (catching) {
-      applyCatchPose(catchKind, catchDir);   // gloves where the ball is going
-    } else if (keeperTarget.x < 0) {
-      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
-      kLArm.rotation.set(0, 0, -(Math.PI - 0.3)); kRArm.rotation.set(0, 0, -(Math.PI - 0.95));   // both arms reach to the left
-      kLLeg.rotation.set(0, 0, -0.2); kRLeg.rotation.set(-0.3, 0, 0.3);
-    } else {
-      kLArm.userData.fore.rotation.x = kRArm.userData.fore.rotation.x = -0.25;
-      kRArm.rotation.set(0, 0, Math.PI - 0.3); kLArm.rotation.set(0, 0, Math.PI - 0.95);   // both arms reach to the right
-      kRLeg.rotation.set(0, 0, 0.2); kLLeg.rotation.set(-0.3, 0, -0.3);
-    }
   }
 
   // While the student aims, the keeper does what real keepers do on the line, picking a move at random (never the same one
@@ -2444,7 +2477,7 @@
       world.step(1 / 120, delta, 8);   // small steps, so a fast ball doesn't skip through the net
       keepInNet();
       // a save is a save, however fast the shot: stop the ball in front of the line
-      if (enforceSave && ballBody.position.z < (catching ? catchZ + BALL_RADIUS : 1.2) && ballBody.velocity.z < 0) {
+      if (enforceSave && ballBody.position.z < (savePlanned ? catchZ + BALL_RADIUS : 1.2) && ballBody.velocity.z < 0) {
         hitKeeper = true;
         enforceSave = false;
         if (catching) { caught = true; caughtTime = 0; playSound('catch'); }   // into the gloves (see holdCaughtBall)
