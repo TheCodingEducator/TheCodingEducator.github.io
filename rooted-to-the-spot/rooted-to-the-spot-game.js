@@ -58,13 +58,13 @@
   // The cup: a knockout of three matches (quarterfinal, semifinal, final), each against a stronger team. A cup run in
   // progress is saved, so a student can pick it up next class.
   var TEAMS = [
-    { en: 'Barca', c: 0xa50044 }, { en: 'PSG', c: 0x0b2a5b }, { en: 'Madrid', c: 0xf1f5f9 }, { en: 'Fire', c: 0xc8102e },
-    { en: 'Arsenal', c: 0xdb0007 }, { en: 'City', c: 0x6cabdd }, { en: 'Man U', c: 0xda291c }, { en: 'Liverpool', c: 0xc8102e },
-    { en: 'Bayern', c: 0xdc052d }, { en: 'Juventus', c: 0x111111 }, { en: 'AC Milan', c: 0x9b111e }, { en: 'Chelsea', c: 0x034694 },
-    { en: 'Inter', c: 0x0068a8 }, { en: 'Dortmund', c: 0xfde100 }
+    { en: 'Barcelona', es: 'Barcelona', c: 0xa50044 }, { en: 'Paris', es: 'París', c: 0x0b2a5b }, { en: 'Madrid', es: 'Madrid', c: 0xf1f5f9 }, { en: 'Chicago', es: 'Chicago', c: 0xc8102e },
+    { en: 'Islington', es: 'Islington', c: 0xdb0007 }, { en: 'Manchester', es: 'Mánchester', c: 0x6cabdd }, { en: 'Trafford', es: 'Trafford', c: 0xda291c }, { en: 'Liverpool', es: 'Liverpool', c: 0xc8102e },
+    { en: 'Munich', es: 'Múnich', c: 0xdc052d }, { en: 'Turin', es: 'Turín', c: 0x111111 }, { en: 'Milan', es: 'Milán', c: 0x9b111e }, { en: 'London', es: 'Londres', c: 0x034694 },
+    { en: 'Lombardy', es: 'Lombardía', c: 0x0068a8 }, { en: 'Dortmund', es: 'Dortmund', c: 0xfde100 }
   ];
   var CUP_ROUNDS = [T('Quarterfinal', 'Cuartos de final'), T('Semifinal', 'Semifinal'), T('Final', 'Final')];
-  function teamName(i) { return TEAMS[i].en; }
+  function teamName(i) { return T(TEAMS[i].en, TEAMS[i].es); }
   var aimPower = 0, hitKeeper = false, kickPhase = 0, isAutoMiss = false, resultDecided = false, enforceSave = false;
   var resultTimeout = null, keysDown = {};
 
