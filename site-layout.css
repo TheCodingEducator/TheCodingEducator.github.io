@@ -178,6 +178,8 @@ body.site-fit { padding-top: 44px; box-sizing: border-box; }
   html .site-bar .back-link, html .site-bar .fullscreen-btn, .site-bar .sb-toggle { min-height: 38px; min-width: 38px; justify-content: center; }
   /* keyboard-only tips in the games (Press Enter, Esc goes back ...) aren't shown on phones and tablets */
   .kbdTip, .keys-help, .hint.keys { display: none !important; }
+  /* the Exit Fullscreen button: small, tucked into the top-left corner, so it covers as little of the game as possible */
+  html .pseudo-fullscreen-exit-btn.visible { top: 4px !important; left: 4px !important; padding: 4px 9px !important; font-size: 12px !important; gap: 4px !important; min-height: 0 !important; border-radius: 999px !important; }
 }
 /* the Teacher guide link looks like the bar's other buttons */
 .site-topbar a.sb-guide { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; }

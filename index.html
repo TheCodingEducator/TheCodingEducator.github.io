@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-langs="en es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -57,6 +57,9 @@
   .site-nav { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 15px; }
   .site-nav a { color: var(--muted); text-decoration: none; font-weight: 700; }
   .site-nav a:hover { color: var(--accent); }
+  .lang-btn { font: inherit; font-weight: 800; color: var(--accent); background: none; border: 2px solid var(--line, #f0e2c8); border-radius: 999px; padding: 2px 12px; cursor: pointer; }
+  .lang-btn:hover { border-color: var(--accent); }
+  html[lang="es"] .latest { display: none; }   /* the latest-update line is in English, and changes with every update */
 
   .hero {
     max-width: 1080px; margin: 0 auto; padding: 36px 24px 28px;
@@ -129,6 +132,7 @@
   }
   @media (prefers-reduced-motion: reduce) { .card, .grades button { transition: none; } .card:hover, .grades button:hover { transform: none; } }
 </style>
+<script src="site-lang.js?v=17fe73a6"></script>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -138,24 +142,25 @@
   <div class="topbar">
     <a class="brand" href="./"><img src="logo-icon.svg" alt="" width="44" height="44">Student Math Games</a>
     <nav class="site-nav" aria-label="Site">
-      <a href="teachers">&#127822; For teachers</a>
-      <a href="whats-new">&#10024; What's new</a>
-      <a href="my-stats">&#128202; My Stats &amp; Badges</a>
-      <a href="about">About</a>
+      <a href="teachers" data-es="&#127822; Para docentes">&#127822; For teachers</a>
+      <a href="whats-new" data-es="&#10024; Novedades">&#10024; What's new</a>
+      <a href="my-stats" data-es="&#128202; Mis estadísticas e insignias">&#128202; My Stats &amp; Badges</a>
+      <a href="about" data-es="Acerca de">About</a>
+      <button type="button" class="lang-btn" id="lang-btn" lang="es" aria-label="Cambiar a español" data-es-aria="Switch to English" data-es="&#127760; English">&#127760; Español</button>
     </nav>
   </div>
 
   <div class="hero">
     <div>
-      <h1>Free Online Math Games for Students &amp; Teachers</h1>
-      <p class="big">Math is more fun when you play it.</p>
-      <p class="lede">Free games for grades 2&ndash;8, designed by a math teacher. No accounts, no logins, nothing to install. Pick your grade and press play.</p>
+      <h1 data-es="Juegos de matemáticas gratis en línea para estudiantes y docentes">Free Online Math Games for Students &amp; Teachers</h1>
+      <p data-es="Las matemáticas son más divertidas cuando juegas." class="big">Math is more fun when you play it.</p>
+      <p data-es="Juegos gratis para 2.º a 8.º grado, diseñados por un maestro de matemáticas. Sin cuentas, sin iniciar sesión, nada que instalar. Elige tu grado y pulsa jugar." class="lede">Free games for grades 2&ndash;8, designed by a math teacher. No accounts, no logins, nothing to install. Pick your grade and press play.</p>
       <div class="grades" role="group" aria-label="Show games for a grade">
-        <button type="button" style="--c: var(--g8)" data-g="8" aria-pressed="false">Grade 8</button>
-        <button type="button" style="--c: var(--g7)" data-g="7" aria-pressed="false">Grade 7</button>
-        <button type="button" style="--c: var(--g6)" data-g="6" aria-pressed="false">Grade 6</button>
-        <button type="button" style="--c: var(--g25)" data-g="2 3 4 5" aria-pressed="false">Grades 2&ndash;5</button>
-        <button type="button" class="all" data-g="" aria-pressed="true">All games</button>
+        <button type="button" style="--c: var(--g8)" data-g="8" aria-pressed="false" data-es="8.º grado">Grade 8</button>
+        <button type="button" style="--c: var(--g7)" data-g="7" aria-pressed="false" data-es="7.º grado">Grade 7</button>
+        <button type="button" style="--c: var(--g6)" data-g="6" aria-pressed="false" data-es="6.º grado">Grade 6</button>
+        <button type="button" style="--c: var(--g25)" data-g="2 3 4 5" aria-pressed="false" data-es="2.º a 5.º grado">Grades 2&ndash;5</button>
+        <button type="button" class="all" data-g="" aria-pressed="true" data-es="Todos los juegos">All games</button>
       </div>
       <p class="grades-note" id="grades-note" aria-live="polite"></p>
     </div>
@@ -164,16 +169,16 @@
 </header>
 
 <section class="facts" aria-label="About these games">
-  <p class="fact"><b>Made by a math teacher</b>I'm an 8th grade math teacher, and I design every game around a Common Core standard, from counting coins to the Pythagorean theorem.</p>
-  <p class="fact"><b>Safe for school</b>No accounts, no logins and no student data. The games run on student devices and projectors.</p>
-  <p class="fact"><b>Ready to teach</b>Every game has a <a href="teachers">teacher guide</a>, a worksheet and an exit ticket. All games work with the keyboard and screen readers.</p>
+  <p class="fact" data-es="<b>Hecho por un maestro de matemáticas</b>Soy maestro de matemáticas de 8.º grado y diseño cada juego en torno a un estándar Common Core, desde contar monedas hasta el teorema de Pitágoras."><b>Made by a math teacher</b>I'm an 8th grade math teacher, and I design every game around a Common Core standard, from counting coins to the Pythagorean theorem.</p>
+  <p class="fact" data-es="<b>Seguro para la escuela</b>Sin cuentas, sin iniciar sesión y sin datos de estudiantes. Los juegos funcionan en los dispositivos de los estudiantes y en proyectores."><b>Safe for school</b>No accounts, no logins and no student data. The games run on student devices and projectors.</p>
+  <p class="fact" data-es="<b>Listo para enseñar</b>Cada juego tiene una <a href=&quot;teachers&quot;>guía para docentes</a>, una hoja de práctica y un boleto de salida. Todos los juegos funcionan con el teclado y con lectores de pantalla."><b>Ready to teach</b>Every game has a <a href="teachers">teacher guide</a>, a worksheet and an exit ticket. All games work with the keyboard and screen readers.</p>
 </section>
-<p class="latest"><strong style="color: var(--text);">Latest update, October 14:</strong> Rooted to the Spot: be the goalkeeper, sudden death and a cup; a much simpler For Teachers page; more of every game in Spanish; and in Pythagorean Platforms, a giant banana for the monkey and a shorter How to Play. <a href="whats-new">See everything that's new &rarr;</a></p>
+<p class="latest"><strong style="color: var(--text);">Latest update, October 15:</strong> The home page in Spanish, and every game checked and improved for phones. <a href="whats-new">See everything that's new &rarr;</a></p>
 
 <main>
 
   <section class="topic-group">
-  <h2 class="topic">Lines and Slope <span style="--c: var(--g8)">Grade 8</span></h2>
+  <h2 class="topic"><span data-es="Rectas y pendiente">Lines and Slope</span> <span style="--c: var(--g8)" data-es="8.º grado">Grade 8</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="8">
@@ -181,16 +186,16 @@
       <img class="thumb" src="og/thumbs/linear-world-cup.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Linear World Cup</h3>
-        <p>Score goals and complete passes by writing the slope-intercept equation of the line to your target.</p>
+        <p data-es="Marca goles y completa pases escribiendo la ecuación pendiente-intersección de la recta hacia tu objetivo.">Score goals and complete passes by writing the slope-intercept equation of the line to your target.</p>
       </div>
     </a>
-    <div class="card-links"><a href="linear-world-cup/">&#9654; Play</a><a href="linear-world-cup/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="linear-world-cup/" data-es="&#9654; Jugar">&#9654; Play</a><a href="linear-world-cup/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
 
   <section class="topic-group">
-  <h2 class="topic">Geometry <span style="--c: var(--g7)">Grades 7&ndash;8</span></h2>
+  <h2 class="topic"><span data-es="Geometría">Geometry</span> <span style="--c: var(--g7)" data-es="7.º a 8.º grado">Grades 7&ndash;8</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="8">
@@ -198,10 +203,10 @@
       <img class="thumb" src="og/thumbs/pythagorean-platforms.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Pythagorean Platforms</h3>
-        <p>Swing through the jungle with the Pythagorean theorem: find the length of your rope or the distance to the next platform, one step per swing, then watch the missing side land in slow motion.</p>
+        <p data-es="Balancéate por la selva con el teorema de Pitágoras: halla el largo de tu cuerda o la distancia a la siguiente plataforma, un paso por balanceo, y mira caer el lado que falta en cámara lenta.">Swing through the jungle with the Pythagorean theorem: find the length of your rope or the distance to the next platform, one step per swing, then watch the missing side land in slow motion.</p>
       </div>
     </a>
-    <div class="card-links"><a href="pythagorean-platforms/">&#9654; Play</a><a href="pythagorean-platforms/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="pythagorean-platforms/" data-es="&#9654; Jugar">&#9654; Play</a><a href="pythagorean-platforms/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="8">
@@ -209,10 +214,10 @@
       <img class="thumb" src="og/thumbs/similarity-builder.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Similarity Builder</h3>
-        <p>Run, jump, and dodge obstacles, then build a bridge across each gap by finding scale factors and missing sides of similar figures - or practice just the question types you choose.</p>
+        <p data-es="Corre, salta y esquiva obstáculos, y construye un puente en cada hueco hallando factores de escala y lados que faltan en figuras semejantes, o practica solo los tipos de preguntas que elijas.">Run, jump, and dodge obstacles, then build a bridge across each gap by finding scale factors and missing sides of similar figures - or practice just the question types you choose.</p>
       </div>
     </a>
-    <div class="card-links"><a href="similarity-builder/">&#9654; Play</a><a href="similarity-builder/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="similarity-builder/" data-es="&#9654; Jugar">&#9654; Play</a><a href="similarity-builder/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="8">
@@ -220,10 +225,10 @@
       <img class="thumb" src="og/thumbs/lets-get-to-the-point.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Let's Get to the Point</h3>
-        <p>Slide, spin, and flip a point on the coordinate grid to master translations, rotations, and reflections.</p>
+        <p data-es="Desliza, gira y refleja un punto en la cuadrícula de coordenadas para dominar las traslaciones, rotaciones y reflexiones.">Slide, spin, and flip a point on the coordinate grid to master translations, rotations, and reflections.</p>
       </div>
     </a>
-    <div class="card-links"><a href="lets-get-to-the-point/">&#9654; Play</a><a href="lets-get-to-the-point/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="lets-get-to-the-point/" data-es="&#9654; Jugar">&#9654; Play</a><a href="lets-get-to-the-point/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="8">
@@ -231,10 +236,10 @@
       <img class="thumb" src="og/thumbs/math-billiards.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Math Billiards</h3>
-        <p>A real pool game where every shot is an angle problem: aim anywhere, solve for x with complementary, supplementary, vertical and parallel-line angles, and watch your angle decide where the ball goes.</p>
+        <p data-es="Un juego de billar de verdad en el que cada tiro es un problema de ángulos: apunta donde quieras, halla x con ángulos complementarios, suplementarios, opuestos por el vértice y de rectas paralelas, y mira cómo tu ángulo decide adónde va la bola.">A real pool game where every shot is an angle problem: aim anywhere, solve for x with complementary, supplementary, vertical and parallel-line angles, and watch your angle decide where the ball goes.</p>
       </div>
     </a>
-    <div class="card-links"><a href="math-billiards/">&#9654; Play</a><a href="math-billiards/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="math-billiards/" data-es="&#9654; Jugar">&#9654; Play</a><a href="math-billiards/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="7 8">
@@ -242,10 +247,10 @@
       <img class="thumb" src="og/thumbs/laser-heist-angle-breaker.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Laser Heist: Angle Breaker</h3>
-        <p>Climb Vertex Tower to steal back the Golden Angle: aim a laser with complementary, supplementary, vertical and parallel-line angles to knock out the security, then sneak past the guards.</p>
+        <p data-es="Sube a la Torre Vértice para recuperar el Ángulo Dorado: apunta un láser con ángulos complementarios, suplementarios, opuestos por el vértice y de rectas paralelas para apagar la seguridad, y pasa a escondidas junto a los guardias.">Climb Vertex Tower to steal back the Golden Angle: aim a laser with complementary, supplementary, vertical and parallel-line angles to knock out the security, then sneak past the guards.</p>
       </div>
     </a>
-    <div class="card-links"><a href="laser-heist-angle-breaker/">&#9654; Play</a><a href="laser-heist-angle-breaker/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="laser-heist-angle-breaker/" data-es="&#9654; Jugar">&#9654; Play</a><a href="laser-heist-angle-breaker/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="7 8">
@@ -253,16 +258,16 @@
       <img class="thumb" src="og/thumbs/bank-shot-angle-golf.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Bank Shot: Angle Golf</h3>
-        <p>Solve complementary and supplementary bank-shot angles, then aim and putt your way around a 9-hole mini golf course.</p>
+        <p data-es="Resuelve ángulos complementarios y suplementarios de rebote, y luego apunta y golpea en un campo de minigolf de 9 hoyos.">Solve complementary and supplementary bank-shot angles, then aim and putt your way around a 9-hole mini golf course.</p>
       </div>
     </a>
-    <div class="card-links"><a href="bank-shot-angle-golf/">&#9654; Play</a><a href="bank-shot-angle-golf/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="bank-shot-angle-golf/" data-es="&#9654; Jugar">&#9654; Play</a><a href="bank-shot-angle-golf/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
 
   <section class="topic-group">
-  <h2 class="topic">Expressions and Equations <span style="--c: var(--g6)">Grades 6&ndash;8</span></h2>
+  <h2 class="topic"><span data-es="Expresiones y ecuaciones">Expressions and Equations</span> <span style="--c: var(--g6)" data-es="6.º a 8.º grado">Grades 6&ndash;8</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="6 7 8">
@@ -270,10 +275,10 @@
       <img class="thumb" src="og/thumbs/tip-the-scales.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Tip the Scales</h3>
-        <p>Balance a literal scale to solve linear equations, from one-step basics to distributing and combining like terms.</p>
+        <p data-es="Equilibra una balanza de verdad para resolver ecuaciones lineales, desde las de un paso hasta las que piden distribuir y combinar términos semejantes.">Balance a literal scale to solve linear equations, from one-step basics to distributing and combining like terms.</p>
       </div>
     </a>
-    <div class="card-links"><a href="tip-the-scales/">&#9654; Play</a><a href="tip-the-scales/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="tip-the-scales/" data-es="&#9654; Jugar">&#9654; Play</a><a href="tip-the-scales/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="8">
@@ -281,10 +286,10 @@
       <img class="thumb" src="og/thumbs/exponent-racer.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Exponent Racer</h3>
-        <p>Race down the road answering exponent questions to keep your fuel up and dodge traffic.</p>
+        <p data-es="Corre por la carretera respondiendo preguntas de exponentes para no quedarte sin combustible y esquivar el tráfico.">Race down the road answering exponent questions to keep your fuel up and dodge traffic.</p>
       </div>
     </a>
-    <div class="card-links"><a href="exponent-racer/">&#9654; Play</a><a href="exponent-racer/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="exponent-racer/" data-es="&#9654; Jugar">&#9654; Play</a><a href="exponent-racer/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="8">
@@ -292,10 +297,10 @@
       <img class="thumb" src="og/thumbs/exponent-hoops.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Exponent Hoops</h3>
-        <p>Shoot hoops by solving exponent rules - play solo or head-to-head with a friend.</p>
+        <p data-es="Encesta resolviendo reglas de exponentes: juega solo o contra un amigo.">Shoot hoops by solving exponent rules - play solo or head-to-head with a friend.</p>
       </div>
     </a>
-    <div class="card-links"><a href="exponent-hoops/">&#9654; Play</a><a href="exponent-hoops/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="exponent-hoops/" data-es="&#9654; Jugar">&#9654; Play</a><a href="exponent-hoops/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
   <div class="card" data-grades="8">
@@ -303,16 +308,16 @@
       <img class="thumb" src="og/thumbs/rooted-to-the-spot.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Rooted to the Spot</h3>
-        <p>Square roots, cube roots and estimating square roots earn your penalty kicks - then aim for the top corner in a 3D stadium.</p>
+        <p data-es="Raíces cuadradas, raíces cúbicas y estimaciones te ganan cada penal; luego ve a la portería para atajar los tiros del otro equipo. Juega un amistoso, una copa o contra un amigo.">Square roots, cube roots and estimates earn your penalty kicks - then go in goal to save the other team's. Play a friendly, a cup or a friend.</p>
       </div>
     </a>
-    <div class="card-links"><a href="rooted-to-the-spot/">&#9654; Play</a><a href="rooted-to-the-spot/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="rooted-to-the-spot/" data-es="&#9654; Jugar">&#9654; Play</a><a href="rooted-to-the-spot/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
 
   <section class="topic-group">
-  <h2 class="topic">Ratios and Proportions <span style="--c: var(--g6)">Grades 6&ndash;7</span></h2>
+  <h2 class="topic"><span data-es="Razones y proporciones">Ratios and Proportions</span> <span style="--c: var(--g6)" data-es="6.º a 7.º grado">Grades 6&ndash;7</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="6 7">
@@ -320,16 +325,16 @@
       <img class="thumb" src="og/thumbs/proportional-plates.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Proportional Plates</h3>
-        <p>Run a diner as the chef: take orders, scale recipes and prices with proportions, and serve every plate before your customers' smiles turn into scowls - or practice just the skills you choose.</p>
+        <p data-es="Dirige un restaurante como chef: toma pedidos, ajusta recetas y precios con proporciones y sirve cada plato antes de que tus clientes se enojen, o practica solo las destrezas que elijas.">Run a diner as the chef: take orders, scale recipes and prices with proportions, and serve every plate before your customers' smiles turn into scowls - or practice just the skills you choose.</p>
       </div>
     </a>
-    <div class="card-links"><a href="proportional-plates/">&#9654; Play</a><a href="proportional-plates/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="proportional-plates/" data-es="&#9654; Jugar">&#9654; Play</a><a href="proportional-plates/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
 
   <section class="topic-group">
-  <h2 class="topic">The Coordinate Plane <span style="--c: var(--g25)">Grades 5&ndash;6</span></h2>
+  <h2 class="topic"><span data-es="El plano de coordenadas">The Coordinate Plane</span> <span style="--c: var(--g25)" data-es="5.º a 6.º grado">Grades 5&ndash;6</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="5 6">
@@ -337,16 +342,16 @@
       <img class="thumb" src="og/thumbs/battle-on-the-coordinate-plane.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Battle on the Coordinate Plane</h3>
-        <p>Hide your fleet, fire with ordered pairs, and watch a plane fly x first, then y. Find the enemy's shots on your own board and sink both ships - first quadrant, all four quadrants, or a timed Coordinate Commander mode.</p>
+        <p data-es="Esconde tu flota, dispara con pares ordenados y mira un avión volar primero en x y luego en y. Encuentra los disparos enemigos en tu propio tablero y hunde los dos barcos: primer cuadrante, los cuatro cuadrantes o el modo con tiempo Coordinate Commander.">Hide your fleet, fire with ordered pairs, and watch a plane fly x first, then y. Find the enemy's shots on your own board and sink both ships - first quadrant, all four quadrants, or a timed Coordinate Commander mode.</p>
       </div>
     </a>
-    <div class="card-links"><a href="battle-on-the-coordinate-plane/">&#9654; Play</a><a href="battle-on-the-coordinate-plane/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="battle-on-the-coordinate-plane/" data-es="&#9654; Jugar">&#9654; Play</a><a href="battle-on-the-coordinate-plane/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
 
   <section class="topic-group">
-  <h2 class="topic">Multiplication and Area <span style="--c: var(--g25)">Grade 3</span></h2>
+  <h2 class="topic"><span data-es="Multiplicación y área">Multiplication and Area</span> <span style="--c: var(--g25)" data-es="3.er grado">Grade 3</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="3">
@@ -354,16 +359,16 @@
       <img class="thumb" src="og/thumbs/area-artist.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Area Artist</h3>
-        <p>Multiply to paint a hidden pixel-art masterpiece one rectangle at a time - pick animals, pets, space, sports, fashion and more - or design your own art in the studio.</p>
+        <p data-es="Multiplica para pintar una obra de arte escondida, un rectángulo a la vez (animales, mascotas, espacio, deportes, moda y más), o diseña tu propio arte en el estudio.">Multiply to paint a hidden pixel-art masterpiece one rectangle at a time - pick animals, pets, space, sports, fashion and more - or design your own art in the studio.</p>
       </div>
     </a>
-    <div class="card-links"><a href="area-artist/">&#9654; Play</a><a href="area-artist/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="area-artist/" data-es="&#9654; Jugar">&#9654; Play</a><a href="area-artist/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
 
   <section class="topic-group">
-  <h2 class="topic">Money <span style="--c: var(--g25)">Grade 2</span></h2>
+  <h2 class="topic"><span data-es="Dinero">Money</span> <span style="--c: var(--g25)" data-es="2.º grado">Grade 2</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="2">
@@ -371,10 +376,10 @@
       <img class="thumb" src="og/thumbs/piggy-bank-math.jpg" alt="" loading="lazy" width="600" height="315">
       <div class="card-body">
         <h3>Piggy Bank Math</h3>
-        <p>Click pennies, nickels, dimes, and quarters to match a target amount before time runs out.</p>
+        <p data-es="Haz clic en centavos y monedas de 5, 10 y 25 centavos para llegar a la cantidad exacta antes de que se acabe el tiempo.">Click pennies, nickels, dimes, and quarters to match a target amount before time runs out.</p>
       </div>
     </a>
-    <div class="card-links"><a href="piggy-bank-math/">&#9654; Play</a><a href="piggy-bank-math/guide">Full Teacher Guide</a></div>
+    <div class="card-links"><a href="piggy-bank-math/" data-es="&#9654; Jugar">&#9654; Play</a><a href="piggy-bank-math/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
   </div>
   </section>
@@ -382,7 +387,7 @@
 </main>
 
 <footer>
-  &copy; 2026 Mr. H. All Rights Reserved. &middot; <a href="teachers" style="color: var(--muted);">For teachers</a> &middot; <a href="whats-new" style="color: var(--muted);">What's new</a> &middot; <a href="about" style="color: var(--muted);">About</a> &middot; <a href="privacy-policy" style="color: var(--muted);">Privacy Policy</a> &middot; <a href="terms" style="color: var(--muted);">Terms of Service</a> &middot; <a href="accessibility" style="color: var(--muted);">Accessibility</a> &middot; <a href="contact" style="color: var(--muted);">Contact</a>
+  <span data-es="&copy; 2026 Mr. H. Todos los derechos reservados.">&copy; 2026 Mr. H. All Rights Reserved.</span> &middot; <a href="teachers" style="color: var(--muted);" data-es="Para docentes">For teachers</a> &middot; <a href="whats-new" style="color: var(--muted);" data-es="Novedades">What's new</a> &middot; <a href="about" style="color: var(--muted);" data-es="Acerca de">About</a> &middot; <a href="privacy-policy" style="color: var(--muted);" data-es="Privacidad">Privacy Policy</a> &middot; <a href="terms" style="color: var(--muted);" data-es="Condiciones de uso">Terms of Service</a> &middot; <a href="accessibility" style="color: var(--muted);" data-es="Accesibilidad">Accessibility</a> &middot; <a href="contact" style="color: var(--muted);" data-es="Contacto">Contact</a>
 </footer>
 
 <script>
@@ -397,7 +402,8 @@
       c.hidden = !ok; if (ok) n++;
     });
     document.querySelectorAll('.topic-group').forEach(function (s) { s.hidden = !s.querySelector('.card:not([hidden])'); });
-    note.textContent = want.length ? n + (n === 1 ? ' game' : ' games') + ' for ' + btn.textContent + '.' : '';
+    var T = window.tl || function (en) { return en; };
+    note.textContent = want.length ? n + T(n === 1 ? ' game' : ' games', n === 1 ? ' juego' : ' juegos') + T(' for ', ' para ') + btn.textContent + '.' : '';
   }
   btns.forEach(function (b) {
     b.addEventListener('click', function () {
@@ -406,6 +412,14 @@
     });
   });
 })();
+</script>
+<script>
+// The language button switches the page between English and Spanish; the choice is shared with every game on this device
+document.getElementById('lang-btn').addEventListener('click', function () {
+  var es = document.documentElement.lang === 'es';
+  try { localStorage.setItem('site_lang', es ? 'en' : 'es'); } catch (e) {}
+  location.reload();
+});
 </script>
 
 </body>
