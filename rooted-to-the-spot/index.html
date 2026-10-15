@@ -213,15 +213,35 @@
   #ps .card.pre { border-top: 5px solid var(--green); width: min(100%, 720px); }
   #ps .card.pre h2 { margin: 0 0 8px; font: 700 clamp(34px, 7cqmin, 56px) 'Teko', sans-serif; line-height: 1; }
   #ps .scout { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.4); color: #dcfce7; border-radius: 12px; padding: 8px 12px; margin: 10px 0 0; font-weight: 600; font-size: clamp(14px, 2.6cqmin, 17px); }
-  #ps .bracket { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(6px, 1.6cqmin, 14px); text-align: left; }
-  #ps .bcol { display: flex; flex-direction: column; gap: 6px; }
-  #ps .bcol .bm { margin: auto 0; }   /* the headings stay at the top; the matches spread out below */
-  #ps .bcol h3 { margin: 0; font: 600 clamp(15px, 2.8cqmin, 20px) 'Teko', sans-serif; letter-spacing: 0.06em; color: var(--yellow); text-transform: uppercase; }
-  #ps .bm { position: relative; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 8px; padding: 3px 34px 3px 8px; font-size: clamp(11px, 2.1cqmin, 14px); line-height: 1.35; }
-  #ps .bm span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #ps .bm span.w { font-weight: 800; color: #fff; } #ps .bm span.l { color: var(--soft); }
-  #ps .bm b { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--yellow); font-size: 0.95em; }
-  #ps .bm.now { border-color: var(--yellow); box-shadow: 0 0 10px rgba(250,204,21,0.4); }
+  /* the cup bracket: each pair of matches is joined by a bracket line to the match its winners play next */
+  #ps .bkt { --bl: rgba(255,255,255,0.35); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 0.8fr); column-gap: 20px; text-align: left; margin: 4px 0 0; }
+  #ps .bkt .bcol { display: flex; flex-direction: column; min-width: 0; }
+  #ps .bkt h3 { margin: 0 0 4px; font: 600 clamp(14px, 2.6cqmin, 19px) 'Teko', sans-serif; letter-spacing: 0.06em; color: var(--yellow); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ps .bkt .pair { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 6px; position: relative; padding: 3px 0; }
+  #ps .bkt .pair::after { content: ""; position: absolute; right: -11px; top: 25%; bottom: 25%; width: 10px; border: 2px solid var(--bl); border-left: 0; border-radius: 0 7px 7px 0; }
+  #ps .bkt .solo { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; }
+  #ps .bkt .r2 .solo::after { content: ""; position: absolute; right: -20px; top: 50%; width: 19px; border-top: 2px solid var(--bl); }
+  #ps .bkt .r1 .bm::before, #ps .bkt .r2 .bm::before { content: ""; position: absolute; left: -10px; top: 50%; width: 9px; border-top: 2px solid var(--bl); }
+  #ps .bkt .bm { position: relative; background: rgba(255,255,255,0.06); border: 2px solid var(--line); border-radius: 9px; padding: 3px 30px 3px 8px; font-size: clamp(11px, 2.1cqmin, 14px); line-height: 1.35; }
+  #ps .bkt .bm span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e2e8f0; }
+  #ps .bkt .bm span.w { font-weight: 800; color: #fff; } #ps .bkt .bm span.l { color: #64748b; }
+  #ps .bkt .bm b { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); color: var(--yellow); font-size: 0.9em; }
+  #ps .bkt .bm.you { border-color: var(--blue); background: rgba(59,130,246,0.14); }
+  #ps .bkt .bm.out { border-color: rgba(239,68,68,0.6); background: rgba(239,68,68,0.1); }
+  #ps .bkt .bm.now { border-color: var(--yellow); box-shadow: 0 0 12px rgba(250,204,21,0.5); }
+  #ps .bkt .champ { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: clamp(30px, 6cqmin, 46px); line-height: 1; filter: grayscale(0.8) opacity(0.6); }
+  #ps .bkt .champ span { font: 700 clamp(13px, 2.4cqmin, 17px) 'Inter', sans-serif; color: var(--soft); }
+  #ps .bkt .champ.won { filter: drop-shadow(0 0 12px rgba(250,204,21,0.7)); } #ps .bkt .champ.won span { color: var(--yellow); }
+  /* narrow screens (phones held upright): the score drops under the two names, so the names get the whole box */
+  @container (max-width: 560px) {
+    #ps .bkt { grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 0.55fr); column-gap: 14px; }
+    #ps .bkt .bm { padding: 2px 5px; font-size: 11px; }
+    #ps .bkt .bm b { position: static; transform: none; display: block; font-size: 10px; line-height: 1.2; }
+    #ps .bkt .pair::after { right: -8px; width: 7px; } #ps .bkt .r2 .solo::after { right: -14px; width: 13px; }
+    #ps .bkt .r1 .bm::before, #ps .bkt .r2 .bm::before { left: -8px; width: 7px; }
+    #ps .bkt h3 { font-size: 12px; letter-spacing: 0.02em; }
+    #ps .bkt .r3 h3 { visibility: hidden; }   /* the trophy says it */
+  }
   #ps .qor { font-size: 0.6em; font-weight: 600; color: var(--soft); margin: 0 0.2em; }
   #ps .choices .btn .rt { vertical-align: middle; }
   #ps .nl-pt.alt { top: 34px; } #ps .nl-pt.alt b { color: #60a5fa; } #ps .nl-pt.alt::after { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
@@ -342,6 +362,16 @@
           <div id="pre-bracket" hidden></div>
           <p class="scout" id="pre-scout"></p>
           <div class="go-row"><button type="button" class="btn green" id="pre-go" data-es="¡A JUGAR!">KICK OFF</button></div>
+        </div>
+      </div>
+
+      <!-- After every cup match: the bracket with the result filled in -->
+      <div class="scr solid" id="scr-bracket" hidden>
+        <div class="card pre bk">
+          <div class="kicker" id="bk-kicker"></div>
+          <h2 id="bk-title"></h2>
+          <div id="bk-body"></div>
+          <div class="go-row"><button type="button" class="btn green" id="bk-go" data-es="VER TUS RESULTADOS">SEE YOUR RESULTS</button></div>
         </div>
       </div>
 
@@ -477,7 +507,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="rooted-to-the-spot-game.js?v=4a727048"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="rooted-to-the-spot-game.js?v=fa075095"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>

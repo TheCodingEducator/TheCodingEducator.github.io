@@ -28,7 +28,7 @@
   // ---------- DOM ----------
   var $ = function (id) { return document.getElementById(id); };
   var app = $('ps'), canvas = $('ps-canvas');
-  var scrPre = $('scr-pre'), scrTitle = $('scr-title'), scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
+  var scrBracket = $('scr-bracket'), scrPre = $('scr-pre'), scrTitle = $('scr-title'), scrMenu = $('scr-menu'), scrQ = $('scr-q'), scrExp = $('scr-exp'), scrOver = $('scr-over');
   var qIn = $('q-in'), qIn2 = $('q-in2'), activeIn = null, msg = $('msg'), chance = $('chance'), aimHint = $('aimhint'), hud = $('hud');
   var isTouch = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
   if (isTouch) [qIn, qIn2].forEach(function (el) { el.readOnly = true; el.setAttribute('inputmode', 'none'); });   // the on-screen pad instead of the phone keyboard
@@ -2494,23 +2494,37 @@
     }
     return cup;
   }
-  function bracketHTML(cup) {
-    var you = T('You', 'Tú'), N = function (i) { return teamName(i); };
-    var m = function (a, b, sc, now) {   // a match: the winner (if played) is the first team
-      return '<div class="bm' + (now ? ' now' : '') + '"><span class="' + (sc ? 'w' : '') + '">' + a + '</span><span class="' + (sc ? 'l' : '') + '">' + b + '</span>' +
-        (sc ? '<b>' + sc + '</b>' : '') + '</div>';
+  // The cup bracket, drawn as a real bracket: quarterfinals, semifinals, the final and the trophy, with lines joining each
+  // pair of matches to the match their winners play next. The student's own matches are outlined in blue (the next one
+  // glows); winners are bold, losers faded. lostAt: the round the student was knocked out in (-1 if still in).
+  function bracketHTML(cup, lostAt) {
+    if (lostAt === undefined) lostAt = -1;
+    var you = T('You', 'Tú'), N = function (i) { return teamName(i); }, r = cup.round, mine = cup.mine || [];
+    var sc = function (p) { return p[0] + '–' + p[1]; };
+    var qfDone = r >= 1 || lostAt >= 0, sfDone = r >= 2 || lostAt >= 1;
+    // a match: two rows (top, bottom), each { n: name, w: won, l: lost }, an optional score, and classes for the box
+    var box = function (top, bot, score, cls) {
+      var row = function (t) { return '<span class="' + (t.w ? 'w' : t.l ? 'l' : '') + '">' + t.n + '</span>'; };
+      return '<div class="bm' + (cls ? ' ' + cls : '') + '">' + row(top) + row(bot) + (score ? '<b>' + score + '</b>' : '') + '</div>';
     };
-    var sc = function (p) { return p[0] + '–' + p[1]; }, r = cup.round, mine = cup.mine || [];
-    var yours = function (k, opp) {   // the student's own match: they won it if it has a result (a loss ends the cup)
-      return mine[k] ? m(you, N(opp), mine[k]) : m(you, r >= k ? N(opp) : '?', '', r === k);
+    var yours = function (k) {   // the student's match in round k
+      var opp = cup.opps[k];
+      if (lostAt === k) return box({ n: N(opp), w: true }, { n: you, l: true }, mine[k], 'you out');
+      if (mine[k]) return box({ n: you, w: true }, { n: N(opp), l: true }, mine[k], 'you');
+      if (lostAt >= 0 && k > lostAt) return box({ n: k === lostAt + 1 ? N(cup.opps[lostAt]) : '?' }, { n: (k === 1 ? qfDone : sfDone) ? N(cup.opps[k]) : '?' }, '', '');   // whoever knocked you out goes on
+      return box({ n: you }, { n: r >= k ? N(opp) : '?' }, '', 'you' + (r === k ? ' now' : ''));
     };
-    return '<div class="bracket">' +
-      '<div class="bcol"><h3>' + CUP_ROUNDS[0] + '</h3>' + yours(0, cup.opps[0]) +
-        (r >= 1 ? m(N(cup.opps[1]), N(cup.others[0]), sc(cup.sims.qf2)) + m(N(cup.opps[2]), N(cup.others[1]), sc(cup.sims.qf3)) + m(N(cup.others[2]), N(cup.others[3]), sc(cup.sims.qf4))
-          : m(N(cup.opps[1]), N(cup.others[0])) + m(N(cup.opps[2]), N(cup.others[1])) + m(N(cup.others[2]), N(cup.others[3]))) + '</div>' +
-      '<div class="bcol"><h3>' + CUP_ROUNDS[1] + '</h3>' + yours(1, cup.opps[1]) +
-        (r >= 2 ? m(N(cup.opps[2]), N(cup.others[2]), sc(cup.sims.sf2)) : m(r >= 1 ? N(cup.opps[2]) : '?', r >= 1 ? N(cup.others[2]) : '?')) + '</div>' +
-      '<div class="bcol"><h3>' + CUP_ROUNDS[2] + '</h3>' + yours(2, cup.opps[2]) + '</div>' +
+    var other = function (a, b, s, shown) { return shown ? box({ n: N(a), w: true }, { n: N(b), l: true }, sc(s)) : box({ n: N(a) }, { n: N(b) }); };
+    var champ = r >= 3 ? '<div class="champ won">🏆<span>' + you + '</span></div>' : '<div class="champ">🏆<span>?</span></div>';
+    return '<div class="bkt">' +
+      '<div class="bcol r0"><h3>' + CUP_ROUNDS[0] + '</h3>' +
+        '<div class="pair">' + yours(0) + other(cup.opps[1], cup.others[0], cup.sims.qf2, qfDone) + '</div>' +
+        '<div class="pair">' + other(cup.opps[2], cup.others[1], cup.sims.qf3, qfDone) + other(cup.others[2], cup.others[3], cup.sims.qf4, qfDone) + '</div></div>' +
+      '<div class="bcol r1"><h3>' + CUP_ROUNDS[1] + '</h3>' +
+        '<div class="pair">' + yours(1) + (sfDone ? other(cup.opps[2], cup.others[2], cup.sims.sf2, true)
+          : box({ n: qfDone ? N(cup.opps[2]) : '?' }, { n: qfDone ? N(cup.others[2]) : '?' })) + '</div></div>' +
+      '<div class="bcol r2"><h3>' + CUP_ROUNDS[2] + '</h3><div class="solo">' + yours(2) + '</div></div>' +
+      '<div class="bcol r3"><h3>' + T('Champion', 'Campeón') + '</h3><div class="solo">' + champ + '</div></div>' +
     '</div>';
   }
   function cupLine() {
@@ -2522,7 +2536,8 @@
 
   function showOver() {
     state = STATE.OVER;
-    if (window.SiteResults) setTimeout(function () { window.SiteResults.show({ title: T('Your results', 'Tus resultados') }); }, 1500);
+    var showResults = function (ms) { if (window.SiteResults) setTimeout(function () { window.SiteResults.show({ title: T('Your results', 'Tus resultados') }); }, ms); };
+    if (match.mode !== 'cup') showResults(1500);   // a cup match shows it after the bracket (see bracketDone)
     hideAimHud();
     drawHud();
     var a = match.score[0], b = match.score[1], win = a > b, draw = a === b, two = match.mode === 'two';
@@ -2541,7 +2556,9 @@
     var title, again = T('PLAY AGAIN', 'JUGAR DE NUEVO'), note = '';
     if (two) title = draw ? T('A DRAW!', '¡EMPATE!') : T('PLAYER ', '¡GANA EL JUGADOR ') + (win ? 1 : 2) + T(' WINS!', '!');
     else if (match.mode === 'cup') {
-      var cupR = match.cupRound;
+      var cupR = match.cupRound, cupView = JSON.parse(JSON.stringify(loadCup())), lostAt = -1;   // the bracket shown after the match
+      if (win) { cupView.mine[cupR] = a + '–' + b; cupView.round = cupR + 1; }
+      else { cupView.mine[cupR] = b + '–' + a; lostAt = cupR; }   // their score first: they won
       if (win && cupR === 2) {   // the final: the cup!
         title = T('CUP WINNERS! 🏆', '¡CAMPEONES DE COPA! 🏆');
         save('cups', load('cups', 0) + 1); save('cup', null); again = T('NEW CUP', 'NUEVA COPA');
@@ -2579,8 +2596,22 @@
       list.innerHTML = '<p class="allok">' + T('Every question right. Great work!', '¡Todas las preguntas bien. Excelente trabajo!') + '</p>';
       list.hidden = false;
     }
+    if (match.mode === 'cup') {   // after every cup match: the bracket first, with this result filled in, then the results
+      $('bk-kicker').textContent = CUP_ROUNDS[cupR].toUpperCase() + ' · ' + sideName(0) + ' ' + a + ' – ' + b + ' ' + sideName(1);
+      $('bk-title').textContent = title;
+      $('bk-body').innerHTML = bracketHTML(cupView, lostAt);
+      show(scrBracket);
+      $('bk-go').focus({ preventScroll: true });
+      return;
+    }
     show(scrOver);
     $('over-again').focus({ preventScroll: true });
+  }
+  function bracketDone() {
+    hide(scrBracket);
+    show(scrOver);
+    $('over-again').focus({ preventScroll: true });
+    if (window.SiteResults) setTimeout(function () { window.SiteResults.show({ title: T('Your results', 'Tus resultados') }); }, 600);
   }
 
   // ---------- Title screen ----------
@@ -2652,7 +2683,7 @@
     state = STATE.MENU;
     if (view !== 'shoot') setView('shoot');
     $('cup-line').textContent = cupLine();
-    hide(scrOver); hide(scrQ); hide(scrExp); hide(scrPre);
+    hide(scrOver); hide(scrQ); hide(scrExp); hide(scrPre); hide(scrBracket);
     hud.hidden = true;
     updateBoard();
     hideAimHud();
@@ -2822,7 +2853,7 @@
   // On every screen (menu, question, explanation, final whistle, pause), the arrow keys move between its buttons and
   // answer boxes; Enter or Space presses the one that's highlighted. While aiming, the arrows move the aim instead.
   function moveFocus(dir) {
-    var screen = paused ? scrPause : [scrTitle, scrMenu, scrPre, scrQ, scrExp, scrOver].filter(function (s) { return !s.hidden; })[0];
+    var screen = paused ? scrPause : [scrTitle, scrMenu, scrPre, scrBracket, scrQ, scrExp, scrOver].filter(function (s) { return !s.hidden; })[0];
     if (!screen) return false;
     var items = Array.prototype.filter.call(screen.querySelectorAll('button, input'), function (el) {
       return !el.hidden && !el.disabled && el.offsetParent !== null;
@@ -2897,6 +2928,7 @@
   $('btn-two').addEventListener('click', function () { unlockAudio(); tryStart('two'); });
   $('q-hint').addEventListener('click', showHint);
   $('pre-go').addEventListener('click', beginMatch);
+  $('bk-go').addEventListener('click', bracketDone);
   $('over-again').addEventListener('click', function () { startShootout(); });
   $('over-menu').addEventListener('click', showMenu);
   $('btn-menu').addEventListener('click', function () { if (paused) closePause(); else openPause(); });
