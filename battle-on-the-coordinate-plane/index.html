@@ -220,6 +220,35 @@
   @container (max-width: 800px) { #bc .instr { grid-template-columns: 1fr; } }
   /* short screens (a phone on its side): instructions side by side and tighter, so they fit without scrolling */
   @container (max-height: 600px) { #bc .instr { grid-template-columns: 1.35fr 1fr; } #bc .steps { gap: 4px; } #bc .steps li { padding: 3px 10px; font-size: 14px; } #bc .xy-card svg { max-height: 150px; } #bc .scr.center { padding-top: 48px; padding-bottom: 8px; } }
+  /* a phone on its side: the steps and the (x, y) card are two pages (Next / The steps buttons), each at a readable size */
+  #bc .ipager { display: none; }
+  @container (max-height: 460px) and (min-width: 480px) {
+    #bc .instr { grid-template-columns: 1fr; width: min(100%, 900px); }
+    #bc .instr[data-page="1"] .ipage2, #bc .instr[data-page="2"] .ipage1 { display: none; }
+    #bc .instr[data-page="1"] ~ .row #instr-next, #bc .instr[data-page="2"] ~ .row #instr-prev { display: inline-flex; }
+    #bc .instr[data-page="1"] ~ .row #instr-go, #bc .instr[data-page="2"] ~ .row #instr-back { display: none; }
+    #bc #scr-instr.scr.center { padding-top: 8px; padding-bottom: 6px; }
+    #bc #scr-instr .scr-head { margin-bottom: 6px; }
+    #bc #scr-instr .scr-head h1 { font-size: 22px; }
+    #bc #scr-instr .scr-head p { margin-top: 2px; font-size: 14px; }
+    #bc #scr-instr .card { padding: 8px 10px; }
+    #bc #scr-instr .row { margin-top: 8px; }
+    #bc #scr-instr .row .btn { padding: 6px 18px 4px; font-size: 17px; }
+    #bc .instr .steps { grid-template-columns: 1fr 1fr; gap: 6px; }
+    #bc .instr .steps li { grid-template-columns: 26px 22px 1fr; gap: 6px; padding: 3px 8px; font-size: 14px; line-height: 1.2; }
+    #bc .instr .steps li::before { width: 26px; height: 26px; font-size: 15px; }
+    #bc .instr .steps .si { font-size: 18px; }
+    #bc .instr .xy-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; align-items: center; }
+    #bc .instr .xy-card > .xy-big { grid-column: 1; grid-row: 1; } #bc .instr .xy-card > .xy-rule { grid-column: 1; grid-row: 2; }
+    #bc .instr .xy-card > .note { grid-column: 1; grid-row: 3; }
+    #bc .instr .xy-card > svg { grid-column: 2; grid-row: 1 / span 3; max-height: 180px; }
+    /* 3-Star: the timer note goes under the picture, on the right */
+    #bc .instr .xy-card:has(.note.hard) > svg { grid-row: 1 / span 2; max-height: 112px; }
+    #bc .instr .xy-card > .note.hard { grid-column: 2; grid-row: 3; }
+    #bc .instr .xy-big { font-size: 38px; }
+    #bc .instr .xy-rule { font-size: 15px; }
+    #bc .instr .note { font-size: 13px; padding: 6px 10px; }
+  }
   #bc .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; counter-reset: st; }
   #bc .steps li { display: grid; grid-template-columns: 36px 30px 1fr; align-items: center; gap: 8px; background: #f2f8ff; border-radius: 14px; padding: 6px 12px; font-size: clamp(14px, 2.1cqmin, 18px); line-height: 1.25; }
   #bc .steps li::before { counter-increment: st; content: counter(st); width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font: 800 17px 'Baloo 2', sans-serif; }
@@ -826,7 +855,7 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=b73adee7"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-on-the-coordinate-plane-game.js?v=05a294c2"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>

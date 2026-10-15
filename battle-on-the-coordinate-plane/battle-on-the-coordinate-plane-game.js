@@ -678,7 +678,8 @@
       ['&#9875;', T('Place your two ships: <b>Boat Buddy</b> (4 points) and <b>Giant Galley</b> (5 points).', 'Ubica tus dos barcos: <b>Barquito Amigo</b> (4 puntos) y <b>Galeón Gigante</b> (5 puntos).')],
       ['&#8596;', T('Ships face <b>horizontally or vertically</b>, never diagonally.', 'Los barcos van en <b>horizontal o vertical</b>, nunca en diagonal.')],
       ['&#128683;', T('Ships <b>cannot overlap</b>.', 'Los barcos <b>no pueden encimarse</b>.')],
-      ['&#8635;', T('<b>Click a ship</b> on the board to rotate it (or press <kbd>R</kbd>).', '<b>Haz clic en un barco</b> del tablero para girarlo (o pulsa <kbd>R</kbd>).')],
+      ['&#8635;', TOUCH ? T('<b>Tap a ship</b> on the board to rotate it.', '<b>Toca un barco</b> del tablero para girarlo.')
+        : T('<b>Click a ship</b> on the board to rotate it (or press <kbd>R</kbd>).', '<b>Haz clic en un barco</b> del tablero para girarlo (o pulsa <kbd>R</kbd>).')],
       ['&#9654;', T('Press <b>START GAME</b> when your fleet is ready.', 'Pulsa <b>EMPEZAR</b> cuando tu flota esté lista.')],
       ['&#127919;', G.hard ? T('On your turn, <b>type the whole ordered pair</b>, like (2, &minus;1), and fire.', 'En tu turno, <b>escribe el par ordenado completo</b>, como (2, &minus;1), y dispara.') : T('On your turn, <b>enter a coordinate</b> and fire.', 'En tu turno, <b>escribe una coordenada</b> y dispara.')],
       ['&#128680;', T('On the computer&rsquo;s turn, it gives you a coordinate. <b>Find that point on your own board.</b>', 'En el turno de la computadora, te da una coordenada. <b>Encuentra ese punto en tu propio tablero.</b>')],
@@ -691,18 +692,29 @@
       '&#9201; <b>Cronómetro:</b> ' + TIME.fire + ' segundos para cada tarea. ¿Se acaba el tiempo en tu disparo? Pierdes ese disparo. En el disparo enemigo, el juego te muestra dónde cae. &#128225; Entre turnos aparecen <b>Revisiones de radar</b>: respóndelas para seguir. ¡Lee con cuidado: el enemigo puede dar <b>y antes que x</b>!') + '</div>' : '';
     var exPt = easy ? [2, 3] : [2, -2];
     var html = '<div class="scr-head"><h1 id="instr-h">' + T('HOW TO PLAY', 'CÓMO JUGAR') + '</h1><p>' + m.label + ': ' + m.name + '</p></div>' +
-      '<div class="instr"><div class="card"><ol class="steps">' +
+      // on a short screen (a phone on its side) the two cards are two pages, so each can be read at a full size
+      '<div class="instr" data-page="1"><div class="card ipage1"><ol class="steps">' +
       steps.map(function (s) { return '<li><span class="si" aria-hidden="true">' + s[0] + '</span><span>' + s[1] + '</span></li>'; }).join('') +
-      '</ol></div><div class="card xy-card">' +
+      '</ol></div><div class="card xy-card ipage2">' +
       '<div class="xy-big" aria-label="(x, y)">( <span class="vx">x</span> , <span class="vy">y</span> )</div>' +
       '<div class="xy-rule"><span class="chip cx">x</span><span>' + T('comes <b>first</b>: move <b>left or right</b>', 'va <b>primero</b>: muévete a la <b>izquierda o derecha</b>') + '</span>' +
       '<span class="chip cy">y</span><span>' + T('comes <b>second</b>: move <b>up or down</b>', 'va <b>segundo</b>: muévete <b>arriba o abajo</b>') + '</span></div>' +
       exampleSVG(exPt[0], exPt[1], easy) +
       '<div class="note">' + noteMode + '</div>' + hardNote + '</div></div>' +
       '<div class="row"><button type="button" class="btn ghost" id="instr-back">' + (fromPause ? T('&larr; Back to the game', '&larr; Volver al juego') : T('&larr; Back', '&larr; Atrás')) + '</button>' +
+      '<button type="button" class="btn ghost ipager" id="instr-prev">' + T('&larr; The steps', '&larr; Los pasos') + '</button>' +
+      '<button type="button" class="btn ipager" id="instr-next">' + T('Next: reading (x, y) &#9654;', 'Siguiente: leer (x, y) &#9654;') + '</button>' +
       (fromPause ? '' : '<button type="button" class="btn orange big" id="instr-go">' + T('CONTINUE &#9654;', 'CONTINUAR &#9654;') + '</button>') + '</div>';
     var body = $('#instr-body');
     body.innerHTML = html;
+    var page = function (n) {
+      Sound.play('click');
+      $('#instr-body .instr').setAttribute('data-page', n);
+      fitScreen();
+      focusLater(n === 2 ? ($('#instr-go') || $('#instr-prev')) : $('#instr-next'));
+    };
+    $('#instr-next').addEventListener('click', function () { page(2); });
+    $('#instr-prev').addEventListener('click', function () { page(1); });
     if (fromPause) {
       $('#scr-instr').hidden = false; $('#scr-instr').style.zIndex = 46;
       fitScreen();
