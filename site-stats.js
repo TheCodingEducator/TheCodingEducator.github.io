@@ -77,7 +77,7 @@
     var ps = {
       played: has('penaltyshootout_games'), games: readNum('penaltyshootout_games', 0), best: readNum('penaltyshootout_best', 0),
       goals: readNum('penaltyshootout_goals_total', 0), perfect: readNum('penaltyshootout_perfect', 0),
-      allRight: readNum('penaltyshootout_allright', 0), wins: readNum('penaltyshootout_wins', 0), saves: readNum('penaltyshootout_saves_total', 0), cups: readNum('penaltyshootout_cups', 0)
+      allRight: readNum('penaltyshootout_allright', 0), wins: readNum('penaltyshootout_wins', 0), saves: readNum('penaltyshootout_saves_total', 0), cups: readNum('penaltyshootout_cups', 0), cupBest: readNum('penaltyshootout_cupbest', 0), hints: readNum('penaltyshootout_hints', 0), questions: readNum('penaltyshootout_questions', 0)
     };
     // Bank Shot: Angle Golf keeps best strokes and stars per course and mode; stars count once per hole (best of either mode)
     var golfRec = readJSON('bankshot_records', {}) || {}, golfCourses = ['medieval', 'space', 'summer'], golfNames = { medieval: 'Medieval Kingdom', space: 'Space Station', summer: 'Summer Beach' };
@@ -122,7 +122,7 @@
           ['Best score', rp.bestScore], ['Best combo', 'x' + rp.bestCombo], ['Worlds finished', rp.worlds + ' / 5']] },
       { key: 'penalty', folder: 'rooted-to-the-spot', icon: '⚽', name: 'Rooted to the Spot', played: ps.played,
         best: ps.best > 0 || ps.wins > 0, coins: 0, rows: [
-          ['Shootouts played', ps.games], ['Wins against the computer', ps.wins], ['Cups won', ps.cups], ['Total goals', ps.goals], ['Total saves', ps.saves],
+          ['Shootouts played', ps.games], ['Wins against the computer', ps.wins], ['Cups won', ps.cups], ['Best cup finish', ['—', 'Quarterfinal', 'Semifinal', 'Final', 'Won the cup'][ps.cupBest] || '—'], ['Total goals', ps.goals], ['Total saves', ps.saves], ['Hints used', ps.hints + (ps.questions ? ' in ' + ps.questions + ' questions' : '')],
           ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] },
       { key: 'billiards', folder: 'math-billiards', icon: '🎱', name: 'Math Billiards', played: mb.played,
         best: mb.wins > 0, coins: mb.coins, rows: [

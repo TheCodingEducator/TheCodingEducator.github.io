@@ -1364,6 +1364,7 @@
   function showHint() {
     if (state !== STATE.MATH || hintUsed || question.bonus) return;
     hintUsed = true;
+    save('hints', load('hints', 0) + 1);   // for My Stats: how often hints are used
     $('q-hint').hidden = true;
     $('q-hintbox').innerHTML = hintHTML(question);
     $('q-hintbox').hidden = false;
@@ -2530,6 +2531,8 @@
     save('games', load('games', 0) + 1);
     save('goals_total', load('goals_total', 0) + a + (two ? b : 0));
     save('saves_total', load('saves_total', 0) + saves);
+    save('questions', load('questions', 0) + asked);
+    if (match.mode === 'cup') save('cupbest', Math.max(load('cupbest', 0), win && match.cupRound === 2 ? 4 : match.cupRound + 1));   // 1 quarterfinal ... 3 final, 4 won the cup
     if (regGoals > load('best', 0)) save('best', regGoals);
     if (regGoals === ROUNDS) save('perfect', load('perfect', 0) + 1);
     if (rightCount === asked && asked) save('allright', load('allright', 0) + 1);
