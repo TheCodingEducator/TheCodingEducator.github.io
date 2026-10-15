@@ -452,8 +452,10 @@
     if (!crowdParts) return;
     var excited = crowdCheer > 0, waving = crowdWave !== null;
     crowdTick++;
-    if (!force && !excited && !waving && crowdTick % 4) return;   // waiting: a gentle bob, a few times a second is plenty
-    for (var i = 0; i < fans.length; i++) {
+    // a share of the fans each frame (a quarter while waiting, half while cheering or doing the wave), so no frame has to
+    // move every fan at once
+    var N = force ? 1 : (excited || waving) ? 2 : 4;
+    for (var i = force ? 0 : crowdTick % N; i < fans.length; i += N) {
       var f = fans[i], s = f.size, lift, arms;
       if (excited) {   // a goal! jump up and down with arms in the air
         lift = Math.max(0, Math.sin(t * 10 + f.phase)) * 0.4 * s;
@@ -782,16 +784,90 @@
     p.root.rotation.y = Math.PI;   // facing the goal
     return p;
   }
+  // ---------- Fireworks (a save in goal) ----------
+  // Five bursts in the sky beyond the far stand, a moment apart: colored sparks fly out, fall and fade.
+  var fw = null, fwVel = null, fwLife = null, fwBase = null, FW_N = 900, fwT = -1, fwBursts = [];
+  function fireworks() {
+    if (!fw) {
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FW_N * 3), 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(FW_N * 3), 3));
+      fw = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, depthWrite: false,
+        blending: env === ENV.NIGHT ? THREE.AdditiveBlending : THREE.NormalBlending }));   // a glow at night; solid colors by day
+      fw.frustumCulled = false;
+      scene.add(fw);
+      fwVel = new Float32Array(FW_N * 3); fwLife = new Float32Array(FW_N); fwBase = new Float32Array(FW_N * 3);
+    }
+    fwBursts = [];
+    for (var b = 0; b < 5; b++) {
+      fwBursts.push({ at: b * 0.35 + Math.random() * 0.15, x: (Math.random() - 0.5) * 70, y: 30 + Math.random() * 14, z: 95 + Math.random() * 20,
+        c: new THREE.Color().setHSL(Math.random(), 1, 0.5), done: false });
+    }
+    var p = fw.geometry.attributes.position.array;
+    for (var i = 0; i < FW_N; i++) { fwLife[i] = 0; p[i * 3 + 1] = -100; }
+    fw.geometry.attributes.position.needsUpdate = true;
+    fw.visible = true; fwT = 0;
+  }
+  function animateFireworks(delta) {
+    if (fwT < 0) return;
+    fwT += delta;
+    var p = fw.geometry.attributes.position.array, col = fw.geometry.attributes.color.array, per = Math.floor(FW_N / fwBursts.length);
+    fwBursts.forEach(function (b, bi) {
+      if (b.done || fwT < b.at) return;
+      b.done = true;
+      playSound('firework');
+      for (var j = 0; j < per; j++) {   // sparks in every direction from the burst
+        var i = bi * per + j, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1), s = 12 + Math.random() * 5;
+        p[i * 3] = b.x; p[i * 3 + 1] = b.y; p[i * 3 + 2] = b.z;
+        fwVel[i * 3] = Math.sin(ph) * Math.cos(th) * s; fwVel[i * 3 + 1] = Math.cos(ph) * s; fwVel[i * 3 + 2] = Math.sin(ph) * Math.sin(th) * s;
+        fwBase[i * 3] = b.c.r; fwBase[i * 3 + 1] = b.c.g; fwBase[i * 3 + 2] = b.c.b;
+        fwLife[i] = 1.6 + Math.random() * 0.5;
+      }
+    });
+    for (var i = 0; i < FW_N; i++) {
+      if (fwLife[i] <= 0) continue;
+      fwLife[i] -= delta;
+      if (fwLife[i] <= 0) { p[i * 3 + 1] = -100; continue; }
+      fwVel[i * 3 + 1] -= 6 * delta;   // falling...
+      for (var a = 0; a < 3; a++) { fwVel[i * 3 + a] *= 0.985; p[i * 3 + a] += fwVel[i * 3 + a] * delta; }
+      var fade = Math.min(1, fwLife[i] / 0.7);   // ...and fading out
+      col[i * 3] = fwBase[i * 3] * fade; col[i * 3 + 1] = fwBase[i * 3 + 1] * fade; col[i * 3 + 2] = fwBase[i * 3 + 2] * fade;
+    }
+    fw.geometry.attributes.position.needsUpdate = fw.geometry.attributes.color.needsUpdate = true;
+    if (fwT > 4.2) { fw.visible = false; fwT = -1; }
+  }
+
+  // A player far off at the halfway line, seen only from the goal 50 m away: a simple figure of a few blocks (faces and
+  // fingers can't be seen from there), with no shadow, so the keeper's view stays quick to draw.
+  function farPerson(shirt, i) {
+    var M = function (c) { return new THREE.MeshLambertMaterial({ color: c }); };
+    var shirtM = M(shirt), skin = M(SKINS[i % SKINS.length]), shorts = M(shirt === 0x1d4ed8 ? 0xf8fafc : 0x111827);
+    var root = new THREE.Group(), hips = new THREE.Group(), head = new THREE.Group();
+    hips.position.y = 1.0; root.add(hips);
+    var box = function (w, h, d, m, x, y, parent) { var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, 0); parent.add(b); return b; };
+    box(0.42, 0.62, 0.24, shirtM, 0, 0.32, hips);
+    head.position.y = 0.84; hips.add(head); box(0.2, 0.24, 0.2, skin, 0, 0, head);
+    var limb = function (side, y, len, top, bottom) {
+      var g = new THREE.Group(); g.position.set(side, y, 0); hips.add(g);
+      box(0.13, len / 2, 0.14, top, 0, -len / 4, g); box(0.12, len / 2, 0.13, bottom, 0, -len * 3 / 4, g);
+      return g;
+    };
+    var p = { root: root, hips: hips, head: head, lLeg: limb(-0.1, 0, 1.0, shorts, shirtM), rLeg: limb(0.1, 0, 1.0, shorts, shirtM),
+      lArm: limb(-0.27, 0.58, 0.6, shirtM, skin), rArm: limb(0.27, 0.58, 0.6, shirtM, skin) };
+    root.rotation.y = Math.PI;   // facing the goal
+    return p;
+  }
+
   function setOpponentKit(team) {
     oppTeam = team;
     midfield.forEach(function (p) { scene.remove(p.root); });
     if (shooterP) scene.remove(shooterP.root);
     midfield = [];
     [[-3, 4], [-5.6, 7], [-8.2, 10], [-10.8, 11]].forEach(function (s, i) {   // ours, on the keeper's right
-      var p = teamPerson(0x1d4ed8, s[1], i); p.root.position.set(s[0], 0, 52 + (i % 2) * 1.5); midfield.push(p); scene.add(p.root);
+      var p = farPerson(0x1d4ed8, i); p.root.position.set(s[0], 0, 52 + (i % 2) * 1.5); midfield.push(p); scene.add(p.root);
     });
     [[3, 5], [5.6, 8], [8.2, 2], [10.8, 6]].forEach(function (s, i) {        // theirs, on the keeper's left
-      var p = teamPerson(TEAMS[team].c, s[1], i + 2); p.root.position.set(s[0], 0, 52 + ((i + 1) % 2) * 1.5); midfield.push(p); scene.add(p.root);
+      var p = farPerson(TEAMS[team].c, i + 2); p.root.position.set(s[0], 0, 52 + ((i + 1) % 2) * 1.5); midfield.push(p); scene.add(p.root);
     });
     shooterP = teamPerson(TEAMS[team].c, 9, 3);
     shooterP.root.visible = view === 'keep';
@@ -890,7 +966,7 @@
     var scored = kind === 'goal';
     match.res[1].push(scored);
     if (scored) match.score[1]++;
-    if (kind === 'saved' || kind === 'caught') { saves++; playSound('cheer'); crowdCheer = 3; crowdWave = null; celebrate(); }
+    if (kind === 'saved' || kind === 'caught') { saves++; playSound('cheer'); crowdCheer = 3; crowdWave = null; fireworks(); }
     else if (scored) { playSound('groan'); if (!rippleDone) startRipple(lastLandX, lastLandY); }
     else playSound('cheer');
     msg.textContent = { saved: T('SAVED!', '¡ATAJADA!'), caught: T('CAUGHT!', '¡ATRAPADA!'), goal: T('THEY SCORE', 'GOL DE ELLOS'), wide: T('WIDE!', '¡DESVIADO!'), over: T('OVER THE BAR!', '¡POR ENCIMA!') }[kind];
@@ -1823,7 +1899,7 @@
     return '';
   }
 
-  var keeperStay = false, savePlanned = false;
+  var keeperStay = false, savePlanned = false, parryAt = -1;
   function keeperDecision(targetX, targetY, flight) {
     lastLandX = targetX; lastLandY = targetY;
     keeperStartX = keeperGroup.position.x;   // wherever his side-to-side lean left him
@@ -1860,7 +1936,7 @@
     }
     keeperDiving = true;
     keeperDiveTime = 0;
-    landT = -1;
+    landT = -1; parryAt = -1;
   }
 
   // Every frame: pose the keeper, then lift him just enough that no part of him (a boot, a knee, a hand in a dive) is
@@ -1987,6 +2063,10 @@
       }
       if (planned) applyCatchPose(catchKind, catchDir);
       else if (isDive) reachArms(dir);
+      if (planned && !caught && parryAt >= 0) {        // a parry: the leading hand flicks out at the ball, then recoils
+        var pf = keeperDiveTime - parryAt, pk = pf < 0.07 ? pf / 0.07 : Math.max(0, 1 - (pf - 0.07) / 0.3);
+        (dir < 0 ? kLArm : kRArm).userData.fore.rotation.x -= 0.7 * pk;
+      }
       if (isDive) {                                    // arms and legs settle once he is down
         var s = landT >= 0 ? smooth01(Math.min(1, (f - landT) / 0.5)) : 0;
         diveLegs(dir, 1 - 0.5 * s);
@@ -2571,10 +2651,15 @@
         enforceSave = false;
         if (catching) { caught = true; caughtTime = 0; playSound('catch'); }   // into the gloves (see holdCaughtBall)
         else {
-          // pushed away: back out toward the pitch with a bounce, and off to the side away from the middle of the goal
-          var awayX = ballBody.position.x >= 0 ? 1 : -1;
-          ballBody.position.z = 0.9;
-          ballBody.velocity.set(awayX * (1 + Math.random() * 2.5), 1.5 + Math.random() * 2, 4.5 + Math.random() * 3);
+          // pushed away by his hand, from where his glove met it: outward, away from the goal, with most of its pace taken
+          // off. A high shot near the post is tipped up and wide around it; a lower one is palmed back out.
+          var bp = ballBody.position, bv = ballBody.velocity, out = bp.x >= 0 ? 1 : -1, sp = bv.length();
+          bp.z = Math.max(bp.z, catchZ + BALL_RADIUS);
+          if (bp.y > 1.5 && Math.abs(bp.x) > 2.2) bv.set(out * sp * (0.16 + Math.random() * 0.06), sp * (0.1 + Math.random() * 0.05), sp * (0.04 + Math.random() * 0.05));
+          else bv.set(out * sp * (0.12 + Math.random() * 0.08), sp * (0.02 + Math.random() * 0.06), sp * (0.16 + Math.random() * 0.1));
+          ballBody.angularVelocity.set((Math.random() - 0.5) * 30, out * 20, 0);
+          parryAt = keeperDiveTime;
+          playSound('parry');
           keeperBody.collisionResponse = false;   // the ball can't bump off him again and back toward the goal
         }
       }
@@ -2600,6 +2685,7 @@
     animateCity();
     animateRipple(delta);
     animateConfetti(delta);
+    animateFireworks(delta);
     updateTitleCamera(delta);
     renderer.render(scene, camera);
   }
@@ -2770,6 +2856,20 @@
       gain.gain.setValueAtTime(0.9, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
       slap.connect(lp).connect(gain).connect(master);
       slap.start(now);
+    } else if (type === 'parry') {   // a sharp slap off the glove
+      var slap2 = noiseBuffer(0.08), bpf = audioCtx.createBiquadFilter();
+      bpf.type = 'bandpass'; bpf.frequency.value = 1800; bpf.Q.value = 0.7;
+      gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(1.0, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+      slap2.connect(bpf).connect(gain).connect(master);
+      slap2.start(now);
+    } else if (type === 'firework') {   // a boom in the distance
+      var boom = noiseBuffer(0.9), lpf = audioCtx.createBiquadFilter();
+      lpf.type = 'lowpass'; lpf.frequency.value = 260;
+      gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.7, now + 0.02); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
+      boom.connect(lpf).connect(gain).connect(master);
+      boom.start(now);
     } else if (type === 'woodwork') {
       osc = audioCtx.createOscillator(); gain = audioCtx.createGain();
       osc.type = 'sine'; osc.frequency.setValueAtTime(1000, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.4);
