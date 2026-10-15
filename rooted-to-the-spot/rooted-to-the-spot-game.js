@@ -58,12 +58,13 @@
   // The cup: a knockout of three matches (quarterfinal, semifinal, final), each against a stronger team. A cup run in
   // progress is saved, so a student can pick it up next class.
   var TEAMS = [
-    { en: 'Falcons', es: 'Halcones', c: 0xdc2626 }, { en: 'Sharks', es: 'Tiburones', c: 0x0891b2 }, { en: 'Tigers', es: 'Tigres', c: 0xf97316 },
-    { en: 'Wolves', es: 'Lobos', c: 0x6b7280 }, { en: 'Comets', es: 'Cometas', c: 0x9333ea }, { en: 'Bears', es: 'Osos', c: 0x92400e },
-    { en: 'Flamingos', es: 'Flamencos', c: 0xdb2777 }, { en: 'Dragons', es: 'Dragones', c: 0x16a34a }
+    { en: 'Barca', c: 0xa50044 }, { en: 'PSG', c: 0x0b2a5b }, { en: 'Madrid', c: 0xf1f5f9 }, { en: 'Fire', c: 0xc8102e },
+    { en: 'Arsenal', c: 0xdb0007 }, { en: 'City', c: 0x6cabdd }, { en: 'Man U', c: 0xda291c }, { en: 'Liverpool', c: 0xc8102e },
+    { en: 'Bayern', c: 0xdc052d }, { en: 'Juventus', c: 0x111111 }, { en: 'AC Milan', c: 0x9b111e }, { en: 'Chelsea', c: 0x034694 },
+    { en: 'Inter', c: 0x0068a8 }, { en: 'Dortmund', c: 0xfde100 }
   ];
   var CUP_ROUNDS = [T('Quarterfinal', 'Cuartos de final'), T('Semifinal', 'Semifinal'), T('Final', 'Final')];
-  function teamName(i) { return T(TEAMS[i].en, TEAMS[i].es); }
+  function teamName(i) { return TEAMS[i].en; }
   var aimPower = 0, hitKeeper = false, kickPhase = 0, isAutoMiss = false, resultDecided = false, enforceSave = false;
   var resultTimeout = null, keysDown = {};
 
@@ -786,7 +787,7 @@
   var SKINS = [0x8d5524, 0xc68642, 0xe0ac69, 0xf1c27d, 0x5c3a1e];
   function teamPerson(shirt, n, i) {
     var p = buildPerson({ shirt: shirt, trim: 0xf8fafc, shorts: shirt === 0x1d4ed8 ? 0xf8fafc : 0x111827, socks: shirt,
-      skin: SKINS[i % SKINS.length], hair: [0x111111, 0x2b1a10, 0x6b4423][i % 3], number: String(n), numberColor: '#ffffff' });
+      skin: SKINS[i % SKINS.length], hair: [0x111111, 0x2b1a10, 0x6b4423][i % 3], number: String(n), numberColor: shirt === 0xf1f5f9 || shirt === 0xfde100 || shirt === 0x6cabdd ? '#111827' : '#ffffff' });
     p.root.rotation.y = Math.PI;   // facing the goal
     return p;
   }
@@ -2209,7 +2210,7 @@
   }
   function cupLine() {
     var won = load('cups', 0), cup = load('cup', null), s = '';
-    if (cup && cup.opps) s = T('Next: ', 'Siguiente: ') + CUP_ROUNDS[cup.round] + T(' against the ', ' contra los ') + teamName(cup.opps[cup.round]) + '. ';
+    if (cup && cup.opps) s = T('Next: ', 'Siguiente: ') + CUP_ROUNDS[cup.round] + T(' against ', ' contra ') + teamName(cup.opps[cup.round]) + '. ';
     else s = T('Win a quarterfinal, a semifinal and a final to lift the cup. ', 'Gana cuartos, semifinal y final para levantar la copa. ');
     return '🏆 ' + s + (won ? T('Cups won: ', 'Copas ganadas: ') + won : '');
   }
@@ -2242,7 +2243,7 @@
         var cup = loadCup(); cup.round = cupR + 1; save('cup', cup);
         title = T('ON TO THE ', '¡A LA ') + CUP_ROUNDS[cupR + 1].toUpperCase() + '!';
         again = T('NEXT MATCH', 'SIGUIENTE PARTIDO');
-        note = T('Next: the ', 'Siguiente: los ') + teamName(cup.opps[cupR + 1]) + T(', a tougher team.', ', un equipo más fuerte.');
+        note = T('Next: ', 'Siguiente: ') + teamName(cup.opps[cupR + 1]) + T(', a tougher team.', ', un equipo más fuerte.');
       } else {
         title = T('OUT OF THE CUP', 'ELIMINADOS');
         save('cup', null); again = T('NEW CUP', 'NUEVA COPA');
