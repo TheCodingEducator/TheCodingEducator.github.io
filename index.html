@@ -62,9 +62,39 @@
   html[lang="es"] .latest { display: none; }   /* the latest-update line is in English, and changes with every update */
 
   .hero {
-    max-width: 1080px; margin: 0 auto; padding: 36px 24px 28px;
-    display: grid; grid-template-columns: 1.35fr 1fr; gap: 32px; align-items: center;
+    position: relative; max-width: 1080px; margin: 0 auto; padding: 36px 24px 36px;
+    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; align-items: center;
   }
+  .hero > * { position: relative; z-index: 1; }
+  /* math symbols drifting behind the hero (decoration only) */
+  .floaters { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .floaters span { position: absolute; font-weight: 900; line-height: 1; opacity: 0.22; animation: drift 9s ease-in-out infinite alternate; }
+  .floaters span:nth-child(1) { left: 2%; top: 8%; font-size: 54px; color: var(--g25); }
+  .floaters span:nth-child(2) { left: 44%; top: 4%; font-size: 40px; color: var(--g7); animation-delay: -3s; }
+  .floaters span:nth-child(3) { left: 38%; bottom: 6%; font-size: 48px; color: var(--g6); animation-delay: -6s; }
+  .floaters span:nth-child(4) { right: 3%; top: 2%; font-size: 46px; color: var(--g8); animation-delay: -2s; }
+  .floaters span:nth-child(5) { right: 1%; bottom: 4%; font-size: 52px; color: #b7651c; animation-delay: -5s; }
+  .floaters span:nth-child(6) { left: 6%; bottom: 2%; font-size: 38px; color: var(--g8); animation-delay: -7s; }
+  @keyframes drift { from { transform: translateY(-8px) rotate(-8deg); } to { transform: translateY(10px) rotate(10deg); } }
+
+  /* the featured game */
+  .featured { position: relative; padding: 0 0 18px 18px; }
+  .feat-badge { position: absolute; top: -14px; right: 14px; z-index: 3; background: #ffc83d; color: #4a2c00; font-weight: 900; font-size: 14px;
+    padding: 6px 14px; border-radius: 999px; box-shadow: 0 3px 0 #c98a00; transform: rotate(3deg); }
+  .feat-shot { display: block; border-radius: 22px; overflow: hidden; border: 6px solid #fff; box-shadow: 0 16px 36px rgba(60, 40, 10, 0.22);
+    transform: rotate(-1.5deg); transition: transform 0.25s ease; }
+  .feat-shot img { display: block; width: 100%; height: auto; aspect-ratio: 780 / 608; object-fit: cover; }
+  .featured:hover .feat-shot { transform: rotate(0deg) scale(1.01); }
+  .feat-inset { position: absolute; left: -4px; top: 14%; width: 38%; z-index: 2; border-radius: 16px; overflow: hidden; border: 5px solid #fff;
+    box-shadow: 0 10px 24px rgba(60, 40, 10, 0.25); transform: rotate(4deg); }
+  .feat-inset img { display: block; width: 100%; height: auto; aspect-ratio: 780 / 600; object-fit: cover; }
+  .feat-info { position: relative; z-index: 2; margin: -34px 12px 0 30px; background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    padding: 14px 18px 16px; box-shadow: 0 8px 22px rgba(60, 40, 10, 0.12); }
+  .feat-info h2 { margin: 0 0 4px; font-size: 22px; font-weight: 900; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+  .feat-info h2 .gr { font-size: 12px; font-weight: 800; color: #fff; background: var(--g7); padding: 3px 9px; border-radius: 999px; }
+  .feat-info p { margin: 0 0 12px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .feat-info .card-links { padding: 0; }
+  .feat-info .card-links a:first-child { font-size: 16px; padding: 9px 20px; box-shadow: 0 3px 0 #8f3212; }
   .hero h1 { margin: 0 0 10px; font-size: 17px; font-weight: 800; color: var(--accent); }
   .hero .big { margin: 0 0 14px; font-size: clamp(32px, 5.2vw, 54px); font-weight: 900; line-height: 1.08; letter-spacing: -0.5px; }
   .hero .lede { margin: 0 0 22px; font-size: 18px; line-height: 1.55; color: var(--muted); max-width: 560px; }
@@ -77,11 +107,12 @@
 
   .grades { display: flex; flex-wrap: wrap; gap: 10px; }
   .grades button {
-    font: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
-    padding: 10px 18px; border-radius: 999px; border: 2px solid var(--c); background: #fff; color: var(--c);
-    transition: transform 0.12s ease;
+    font: inherit; font-size: 17px; font-weight: 900; cursor: pointer;
+    padding: 11px 20px; border-radius: 999px; border: 3px solid var(--c); background: #fff; color: var(--c);
+    box-shadow: 0 4px 0 var(--c); transition: transform 0.12s ease, box-shadow 0.12s ease;
   }
-  .grades button:hover { transform: translateY(-2px); }
+  .grades button:hover { transform: translateY(-2px) rotate(-2deg); }
+  .grades button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--c); }
   .grades button[aria-pressed="true"] { background: var(--c); color: #fff; }
   .grades .all { --c: var(--text); }
   .grades-note { margin: 10px 0 0; font-size: 14px; color: var(--muted); min-height: 1.4em; }
@@ -90,7 +121,12 @@
     max-width: 1080px; margin: 0 auto; padding: 0 24px;
     display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;
   }
-  .fact { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+  .stats { max-width: 1080px; margin: 0 auto 18px; padding: 0 24px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .stat { margin: 0; background: var(--sun); border-radius: 18px; padding: 12px 14px; text-align: center; color: #7a3d10; font-weight: 800; font-size: 14px; }
+  .stat b { display: block; font-size: 30px; font-weight: 900; line-height: 1.1; color: var(--text); }
+  .fact { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px 14px 64px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+  .fact::before { position: absolute; left: 14px; top: 14px; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--sun); }
+  .fact:nth-child(1)::before { content: "\1F34E"; } .fact:nth-child(2)::before { content: "\1F512"; } .fact:nth-child(3)::before { content: "\1F4DA"; }
   .fact b { display: block; color: var(--text); font-size: 16px; margin-bottom: 2px; }
   .fact a { color: var(--accent); }
   .latest { max-width: 1080px; margin: 14px auto 0; padding: 0 24px; font-size: 15px; color: var(--muted); }
@@ -100,15 +136,24 @@
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 22px; }
 
-  h2.topic { font-size: 24px; font-weight: 900; margin: 44px 0 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
-  h2.topic span { font-size: 13px; font-weight: 800; color: #fff; background: var(--c, var(--accent)); padding: 4px 10px; border-radius: 999px; }
+  h2.topic { font-size: 26px; font-weight: 900; margin: 48px 0 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+  h2.topic .ticon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; font-style: normal; background: var(--sun); transform: rotate(-4deg); }
+  h2.topic span[style] { font-size: 13px; font-weight: 800; color: #fff; background: var(--c, var(--accent)); padding: 4px 10px; border-radius: 999px; }
 
   .card {
     display: flex; flex-direction: column; background: var(--panel); border-radius: 20px; overflow: hidden;
     border: 1px solid var(--line); box-shadow: 0 2px 0 var(--line);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(120, 80, 20, 0.14); }
+  .card:hover { transform: translateY(-5px) rotate(-0.6deg); box-shadow: 0 12px 26px rgba(120, 80, 20, 0.16); }
+  .thumb-wrap { position: relative; display: block; overflow: hidden; }
+  .thumb { transition: transform 0.3s ease; }
+  .card:hover .thumb { transform: scale(1.05); }
+  .thumb-wrap::after { content: "\25B6"; position: absolute; right: 12px; bottom: 12px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent); color: #fff; font-size: 17px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0; transform: scale(0.7); transition: opacity 0.2s ease, transform 0.2s ease; }
+  .card:hover .thumb-wrap::after, .card-main:focus-visible .thumb-wrap::after { opacity: 1; transform: scale(1); }
+  .card.star { border: 3px solid #ffc83d; }
+  .card .ribbon { position: absolute; top: 10px; left: 10px; z-index: 1; background: #ffc83d; color: #4a2c00; font-size: 12px; font-weight: 900; padding: 3px 10px; border-radius: 999px; }
   .card[hidden], section.topic-group[hidden] { display: none; }
   .card-main { display: block; flex: 1; text-decoration: none; color: inherit; }
   .thumb { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; object-fit: cover; background: var(--sun); }
@@ -127,10 +172,16 @@
   footer a { color: var(--muted); }
 
   @media (max-width: 760px) {
-    .hero { grid-template-columns: 1fr; padding-top: 24px; gap: 20px; }
-    .hero-art { display: none; }
+    .hero { grid-template-columns: 1fr; padding-top: 24px; gap: 30px; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .featured { padding-left: 10px; }
+    .feat-inset { width: 34%; }
   }
-  @media (prefers-reduced-motion: reduce) { .card, .grades button { transition: none; } .card:hover, .grades button:hover { transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .card, .grades button, .thumb, .feat-shot, .thumb-wrap::after { transition: none; }
+    .card:hover, .grades button:hover, .card:hover .thumb, .featured:hover .feat-shot { transform: none; }
+    .floaters span { animation: none; }
+  }
 </style>
 <script src="site-lang.js?v=17fe73a6"></script>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count"
@@ -151,6 +202,7 @@
   </div>
 
   <div class="hero">
+    <div class="floaters" aria-hidden="true"><span>+</span><span>&times;</span><span>&pi;</span><span>&divide;</span><span>&deg;</span><span>&radic;</span></div>
     <div>
       <h1 data-es="Juegos de matemáticas gratis en línea para estudiantes y docentes">Free Online Math Games for Students &amp; Teachers</h1>
       <p data-es="Las matemáticas son más divertidas cuando juegas." class="big">Math is more fun when you play it.</p>
@@ -164,26 +216,42 @@
       </div>
       <p class="grades-note" id="grades-note" aria-live="polite"></p>
     </div>
-    <div class="hero-art" aria-hidden="true"><span>+</span><span>&minus;</span><span>&times;</span><span>&divide;</span></div>
+    <section class="featured" aria-labelledby="feat-h">
+      <span class="feat-badge" data-es="&#11088; Juego destacado">&#11088; Featured game</span>
+      <a class="feat-shot" href="bank-shot-angle-golf/" tabindex="-1" aria-hidden="true"><img src="og/featured/angle-golf-course.jpg" alt="" width="780" height="608"></a>
+      <div class="feat-inset" aria-hidden="true"><img src="og/featured/angle-golf-question.jpg" alt="" width="780" height="600" loading="lazy"></div>
+      <div class="feat-info">
+        <h2 id="feat-h">Bank Shot: Angle Golf <span class="gr" data-es="7.º grado">Grade 7</span></h2>
+        <p data-es="Halla el ángulo, haz rebotar la bola en la pared y emboca. Tres campos temáticos con molinos, agujeros negros y tablas de surf.">Find the angle, bank the ball off the wall, and sink the putt. Three themed courses with windmills, black holes and surfboards.</p>
+        <div class="card-links"><a href="bank-shot-angle-golf/" data-es="&#9654; Jugar ahora">&#9654; Play now</a><a href="bank-shot-angle-golf/guide" data-es="Guía para docentes">Teacher guide</a></div>
+      </div>
+    </section>
   </div>
 </header>
+
+<section class="stats" aria-label="At a glance" data-es-aria="De un vistazo">
+  <p class="stat"><b>15</b><span data-es="juegos">games</span></p>
+  <p class="stat"><b>2&ndash;8</b><span data-es="grados">grades</span></p>
+  <p class="stat"><b>0</b><span data-es="cuentas o inicios de sesión">accounts or logins</span></p>
+  <p class="stat"><b>2</b><span data-es="idiomas: inglés y español">languages (English, Español)</span></p>
+</section>
 
 <section class="facts" aria-label="About these games">
   <p class="fact" data-es="<b>Hecho por un maestro de matemáticas</b>Soy maestro de matemáticas de 8.º grado y diseño cada juego en torno a un estándar Common Core, desde contar monedas hasta el teorema de Pitágoras."><b>Made by a math teacher</b>I'm an 8th grade math teacher, and I design every game around a Common Core standard, from counting coins to the Pythagorean theorem.</p>
   <p class="fact" data-es="<b>Seguro para la escuela</b>Sin cuentas, sin iniciar sesión y sin datos de estudiantes. Los juegos funcionan en los dispositivos de los estudiantes y en proyectores."><b>Safe for school</b>No accounts, no logins and no student data. The games run on student devices and projectors.</p>
   <p class="fact" data-es="<b>Listo para enseñar</b>Cada juego tiene una <a href=&quot;teachers&quot;>guía para docentes</a>, una hoja de práctica y un boleto de salida. Todos los juegos funcionan con el teclado y con lectores de pantalla."><b>Ready to teach</b>Every game has a <a href="teachers">teacher guide</a>, a worksheet and an exit ticket. All games work with the keyboard and screen readers.</p>
 </section>
-<p class="latest"><strong style="color: var(--text);">Latest update, October 15:</strong> Phones held sideways now show the whole game, with number keys in the space beside it, and BattlePhones held sideways now show the whole game, with number keys in the space beside it.rsquo;s How to Play is readable on a phone. <a href="whats-new">See everything that's new &rarr;</a></p>
+<p class="latest"><strong style="color: var(--text);">Latest update, October 15:</strong> A new home page with a featured game, and phones held sideways now show the whole game. <a href="whats-new">See everything that's new &rarr;</a></p>
 
 <main>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="Rectas y pendiente">Lines and Slope</span> <span style="--c: var(--g8)" data-es="8.º grado">Grade 8</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#128200;</i><span data-es="Rectas y pendiente">Lines and Slope</span> <span style="--c: var(--g8)" data-es="8.º grado">Grade 8</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="8">
     <a class="card-main" href="linear-world-cup/">
-      <img class="thumb" src="og/thumbs/linear-world-cup.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/linear-world-cup.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Linear World Cup</h3>
         <p data-es="Marca goles y completa pases escribiendo la ecuación pendiente-intersección de la recta hacia tu objetivo.">Score goals and complete passes by writing the slope-intercept equation of the line to your target.</p>
@@ -195,12 +263,12 @@
   </section>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="Geometría">Geometry</span> <span style="--c: var(--g7)" data-es="7.º a 8.º grado">Grades 7&ndash;8</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#128208;</i><span data-es="Geometría">Geometry</span> <span style="--c: var(--g7)" data-es="7.º a 8.º grado">Grades 7&ndash;8</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="8">
     <a class="card-main" href="pythagorean-platforms/">
-      <img class="thumb" src="og/thumbs/pythagorean-platforms.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/pythagorean-platforms.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Pythagorean Platforms</h3>
         <p data-es="Balancéate por la selva con el teorema de Pitágoras: halla el largo de tu cuerda o la distancia a la siguiente plataforma, un paso por balanceo, y mira caer el lado que falta en cámara lenta.">Swing through the jungle with the Pythagorean theorem: find the length of your rope or the distance to the next platform, one step per swing, then watch the missing side land in slow motion.</p>
@@ -211,7 +279,7 @@
 
   <div class="card" data-grades="8">
     <a class="card-main" href="similarity-builder/">
-      <img class="thumb" src="og/thumbs/similarity-builder.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/similarity-builder.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Similarity Builder</h3>
         <p data-es="Corre, salta y esquiva obstáculos, y construye un puente en cada hueco hallando factores de escala y lados que faltan en figuras semejantes, o practica solo los tipos de preguntas que elijas.">Run, jump, and dodge obstacles, then build a bridge across each gap by finding scale factors and missing sides of similar figures - or practice just the question types you choose.</p>
@@ -222,7 +290,7 @@
 
   <div class="card" data-grades="8">
     <a class="card-main" href="lets-get-to-the-point/">
-      <img class="thumb" src="og/thumbs/lets-get-to-the-point.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/lets-get-to-the-point.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Let's Get to the Point</h3>
         <p data-es="Desliza, gira y refleja un punto en la cuadrícula de coordenadas para dominar las traslaciones, rotaciones y reflexiones.">Slide, spin, and flip a point on the coordinate grid to master translations, rotations, and reflections.</p>
@@ -233,7 +301,7 @@
 
   <div class="card" data-grades="8">
     <a class="card-main" href="math-billiards/">
-      <img class="thumb" src="og/thumbs/math-billiards.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/math-billiards.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Math Billiards</h3>
         <p data-es="Un juego de billar de verdad en el que cada tiro es un problema de ángulos: apunta donde quieras, halla x con ángulos complementarios, suplementarios, opuestos por el vértice y de rectas paralelas, y mira cómo tu ángulo decide adónde va la bola.">A real pool game where every shot is an angle problem: aim anywhere, solve for x with complementary, supplementary, vertical and parallel-line angles, and watch your angle decide where the ball goes.</p>
@@ -244,7 +312,7 @@
 
   <div class="card" data-grades="7 8">
     <a class="card-main" href="laser-heist-angle-breaker/">
-      <img class="thumb" src="og/thumbs/laser-heist-angle-breaker.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/laser-heist-angle-breaker.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Laser Heist: Angle Breaker</h3>
         <p data-es="Sube a la Torre Vértice para recuperar el Ángulo Dorado: apunta un láser con ángulos complementarios, suplementarios, opuestos por el vértice y de rectas paralelas para apagar la seguridad, y pasa a escondidas junto a los guardias.">Climb Vertex Tower to steal back the Golden Angle: aim a laser with complementary, supplementary, vertical and parallel-line angles to knock out the security, then sneak past the guards.</p>
@@ -253,9 +321,10 @@
     <div class="card-links"><a href="laser-heist-angle-breaker/" data-es="&#9654; Jugar">&#9654; Play</a><a href="laser-heist-angle-breaker/guide" data-es="Guía para docentes">Full Teacher Guide</a></div>
   </div>
 
-  <div class="card" data-grades="7 8">
+  <div class="card star" data-grades="7 8" style="position: relative">
+    <span class="ribbon" data-es="&#11088; Destacado">&#11088; Featured</span>
     <a class="card-main" href="bank-shot-angle-golf/">
-      <img class="thumb" src="og/thumbs/bank-shot-angle-golf.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/bank-shot-angle-golf.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Bank Shot: Angle Golf</h3>
         <p data-es="Resuelve ángulos complementarios y suplementarios de rebote, y luego apunta y golpea en un campo de minigolf de 9 hoyos.">Solve complementary and supplementary bank-shot angles, then aim and putt your way around a 9-hole mini golf course.</p>
@@ -267,12 +336,12 @@
   </section>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="Expresiones y ecuaciones">Expressions and Equations</span> <span style="--c: var(--g6)" data-es="6.º a 8.º grado">Grades 6&ndash;8</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#9878;&#65039;</i><span data-es="Expresiones y ecuaciones">Expressions and Equations</span> <span style="--c: var(--g6)" data-es="6.º a 8.º grado">Grades 6&ndash;8</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="6 7 8">
     <a class="card-main" href="tip-the-scales/">
-      <img class="thumb" src="og/thumbs/tip-the-scales.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/tip-the-scales.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Tip the Scales</h3>
         <p data-es="Equilibra una balanza de verdad para resolver ecuaciones lineales, desde las de un paso hasta las que piden distribuir y combinar términos semejantes.">Balance a literal scale to solve linear equations, from one-step basics to distributing and combining like terms.</p>
@@ -283,7 +352,7 @@
 
   <div class="card" data-grades="8">
     <a class="card-main" href="exponent-racer/">
-      <img class="thumb" src="og/thumbs/exponent-racer.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/exponent-racer.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Exponent Racer</h3>
         <p data-es="Corre por la carretera respondiendo preguntas de exponentes para no quedarte sin combustible y esquivar el tráfico.">Race down the road answering exponent questions to keep your fuel up and dodge traffic.</p>
@@ -294,7 +363,7 @@
 
   <div class="card" data-grades="8">
     <a class="card-main" href="exponent-hoops/">
-      <img class="thumb" src="og/thumbs/exponent-hoops.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/exponent-hoops.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Exponent Hoops</h3>
         <p data-es="Encesta resolviendo reglas de exponentes: juega solo o contra un amigo.">Shoot hoops by solving exponent rules - play solo or head-to-head with a friend.</p>
@@ -305,7 +374,7 @@
 
   <div class="card" data-grades="8">
     <a class="card-main" href="rooted-to-the-spot/">
-      <img class="thumb" src="og/thumbs/rooted-to-the-spot.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/rooted-to-the-spot.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Rooted to the Spot</h3>
         <p data-es="Raíces cuadradas, raíces cúbicas y estimaciones te ganan cada penal; luego ve a la portería para atajar los tiros del otro equipo. Juega un amistoso, una copa o contra un amigo.">Square roots, cube roots and estimates earn your penalty kicks - then go in goal to save the other team's. Play a friendly, a cup or a friend.</p>
@@ -317,12 +386,12 @@
   </section>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="Razones y proporciones">Ratios and Proportions</span> <span style="--c: var(--g6)" data-es="6.º a 7.º grado">Grades 6&ndash;7</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#127859;</i><span data-es="Razones y proporciones">Ratios and Proportions</span> <span style="--c: var(--g6)" data-es="6.º a 7.º grado">Grades 6&ndash;7</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="6 7">
     <a class="card-main" href="proportional-plates/">
-      <img class="thumb" src="og/thumbs/proportional-plates.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/proportional-plates.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Proportional Plates</h3>
         <p data-es="Dirige un restaurante como chef: toma pedidos, ajusta recetas y precios con proporciones y sirve cada plato antes de que tus clientes se enojen, o practica solo las destrezas que elijas.">Run a diner as the chef: take orders, scale recipes and prices with proportions, and serve every plate before your customers' smiles turn into scowls - or practice just the skills you choose.</p>
@@ -334,12 +403,12 @@
   </section>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="El plano de coordenadas">The Coordinate Plane</span> <span style="--c: var(--g25)" data-es="5.º a 6.º grado">Grades 5&ndash;6</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#128205;</i><span data-es="El plano de coordenadas">The Coordinate Plane</span> <span style="--c: var(--g25)" data-es="5.º a 6.º grado">Grades 5&ndash;6</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="5 6">
     <a class="card-main" href="battle-on-the-coordinate-plane/">
-      <img class="thumb" src="og/thumbs/battle-on-the-coordinate-plane.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/battle-on-the-coordinate-plane.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Battle on the Coordinate Plane</h3>
         <p data-es="Esconde tu flota, dispara con pares ordenados y mira un avión volar primero en x y luego en y. Encuentra los disparos enemigos en tu propio tablero y hunde los dos barcos: primer cuadrante, los cuatro cuadrantes o el modo con tiempo Coordinate Commander.">Hide your fleet, fire with ordered pairs, and watch a plane fly x first, then y. Find the enemy's shots on your own board and sink both ships - first quadrant, all four quadrants, or a timed Coordinate Commander mode.</p>
@@ -351,12 +420,12 @@
   </section>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="Multiplicación y área">Multiplication and Area</span> <span style="--c: var(--g25)" data-es="3.er grado">Grade 3</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#127912;</i><span data-es="Multiplicación y área">Multiplication and Area</span> <span style="--c: var(--g25)" data-es="3.er grado">Grade 3</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="3">
     <a class="card-main" href="area-artist/">
-      <img class="thumb" src="og/thumbs/area-artist.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/area-artist.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Area Artist</h3>
         <p data-es="Multiplica para pintar una obra de arte escondida, un rectángulo a la vez (animales, mascotas, espacio, deportes, moda y más), o diseña tu propio arte en el estudio.">Multiply to paint a hidden pixel-art masterpiece one rectangle at a time - pick animals, pets, space, sports, fashion and more - or design your own art in the studio.</p>
@@ -368,12 +437,12 @@
   </section>
 
   <section class="topic-group">
-  <h2 class="topic"><span data-es="Dinero">Money</span> <span style="--c: var(--g25)" data-es="2.º grado">Grade 2</span></h2>
+  <h2 class="topic"><i class="ticon" aria-hidden="true">&#129689;</i><span data-es="Dinero">Money</span> <span style="--c: var(--g25)" data-es="2.º grado">Grade 2</span></h2>
   <div class="grid">
 
   <div class="card" data-grades="2">
     <a class="card-main" href="piggy-bank-math/">
-      <img class="thumb" src="og/thumbs/piggy-bank-math.jpg" alt="" loading="lazy" width="600" height="315">
+      <span class="thumb-wrap"><img class="thumb" src="og/thumbs/piggy-bank-math.jpg" alt="" loading="lazy" width="600" height="315"></span>
       <div class="card-body">
         <h3>Piggy Bank Math</h3>
         <p data-es="Haz clic en centavos y monedas de 5, 10 y 25 centavos para llegar a la cantidad exacta antes de que se acabe el tiempo.">Click pennies, nickels, dimes, and quarters to match a target amount before time runs out.</p>
