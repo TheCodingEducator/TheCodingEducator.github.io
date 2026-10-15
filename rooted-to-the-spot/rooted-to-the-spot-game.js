@@ -59,9 +59,9 @@
   // progress is saved, so a student can pick it up next class.
   var TEAMS = [
     { en: 'Barcelona', es: 'Barcelona', c: 0xa50044 }, { en: 'Paris', es: 'París', c: 0x0b2a5b }, { en: 'Madrid', es: 'Madrid', c: 0xf1f5f9 }, { en: 'Chicago', es: 'Chicago', c: 0xc8102e },
-    { en: 'Islington', es: 'Islington', c: 0xdb0007 }, { en: 'Manchester', es: 'Mánchester', c: 0x6cabdd }, { en: 'Trafford', es: 'Trafford', c: 0xda291c }, { en: 'Liverpool', es: 'Liverpool', c: 0xc8102e },
+    { en: 'Manchester', es: 'Mánchester', c: 0x6cabdd }, { en: 'Trafford', es: 'Trafford', c: 0xda291c }, { en: 'Liverpool', es: 'Liverpool', c: 0xc8102e },
     { en: 'Munich', es: 'Múnich', c: 0xdc052d }, { en: 'Turin', es: 'Turín', c: 0x111111 }, { en: 'Milan', es: 'Milán', c: 0x9b111e }, { en: 'London', es: 'Londres', c: 0x034694 },
-    { en: 'Lombardy', es: 'Lombardía', c: 0x0068a8 }, { en: 'Dortmund', es: 'Dortmund', c: 0xfde100 }
+    { en: 'Dortmund', es: 'Dortmund', c: 0xfde100 }
   ];
   var CUP_ROUNDS = [T('Quarterfinal', 'Cuartos de final'), T('Semifinal', 'Semifinal'), T('Final', 'Final')];
   function teamName(i) { return T(TEAMS[i].en, TEAMS[i].es); }
@@ -2201,7 +2201,7 @@
   // ---------- The cup ----------
   function loadCup() {
     var cup = load('cup', null);
-    if (!cup || !Array.isArray(cup.opps) || cup.opps.length !== 3 || !(cup.round >= 0 && cup.round < 3)) {
+    if (!cup || !Array.isArray(cup.opps) || cup.opps.length !== 3 || !(cup.round >= 0 && cup.round < 3) || cup.opps.some(function (o) { return !TEAMS[o]; })) {
       var all = TEAMS.map(function (t, i) { return i; }).sort(function () { return Math.random() - 0.5; });
       cup = { round: 0, opps: all.slice(0, 3) };
       save('cup', cup);
@@ -2210,7 +2210,7 @@
   }
   function cupLine() {
     var won = load('cups', 0), cup = load('cup', null), s = '';
-    if (cup && cup.opps) s = T('Next: ', 'Siguiente: ') + CUP_ROUNDS[cup.round] + T(' against ', ' contra ') + teamName(cup.opps[cup.round]) + '. ';
+    if (cup && cup.opps && TEAMS[cup.opps[cup.round]]) s = T('Next: ', 'Siguiente: ') + CUP_ROUNDS[cup.round] + T(' against ', ' contra ') + teamName(cup.opps[cup.round]) + '. ';
     else s = T('Win a quarterfinal, a semifinal and a final to lift the cup. ', 'Gana cuartos, semifinal y final para levantar la copa. ');
     return '🏆 ' + s + (won ? T('Cups won: ', 'Copas ganadas: ') + won : '');
   }
