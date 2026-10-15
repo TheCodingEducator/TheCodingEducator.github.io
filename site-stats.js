@@ -77,7 +77,7 @@
     var ps = {
       played: has('penaltyshootout_games'), games: readNum('penaltyshootout_games', 0), best: readNum('penaltyshootout_best', 0),
       goals: readNum('penaltyshootout_goals_total', 0), perfect: readNum('penaltyshootout_perfect', 0),
-      allRight: readNum('penaltyshootout_allright', 0)
+      allRight: readNum('penaltyshootout_allright', 0), wins: readNum('penaltyshootout_wins', 0), saves: readNum('penaltyshootout_saves_total', 0), cups: readNum('penaltyshootout_cups', 0)
     };
     // Bank Shot: Angle Golf keeps best strokes and stars per course and mode; stars count once per hole (best of either mode)
     var golfRec = readJSON('bankshot_records', {}) || {}, golfCourses = ['medieval', 'space', 'summer'], golfNames = { medieval: 'Medieval Kingdom', space: 'Space Station', summer: 'Summer Beach' };
@@ -121,8 +121,8 @@
         best: rp.bestScore > 0, coins: 0, rows: [
           ['Best score', rp.bestScore], ['Best combo', 'x' + rp.bestCombo], ['Worlds finished', rp.worlds + ' / 5']] },
       { key: 'penalty', folder: 'rooted-to-the-spot', icon: '⚽', name: 'Rooted to the Spot', played: ps.played,
-        best: ps.best > 0, coins: 0, rows: [
-          ['Shootouts played', ps.games], ['Best shootout', ps.best + ' / 5 goals'], ['Total goals', ps.goals],
+        best: ps.best > 0 || ps.wins > 0, coins: 0, rows: [
+          ['Shootouts played', ps.games], ['Wins against the computer', ps.wins], ['Cups won', ps.cups], ['Total goals', ps.goals], ['Total saves', ps.saves],
           ['Every question right', ps.allRight + (ps.allRight === 1 ? ' shootout' : ' shootouts')]] },
       { key: 'billiards', folder: 'math-billiards', icon: '🎱', name: 'Math Billiards', played: mb.played,
         best: mb.wins > 0, coins: mb.coins, rows: [
@@ -172,6 +172,8 @@
       { game: 'penalty', icon: '🧠', name: 'Sharp Shooter', desc: 'Answer every question right in a shootout', earned: ps.allRight >= 1 },
       { game: 'penalty', icon: '🏆', name: 'Perfect Shootout', desc: 'Score all 5 goals', earned: ps.perfect >= 1 },
       { game: 'penalty', icon: '⭐', name: 'Goal Machine', desc: 'Score 25 goals in total', earned: ps.goals >= 25 },
+      { game: 'penalty', icon: '🧤', name: 'Brick Wall', desc: 'Make 10 saves in goal', earned: ps.saves >= 10 },
+      { game: 'penalty', icon: '🏆', name: 'Cup Winner', desc: 'Win the cup', earned: ps.cups >= 1 },
       { game: 'billiards', icon: '🎱', name: 'First Rack', desc: 'Finish a game of classroom 8-ball', earned: mb.games >= 1 },
       { game: 'billiards', icon: '📐', name: 'Angle Ace', desc: 'Solve 25 shots', earned: mb.solved >= 25 },
       { game: 'billiards', icon: '🖥️', name: 'Beat the Computer', desc: 'Win a game against the computer', earned: mb.wins >= 1 },

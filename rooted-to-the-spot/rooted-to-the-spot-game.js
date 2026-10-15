@@ -41,11 +41,29 @@
   function focusGame() { try { canvas.focus({ preventScroll: true }); } catch (e) {} }
 
   // ---------- Game state ----------
-  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8, TITLE: 9 };
+  // RUNUP, SAVING and SAVED are the student's turns in goal (the computer's shooter runs up, the shot flies, the result)
+  var STATE = { MENU: 0, MATH: 1, EXPLANATION: 2, AIMING: 3, CHARGING: 4, KICKING: 5, RESULT: 6, OVER: 7, WHISTLE: 8, TITLE: 9, RUNUP: 10, SAVING: 11, SAVED: 12 };
   var ENV = { DAY: 0, NIGHT: 1, RAIN: 2 };
   var state = STATE.TITLE, env = ENV.DAY;
 
+  // ---------- A match ----------
+  // Like a real shootout: 5 rounds, and in each round both sides take a kick. Against the computer the student takes a
+  // kick, then goes in goal for the other team's kick. With two players, player 1 and player 2 each take a kick.
+  // Tied after 5 rounds: sudden death, one round at a time, until a round has a winner.
+  // match.side is whose turn it is (0 = the student or player 1, 1 = the computer or player 2).
+  var ROUNDS = 5, MAX_ROUNDS = 15;
+  var match = null, role = 'kick';   // role: 'kick' (the student shoots) or 'save' (the student is the keeper)
+  var hintUsed = false, asked = 0, saves = 0;
   var kickNum = 0, goals = 0, rightCount = 0, results = [], missed = [], usedQ = {}, question = null, lastKey = '';
+  // The cup: a knockout of three matches (quarterfinal, semifinal, final), each against a stronger team. A cup run in
+  // progress is saved, so a student can pick it up next class.
+  var TEAMS = [
+    { en: 'Falcons', es: 'Halcones', c: 0xdc2626 }, { en: 'Sharks', es: 'Tiburones', c: 0x0891b2 }, { en: 'Tigers', es: 'Tigres', c: 0xf97316 },
+    { en: 'Wolves', es: 'Lobos', c: 0x6b7280 }, { en: 'Comets', es: 'Cometas', c: 0x9333ea }, { en: 'Bears', es: 'Osos', c: 0x92400e },
+    { en: 'Flamingos', es: 'Flamencos', c: 0xdb2777 }, { en: 'Dragons', es: 'Dragones', c: 0x16a34a }
+  ];
+  var CUP_ROUNDS = [T('Quarterfinal', 'Cuartos de final'), T('Semifinal', 'Semifinal'), T('Final', 'Final')];
+  function teamName(i) { return T(TEAMS[i].en, TEAMS[i].es); }
   var aimPower = 0, hitKeeper = false, kickPhase = 0, isAutoMiss = false, resultDecided = false, enforceSave = false;
   var resultTimeout = null, keysDown = {};
 
@@ -61,7 +79,8 @@
   var powerShot = false;   // earned by the bonus question: a much tighter (green) aiming circle for this kick
   // Where the ball can land, around the aim point: the circle starts big and shrinks as the power builds.
   // Regular shot (yellow): 4.2 m down to 0.9 m, so even a perfect release scatters. Power shot (green): 2.6 m down to 0.25 m.
-  function errorRadiusFor(p) { return powerShot ? 2.6 - p * 2.35 : 4.2 - p * 3.3; }
+  // A hint costs some kick power: the circle is a third bigger.
+  function errorRadiusFor(p) { return (powerShot ? 2.6 - p * 2.35 : 4.2 - p * 3.3) * (hintUsed ? 1.3 : 1); }
   var AIM_YELLOW = 0xfacc15, AIM_GREEN = 0x33ff33;
 
   function initEngine() {
@@ -89,6 +108,8 @@
     createKeeper(mats);
     createReferee();
     createLeg();
+    createGloves();
+    setOpponentKit(0);
 
     targetCrosshair = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.25, 32),
       new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthTest: false }));
@@ -120,6 +141,12 @@
     renderer.setSize(w, h, false);
     var aspect = w / h;
     camera.aspect = aspect;
+    if (view === 'keep') {   // in goal: a wide view, about 90 degrees across on a computer screen
+      camera.fov = Math.min(100, Math.max(50, 2 * Math.atan(1 / aspect) * 180 / Math.PI));
+      camera.zoom = 1;
+      camera.updateProjectionMatrix();
+      return;
+    }
     var needV = 2 * Math.atan(Math.tan(20 * Math.PI / 180) / aspect) * 180 / Math.PI;
     camera.fov = Math.min(95, Math.max(55, needV));
     camera.zoom = GOAL_ZOOM;   // a pure dilation of the picture about the goal's center; the 3D world (and every percentage) is unchanged
@@ -233,16 +260,18 @@
       scene.add(m);
     };
     wall(100, 0, -20, 0); wall(80, -45, 20, Math.PI / 2); wall(80, 45, 20, -Math.PI / 2);
+    wall(90, 0, 70, 0); wall(20, -45, 65, Math.PI / 2); wall(20, 45, 65, -Math.PI / 2);   // the far end, seen from the goal
 
     // Grandstands
-    // tiers of seating in two alternating shades
+    // tiers of seating in two alternating shades; the far stand is what the keeper sees past the halfway line
     var standMats = [new THREE.MeshLambertMaterial({ color: 0x1e293b }), new THREE.MeshLambertMaterial({ color: 0x334155 })];
-    var backGeo = new THREE.BoxGeometry(100, 1, 2), sideGeo = new THREE.BoxGeometry(2, 1, 100);
+    var backGeo = new THREE.BoxGeometry(100, 1, 2), sideGeo = new THREE.BoxGeometry(2, 1, 110);
     for (i = 1; i <= 15; i++) {
       var sm = standMats[i % 2];
       var b = new THREE.Mesh(backGeo, sm); b.position.set(0, i, -20 - i * 2); scene.add(b);
-      var l = new THREE.Mesh(sideGeo, sm); l.position.set(-45 - i * 2, i, 20); scene.add(l);
-      var r = new THREE.Mesh(sideGeo, sm); r.position.set(45 + i * 2, i, 20); scene.add(r);
+      var f = new THREE.Mesh(backGeo, sm); f.position.set(0, i, 70 + i * 2); scene.add(f);
+      var l = new THREE.Mesh(sideGeo, sm); l.position.set(-45 - i * 2, i, 25); scene.add(l);
+      var r = new THREE.Mesh(sideGeo, sm); r.position.set(45 + i * 2, i, 25); scene.add(r);
     }
     createCrowd();
 
@@ -357,8 +386,11 @@
     };
     for (var row = 1; row <= 15; row++) {
       var seatY = row + 0.5;
-      for (var x = -47; x <= 47; x += 1.0) addFan(x, seatY, -20 - row * 2 + 0.2, 0);          // behind the goal, facing the pitch
-      for (var z = -28; z <= 30; z += 1.0) {                                                  // the side stands, facing in
+      for (var x = -47; x <= 47; x += 1.0) {
+        addFan(x, seatY, -20 - row * 2 + 0.2, 0);                                             // behind the goal, facing the pitch
+        if (x % 2 === 0) addFan(x, seatY, 70 + row * 2 - 0.2, Math.PI);                       // the far end (seen only from the goal)
+      }
+      for (var z = -28; z <= 68; z += 1.0) {                                                  // the side stands, facing in
         addFan(-45 - row * 2 + 0.2, seatY, z, Math.PI / 2);
         addFan(45 + row * 2 - 0.2, seatY, z, -Math.PI / 2);
       }
@@ -711,6 +743,245 @@
     scene.add(legGroup);
   }
 
+  // ---------- In goal (first person) ----------
+  // When the other team shoots, the student is the keeper. The camera is the keeper's eyes, just behind the goal line, and
+  // only the keeper's gloves show. The gloves ARE the mouse pointer (or finger, or the arrow keys): they sit exactly where
+  // the pointer is, on a plane GLOVE_Z in front of the line, and the keeper's head follows them, sliding and dropping
+  // like a real keeper diving, so the gloves can reach every corner. aimS is the pointer, from -1 to 1 across the screen.
+  var view = 'shoot', glovesG = null, shooterP = null, midfield = [], aimS = { x: 0, y: 0 }, gloveW = { x: 0, y: 1.3 };
+  var KEEP_CAM_Z = -0.4, GLOVE_Z = 1.0, oppTeam = 0, oppStr = 0.25;
+
+  function createGloves() {
+    glovesG = new THREE.Group();
+    var M = function (c, rough) { return new THREE.MeshStandardMaterial({ color: c, roughness: rough || 0.6 }); };
+    var white = M(0xf8fafc), green = M(0x22c55e), cuffM = M(0x14532d), skin = M(0xe0ac69);
+    [-1, 1].forEach(function (s) {
+      var g = new THREE.Group(); g.position.x = s * 0.19; g.rotation.z = -s * 0.12; g.scale.setScalar(0.85);
+      var add = function (geo, mat, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z || 0); g.add(m); return m; };
+      add(new THREE.BoxGeometry(0.12, 0.14, 0.05), white, 0, 0);                         // the palm
+      add(new THREE.BoxGeometry(0.1, 0.05, 0.012), green, 0, 0.0, -0.03);                 // a stripe across the back
+      for (var f = 0; f < 4; f++) {                                                         // four fingers, spread a little
+        var fing = add(new THREE.BoxGeometry(0.026, 0.085, 0.04), white, -0.045 + f * 0.03, 0.11 - Math.abs(f - 1.5) * 0.01);
+        fing.rotation.z = (f - 1.5) * -0.08;
+      }
+      var thumb = add(new THREE.BoxGeometry(0.03, 0.075, 0.04), white, -s * 0.075, 0.02); thumb.rotation.z = s * 0.7;
+      add(new THREE.CylinderGeometry(0.055, 0.05, 0.07, 14), cuffM, 0, -0.1);               // the wrist strap
+      add(new THREE.CylinderGeometry(0.045, 0.045, 0.06, 12), skin, 0, -0.16);
+      glovesG.add(g);
+    });
+    glovesG.visible = false;
+    scene.add(glovesG);
+  }
+
+  // The other team: its shooter, and four of its players at the halfway line on the keeper's left. The student's own
+  // team (blue) stands on the keeper's right. (Looking out from the goal, the keeper's right is -x.)
+  var SKINS = [0x8d5524, 0xc68642, 0xe0ac69, 0xf1c27d, 0x5c3a1e];
+  function teamPerson(shirt, n, i) {
+    var p = buildPerson({ shirt: shirt, trim: 0xf8fafc, shorts: shirt === 0x1d4ed8 ? 0xf8fafc : 0x111827, socks: shirt,
+      skin: SKINS[i % SKINS.length], hair: [0x111111, 0x2b1a10, 0x6b4423][i % 3], number: String(n), numberColor: '#ffffff' });
+    p.root.rotation.y = Math.PI;   // facing the goal
+    return p;
+  }
+  function setOpponentKit(team) {
+    oppTeam = team;
+    midfield.forEach(function (p) { scene.remove(p.root); });
+    if (shooterP) scene.remove(shooterP.root);
+    midfield = [];
+    [[-3, 4], [-5.6, 7], [-8.2, 10], [-10.8, 11]].forEach(function (s, i) {   // ours, on the keeper's right
+      var p = teamPerson(0x1d4ed8, s[1], i); p.root.position.set(s[0], 0, 52 + (i % 2) * 1.5); midfield.push(p); scene.add(p.root);
+    });
+    [[3, 5], [5.6, 8], [8.2, 2], [10.8, 6]].forEach(function (s, i) {        // theirs, on the keeper's left
+      var p = teamPerson(TEAMS[team].c, s[1], i + 2); p.root.position.set(s[0], 0, 52 + ((i + 1) % 2) * 1.5); midfield.push(p); scene.add(p.root);
+    });
+    shooterP = teamPerson(TEAMS[team].c, 9, 3);
+    shooterP.root.visible = view === 'keep';
+    scene.add(shooterP.root);
+    placeShooter(0);
+  }
+  var RUN_FROM = { x: -0.9, z: 13.7 }, RUN_TO = { x: -0.32, z: 11.42 };
+  function placeShooter(k) {   // k: 0 = standing back, ready; 1 = at the ball
+    shooterP.root.position.set(RUN_FROM.x + (RUN_TO.x - RUN_FROM.x) * k, 0, RUN_FROM.z + (RUN_TO.z - RUN_FROM.z) * k);
+    shooterP.root.rotation.y = Math.PI - Math.atan2(RUN_TO.x - RUN_FROM.x, RUN_FROM.z - RUN_TO.z) * (1 - k);
+  }
+
+  // switch between shooting (behind the ball) and keeping (in goal)
+  function setView(v) {
+    view = v;
+    var keep = v === 'keep';
+    keeperGroup.visible = !keep;
+    glovesG.visible = keep;
+    shooterP.root.visible = keep;
+    if (keep) { placeShooter(0); aimS.x = 0; aimS.y = -0.55; }   // gloves start low, so the shooter is in view
+    canvas.style.cursor = keep ? 'none' : '';
+    canvas.setAttribute('aria-label', keep
+      ? T('In goal. Move your gloves with the mouse, a finger or the arrow keys to stop the shot. Escape opens the menu.', 'En la portería. Mueve los guantes con el ratón, un dedo o las flechas para atajar el tiro. Escape abre el menú.')
+      : T('The stadium. Aim with the mouse, a finger or the arrow keys; click, tap or press Space to power up, and again to shoot. Escape opens the menu.', 'El estadio. Apunta con el ratón, un dedo o las flechas; haz clic, toca o pulsa Espacio para cargar, y otra vez para tirar. Escape abre el menú.'));
+    if (!keep) { camera.position.copy(camHome); camera.lookAt(lookHome); }
+    resize();
+  }
+
+  // the keeper's eyes follow the gloves (see above)
+  function keeperCam() {
+    var d = GLOVE_Z - KEEP_CAM_Z, H = d * Math.tan(camera.fov * Math.PI / 360), W = H * camera.aspect;
+    var cx = aimS.x * Math.max(0, 3.5 - W), cy = 1.3 + aimS.y * Math.max(0, 1.15 - H);
+    gloveW.x = Math.max(-3.9, Math.min(3.9, cx + aimS.x * W));
+    gloveW.y = Math.max(0.1, Math.min(2.7, cy + aimS.y * H));
+    camera.position.set(cx, cy, KEEP_CAM_Z);
+    camera.lookAt(cx, cy, 20);
+    camera.rotateZ(aimS.x * 0.06);   // leaning into the dive
+    glovesG.position.set(gloveW.x, gloveW.y, GLOVE_Z);
+    glovesG.rotation.z = aimS.x * 0.35;
+  }
+  function aimFromPointer(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    aimS.x = Math.max(-1, Math.min(1, ((clientX - rect.left) / rect.width) * 2 - 1));
+    aimS.y = Math.max(-1, Math.min(1, -((clientY - rect.top) / rect.height) * 2 + 1));
+  }
+
+  // The other team's kick. A right answer means slow motion (a hint makes it a little less slow); a wrong answer means
+  // full speed, which is very hard (but not impossible) to save. Shots get faster and more accurate in later cup rounds.
+  var runT = -1, slowMo = false, kickT = -1, fly = null, saveRes = '', heldT = 0;
+  var srLive = null;
+  function startRunUp() {
+    resetBall();
+    placeShooter(0);
+    $('slow-badge').hidden = !slowMo;
+    refWhistle(function () { state = STATE.RUNUP; runT = 0; kickT = -1; });
+  }
+  function pickShot() {
+    var side = Math.random() < 0.5 ? -1 : 1, r = Math.random(), x, y;
+    if (r < 0.1 - 0.05 * oppStr) {   // now and then the shooter misses the target
+      if (Math.random() < 0.5) { x = side * (3.95 + Math.random() * 0.8); y = 0.3 + Math.random() * 1.6; }
+      else { x = side * Math.random() * 3; y = 2.7 + Math.random() * 0.5; }
+    } else if (r < 0.22 - 0.1 * oppStr) { x = (Math.random() - 0.5) * 1.4; y = 0.25 + Math.random() * 1.5; }   // down the middle
+    else { x = side * Math.min(3.45, 1.3 + Math.random() * (1.9 + 0.4 * oppStr)); y = 0.15 + Math.random() * 2.05; }
+    return { x: x, y: y };
+  }
+  function shootAtKeeper() {
+    var s = pickShot(), speed = 22 + 6 * oppStr, g = 9.81, t = Math.sqrt(s.x * s.x + PENALTY_DIST * PENALTY_DIST) / speed;
+    fly = { p: new THREE.Vector3(0, BALL_RADIUS, PENALTY_DIST), v: new THREE.Vector3(s.x / t, (s.y - BALL_RADIUS + 0.5 * g * t * t) / t, -PENALTY_DIST / t),
+      scale: slowMo ? (hintUsed ? 0.5 : 0.3) : 1, target: s, inNet: false, crossed: false };
+    lastLandX = s.x; lastLandY = s.y;
+    state = STATE.SAVING;
+    saveRes = ''; heldT = 0;
+    playSound('kick');
+    if (srLive && slowMo) srLive.textContent = (s.y > 1.4 ? T('High ', 'Alto ') : T('Low ', 'Bajo ')) +
+      (s.x > 0.8 ? T('to your left', 'a tu izquierda') : s.x < -0.8 ? T('to your right', 'a tu derecha') : T('down the middle', 'por el centro')) + '!';
+  }
+  function saveDone(kind) {   // kind: 'saved', 'caught', 'goal', 'wide' or 'over'
+    if (saveRes) return;
+    saveRes = kind;
+    state = STATE.SAVED;
+    $('slow-badge').hidden = true;
+    var scored = kind === 'goal';
+    match.res[1].push(scored);
+    if (scored) match.score[1]++;
+    if (kind === 'saved' || kind === 'caught') { saves++; playSound('cheer'); crowdCheer = 3; crowdWave = null; celebrate(); }
+    else if (scored) { playSound('groan'); if (!rippleDone) startRipple(lastLandX, lastLandY); }
+    else playSound('cheer');
+    msg.textContent = { saved: T('SAVED!', '¡ATAJADA!'), caught: T('CAUGHT!', '¡ATRAPADA!'), goal: T('THEY SCORE', 'GOL DE ELLOS'), wide: T('WIDE!', '¡DESVIADO!'), over: T('OVER THE BAR!', '¡POR ENCIMA!') }[kind];
+    msg.className = scored ? 'miss' : 'goal';
+    msg.hidden = false;
+    var ax = Math.abs(lastLandX), line;
+    if (kind === 'saved') line = pick([T('What a save!', '¡Qué atajada!'), T('Great reflexes!', '¡Grandes reflejos!'), T('Pushed away!', '¡Despejada!')]);
+    else if (kind === 'caught') line = T('Safe hands! Caught it.', '¡Manos seguras! La atrapaste.');
+    else if (!scored) line = T('Off target. Lucky!', 'Fuera. ¡Qué suerte!');
+    else if (!slowMo) line = T('Too fast! A right answer slows the shot down.', '¡Muy rápido! Una respuesta correcta hace el tiro más lento.');
+    else if (ax > 2.4) line = T('Into the corner. Stretch for it next time!', 'A la esquina. ¡Estírate más la próxima vez!');
+    else line = T('Get your gloves in front of the ball!', '¡Pon los guantes delante del balón!');
+    $('caption').textContent = line; $('caption').hidden = false;
+    drawHud();
+    var next = function () {
+      if (paused) { resultTimeout = setTimeout(next, 300); return; }
+      if (state === STATE.SAVED) skipResult();
+    };
+    resultTimeout = setTimeout(next, 2400);
+  }
+  function animateKeeperMode(delta) {
+    if (state === STATE.MATH || state === STATE.EXPLANATION || state === STATE.WHISTLE || state === STATE.RUNUP || state === STATE.SAVING || state === STATE.SAVED) {
+      var kx = (keysDown.ArrowRight || keysDown.KeyD ? 1 : 0) - (keysDown.ArrowLeft || keysDown.KeyA ? 1 : 0);
+      var ky = (keysDown.ArrowUp || keysDown.KeyW ? 1 : 0) - (keysDown.ArrowDown || keysDown.KeyS ? 1 : 0);
+      if (state !== STATE.MATH && (kx || ky)) {
+        aimS.x = Math.max(-1, Math.min(1, aimS.x + kx * 1.8 * delta));
+        aimS.y = Math.max(-1, Math.min(1, aimS.y + ky * 1.8 * delta));
+      }
+    }
+    keeperCam();
+    var t = clock.elapsedTime, sp = shooterP;
+    // the shooter: waits, rocking on his toes; runs up; strikes with his right foot
+    if (state === STATE.RUNUP) {
+      runT += delta;
+      var RUN = 1.0, k = Math.min(1, runT / RUN);
+      placeShooter(k);
+      var ph = runT * 13;
+      if (k < 1) {
+        sp.lLeg.rotation.x = Math.sin(ph) * 0.7; sp.rLeg.rotation.x = -Math.sin(ph) * 0.7;
+        sp.lArm.rotation.x = -Math.sin(ph) * 0.6; sp.rArm.rotation.x = Math.sin(ph) * 0.6;
+        sp.hips.position.y = 1.0 + Math.abs(Math.sin(ph)) * 0.05;
+      } else {
+        if (kickT < 0) kickT = 0;
+        kickT += delta;
+        var w = Math.min(1, kickT / 0.16);
+        sp.rLeg.rotation.x = 0.7 - 2.0 * w; sp.lLeg.rotation.x = 0.1;   // the right leg swings through
+        sp.lArm.rotation.set(-0.5, 0, -0.6); sp.rArm.rotation.set(0.4, 0, 0.3);
+        if (w >= 1) shootAtKeeper();
+      }
+    } else if (state !== STATE.SAVING && state !== STATE.SAVED) {
+      sp.hips.position.y = 1.0 + Math.sin(t * 2.4) * 0.012;
+      sp.lLeg.rotation.x = sp.rLeg.rotation.x = 0;
+      sp.lArm.rotation.set(0, 0, -0.12 + Math.sin(t * 1.3) * 0.03); sp.rArm.rotation.set(0, 0, 0.12 - Math.sin(t * 1.3) * 0.03);
+    }
+    if ((state === STATE.SAVING || state === STATE.SAVED) && fly) flyBall(delta * (state === STATE.SAVING ? fly.scale : 1));
+  }
+  // The ball, moved by hand (no physics engine here): gravity, a bounce on the grass, and the net.
+  function flyBall(dt) {
+    var p = fly.p, v = fly.v, g = 9.81;
+    if (saveRes === 'caught') {   // held in the gloves
+      p.set(gloveW.x, gloveW.y, GLOVE_Z + 0.12);
+      ballMesh.position.copy(p);
+      return;
+    }
+    var prevZ = p.z;
+    v.y -= g * dt;
+    p.addScaledVector(v, dt);
+    if (p.y < BALL_RADIUS) { p.y = BALL_RADIUS; if (v.y < 0) v.y = -v.y * 0.45; v.x *= 0.8; v.z *= 0.8; }
+    // reaching the gloves
+    if (!saveRes && !fly.crossed && prevZ > GLOVE_Z && p.z <= GLOVE_Z) {
+      fly.crossed = true;
+      var dx = p.x - gloveW.x, dy = p.y - gloveW.y;
+      if (Math.abs(dx) < 0.21 && Math.abs(dy) < 0.21) { playSound('catch'); saveDone('caught'); return; }
+      if (Math.abs(dx) < 0.42 && Math.abs(dy) < 0.38) {   // fingertips: pushed away to the side
+        playSound('catch');
+        v.set((dx >= 0 ? 1 : -1) * (1.5 + Math.random() * 2.5) + v.x * 0.15, 2 + Math.random() * 2, 5 + Math.random() * 3);
+        saveDone('saved');
+      }
+    }
+    // the goal line
+    if (!saveRes && prevZ > 0 && p.z <= 0) {
+      var inGoal = Math.abs(p.x) < GOAL_WIDTH / 2 - BALL_RADIUS && p.y < GOAL_HEIGHT - BALL_RADIUS;
+      if (inGoal) { fly.inNet = true; saveDone('goal'); }
+      else saveDone(p.y >= GOAL_HEIGHT - BALL_RADIUS && Math.abs(p.x) < GOAL_WIDTH / 2 ? 'over' : 'wide');
+    }
+    if (fly.inNet) {   // the net holds it
+      var side = GOAL_WIDTH / 2 - BALL_RADIUS;
+      if (p.z < -2.3) { p.z = -2.3; v.z = -v.z * 0.08; v.x *= 0.5; }
+      if (p.x > side) { p.x = side; v.x = -Math.abs(v.x) * 0.1; }
+      if (p.x < -side) { p.x = -side; v.x = Math.abs(v.x) * 0.1; }
+      if (p.y > GOAL_HEIGHT - BALL_RADIUS) { p.y = GOAL_HEIGHT - BALL_RADIUS; v.y = 0; }
+    }
+    ballMesh.position.copy(p);
+    ballMesh.rotation.x -= v.z * dt * 4;
+  }
+  function animateMidfield() {
+    var t = clock.elapsedTime;
+    midfield.forEach(function (p, i) {
+      p.hips.position.y = 1.0 + Math.sin(t * 1.6 + i) * 0.008;
+      p.lArm.rotation.set(0, 0, -0.12 - Math.sin(t * 0.9 + i) * 0.04);
+      p.rArm.rotation.set(0, 0, 0.12 + Math.sin(t * 0.9 + i) * 0.04);
+      p.head.rotation.y = Math.sin(t * 0.4 + i * 2) * 0.3;
+    });
+  }
+
   // ---------- Questions ----------
   function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
   function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
@@ -863,13 +1134,67 @@
 
   function skillName(id) { for (var i = 0; i < SKILLS.length; i++) if (SKILLS[i].id === id) return SKILLS[i].name; return ''; }
 
+  // "ROUND 2 OF 5 · YOUR SAVE", "SUDDEN DEATH · PLAYER 2"
+  function turnLabel() {
+    var head = match.round >= ROUNDS ? T('SUDDEN DEATH', 'MUERTE SÚBITA') : T('ROUND ', 'RONDA ') + (match.round + 1) + T(' OF ', ' DE ') + ROUNDS;
+    var who = match.mode === 'two' ? T('PLAYER ', 'JUGADOR ') + (match.side + 1)
+      : role === 'save' ? T('YOUR SAVE', 'TU ATAJADA') : T('YOUR KICK', 'TU TIRO');
+    return head + ' · ' + who;
+  }
+
+  // ---------- Hints ----------
+  // Before answering, a student can ask for a hint: the picture behind the question (a square of little squares, a cube of
+  // little cubes, the perfect squares nearby), without the answer. It costs a little: a weaker shot (a bigger aiming
+  // circle) or, in goal, less slow motion.
+  function hintHTML(q) {
+    var r = q.r, sz = Math.min(96, Math.max(56, app.clientHeight * 0.13)), pic = '', txt;
+    if (q.skill === 'sqrt' || q.skill === 'area') {
+      if (r > 1) pic = gridHTML(r, sz, true);
+      txt = T('A square made of ' + fmt(r * r) + ' little squares. Count the squares along one side.', 'Un cuadrado hecho de ' + fmt(r * r) + ' cuadraditos. Cuenta los cuadrados de un lado.');
+    } else if (q.skill === 'square') {
+      if (r > 1) pic = gridHTML(r, sz, true);
+      txt = r + '² = ' + r + ' × ' + r + T(': count all the little squares, or multiply.', ': cuenta todos los cuadraditos, o multiplica.');
+    } else if (q.skill === 'cube' || q.skill === 'cubeside') {
+      if (r > 1) pic = cubeHTML(r, sz, true);
+      txt = T('Which number, used 3 times, multiplies to ', '¿Qué número, multiplicado 3 veces, da ') + fmt(r * r * r) + T('? Count the little cubes along one edge.', '? Cuenta los cubitos de una arista.');
+    } else if (q.skill === 'cubed') {
+      txt = r + '³ = ' + r + ' × ' + r + ' × ' + r + T('. Start with ', '. Empieza con ') + r + ' × ' + r + ' = ' + (r * r) + T(', then multiply by ', ', luego multiplica por ') + r + '.';
+    } else if (q.closer) {
+      txt = '√' + q.n + T(' is between ', ' está entre ') + q.a + T(' and ', ' y ') + (q.a + 1) + ', ' + T('because ', 'porque ') + q.a + '² = ' + q.lo + T(' and ', ' y ') + (q.a + 1) + '² = ' + q.hi +
+        T('. Is ' + q.n + ' closer to ' + q.lo + ' or to ' + q.hi + '?', '. ¿' + q.n + ' está más cerca de ' + q.lo + ' o de ' + q.hi + '?');
+    } else {   // between two whole numbers: the perfect squares (or cubes) around it
+      var pw = q.cube ? 3 : 2, list = [];
+      for (var k = Math.max(0, q.a - 1); k <= q.a + 2; k++) list.push(k + (q.cube ? '³' : '²') + ' = ' + fmt(Math.pow(k, pw)));
+      txt = (q.cube ? T('Perfect cubes: ', 'Cubos perfectos: ') : T('Perfect squares: ', 'Cuadrados perfectos: ')) + list.join(', ') +
+        T('. Where does ' + q.n + ' fit?', '. ¿Dónde cabe ' + q.n + '?');
+    }
+    return pic + '<p>' + roots(txt) + '</p>';
+  }
+  function showHint() {
+    if (state !== STATE.MATH || hintUsed || question.bonus) return;
+    hintUsed = true;
+    $('q-hint').hidden = true;
+    $('q-hintbox').innerHTML = hintHTML(question);
+    $('q-hintbox').hidden = false;
+    scrQ.querySelector('.card').classList.add('hinted');
+    playSound('blip');
+    if (!isTouch && !question.closer) activeIn.focus({ preventScroll: true });
+  }
+
   function askQuestion(bonus) {
     question = makeQuestion(!!bonus);
+    if (!bonus) { asked++; hintUsed = false; }
     $('q-kick').textContent = bonus ? T('⚡ BONUS QUESTION · POWER SHOT', '⚡ PREGUNTA EXTRA · TIRO POTENTE')
-      : T('KICK ', 'TIRO ') + (kickNum + 1) + T(' OF ', ' DE ') + KICKS + ' · ' + skillName(question.cat).toUpperCase();
+      : turnLabel() + ' · ' + skillName(question.cat).toUpperCase();
     $('q-kick').classList.toggle('bonus', !!bonus);
     $('q-bonus').hidden = !bonus;
     $('q-skip').hidden = !bonus;
+    $('q-hint').hidden = !!bonus;
+    $('q-hint').innerHTML = role === 'save' ? T('💡 HINT <small>(less slow motion)</small>', '💡 PISTA <small>(menos cámara lenta)</small>')
+      : T('💡 HINT <small>(weaker shot)</small>', '💡 PISTA <small>(tiro más débil)</small>');
+    $('q-hintbox').hidden = true;
+    scrQ.querySelector('.card').classList.remove('hinted');
+    $('q-go').textContent = role === 'save' ? T('SAVE', 'ATAJAR') : T('KICK', 'TIRAR');
     $('q-text').innerHTML = question.html;
     $('q-text').classList.toggle('long', !!question.two);
     $('q-sub').textContent = question.sub || T('Type a whole number.', 'Escribe un número entero.');
@@ -925,6 +1250,12 @@
     }
     hide(scrQ);
     if (window.SiteResults) window.SiteResults.record(question.cat || skillGroup(question.skill || ''), ok);
+    if (role === 'save') {   // in goal: right = the shot comes in slow motion; wrong = see why, then full speed
+      slowMo = ok;
+      if (ok) { rightCount++; playSound('blip'); startRunUp(); }
+      else { missed.push({ q: question.plain, you: answerText(given), ans: question.answer }); showExplanation(answerText(given), given); }
+      return;
+    }
     if (question.bonus) {   // the bonus question: right earns a power shot; wrong just shows why, then a normal shot
       if (ok) { powerShot = true; playSound('blip'); goShoot(); }
       else { missed.push({ q: question.plain, you: answerText(given), ans: question.answer }); showExplanation(answerText(given), given); }
@@ -951,16 +1282,16 @@
   // Sides up to 16 are drawn square by square; a side of 100 is drawn as 10 blocks of 10
   function blocks(r) { if (r <= 16 || r % 10) return { n: r, b: 1 }; var b = r >= 100 ? r / 10 : 10; return { n: r / b, b: b }; }
 
-  function gridHTML(r, sizePx) {
+  function gridHTML(r, sizePx, noCap) {
     var k = blocks(r), n = k.n, px = Math.max(6, Math.floor(sizePx / n)), cells = '';
     for (var i = 0; i < n * n; i++) cells += '<i style="animation-delay:' + Math.round(i * 1000 / (n * n)) + 'ms"></i>';
-    return '<div class="grid" style="grid-template-columns:repeat(' + n + ',' + px + 'px);grid-template-rows:repeat(' + n + ',' + px + 'px)">' + cells + '</div>' +
+    return '<div class="grid" style="grid-template-columns:repeat(' + n + ',' + px + 'px);grid-template-rows:repeat(' + n + ',' + px + 'px)">' + cells + '</div>' + (noCap ? '' :
       '<div class="gcap">' + fmt(r) + ' × ' + fmt(r) +
-      (k.b > 1 ? T('<br>each square is ', '<br>cada cuadrado es ') + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b) : '') + '</div>';
+      (k.b > 1 ? T('<br>each square is ', '<br>cada cuadrado es ') + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b) : '') + '</div>');
   }
 
   // A cube of r × r × r little cubes, drawn at an angle so its top and two sides show
-  function cubeHTML(rTrue, sizePx) {
+  function cubeHTML(rTrue, sizePx, noCap) {
     var k = blocks(rTrue), r = k.n;
     var s = sizePx / (r * 1.8), c30 = Math.cos(Math.PI / 6), s30 = 0.5;
     var P = function (x, y, z) { return [(x - z) * c30 * s, (x + z) * s30 * s - y * s]; };
@@ -983,9 +1314,9 @@
     var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
     var minX = Math.min.apply(null, xs), minY = Math.min.apply(null, ys), w = Math.max.apply(null, xs) - minX, h = Math.max.apply(null, ys) - minY;
     return '<svg class="cube" width="' + Math.round(w + 4) + '" height="' + Math.round(h + 4) + '" viewBox="' + (minX - 2) + ' ' + (minY - 2) + ' ' + (w + 4) + ' ' + (h + 4) + '" role="img" aria-label="' +
-      T('A cube made of ', 'Un cubo hecho de ') + fmt(rTrue * rTrue * rTrue) + (rTrue * rTrue * rTrue === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')) + '">' + svg + '</svg>' +
+      T('A cube made of ', 'Un cubo hecho de ') + fmt(rTrue * rTrue * rTrue) + (rTrue * rTrue * rTrue === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')) + '">' + svg + '</svg>' + (noCap ? '' :
       '<div class="gcap">' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' × ' + fmt(rTrue) + ' = ' + fmt(rTrue * rTrue * rTrue) + (rTrue * rTrue * rTrue === 1 ? T(' little cube', ' cubito') : T(' little cubes', ' cubitos')) +
-      (k.b > 1 ? T('<br>each block is ', '<br>cada bloque es ') + k.b + ' × ' + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b * k.b) : '') + '</div>';
+      (k.b > 1 ? T('<br>each block is ', '<br>cada bloque es ') + k.b + ' × ' + k.b + ' × ' + k.b + ' = ' + fmt(k.b * k.b * k.b) : '') + '</div>');
   }
 
   // When a wrong answer matches a classic mistake, say so first, so the student sees what went wrong.
@@ -1035,8 +1366,10 @@
     $('exp-tip').innerHTML = tip ? '💡 ' + roots(tip) : '';
     $('exp-tip').hidden = !tip;
     // a missed bonus question just leads to a normal shot, not a wild one
-    $('exp-go').textContent = q.bonus ? T('TAKE THE SHOT', 'A TIRAR') : T('WATCH THE MISS', 'VER EL FALLO');
-    $('exp-wild').hidden = !!q.bonus;
+    $('exp-go').textContent = role === 'save' ? T('FACE THE SHOT', 'A ATAJAR') : q.bonus ? T('TAKE THE SHOT', 'A TIRAR') : T('WATCH THE MISS', 'VER EL FALLO');
+    $('exp-wild').textContent = role === 'save' ? T('Because you missed the question, the shot comes at full speed!', 'Como fallaste la pregunta, ¡el tiro viene a toda velocidad!')
+      : T('Because you missed the question, your shot goes wild!', 'Como fallaste la pregunta, ¡tu tiro sale desviado!');
+    $('exp-wild').hidden = !!q.bonus && role !== 'save';
 
     if (q.skill === 'sqrt' || q.skill === 'square' || q.skill === 'area') {
       body = gridHTML(r, Math.min(200, Math.max(120, app.clientHeight * 0.3)));
@@ -1095,6 +1428,7 @@
   function closeExplanation() {
     if (state !== STATE.EXPLANATION) return;
     hide(scrExp);
+    if (role === 'save') { startRunUp(); return; }     // in goal: the shot comes at full speed
     if (question.bonus) { goShoot(); return; }         // missed the bonus: a normal shot
     refWhistle(function () { executeKick(true); });   // missed the math: after the whistle, the shot goes wild
   }
@@ -1219,7 +1553,7 @@
     var place = 0.4 + 0.46 * Math.pow(dx, 1.2) + 0.1 * dy + 0.1 * dx * dy;
     var strike = 0.7 + 0.3 * power;
     // level 1: a generous keeper (even a shot at him goes in about 2 times in 3); level 10: a sharp one
-    var p = place * strike * (1.2 - 0.45 * skillRating) + 0.12 * (1 - skillRating);
+    var p = (place * strike * (1.2 - 0.45 * skillRating) + 0.12 * (1 - skillRating)) * (1.06 - 0.16 * oppStr);   // later cup rounds: a better keeper
     return Math.max(0.05, Math.min(0.98, p));
   }
 
@@ -1694,9 +2028,11 @@
   function kickResult(kind) {
     resultDecided = true;
     state = STATE.RESULT;
-    results[kickNum] = kind;
-    if (kind === 'goal') { goals++; playSound('cheer'); crowdCheer = 3; crowdWave = null; } else playSound('groan');
-    if (!isAutoMiss) adaptKeeper(kind);   // wild shots after a wrong answer don't count
+    var scored = kind === 'goal';
+    match.res[match.side].push(scored);
+    if (scored) match.score[match.side]++;
+    if (scored) { playSound('cheer'); crowdCheer = 3; crowdWave = null; } else playSound('groan');
+    if (!isAutoMiss && match.mode !== 'two') adaptKeeper(kind);   // wild shots after a wrong answer don't count
     msg.textContent = {
       goal: T('GOAL!', '¡GOL!'), saved: T('SAVED', '¡ATAJADA!'), caught: T('CAUGHT!', '¡ATRAPADA!'),
       post: T('OFF THE POST', '¡AL PALO!'), wide: T('WIDE', 'DESVIADO'), over: T('OVER THE BAR', 'POR ENCIMA')
@@ -1706,7 +2042,6 @@
     var line = announcerLine(kind);
     $('caption').textContent = line; $('caption').hidden = !line;
     if (kind === 'goal') { celebrate(); if (!rippleDone) startRipple(lastLandX, lastLandY); }
-    kickNum++;
     drawHud();
     var next = function () {
       if (paused) { resultTimeout = setTimeout(next, 300); return; }   // wait until the menu is closed
@@ -1720,48 +2055,78 @@
     msg.hidden = true;
     $('caption').hidden = true;
     chance.hidden = true;
+    if (srLive) srLive.textContent = '';
+    advanceTurn();
     nextKick();
   }
 
   var boardCanvas = null, boardTex = null;
+  function sideName(s) {
+    if (!match) return '';
+    if (match.mode === 'two') return T('PLAYER ', 'JUGADOR ') + (s + 1);
+    return s === 0 ? T('YOU', 'TÚ') : teamName(match.opp).toUpperCase();
+  }
   function updateBoard() {
     if (!boardCanvas) return;
-    var c = boardCanvas.getContext('2d'), inGame = !hud.hidden;
+    var c = boardCanvas.getContext('2d'), inGame = !hud.hidden && match;
     c.fillStyle = '#05070d'; c.fillRect(0, 0, 512, 256);
     c.strokeStyle = '#3b82f6'; c.lineWidth = 8; c.strokeRect(8, 8, 496, 240);
     c.textAlign = 'center';
     c.fillStyle = '#60a5fa'; c.font = 'bold 34px Arial';
-    c.fillText('ROOTED TO THE SPOT', 256, 58);
+    c.fillText(inGame && match.mode === 'cup' ? CUP_ROUNDS[match.cupRound].toUpperCase() : 'ROOTED TO THE SPOT', 256, 58);
     c.fillStyle = '#facc15'; c.font = 'bold 96px Arial';
-    c.fillText(inGame ? goals + ' / ' + KICKS : '⚽', 256, 165);
+    c.fillText(inGame ? match.score[0] + ' – ' + match.score[1] : '⚽', 256, 165);
     c.fillStyle = '#e2e8f0'; c.font = 'bold 30px Arial';
-    c.fillText(inGame ? T('GOALS', 'GOLES') + ' · ' + T('KICK ', 'TIRO ') + Math.min(kickNum + 1, KICKS) + '/' + KICKS : T('A PENALTY SHOOTOUT', 'UNA TANDA DE PENALES'), 256, 222);
+    c.fillText(inGame ? sideName(0) + '  ·  ' + sideName(1) : T('A PENALTY SHOOTOUT', 'UNA TANDA DE PENALES'), 256, 222);
     boardTex.needsUpdate = true;
   }
 
+  // Two rows on the scoreboard: a dot for each kick (green: scored, red: not), the next kick ringed in yellow
   function drawHud() {
     updateBoard();
-    $('hud-goals').textContent = goals;
-    var dots = '';
-    for (var i = 0; i < KICKS; i++) {
-      var r = results[i];
-      dots += '<span class="dot ' + (r === 'goal' ? 'g' : r ? 'x' : '') + (i === kickNum && state !== STATE.OVER ? ' now' : '') + '">' +
-        (r === 'goal' ? '✓' : r ? '✗' : '') + '</span>';
+    if (!match) return;
+    var n = Math.max(ROUNDS, match.round + 1);
+    for (var s = 0; s < 2; s++) {
+      $('hud-n' + s).textContent = sideName(s);
+      $('hud-s' + s).textContent = match.score[s];
+      var dots = '', res = match.res[s];
+      for (var i = 0; i < n; i++) {
+        var r = res[i], now = i === match.round && s === match.side && state !== STATE.OVER;
+        dots += '<span class="dot ' + (r === true ? 'g' : r === false ? 'x' : '') + (now ? ' now' : '') + '">' + (r === true ? '✓' : r === false ? '✗' : '') + '</span>';
+      }
+      $('hud-d' + s).innerHTML = dots;
+      $('hud-d' + s).setAttribute('aria-label', sideName(s) + ': ' + match.score[s] + ' ' + T('goals', 'goles'));
     }
-    $('hud-dots').innerHTML = dots;
-    $('hud-dots').setAttribute('aria-label', T('Kicks: ', 'Tiros: ') + results.map(function (r) {
-      return r === 'goal' ? T('goal', 'gol') : T('no goal', 'sin gol');
-    }).join(', '));
   }
 
   // ---------- Shootout flow ----------
-  function startShootout() {
-    kickNum = 0; goals = 0; rightCount = 0; results = []; missed = []; usedQ = {};
+  // mode: 'friendly' (one match against the computer), 'cup' (the next match of the cup run) or 'two' (two players)
+  var lastMode = 'friendly';
+  function startShootout(mode) {
+    mode = mode || lastMode;
+    lastMode = mode;
+    var opp = Math.floor(Math.random() * TEAMS.length), cupRound = 0;
+    if (mode === 'cup') { var cup = loadCup(); opp = cup.opps[cup.round]; cupRound = cup.round; }
+    match = { mode: mode, round: 0, side: 0, score: [0, 0], res: [[], []], opp: opp, cupRound: cupRound };
+    oppStr = mode === 'cup' ? cupRound / 2 : 0.25;
+    setOpponentKit(opp);
+    rightCount = 0; asked = 0; saves = 0; missed = []; usedQ = {};
     if (window.SiteResults) window.SiteResults.reset();
     hide(scrMenu); hide(scrOver);
     hud.hidden = false;
     drawHud();
     nextKick();
+  }
+
+  // after each kick: the other side's turn; after both, the next round
+  function advanceTurn() {
+    if (match.side === 0) { match.side = 1; return; }
+    match.side = 0; match.round++;
+  }
+  // the match is over when, after a whole round, the scores differ (from round 5 on), or after MAX_ROUNDS rounds
+  function matchOver() {
+    if (match.side !== 0 || match.round < ROUNDS) return false;
+    return match.score[0] !== match.score[1] || match.round >= MAX_ROUNDS;
   }
 
   function nextKick() {
@@ -1773,8 +2138,31 @@
     legGroup.visible = false;
     resetBall();
     resetKeeper();
+    if (matchOver()) { setView('shoot'); drawHud(); showOver(); return; }
+    role = match.mode !== 'two' && match.side === 1 ? 'save' : 'kick';
+    // in a two-player game, each player's own boot color: blue for player 1, red for player 2
+    legGroup.children[0].material.color.setHex(match.mode === 'two' && match.side === 1 ? 0xdc2626 : 0x1d4ed8);
+    legGroup.children[3].material.color.setHex(match.mode === 'two' && match.side === 1 ? 0xdc2626 : 0x1d4ed8);
+    setView(role === 'save' ? 'keep' : 'shoot');
     drawHud();
-    if (kickNum >= KICKS) showOver(); else askQuestion();
+    askQuestion();
+  }
+
+  // ---------- The cup ----------
+  function loadCup() {
+    var cup = load('cup', null);
+    if (!cup || !Array.isArray(cup.opps) || cup.opps.length !== 3 || !(cup.round >= 0 && cup.round < 3)) {
+      var all = TEAMS.map(function (t, i) { return i; }).sort(function () { return Math.random() - 0.5; });
+      cup = { round: 0, opps: all.slice(0, 3) };
+      save('cup', cup);
+    }
+    return cup;
+  }
+  function cupLine() {
+    var won = load('cups', 0), cup = load('cup', null), s = '';
+    if (cup && cup.opps) s = T('Next: ', 'Siguiente: ') + CUP_ROUNDS[cup.round] + T(' against the ', ' contra los ') + teamName(cup.opps[cup.round]) + '. ';
+    else s = T('Win a quarterfinal, a semifinal and a final to lift the cup. ', 'Gana cuartos, semifinal y final para levantar la copa. ');
+    return '🏆 ' + s + (won ? T('Cups won: ', 'Copas ganadas: ') + won : '');
   }
 
   function showOver() {
@@ -1782,25 +2170,53 @@
     if (window.SiteResults) setTimeout(function () { window.SiteResults.show({ title: T('Your results', 'Tus resultados') }); }, 1500);
     hideAimHud();
     drawHud();
-    var best = load('best', 0), newBest = goals > best;
+    var a = match.score[0], b = match.score[1], win = a > b, draw = a === b, two = match.mode === 'two';
+    // saved stats (My Stats): the student's own goals; in a two-player game, both players' goals
+    var regGoals = match.res[0].slice(0, ROUNDS).filter(Boolean).length;
     save('games', load('games', 0) + 1);
-    save('goals_total', load('goals_total', 0) + goals);
-    if (newBest) save('best', goals);
-    if (goals === KICKS) save('perfect', load('perfect', 0) + 1);
-    if (rightCount === KICKS) save('allright', load('allright', 0) + 1);
+    save('goals_total', load('goals_total', 0) + a + (two ? b : 0));
+    save('saves_total', load('saves_total', 0) + saves);
+    if (regGoals > load('best', 0)) save('best', regGoals);
+    if (regGoals === ROUNDS) save('perfect', load('perfect', 0) + 1);
+    if (rightCount === asked && asked) save('allright', load('allright', 0) + 1);
+    if (!two && win) save('wins', load('wins', 0) + 1);
 
-    $('over-title').textContent = goals >= 4 ? T('CHAMPION!', '¡CAMPEÓN!') : goals >= 2 ? T('FULL TIME', 'FINAL DEL PARTIDO') : T('KEEP PRACTICING', 'SIGUE PRACTICANDO');
-    $('over-goals').textContent = goals + ' / ' + KICKS;
-    $('over-right').textContent = rightCount + ' / ' + KICKS;
-    $('over-best').textContent = newBest ? T('New best!', '¡Nuevo récord!') : T('Best: ', 'Récord: ') + Math.max(best, goals) + ' / ' + KICKS;
-    $('over-best').className = newBest ? 'best new' : 'best';
+    var title, again = T('PLAY AGAIN', 'JUGAR DE NUEVO'), note = '';
+    if (two) title = draw ? T('A DRAW!', '¡EMPATE!') : T('PLAYER ', '¡GANA EL JUGADOR ') + (win ? 1 : 2) + T(' WINS!', '!');
+    else if (match.mode === 'cup') {
+      var cupR = match.cupRound;
+      if (win && cupR === 2) {   // the final: the cup!
+        title = T('CUP WINNERS! 🏆', '¡CAMPEONES DE COPA! 🏆');
+        save('cups', load('cups', 0) + 1); save('cup', null); again = T('NEW CUP', 'NUEVA COPA');
+        celebrate(); crowdCheer = 4;
+      } else if (win) {
+        var cup = loadCup(); cup.round = cupR + 1; save('cup', cup);
+        title = T('ON TO THE ', '¡A LA ') + CUP_ROUNDS[cupR + 1].toUpperCase() + '!';
+        again = T('NEXT MATCH', 'SIGUIENTE PARTIDO');
+        note = T('Next: the ', 'Siguiente: los ') + teamName(cup.opps[cupR + 1]) + T(', a tougher team.', ', un equipo más fuerte.');
+      } else {
+        title = T('OUT OF THE CUP', 'ELIMINADOS');
+        save('cup', null); again = T('NEW CUP', 'NUEVA COPA');
+        note = T('Knocked out in the ', 'Eliminados en ') + CUP_ROUNDS[cupR].toLowerCase() + T('. Start a new cup run!', '. ¡Empieza otra copa!');
+      }
+    } else title = win ? T('YOU WIN!', '¡GANASTE!') : draw ? T('A DRAW', 'EMPATE') : T('THEY WIN', 'GANAN ELLOS');
+
+    $('over-title').textContent = title;
+    $('over-score').textContent = sideName(0) + ' ' + a + ' – ' + b + ' ' + sideName(1);
+    $('over-right').textContent = rightCount + ' / ' + asked;
+    $('over-saves').textContent = saves;
+    $('over-saves-box').hidden = two;
+    $('over-best').textContent = note;
+    $('over-best').className = 'best';
+    $('over-again').textContent = again;
     var list = $('over-missed');
     if (missed.length) {
-      list.innerHTML = '<h3>' + T('Questions to review', 'Preguntas para repasar') + '</h3>' + missed.map(function (m) {
+      list.innerHTML = '<h3>' + T('Questions to review', 'Preguntas para repasar') + '</h3>' + missed.slice(0, 4).map(function (m) {
         var line = m.q;
         [].concat(m.ans).forEach(function (x) { line = line.replace('?', '<b class="ok">' + fmt(x) + '</b>'); });   // fill in each blank
         return '<li><span class="mq">' + roots(line) + '</span><span class="you">' + T('you said ', 'dijiste ') + m.you + '</span></li>';
-      }).join('');
+      }).join('') +
+        (missed.length > 4 ? '<p class="more">' + T('and ', 'y ') + (missed.length - 4) + T(' more', ' más') + '</p>' : '');
       list.hidden = false;
     } else {
       list.innerHTML = '<p class="allok">' + T('Every question right. Great work!', '¡Todas las preguntas bien. Excelente trabajo!') + '</p>';
@@ -1871,11 +2287,14 @@
     hideAimHud();
     targetCrosshair.visible = errorCircle.visible = false;
     legGroup.visible = false;
+    fly = null; runT = -1; $('slow-badge').hidden = true; $('caption').hidden = true;
     clock.getDelta();
   }
 
   function showMenu() {
     state = STATE.MENU;
+    if (view !== 'shoot') setView('shoot');
+    $('cup-line').textContent = cupLine();
     hide(scrOver); hide(scrQ); hide(scrExp);
     hud.hidden = true;
     updateBoard();
@@ -1903,9 +2322,9 @@
     });
   }
 
-  function tryStart() {
+  function tryStart(mode) {
     if (skillOn.indexOf(true) < 0) { $('skill-err').hidden = false; return; }
-    startShootout();
+    startShootout(mode);
   }
 
   // A save is a save: once the keeper has touched the ball it can never cross the goal line (a rebound off the post or a
@@ -1993,6 +2412,8 @@
     }
 
     updateKeeper(delta);
+    if (view === 'keep') animateKeeperMode(delta);
+    animateMidfield();
     if (caught && state === STATE.RESULT) holdCaughtBall(delta);
 
     if (rainParticles) {
@@ -2020,16 +2441,18 @@
   }
   canvas.addEventListener('mousedown', function (e) {
     if (e.button !== 0) return;
+    if (view === 'keep') { unlockAudio(); aimFromPointer(e.clientX, e.clientY); if (state === STATE.SAVED) skipResult(); return; }
     clickShot(e.clientX, e.clientY);
   });
-  canvas.addEventListener('mousemove', function (e) { aimAt(e.clientX, e.clientY); });
+  canvas.addEventListener('mousemove', function (e) { if (view === 'keep') aimFromPointer(e.clientX, e.clientY); else aimAt(e.clientX, e.clientY); });
 
   canvas.addEventListener('touchstart', function (e) {
     e.preventDefault();   // no pretend mouse clicks afterwards
     var t = e.touches[0];
+    if (view === 'keep') { unlockAudio(); aimFromPointer(t.clientX, t.clientY); if (state === STATE.SAVED) skipResult(); return; }
     clickShot(t.clientX, t.clientY);
   }, { passive: false });
-  canvas.addEventListener('touchmove', function (e) { e.preventDefault(); var t = e.touches[0]; aimAt(t.clientX, t.clientY); }, { passive: false });
+  canvas.addEventListener('touchmove', function (e) { e.preventDefault(); var t = e.touches[0]; if (view === 'keep') aimFromPointer(t.clientX, t.clientY); else aimAt(t.clientX, t.clientY); }, { passive: false });
   canvas.addEventListener('touchend', function (e) { e.preventDefault(); }, { passive: false });
 
   // On every screen (menu, question, explanation, final whistle, pause), the arrow keys move between its buttons and
@@ -2073,13 +2496,15 @@
       return;
     }
     if (tag === 'BUTTON' && go) return;   // a focused button presses itself
-    if (AIM_KEYS[e.code] && (state === STATE.AIMING || state === STATE.CHARGING)) { if (state === STATE.AIMING) keysDown[e.code] = true; e.preventDefault(); return; }
+    if (AIM_KEYS[e.code] && (state === STATE.AIMING || state === STATE.CHARGING || view === 'keep')) { if (state === STATE.AIMING || view === 'keep') keysDown[e.code] = true; e.preventDefault(); return; }
     if (!go) return;
     e.preventDefault();
     if (e.repeat) return;
-    if (state === STATE.MENU) tryStart();
+    if (state === STATE.MENU) tryStart('friendly');
     else if (state === STATE.EXPLANATION) closeExplanation();
     else if (state === STATE.OVER) startShootout();
+    else if (state === STATE.SAVED) skipResult();
+    else if (view === 'keep') return;   // in goal, Space and Enter do nothing while the shot comes
     else if (state === STATE.CHARGING) endCharge();   // keyboard: one press starts the power, the next press shoots
     else startCharge();
   });
@@ -2102,8 +2527,11 @@
     });
   });
   $('exp-go').addEventListener('click', closeExplanation);
-  $('btn-start').addEventListener('click', function () { unlockAudio(); tryStart(); });
-  $('over-again').addEventListener('click', startShootout);
+  $('btn-start').addEventListener('click', function () { unlockAudio(); tryStart('friendly'); });
+  $('btn-cup').addEventListener('click', function () { unlockAudio(); tryStart('cup'); });
+  $('btn-two').addEventListener('click', function () { unlockAudio(); tryStart('two'); });
+  $('q-hint').addEventListener('click', showHint);
+  $('over-again').addEventListener('click', function () { startShootout(); });
   $('over-menu').addEventListener('click', showMenu);
   $('btn-menu').addEventListener('click', function () { if (paused) closePause(); else openPause(); });
   $('pause-resume').addEventListener('click', closePause);
@@ -2188,6 +2616,7 @@
   }
 
   // ---------- Start ----------
+  srLive = $('sr-live');
   buildMenu();
   try {
     initEngine();

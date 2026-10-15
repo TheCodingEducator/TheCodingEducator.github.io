@@ -78,6 +78,12 @@
   #ps .dot.g { background: var(--green); border-color: var(--green); }
   #ps .dot.x { background: var(--red); border-color: var(--red); }
   #ps .dot.now { border-color: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+  #ps .hudbox.score { flex-direction: column; align-items: stretch; gap: 2px; padding: 4px 10px; }
+  #ps .srow { display: flex; align-items: center; gap: 8px; }
+  #ps .srow .tm { min-width: 4.2em; font-size: 0.72em; color: var(--soft); white-space: nowrap; }
+  #ps .srow .gl { min-width: 0.8em; text-align: center; }
+  #ps .dots { display: flex; gap: 4px; }
+  #ps .hudbox.score .dot { width: clamp(15px, 3cqmin, 22px); height: clamp(15px, 3cqmin, 22px); font-size: clamp(9px, 1.8cqmin, 13px); }
   #ps #weather { color: #93c5fd; font-size: clamp(18px, 3.4cqmin, 28px); }
   #ps .hudright { display: flex; gap: 8px; align-items: flex-start; }
   #ps .hudbtn { pointer-events: auto; cursor: pointer; background: var(--glass); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 4px 14px; font: 500 clamp(18px, 3.4cqmin, 28px) 'Teko', Impact, sans-serif; letter-spacing: 0.06em; line-height: 1.1; }
@@ -110,6 +116,7 @@
   #ps #msg.goal { color: #4ade80; } #ps #msg.saved { color: var(--yellow); } #ps #msg.miss { color: #f87171; }
   #ps #caption { position: absolute; left: 50%; top: calc(42% + clamp(48px, 11cqmin, 100px)); transform: translateX(-50%); z-index: 6; pointer-events: none; background: rgba(0,0,0,0.65); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 6px 18px; font: 700 clamp(14px, 2.8cqmin, 20px) 'Inter', sans-serif; text-align: center; width: max-content; max-width: calc(100% - 24px); animation: ps-rise 0.4s ease-out; }
   #ps #power-badge { position: absolute; top: clamp(52px, 10cqmin, 76px); left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; background: linear-gradient(90deg, #f59e0b, #facc15); color: #1c1917; border-radius: 999px; padding: 4px 16px 1px; font: 700 clamp(18px, 3.4cqmin, 26px) 'Teko', sans-serif; letter-spacing: 0.06em; box-shadow: 0 0 18px rgba(250,204,21,0.6); white-space: nowrap; }
+  #ps #slow-badge { position: absolute; top: clamp(70px, 14cqmin, 100px); left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; background: linear-gradient(90deg, #0891b2, #22d3ee); color: #052e3a; border-radius: 999px; padding: 4px 16px 1px; font: 700 clamp(18px, 3.4cqmin, 26px) 'Teko', sans-serif; letter-spacing: 0.06em; box-shadow: 0 0 18px rgba(34,211,238,0.6); white-space: nowrap; }
   @keyframes ps-pop { from { transform: translate(-50%, -50%) scale(0.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
   #ps #chance { position: absolute; bottom: clamp(56px, 10cqmin, 84px); background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 6px 16px 8px; left: 50%; transform: translateX(-50%); font-size: clamp(26px, 5.5cqmin, 46px); font-weight: 700; text-shadow: 0 0 14px #000; pointer-events: none; z-index: 5; white-space: nowrap; }
   #ps #chance { text-align: center; line-height: 1; }
@@ -190,6 +197,18 @@
     #ps #q-go { display: none; }
   }
 
+  #ps .hintbtn { background: rgba(250,204,21,0.12); color: #fde68a; border: 1px solid rgba(250,204,21,0.5); border-radius: 999px; padding: 4px 14px; margin-top: 10px; font: 700 clamp(13px, 2.4cqmin, 16px) 'Inter', sans-serif; cursor: pointer; }
+  #ps .hintbtn small { font-weight: 600; opacity: 0.85; }
+  #ps .hintbtn:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+  #ps .hintbox { display: flex; align-items: center; justify-content: center; gap: 12px; background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.35); border-radius: 12px; padding: 6px 10px; margin: 0 0 10px; text-align: left; color: #fef3c7; font-size: clamp(13px, 2.5cqmin, 16px); font-weight: 600; }
+  #ps .hintbox p { margin: 0; }
+  #ps .hintbox .grid { margin: 0; flex: none; }
+  #ps .hintbox svg.cube { margin: 0; flex: none; }
+  #ps .card.q.hinted .qtext { font-size: clamp(24px, 5.6cqmin, 44px); margin: 2px 0; }
+  #ps .card.q.hinted .qsub { margin-bottom: 6px; }
+  #ps .modes .btn { font-size: clamp(22px, 4.2cqmin, 32px); padding: 4px 22px 0; }
+  #ps .cupline { color: #fde68a; font-size: clamp(13px, 2.4cqmin, 15px); margin: 8px 0 0; }
+  #ps .stat.wide { min-width: 200px; }
   /* Wrong answer */
   #ps .exp h2 { margin: 0; color: #f87171; font: 700 clamp(38px, 8cqmin, 64px) 'Teko', sans-serif; line-height: 1; }
   #ps .exp .you { font-size: clamp(15px, 3cqmin, 20px); margin: 4px 0 10px; }
@@ -224,6 +243,7 @@
   #ps #over-missed h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--soft); margin: 0 0 6px; }
   #ps #over-missed li { display: flex; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 6px 12px; margin-bottom: 4px; font-size: 16px; }
   #ps #over-missed .you { color: #fca5a5; font-size: 14px; white-space: nowrap; }
+  #ps #over-missed .more { text-align: center; color: var(--soft); font-size: 13px; margin: 2px 0 0; }
   #ps .allok { text-align: center; color: #4ade80; font-weight: 700; margin: 0; }
   #ps #webgl-err { position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; text-align: center; background: #0b1020; font-size: 18px; }
 </style>
@@ -232,7 +252,7 @@
 <script src="../site-lang.js?v=17fe73a6"></script>
 <script src="../site-keyboard.js?v=e71645cc"></script>
 <link rel="stylesheet" href="../site-layout.css?v=2dc18537">
-<script src="../site-stats.js?v=432f56b2"></script>
+<script src="../site-stats.js?v=f3a950a8"></script>
 <script src="../site-layout.js?v=627e2fba"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
@@ -242,7 +262,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Rooted to the Spot</h1>
-<p class="sr-only" data-es="Un juego de penales con matemáticas. Cada tanda tiene 5 tiros. Responde una pregunta de raíces cuadradas para ganar cada tiro; una respuesta incorrecta muestra por qué, y ese tiro sale desviado. Luego apunta a la portería con el ratón, el dedo o las flechas, y haz clic, toca o pulsa la barra espaciadora una vez para empezar la fuerza y otra vez para tirar. Los tiros a las esquinas tienen más probabilidad de ser gol.">A penalty shootout math game. Each shootout is 5 kicks. Answer a square root question to earn each kick; a wrong answer shows why, and that shot goes wild. Then aim at the goal with the mouse, a finger or the arrow keys, click, tap or press the space bar once to start the power and again to shoot. Corner shots have the best chance to score.</p>
+<p class="sr-only" data-es="Un juego de penales con matemáticas: 5 rondas, y muerte súbita si hay empate. Responde una pregunta de raíces para ganar cada tiro; luego apunta con el ratón, un dedo o las flechas y pulsa Espacio (o haz clic) una vez para cargar y otra vez para tirar. Después eres el portero: responde una pregunta, y una respuesta correcta hace que el tiro del otro equipo venga en cámara lenta. Mueve los guantes con el ratón, un dedo o las flechas para atajarlo. Juega un amistoso, una copa de tres partidos o a dos jugadores.">A penalty shootout math game: 5 rounds, then sudden death if tied. Answer a square root question to earn each kick, then aim with the mouse, a finger or the arrow keys and press Space (or click) once to start the power and again to shoot. Then you are the keeper: answer a question, and a right answer makes the other team&#39;s shot come in slow motion. Move your gloves with the mouse, a finger or the arrow keys to stop it. Play a friendly, a cup of three knockout matches, or two players.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -250,7 +270,10 @@
       <canvas id="ps-canvas" tabindex="0" aria-label="The stadium. Aim with the mouse, a finger or the arrow keys; click, tap or press Space to power up, and again to shoot. Escape opens the menu." data-es-aria="El estadio. Apunta con el ratón, un dedo o las flechas; haz clic, toca o pulsa Espacio para cargar, y otra vez para tirar. Escape abre el menú."></canvas>
 
       <div id="hud" hidden>
-        <div class="hudbox"><span data-es="GOLES">GOALS</span> <span class="gl" id="hud-goals">0</span><span id="hud-dots" role="img"></span></div>
+        <div class="hudbox score">
+          <div class="srow"><span class="tm" id="hud-n0">YOU</span><span class="gl" id="hud-s0">0</span><span class="dots" id="hud-d0" role="img"></span></div>
+          <div class="srow"><span class="tm" id="hud-n1">THEM</span><span class="gl" id="hud-s1">0</span><span class="dots" id="hud-d1" role="img"></span></div>
+        </div>
         <div class="hudright">
           <div class="hudbox" id="weather">DAY</div>
           <button type="button" class="hudbtn" id="btn-menu" aria-label="Menu (Esc)" data-es-aria="Menú (Esc)"><span aria-hidden="true">&#9776;</span> <span data-es="MENÚ">MENU</span></button>
@@ -259,6 +282,8 @@
       <div id="chance" hidden aria-live="off"><div class="big"><span id="chance-lbl">SCORING CHANCE</span>: <span id="chance-n">0</span>%</div></div>
       <div id="msg" hidden aria-live="assertive"></div>
       <div id="caption" hidden aria-live="polite"></div>
+      <div id="slow-badge" hidden data-es="&#9201; CÁMARA LENTA: ¡mueve los guantes al balón!">&#9201; SLOW MOTION: move your gloves to the ball!</div>
+      <div id="sr-live" class="sr-only" aria-live="assertive"></div>
       <div id="power-badge" hidden data-es="&#9889; TIRO POTENTE: círculo más pequeño">&#9889; POWER SHOT: smaller circle</div>
       <div id="aimhint" hidden data-es="Apunta con el ratón, un dedo o las flechas &middot; Haz clic (o pulsa Espacio) para cargar, y otra vez para tirar">Aim with the mouse, a finger or the arrow keys &middot; Click, tap or press Space to power up, then again to shoot</div>
 
@@ -283,8 +308,13 @@
           <div class="lbl" data-es="ELIGE DESTREZAS">SELECT SKILLS</div>
           <div class="skills" id="skill-list"></div>
           <p class="err" id="skill-err" hidden data-es="¡Elige al menos 1 destreza para empezar!">Select at least 1 skill to begin!</p>
-          <p class="howto" data-es="<b>5 tiros.</b> Responde bien para ganarte cada tiro. Apunta, haz clic para cargar y otra vez para tirar. ¡Las esquinas superiores son las más difíciles de atajar!"><b>5 kicks.</b> Answer right to earn each shot. Aim, click to power up, and click again to shoot. The top corners are the hardest to save!</p>
-          <div class="go-row"><button type="button" class="btn" id="btn-start" data-es="¡A JUGAR!">KICK OFF</button></div>
+          <p class="howto" data-es="<b>5 rondas.</b> Tira un penal y luego ataja uno. Responde bien para ganarte cada tiro, y en la portería una respuesta correcta hace el tiro más lento. ¿Empate? ¡Muerte súbita!"><b>5 rounds.</b> Take a penalty, then save one. Answer right to earn each kick; in goal, a right answer slows the shot down. Tied? Sudden death!</p>
+          <div class="go-row modes">
+            <button type="button" class="btn" id="btn-start" data-es="&#9917; AMISTOSO">&#9917; FRIENDLY</button>
+            <button type="button" class="btn green" id="btn-cup" data-es="&#127942; COPA">&#127942; CUP</button>
+            <button type="button" class="btn ghost" id="btn-two" data-es="&#128101; 2 JUGADORES">&#128101; 2 PLAYERS</button>
+          </div>
+          <p class="cupline" id="cup-line"></p>
         </div>
       </div>
 
@@ -295,6 +325,7 @@
           <p class="qbonus" id="q-bonus" hidden data-es="Acierta para un <b>tiro potente</b> con un círculo más pequeño, o sáltala.">Get it right for a <b>power shot</b> with a smaller aiming circle, or skip it.</p>
           <div class="qtext" id="q-text" aria-live="polite"></div>
           <p class="qsub" id="q-sub"></p>
+          <div class="hintbox" id="q-hintbox" hidden aria-live="polite"></div>
           <div class="ansrow" id="q-ans">
             <button type="button" class="btn ghost" id="q-skip" hidden data-es="SALTAR">SKIP</button>
             <input type="text" id="q-in" inputmode="numeric" maxlength="9" autocomplete="off" placeholder="?" aria-label="Your answer" data-es-aria="Tu respuesta">
@@ -302,6 +333,7 @@
             <input type="text" id="q-in2" hidden inputmode="numeric" maxlength="9" autocomplete="off" placeholder="?" aria-label="The second number" data-es-aria="El segundo número">
             <button type="button" class="btn green" id="q-go" data-es="TIRAR">KICK</button>
           </div>
+          <button type="button" class="hintbtn" id="q-hint">&#128161; HINT</button>
           <div class="choices" id="q-choices" hidden role="group" aria-label="Choose an answer" data-es-aria="Elige una respuesta"></div>
           <div class="pad" id="q-pad">
             <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
@@ -345,8 +377,9 @@
         <div class="card over">
           <h2 id="over-title" data-es="FINAL DEL PARTIDO">FULL TIME</h2>
           <div class="stats">
-            <div class="stat"><b id="over-goals">0 / 5</b><span data-es="Goles">Goals</span></div>
+            <div class="stat wide"><b id="over-score">0 – 0</b><span data-es="Marcador">Score</span></div>
             <div class="stat"><b id="over-right">0 / 5</b><span data-es="Preguntas correctas">Questions right</span></div>
+            <div class="stat" id="over-saves-box"><b id="over-saves">0</b><span data-es="Atajadas">Saves</span></div>
           </div>
           <div class="best" id="over-best"></div>
           <ul id="over-missed" hidden></ul>
@@ -419,7 +452,7 @@
 </section>
 
 <script src="../site-results.js?v=dddc14b7"></script>
-<script src="rooted-to-the-spot-game.js?v=9d0b0ddf"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="rooted-to-the-spot-game.js?v=5f16d129"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
