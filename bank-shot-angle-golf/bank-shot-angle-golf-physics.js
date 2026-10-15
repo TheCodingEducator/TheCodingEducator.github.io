@@ -1,11 +1,40 @@
 // ---------------------------------------------------------------
 // Physics
 // ---------------------------------------------------------------
+// A slow ball only counts as stopped when nothing can move it any more: it isn't where a windmill's sails sweep or a
+// surfboard slides, and it isn't on a hill or in a current. Until then it stays live (even at rest), so the sail that
+// comes round, or the slope, carries it on, and the next shot can't be aimed yet. If a ball is ever pinned somewhere
+// for SETTLE_MAX ms, it counts as stopped anyway, so a hole can never hang.
+var SETTLE_MAX = 6000, settleStart = 0;
+function stillSettling(b) {
+  var i, obs = hole.obstacles || [], zones = hole.zones || [];
+  for (i = 0; i < obs.length; i++) {
+    var o = obs[i];
+    if (o.type === 'windmill' && dist(b.x, b.y, o.x, o.y) < o.r + BALL_R + 4) return true;
+    if (o.type === 'slider') {
+      var c = closestPointOnSegment(b.x, b.y, o.x1, o.y1, o.x2, o.y2);
+      if (dist(b.x, b.y, c.x, c.y) < o.len / 2 + BALL_R + 4) return true;
+    }
+  }
+  for (i = 0; i < zones.length; i++) {
+    var z = zones[i];
+    if (b.x > z.x && b.x < z.x + z.w && b.y > z.y && b.y < z.y + z.h) return true;
+  }
+  return false;
+}
+
 function updatePhysics() {
   if (holePhase !== 'ROLLING' && millis() >= chaosUntil) return;
 
   var speed = mag(ball.vx, ball.vy);
-  if (speed < MIN_STOP_SPEED && millis() >= chaosUntil) {
+  if (speed >= MIN_STOP_SPEED) settleStart = 0;
+  var settling = false;
+  if (speed < MIN_STOP_SPEED && millis() >= chaosUntil && holePhase === 'ROLLING' && stillSettling(ball)) {
+    if (!settleStart) settleStart = millis();
+    settling = millis() - settleStart < SETTLE_MAX;
+  }
+  if (speed < MIN_STOP_SPEED && millis() >= chaosUntil && !settling) {
+    settleStart = 0;
     ball.vx = 0; ball.vy = 0;
     if (holePhase === 'ROLLING' && resolvedInfo && resolvedInfo.typed !== null && !resolvedInfo.correct && resolvedInfo.shot) {
       // a wrong answer: once the ball stops, explain it, then the same question is asked again
