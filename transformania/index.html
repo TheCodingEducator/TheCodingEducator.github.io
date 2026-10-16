@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Transformania - Translations, Rotations and Reflections Game (Grade 8)</title>
 <link rel="canonical" href="https://studentmathgames.com/transformania/">
-<meta name="description" content="A head-to-head falling-blocks game where every piece is a transformation: translate, rotate on tracing paper around a fixed point, or reflect across a line, then watch it drop and clear rows. Free grade 8 math practice for CCSS 8.G.A.1, 8.G.A.2 and 8.G.A.3, with a teacher guide and printable worksheet. No accounts or logins.">
+<meta name="description" content="A turn-based falling-blocks game, against the computer or a classmate on one board, where every piece is a transformation: translate, rotate on tracing paper around a fixed point, or reflect across a line, then watch it drop and clear rows. Free grade 8 math practice for CCSS 8.G.A.1, 8.G.A.2 and 8.G.A.3, with a teacher guide and printable worksheet. No accounts or logins.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <meta name="theme-color" content="#0b1026">
@@ -125,7 +125,17 @@
   @media (hover: none) and (pointer: coarse) { #tm .help { display: none; } }
   #tm .next { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; color: var(--muted); }
   #tm .next canvas { background: rgba(255,255,255,0.05); border-radius: 8px; }
-  #tm .pl:last-child .panel { padding-top: 34px; }   /* room for the Menu button above the right-hand panel */
+  #tm .panel.score { padding-top: 34px; }   /* room for the Menu button above the scoreboard */
+  #tm .turn { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 20px; text-align: center; padding: 6px; border-radius: 12px; background: rgba(92, 200, 255, 0.16); color: #8fdcff; }
+  #tm .turn.p2, #tm .turn.cpu { background: rgba(255, 122, 176, 0.16); color: #ffb3d0; }
+  #tm .goal { font-size: 13px; font-weight: 800; color: var(--muted); text-align: center; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 6px; }
+  #tm .goal b { color: #ffd84d; }
+  #tm .pcard { display: flex; flex-direction: column; gap: 4px; background: rgba(255,255,255,0.04); border: 2px solid transparent; border-radius: 14px; padding: 6px 8px; }
+  #tm .pcard.active { border-color: #5cc8ff; box-shadow: 0 0 14px rgba(92, 200, 255, 0.35); }
+  #tm .pcard.p2.active, #tm .pcard.cpu.active { border-color: #ff7ab0; box-shadow: 0 0 14px rgba(255, 122, 176, 0.35); }
+  #tm .pcard .who { background: none; padding: 0; }
+  #tm .pcard.p1 .who b { color: #5cc8ff; } #tm .pcard.p2 .who b, #tm .pcard.cpu .who b { color: #ff7ab0; }
+  #tm .panel.score { width: 210px; }
   #tm .menu-btn { position: absolute; top: 8px; right: 10px; z-index: 4; padding: 6px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.35); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; }
   #tm .banner { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 26px; padding: 8px 18px; border-radius: 14px; background: rgba(0,0,0,0.6); pointer-events: none; white-space: nowrap; }
   #tm .banner:empty { display: none; }
@@ -135,7 +145,8 @@
 
   /* short screens (laptops, phones held sideways): tighter panels */
   @media (max-height: 560px) {
-    #tm .panel { width: 200px; gap: 4px; } #tm .pl.cpu .panel { width: 140px; }
+    #tm .panel { width: 200px; gap: 4px; } #tm .panel.score { width: 170px; }
+    #tm .turn { font-size: 16px; padding: 3px; } #tm .goal { padding: 3px; font-size: 12px; } #tm .pcard { padding: 4px 6px; }
     #tm .ask { min-height: 0; padding: 5px 8px; } #tm .ask .txt { font-size: 15px; } #tm .ask ol { font-size: 13px; }
     #tm .pad button { height: 32px; font-size: 15px; } #tm .pad .ok { height: 36px; font-size: 15px; }
     #tm .help, #tm .next { display: none; }
@@ -143,7 +154,7 @@
     #tm .msg { font-size: 12px; padding: 4px 7px; }
   }
   @media (max-height: 420px) {
-    #tm .pl.cpu .panel .ask, #tm .pl.cpu .panel .msg { display: none; }
+    #tm .pcard .stats span:last-child { display: none; }
     #tm .rise-lbl { display: none; }
   }
 
@@ -175,7 +186,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Transformania</h1>
-<p class="sr-only" data-es="Un juego de bloques que caen, cara a cara, contra la computadora o contra otro jugador. Cada figura aparece arriba de la línea punteada. Elige dónde empieza con las flechas izquierda y derecha y confirma. Luego haz la transformación que se pide: trasladar con izquierda y derecha, reflejar con las flechas hacia el otro lado de la línea vertical u horizontal, o rotar el papel de calcar alrededor del punto rojo con Q y E, un cuarto de vuelta, 90 grados, por tecla. Pulsa Espacio para comprobar. Una respuesta correcta deja caer la pieza. El primer error de cada pregunta suma una X; tres X pierden. Completar una fila quita una X.">A head-to-head falling-blocks game against the computer or another player. Each figure appears above the dotted line. Choose where it starts with the left and right arrow keys and confirm. Then do the transformation it asks for: translate with left and right, reflect with the arrow keys toward the other side of the vertical or horizontal line, or rotate the tracing paper around the red point with Q and E, one quarter-turn, 90 degrees, per key. Press Space to check. A correct answer drops the piece. The first mistake on each question adds an X; three Xs lose. Completing a row removes an X.</p>
+<p class="sr-only" data-es="Un juego de bloques que caen donde tú y la computadora, o dos jugadores, se turnan en un tablero. Cada figura aparece arriba de la línea punteada. Elige dónde empieza con las flechas izquierda y derecha y confirma. Luego haz la transformación que se pide: trasladar con izquierda y derecha, reflejar con las flechas hacia el otro lado de la línea vertical u horizontal, o rotar el papel de calcar alrededor del punto rojo con Q y E, un cuarto de vuelta, 90 grados, por tecla. Pulsa Espacio para comprobar. Una respuesta correcta deja caer la pieza. El primer error de cada pregunta suma una X; tres X pierden. Completar una fila quita una X. Gana quien complete primero el número de filas de la meta.">A falling-blocks game where you and the computer, or two players, take turns on one board. Each figure appears above the dotted line. Choose where it starts with the left and right arrow keys and confirm. Then do the transformation it asks for: translate with left and right, reflect with the arrow keys toward the other side of the vertical or horizontal line, or rotate the tracing paper around the red point with Q and E, one quarter-turn, 90 degrees, per key. Press Space to check. A correct answer drops the piece. The first mistake on each question adds an X; three Xs lose. Completing a row removes an X. The first player to clear the goal number of rows wins.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -187,8 +198,8 @@
           <p class="tag" data-es="Transforma. Suelta. Completa filas.">Transform it. Drop it. Clear the rows.</p>
           <div class="opt-lbl" data-es="Modo">Mode</div>
           <div class="opts" role="group" aria-label="Mode" data-es-aria="Modo">
-            <button type="button" class="opt" data-mode="cpu" aria-pressed="true">&#129302; <span data-es="Jugador contra computadora">Player vs Computer</span><small data-es="Tu tablero contra el de la computadora">Your board against the computer&rsquo;s</small></button>
-            <button type="button" class="opt" data-mode="pvp" aria-pressed="false" id="opt-pvp">&#128101; <span data-es="Jugador contra jugador">Player vs Player</span><small data-es="Dos jugadores, una computadora">Two players, one keyboard</small></button>
+            <button type="button" class="opt" data-mode="cpu" aria-pressed="true">&#129302; <span data-es="Jugador contra computadora">Player vs Computer</span><small data-es="Se turnan en un tablero">Take turns on one board</small></button>
+            <button type="button" class="opt" data-mode="pvp" aria-pressed="false" id="opt-pvp">&#128101; <span data-es="Jugador contra jugador">Player vs Player</span><small data-es="Dos jugadores se turnan en un tablero">Two players take turns on one board</small></button>
           </div>
           <div class="opt-lbl" data-es="Nivel">Level</div>
           <div class="opts" role="group" aria-label="Level" data-es-aria="Nivel">
@@ -197,6 +208,7 @@
           </div>
           <button type="button" class="go" id="btn-play" data-es="&#9654; Jugar">&#9654; Play</button><br>
           <button type="button" class="ghost-btn" id="btn-how" data-es="Cómo se juega">How to play</button>
+          <p class="keys" data-es="Teclado: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> modo &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> nivel &middot; <kbd>Enter</kbd> jugar &middot; <kbd>H</kbd> cómo se juega">Keyboard: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> mode &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> level &middot; <kbd>Enter</kbd> play &middot; <kbd>H</kbd> how to play</p>
         </div>
       </div>
       <!-- how to play -->
@@ -216,8 +228,9 @@
         <div class="card" style="max-width: 420px">
           <h2 class="logo" style="font-size: 40px" data-es="Pausa">Paused</h2>
           <button type="button" class="go" id="btn-resume" data-es="&#9654; Seguir">&#9654; Resume</button><br>
-          <button type="button" class="ghost-btn" id="btn-restart" data-es="Empezar de nuevo">Restart</button>
-          <button type="button" class="ghost-btn" id="btn-quit" data-es="Menú principal">Main menu</button>
+          <button type="button" class="ghost-btn" id="btn-restart" data-es="Empezar de nuevo (R)">Restart (R)</button>
+          <button type="button" class="ghost-btn" id="btn-quit" data-es="Menú principal (M)">Main menu (M)</button>
+          <p class="keys" data-es="<kbd>Esc</kbd> o <kbd>Enter</kbd> para seguir">Press <kbd>Esc</kbd> or <kbd>Enter</kbd> to resume</p>
         </div>
       </div>
       <!-- game over -->
@@ -227,8 +240,9 @@
           <p class="tag" id="over-why"></p>
           <div class="result-row" id="over-stats"></div>
           <button type="button" class="go" id="btn-again" data-es="&#9654; Otra vez">&#9654; Play again</button><br>
-          <button type="button" class="ghost-btn" id="btn-results" data-es="Resultados por habilidad">Results by skill</button>
-          <button type="button" class="ghost-btn" id="btn-over-menu" data-es="Menú principal">Main menu</button>
+          <button type="button" class="ghost-btn" id="btn-results" data-es="Resultados por habilidad (S)">Results by skill (S)</button>
+          <button type="button" class="ghost-btn" id="btn-over-menu" data-es="Menú principal (M)">Main menu (M)</button>
+          <p class="keys" data-es="<kbd>Enter</kbd> juega otra vez">Press <kbd>Enter</kbd> to play again</p>
         </div>
       </div>
     </div>
@@ -256,7 +270,7 @@
 <section class="teaching-notes">
   <h2>Quick Teacher Tips</h2>
   <h3>What students practice</h3>
-  <p class="practice-summary"><b>Grade 8 &middot; CCSS 8.G.A.1, 8.G.A.2, 8.G.A.3.</b> A head-to-head falling-blocks game where every piece is a transformation students perform with their own hands before it drops.</p>
+  <p class="practice-summary"><b>Grade 8 &middot; CCSS 8.G.A.1, 8.G.A.2, 8.G.A.3.</b> A turn-based falling-blocks game on one shared board, where every piece is a transformation students perform with their own hands before it drops.</p>
   <ul>
     <li>Translations left and right by a number of grid units</li>
     <li>Rotations of 90&deg;, 180&deg;, 270&deg; and 360&deg;, clockwise and counterclockwise, around a fixed point</li>
@@ -275,11 +289,12 @@
   <h3>Tips for using the game</h3>
   <ul>
     <li><strong>The loop:</strong> a figure appears above the white dotted line; students slide it to a starting spot and press Confirm start. Then an instruction appears, a faint ghost keeps the pre-image in place, and students perform the transformation and press Check. A correct image drops, stacks and can complete rows.</li>
-    <li><strong>Rotations on tracing paper:</strong> the figure sits on a sheet of tracing paper pinned at a red point. Students drag the handle (or press a key) to turn it one quarter-turn at a time, and the arrow on the paper, which starts pointing up, shows how far it has turned. 180&deg; takes two turns and 360&deg; takes four, and the game checks the direction as well as the amount.</li>
+    <li><strong>Rotations on tracing paper:</strong> the figure sits on a sheet of tracing paper pinned at a red point. Students drag the handle (or press Q or E) to turn it one quarter-turn at a time, and the arrow on the paper, which starts pointing up, shows how far it has turned. 180&deg; takes two turns and 360&deg; takes four, and the game checks the direction as well as the amount.</li>
     <li><strong>Reflections:</strong> both a vertical and a horizontal line are shown, so students must pick the right line: the left and right keys flip across the vertical line, up and down across the horizontal one.</li>
-    <li><strong>Xs and hints:</strong> the first wrong check on a question adds an X, and each wrong check gives a stronger hint. Three Xs lose, but completing a row removes an X.</li>
-    <li><strong>Pressure:</strong> the floor rises on both boards every so often, and clearing two or more rows at once pushes a row onto the other player&rsquo;s board.</li>
-    <li><strong>Two players</strong> share one keyboard (left player: A D W S, Q E to turn, Space; right player: arrow keys, the &lt; and &gt; keys to turn, Enter). On phones and tablets students play the computer.</li>
+    <li><strong>Taking turns:</strong> students and the computer (or two students) take turns on one board: a piece each, then the other player&rsquo;s turn. Watching the computer do its transformations correctly is a model, too.</li>
+    <li><strong>Xs and hints:</strong> the first wrong check on a question adds an X, and each wrong check gives a stronger hint. Three Xs lose, and a completed row removes one of that player&rsquo;s Xs.</li>
+    <li><strong>Winning:</strong> the first player to clear the goal number of rows (5 on Normal, 6 on Hard) wins. A piece that stops above the dotted line loses, and the floor rises every few pieces.</li>
+    <li><strong>Keyboard:</strong> everything works from the keyboard, including the menus (arrow keys choose the mode and level, Enter plays) and turning the tracing paper (Q and E). Two players share the same keys and take turns.</li>
   </ul>
 </section>
 
@@ -290,7 +305,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="transformania-game.js?v=00bb5ad3"></script>
+<script src="transformania-game.js?v=4161552a"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
   document.getElementById('reset-progress-btn').addEventListener('click', function () {
