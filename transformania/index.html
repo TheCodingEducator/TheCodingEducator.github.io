@@ -186,7 +186,7 @@
 <button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
 <button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
 <h1 class="sr-only">Transformania</h1>
-<p class="sr-only" data-es="Un juego de bloques que caen donde tú y la computadora, o dos jugadores, se turnan en un tablero. Cada figura aparece arriba de la línea punteada. Elige dónde empieza con las flechas izquierda y derecha y confirma. Luego haz la transformación que se pide: trasladar con izquierda y derecha, reflejar con las flechas hacia el otro lado de la línea vertical u horizontal, o rotar el papel de calcar alrededor del punto rojo con Q y E, un cuarto de vuelta, 90 grados, por tecla. Pulsa Espacio para comprobar. Una respuesta correcta deja caer la pieza. El primer error de cada pregunta suma una X; tres X pierden. Completar una fila quita una X. Gana quien complete primero el número de filas de la meta.">A falling-blocks game where you and the computer, or two players, take turns on one board. Each figure appears above the dotted line. Choose where it starts with the left and right arrow keys and confirm. Then do the transformation it asks for: translate with left and right, reflect with the arrow keys toward the other side of the vertical or horizontal line, or rotate the tracing paper around the red point with Q and E, one quarter-turn, 90 degrees, per key. Press Space to check. A correct answer drops the piece. The first mistake on each question adds an X; three Xs lose. Completing a row removes an X. The first player to clear the goal number of rows wins.</p>
+<p class="sr-only" data-es="Un juego de bloques que caen donde tú y la computadora, o dos jugadores, se turnan en un tablero. Cada figura aparece arriba de la línea punteada. Elige dónde empieza con las flechas izquierda y derecha y confirma. Luego haz la transformación que se pide: trasladar con izquierda y derecha, reflejar con las flechas hacia el otro lado de la línea vertical u horizontal, o rotar el papel de calcar alrededor del punto rojo con la flecha hacia arriba en sentido horario y la flecha hacia abajo en sentido antihorario, un cuarto de vuelta, 90 grados, cada vez. Pulsa Espacio para comprobar. Una respuesta correcta deja caer la pieza. El primer error de cada pregunta suma una X; tres X pierden. Completar una fila quita una X. Gana quien complete primero el número de filas de la meta.">A falling-blocks game where you and the computer, or two players, take turns on one board. Each figure appears above the dotted line. Choose where it starts with the left and right arrow keys and confirm. Then do the transformation it asks for: translate with left and right, reflect with the arrow keys toward the other side of the vertical or horizontal line, or rotate the tracing paper around the red point with the up arrow for clockwise and the down arrow for counterclockwise, one quarter-turn, 90 degrees, per press. Press Space to check. A correct answer drops the piece. The first mistake on each question adds an X; three Xs lose. Completing a row removes an X. The first player to clear the goal number of rows wins.</p>
 
 <div class="play-area">
   <div id="game-canvas-slot">
@@ -289,12 +289,12 @@
   <h3>Tips for using the game</h3>
   <ul>
     <li><strong>The loop:</strong> a figure appears above the white dotted line; students slide it to a starting spot and press Confirm start. Then an instruction appears, a faint ghost keeps the pre-image in place, and students perform the transformation and press Check. A correct image drops, stacks and can complete rows.</li>
-    <li><strong>Rotations on tracing paper:</strong> the figure sits on a sheet of tracing paper pinned at a red point. Students drag the handle (or press Q or E) to turn it one quarter-turn at a time, and the arrow on the paper, which starts pointing up, shows how far it has turned. 180&deg; takes two turns and 360&deg; takes four, and the game checks the direction as well as the amount.</li>
+    <li><strong>Rotations on tracing paper:</strong> the figure sits on a sheet of tracing paper pinned at a red point. Students drag the handle (or press the up arrow for clockwise, the down arrow for counterclockwise) to turn it one quarter-turn at a time, and the arrow on the paper, which starts pointing up, shows how far it has turned. 180&deg; takes two turns and 360&deg; takes four, and the game checks the direction as well as the amount.</li>
     <li><strong>Reflections:</strong> both a vertical and a horizontal line are shown, so students must pick the right line: the left and right keys flip across the vertical line, up and down across the horizontal one.</li>
     <li><strong>Taking turns:</strong> students and the computer (or two students) take turns on one board: a piece each, then the other player&rsquo;s turn. Watching the computer do its transformations correctly is a model, too.</li>
     <li><strong>Xs and hints:</strong> the first wrong check on a question adds an X, and each wrong check gives a stronger hint. Three Xs lose, and a completed row removes one of that player&rsquo;s Xs.</li>
     <li><strong>Winning:</strong> the first player to clear the goal number of rows (5 on Normal, 6 on Hard) wins. A piece that stops above the dotted line loses, and the floor rises every few pieces.</li>
-    <li><strong>Keyboard:</strong> everything works from the keyboard, including the menus (arrow keys choose the mode and level, Enter plays) and turning the tracing paper (Q and E). Two players share the same keys and take turns.</li>
+    <li><strong>Keyboard:</strong> everything works from the keyboard, including the menus (arrow keys choose the mode and level, Enter plays) and turning the tracing paper (up arrow clockwise, down arrow counterclockwise). Two players share the same keys and take turns.</li>
   </ul>
 </section>
 
@@ -305,7 +305,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="transformania-game.js?v=4161552a"></script>
+<script src="transformania-game.js?v=144a855e"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
   document.getElementById('reset-progress-btn').addEventListener('click', function () {

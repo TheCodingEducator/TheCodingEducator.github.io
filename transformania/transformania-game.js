@@ -266,8 +266,8 @@
       pad.appendChild(bt); UI.btn[b[0]] = bt;
     });
     left.appendChild(pad);
-    if (!TOUCH) left.appendChild(el('div', 'help', T('<kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd> <kbd>↓</kbd> flip · <kbd>Q</kbd> <kbd>E</kbd> turn the paper · <kbd>Space</kbd> or <kbd>Enter</kbd> confirm / check · <kbd>R</kbd> start over · <kbd>Esc</kbd> menu',
-      '<kbd>←</kbd> <kbd>→</kbd> mover · <kbd>↑</kbd> <kbd>↓</kbd> reflejar · <kbd>Q</kbd> <kbd>E</kbd> girar el papel · <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar / comprobar · <kbd>R</kbd> otra vez · <kbd>Esc</kbd> menú')));
+    if (!TOUCH) left.appendChild(el('div', 'help', T('<kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd> <kbd>↓</kbd> flip, or turn the paper (<kbd>↑</kbd> clockwise, <kbd>↓</kbd> counterclockwise; <kbd>Q</kbd> <kbd>E</kbd> too) · <kbd>Space</kbd> or <kbd>Enter</kbd> confirm / check · <kbd>R</kbd> start over · <kbd>Esc</kbd> menu',
+      '<kbd>←</kbd> <kbd>→</kbd> mover · <kbd>↑</kbd> <kbd>↓</kbd> reflejar, o girar el papel (<kbd>↑</kbd> horario, <kbd>↓</kbd> antihorario; también <kbd>Q</kbd> <kbd>E</kbd>) · <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar / comprobar · <kbd>R</kbd> otra vez · <kbd>Esc</kbd> menú')));
     UI.cv = el('canvas'); UI.cv.tabIndex = 0; UI.cv.setAttribute('role', 'img');
     wrap.appendChild(UI.cv); UI.banner = el('div', 'banner'); wrap.appendChild(UI.banner);
     UI.ctx = UI.cv.getContext('2d');
@@ -344,7 +344,7 @@
   function controlsWord(st) {
     if (TOUCH) return '';
     if (st.type === 'T') return T('Use left and right.', 'Usa izquierda y derecha.');
-    if (st.type === 'R') return T('Turn the paper with Q and E, a quarter-turn at a time.', 'Gira el papel con Q y E, un cuarto de vuelta a la vez.');
+    if (st.type === 'R') return T('Up turns the paper a quarter-turn clockwise; down turns it counterclockwise.', 'Arriba gira el papel un cuarto de vuelta en sentido horario; abajo, en sentido antihorario.');
     return T('Left and right flip across the vertical line; up and down across the horizontal line.', 'Izquierda y derecha reflejan sobre la línea vertical; arriba y abajo sobre la horizontal.');
   }
   function beginStep(from) {
@@ -438,6 +438,7 @@
     }
     if (G.phase !== 'xf') return;
     var st = step();
+    if (st.type === 'R' && (a === 'up' || a === 'down')) a = a === 'up' ? 'cw' : 'ccw';   // during a rotation: up turns clockwise, down counterclockwise
     if (a === 'ok') { check(); return; }
     if (a === 'reset') { beginStep(G.stepStart); render(); return; }
     if (st.type === 'T' && (a === 'left' || a === 'right')) {
@@ -747,7 +748,7 @@
     UI.cv.setAttribute('aria-label', T('The board. ', 'El tablero. ') + UI.turnEl.textContent + '. ' + (st && G.phase === 'xf' ? stepText(st) : ''));
     var B = UI.btn, mine = humanTurn(), place = mine && G.phase === 'place', xf = mine && G.phase === 'xf', t = st && st.type;
     B.left.disabled = B.right.disabled = !(place || (xf && (t === 'T' || t === 'F')));
-    B.up.disabled = B.down.disabled = !(xf && t === 'F');
+    B.up.disabled = B.down.disabled = !(xf && (t === 'F' || t === 'R'));
     B.cw.disabled = B.ccw.disabled = !(xf && t === 'R');
     B.reset.disabled = !xf;
     B.ok.disabled = !(place || xf);
@@ -846,14 +847,14 @@
     T('A figure appears above the <b>white dotted line</b>. Slide it left or right to choose where it starts, then press <b>Confirm start</b>.', 'Una figura aparece arriba de la <b>línea blanca punteada</b>. Deslízala a la izquierda o la derecha para elegir dónde empieza y pulsa <b>Confirmar inicio</b>.'),
     T('An instruction appears, and a faint <b>ghost</b> keeps the starting figure (the pre-image) in place.', 'Aparece una instrucción, y una <b>figura tenue</b> deja la figura inicial (la preimagen) en su lugar.'),
     T('<b>Translate</b>: slide with ◀ ▶ and count the grid units.', '<b>Traslada</b>: desliza con ◀ ▶ y cuenta las unidades.'),
-    T('<b>Rotate</b>: the figure is on tracing paper pinned at a <b>red point</b>. Press ⟲ ⟳ (or Q and E, or drag the handle) to turn it. Each turn is <b>90°</b>: 180° is 2 turns, 270° is 3, 360° is 4. The red arrow on the paper starts pointing up.', '<b>Rota</b>: la figura está en papel de calcar fijo en un <b>punto rojo</b>. Pulsa ⟲ ⟳ (o Q y E, o arrastra el asa) para girarlo. Cada vuelta es de <b>90°</b>: 180° son 2 vueltas, 270° son 3 y 360° son 4. La flecha roja del papel empieza apuntando hacia arriba.'),
+    T('<b>Rotate</b>: the figure is on tracing paper pinned at a <b>red point</b>. Press ▲ to turn it clockwise and ▼ counterclockwise (or ⟳ ⟲, or drag the handle). Each turn is <b>90°</b>: 180° is 2 turns, 270° is 3, 360° is 4. The red arrow on the paper starts pointing up.', '<b>Rota</b>: la figura está en papel de calcar fijo en un <b>punto rojo</b>. Pulsa ▲ para girarlo en sentido horario y ▼ en sentido antihorario (o ⟳ ⟲, o arrastra el asa). Cada vuelta es de <b>90°</b>: 180° son 2 vueltas, 270° son 3 y 360° son 4. La flecha roja del papel empieza apuntando hacia arriba.'),
     T('<b>Reflect</b>: ◀ ▶ flip the figure across the pink <b>vertical</b> line, ▲ ▼ across the green <b>horizontal</b> line.', '<b>Refleja</b>: ◀ ▶ reflejan la figura sobre la línea <b>vertical</b> rosa, ▲ ▼ sobre la línea <b>horizontal</b> verde.'),
     T('Press <b>Check</b>. A correct image drops below the line and stacks. The first wrong check on a question adds an <b>X</b>, and every wrong check gives a stronger hint.', 'Pulsa <b>Comprobar</b>. Una imagen correcta cae debajo de la línea y se apila. El primer error de cada pregunta suma una <b>X</b>, y cada error da una pista más clara.'),
     T('Fill a whole row to clear it and remove one of your Xs. <b>The first to clear the goal number of rows wins.</b> Three Xs, or a piece that stops above the dotted line, loses. The floor rises every few pieces.', 'Completa una fila para quitarla y borrar una de tus X. <b>Gana quien complete primero el número de filas de la meta.</b> Pierde quien llega a tres X o suelta una pieza que queda arriba de la línea punteada. El piso sube cada pocas piezas.'),
     T('<b>Hard</b>: turns up to 360° and sequences such as &ldquo;rotate 90° clockwise, then translate 2 units left&rdquo;, done in order.', '<b>Difícil</b>: giros hasta 360° y secuencias como &ldquo;rota 90° en sentido horario y luego traslada 2 unidades a la izquierda&rdquo;, en orden.')
   ].map(function (x) { return '<li>' + x + '</li>'; }).join('');
-  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip, <kbd>Q</kbd> <kbd>E</kbd> turn the paper, <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>R</kbd> start over, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
-    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar, <kbd>Q</kbd> <kbd>E</kbd> girar el papel, <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>R</kbd> otra vez, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
+  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>R</kbd> start over, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
+    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>R</kbd> otra vez, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
 
   show('scr-title');
   requestAnimationFrame(frame);
