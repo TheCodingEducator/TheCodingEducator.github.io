@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en" data-langs="en es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transformania - Translations, Rotations and Reflections Game (Grade 8)</title>
+<link rel="canonical" href="https://studentmathgames.com/transformania/">
+<meta name="description" content="A head-to-head falling-blocks game where every piece is a transformation: translate, rotate on tracing paper around a fixed point, or reflect across a line, then watch it drop and clear rows. Free grade 8 math practice for CCSS 8.G.A.1, 8.G.A.2 and 8.G.A.3, with a teacher guide and printable worksheet. No accounts or logins.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0b1026">
+<meta property="og:title" content="Transformania - Translations, Rotations and Reflections Game (Grade 8)">
+<meta property="og:description" content="Every falling piece is a transformation: translate it, turn it on tracing paper, or reflect it, then drop it and clear rows.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://studentmathgames.com/transformania/">
+<meta property="og:image" content="https://studentmathgames.com/og/transformania.png">
+<meta name="twitter:card" content="summary_large_image">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893"
+     crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --panel: #151b3a; --text: #eef1ff; --muted: #9aa3cf; --accent: #ffcc33; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #070a1c; min-height: 100%; }
+  body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; font-family: "Nunito", -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .play-area { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 24px; padding: 64px 16px 24px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  .back-link, .fullscreen-btn { position: fixed; top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; color: #fff; font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-decoration: none; z-index: 10; cursor: pointer; }
+  .back-link { left: 12px; } .fullscreen-btn { right: 12px; }
+  .pseudo-fullscreen-exit-btn { position: fixed; top: 12px; left: 12px; z-index: 10000; display: none; padding: 9px 16px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; color: #fff; font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; cursor: pointer; }
+  .pseudo-fullscreen-exit-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
+
+  .standards-panel { background: var(--panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px 20px; width: 250px; max-width: 90vw; color: var(--text); font-size: 13px; line-height: 1.55; }
+  .standards-panel h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  .standards-panel .code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+  .standards-panel p { margin: 0 0 8px; }
+  .standards-panel .standard-entry { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .standards-panel .standard-entry:last-of-type { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .teaching-notes { max-width: 720px; margin: 0 auto; padding: 8px 24px 64px; color: var(--text); width: 100%; }
+  .teaching-notes h2 { font-size: 18px; color: var(--accent); margin: 0 0 12px; }
+  .teaching-notes h3 { font-size: 15px; color: var(--text); margin: 18px 0 8px; }
+  .teaching-notes p, .teaching-notes li { font-size: 15px; line-height: 1.6; color: var(--text); }
+  .teaching-notes ul { padding-left: 20px; }
+  .teaching-notes li { margin-bottom: 10px; }
+  .teaching-notes a { color: var(--accent); }
+  .reset-progress { max-width: 720px; margin: 0 auto 48px; padding: 0 24px; color: var(--muted); }
+  .reset-progress h2 { font-size: 15px; color: var(--text); }
+  .reset-progress-btn { font: inherit; font-weight: 800; padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #fff; cursor: pointer; }
+
+  #game-canvas-slot:fullscreen { display: flex; background: #000; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot:-webkit-full-screen { display: flex; background: #000; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot.pseudo-fullscreen { position: fixed; inset: 0; margin: 0; z-index: 9999; display: flex; background: #000; width: 100vw; height: 100vh; height: 100dvh; }
+  #game-canvas-slot:fullscreen .app, #game-canvas-slot.pseudo-fullscreen .app { width: 100vw !important; height: 100vh !important; height: 100dvh !important; border-radius: 0; }
+  #game-canvas-slot:-webkit-full-screen .app { width: 100vw !important; height: 100vh !important; height: 100dvh !important; border-radius: 0; }
+
+  /* ===== The game. Everything is scoped under #tm. ===== */
+  #tm { position: relative; overflow: hidden; width: min(calc(100vw - 16px), 1400px); height: calc(100vh - 80px); height: calc(100dvh - 80px); min-height: 300px;
+    border-radius: 18px; background: radial-gradient(120% 90% at 50% 0%, #1a2257 0%, #0b1026 60%, #070a1c 100%); color: var(--text);
+    font-family: "Nunito", sans-serif; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  #tm button { font-family: inherit; }
+  #tm button:focus-visible, #tm canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  #tm .scr { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px; z-index: 5; }
+  #tm .scr[hidden] { display: none; }
+  #tm .card { background: rgba(14, 19, 48, 0.94); border: 2px solid rgba(140, 160, 255, 0.35); border-radius: 22px; padding: clamp(14px, 3vh, 28px) clamp(16px, 3vw, 34px);
+    max-width: 760px; width: 100%; max-height: 100%; overflow: hidden; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.5); }
+  #tm .logo { font-family: "Fredoka", sans-serif; font-weight: 700; font-size: clamp(34px, 8vh, 72px); line-height: 1; margin: 0 0 4px; letter-spacing: 1px;
+    background: linear-gradient(90deg, #ff5d8f, #ffcc33 35%, #4ee6a6 65%, #5cc8ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #tm .tag { margin: 0 0 clamp(8px, 2.4vh, 20px); color: var(--muted); font-weight: 800; font-size: clamp(13px, 2.2vh, 17px); }
+  #tm .opt-lbl { margin: clamp(6px, 1.6vh, 14px) 0 6px; font-weight: 900; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #aeb7ff; }
+  #tm .opts { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  #tm .opt { min-width: 190px; padding: clamp(8px, 1.6vh, 14px) 16px; border-radius: 16px; border: 3px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); color: #fff;
+    font-weight: 900; font-size: clamp(15px, 2.4vh, 19px); cursor: pointer; }
+  #tm .opt small { display: block; font-weight: 700; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  #tm .opt[aria-pressed="true"] { border-color: var(--accent); background: rgba(255, 204, 51, 0.14); }
+  #tm .go { margin-top: clamp(10px, 2.4vh, 22px); padding: clamp(10px, 1.8vh, 14px) 42px; border: 0; border-radius: 999px; background: linear-gradient(180deg, #ffd84d, #ffb31a);
+    color: #3a2400; font-family: "Fredoka", sans-serif; font-weight: 700; font-size: clamp(19px, 3.2vh, 26px); cursor: pointer; box-shadow: 0 5px 0 #b97700; }
+  #tm .go:active { transform: translateY(3px); box-shadow: 0 2px 0 #b97700; }
+  #tm .ghost-btn { margin-top: 10px; padding: 8px 18px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: transparent; color: #dfe4ff; font-weight: 800; font-size: 14px; cursor: pointer; }
+  #tm .rules { text-align: left; font-size: clamp(12px, 1.9vh, 15px); line-height: 1.45; margin: 0; padding-left: 20px; }
+  #tm .rules li { margin-bottom: 5px; }
+  #tm .keys { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+  #tm kbd { font: 800 12px "Nunito", sans-serif; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-bottom-width: 3px; border-radius: 6px; padding: 0 5px; color: #fff; }
+
+  /* the match: one column per player, the board beside its panel */
+  #tm #match { position: absolute; inset: 0; display: flex; justify-content: center; align-items: stretch; gap: 14px; padding: 10px 12px; }
+  #tm #match[hidden] { display: none; }
+  #tm .pl { display: flex; gap: 8px; align-items: stretch; min-width: 0; }
+  #tm .board-wrap { position: relative; display: flex; align-items: center; }
+  #tm .board-wrap canvas { display: block; border-radius: 10px; touch-action: none; }
+  #tm .panel { display: flex; flex-direction: column; gap: 6px; width: 230px; min-width: 0; }
+  #tm .pl.cpu .panel { width: 170px; }
+  #tm .who { display: flex; align-items: center; justify-content: space-between; gap: 6px; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 6px 10px; }
+  #tm .who b { font-family: "Fredoka", sans-serif; font-size: 18px; font-weight: 700; }
+  #tm .pl.p1 .who b { color: #5cc8ff; } #tm .pl.p2 .who b { color: #ff7ab0; } #tm .pl.cpu .who b { color: #b9a6ff; }
+  #tm .xs { display: flex; gap: 4px; }
+  #tm .xs i { width: 22px; height: 22px; border-radius: 6px; border: 2px dashed rgba(255,255,255,0.25); display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 15px; color: transparent; }
+  #tm .xs i.on { border: 2px solid #ff4d6a; background: #ff4d6a; color: #fff; animation: tm-pop 0.35s ease-out; }
+  @keyframes tm-pop { from { transform: scale(1.6); } to { transform: none; } }
+  #tm .stats { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; font-weight: 800; color: var(--muted); }
+  #tm .stats b { color: #fff; }
+  #tm .rise { height: 6px; border-radius: 99px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  #tm .rise i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff9f43, #ff4d6a); }
+  #tm .rise-lbl { font-size: 11px; font-weight: 800; color: var(--muted); margin-top: -3px; }
+  #tm .ask { background: rgba(255, 204, 51, 0.1); border: 2px solid rgba(255, 204, 51, 0.55); border-radius: 14px; padding: 8px 10px; min-height: 64px; }
+  #tm .ask .lbl { font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #ffd866; }
+  #tm .ask .txt { font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 17px; line-height: 1.25; margin-top: 2px; }
+  #tm .ask ol { margin: 4px 0 0; padding-left: 20px; font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 15px; line-height: 1.3; }
+  #tm .ask ol li.done { color: #4ee6a6; } #tm .ask ol li.done::marker { content: "\2713  "; }
+  #tm .ask ol li.now { color: #fff; } #tm .ask ol li.later { color: rgba(255,255,255,0.45); }
+  #tm .msg { font-size: 13px; font-weight: 800; line-height: 1.35; border-radius: 12px; padding: 6px 9px; min-height: 22px; }
+  #tm .msg:empty { display: none; }
+  #tm .msg.good { background: rgba(78, 230, 166, 0.15); color: #7dffc4; }
+  #tm .msg.hint { background: rgba(92, 200, 255, 0.13); color: #bfe9ff; }
+  #tm .msg.bad { background: rgba(255, 77, 106, 0.15); color: #ffb3c1; }
+  #tm .pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: auto; }
+  #tm .pad button { height: 40px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; font-size: 18px; font-weight: 900; cursor: pointer; touch-action: manipulation; padding: 0; }
+  #tm .pad button:disabled { opacity: 0.25; cursor: default; }
+  #tm .pad button:not(:disabled):active { background: rgba(255,255,255,0.22); }
+  #tm .pad .wide { grid-column: span 2; font-size: 14px; }
+  #tm .pad .ok { grid-column: span 4; height: 44px; background: linear-gradient(180deg, #4ee6a6, #1fbf7c); border-color: transparent; color: #04291b; font-size: 17px; }
+  #tm .pad .ok.start { background: linear-gradient(180deg, #ffd84d, #ffb31a); color: #3a2400; }
+  #tm .help { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  @media (hover: none) and (pointer: coarse) { #tm .help { display: none; } }
+  #tm .next { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; color: var(--muted); }
+  #tm .next canvas { background: rgba(255,255,255,0.05); border-radius: 8px; }
+  #tm .pl:last-child .panel { padding-top: 34px; }   /* room for the Menu button above the right-hand panel */
+  #tm .menu-btn { position: absolute; top: 8px; right: 10px; z-index: 4; padding: 6px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.35); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; }
+  #tm .banner { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 26px; padding: 8px 18px; border-radius: 14px; background: rgba(0,0,0,0.6); pointer-events: none; white-space: nowrap; }
+  #tm .banner:empty { display: none; }
+  #tm .result-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+  #tm .result-row div { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 8px 14px; min-width: 150px; }
+  #tm .result-row b { display: block; font-size: 22px; font-family: "Fredoka", sans-serif; }
+
+  /* short screens (laptops, phones held sideways): tighter panels */
+  @media (max-height: 560px) {
+    #tm .panel { width: 200px; gap: 4px; } #tm .pl.cpu .panel { width: 140px; }
+    #tm .ask { min-height: 0; padding: 5px 8px; } #tm .ask .txt { font-size: 15px; } #tm .ask ol { font-size: 13px; }
+    #tm .pad button { height: 32px; font-size: 15px; } #tm .pad .ok { height: 36px; font-size: 15px; }
+    #tm .help, #tm .next { display: none; }
+    #tm .who { padding: 4px 8px; } #tm .who b { font-size: 15px; } #tm .xs i { width: 18px; height: 18px; font-size: 12px; }
+    #tm .msg { font-size: 12px; padding: 4px 7px; }
+  }
+  @media (max-height: 420px) {
+    #tm .pl.cpu .panel .ask, #tm .pl.cpu .panel .msg { display: none; }
+    #tm .rise-lbl { display: none; }
+  }
+
+  .rotate-prompt { display: none; position: fixed; inset: 0; z-index: 500; background: #0f172a; color: #f1f5f9;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .rotate-prompt-icon { font-size: 56px; margin-bottom: 20px; }
+  .rotate-prompt h2 { font-size: 20px; font-weight: 900; margin: 0 0 10px; }
+  .rotate-prompt p { font-size: 15px; max-width: 300px; line-height: 1.5; color: #94a3b8; margin: 0 0 18px; }
+  .rotate-prompt a { color: #fff; font-weight: 700; text-decoration: none; padding: 9px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 999px; }
+  @media (hover: none) and (pointer: coarse) and (max-width: 767px) and (orientation: portrait) { .rotate-prompt { display: flex; } }
+</style>
+<script data-goatcounter="https://studentmathgames.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<script src="../site-lang.js?v=17fe73a6"></script>
+<script src="../site-sr.js?v=790186e5"></script>
+<script src="../site-keyboard.js?v=e71645cc"></script>
+<link rel="stylesheet" href="../site-layout.css?v=76857206">
+<script src="../site-layout.js?v=627e2fba"></script>
+</head>
+<body>
+<div class="rotate-prompt" id="rotate-prompt" role="alert">
+  <div class="rotate-prompt-icon" aria-hidden="true">&#128241;</div>
+  <h2 data-es="Gira tu dispositivo">Rotate Your Device</h2>
+  <p data-es="Transformania funciona mejor en horizontal. Gira tu teléfono para jugar.">Transformania works best in landscape. Turn your phone sideways to play.</p>
+  <a href="../" data-es="&larr; Todos los juegos">&larr; All games</a>
+</div>
+
+<a class="back-link" href="../">&larr; All games</a>
+<button type="button" class="fullscreen-btn" id="fullscreen-btn">&#10021; Fullscreen</button>
+<button type="button" class="pseudo-fullscreen-exit-btn" id="pseudo-fullscreen-exit-btn" data-es="&#10021; Salir de pantalla completa">&#10021; Exit Fullscreen</button>
+<h1 class="sr-only">Transformania</h1>
+<p class="sr-only" data-es="Un juego de bloques que caen, cara a cara, contra la computadora o contra otro jugador. Cada figura aparece arriba de la línea punteada. Elige dónde empieza con las flechas izquierda y derecha y confirma. Luego haz la transformación que se pide: trasladar con izquierda y derecha, reflejar con las flechas hacia el otro lado de la línea vertical u horizontal, o rotar el papel de calcar alrededor del punto rojo con Q y E, un cuarto de vuelta, 90 grados, por tecla. Pulsa Espacio para comprobar. Una respuesta correcta deja caer la pieza. El primer error de cada pregunta suma una X; tres X pierden. Completar una fila quita una X.">A head-to-head falling-blocks game against the computer or another player. Each figure appears above the dotted line. Choose where it starts with the left and right arrow keys and confirm. Then do the transformation it asks for: translate with left and right, reflect with the arrow keys toward the other side of the vertical or horizontal line, or rotate the tracing paper around the red point with Q and E, one quarter-turn, 90 degrees, per key. Press Space to check. A correct answer drops the piece. The first mistake on each question adds an X; three Xs lose. Completing a row removes an X.</p>
+
+<div class="play-area">
+  <div id="game-canvas-slot">
+    <div class="app" id="tm">
+      <!-- title -->
+      <div class="scr" id="scr-title">
+        <div class="card">
+          <h2 class="logo">TRANSFORMANIA</h2>
+          <p class="tag" data-es="Transforma. Suelta. Completa filas.">Transform it. Drop it. Clear the rows.</p>
+          <div class="opt-lbl" data-es="Modo">Mode</div>
+          <div class="opts" role="group" aria-label="Mode" data-es-aria="Modo">
+            <button type="button" class="opt" data-mode="cpu" aria-pressed="true">&#129302; <span data-es="Jugador contra computadora">Player vs Computer</span><small data-es="Tu tablero contra el de la computadora">Your board against the computer&rsquo;s</small></button>
+            <button type="button" class="opt" data-mode="pvp" aria-pressed="false" id="opt-pvp">&#128101; <span data-es="Jugador contra jugador">Player vs Player</span><small data-es="Dos jugadores, una computadora">Two players, one keyboard</small></button>
+          </div>
+          <div class="opt-lbl" data-es="Nivel">Level</div>
+          <div class="opts" role="group" aria-label="Level" data-es-aria="Nivel">
+            <button type="button" class="opt" data-level="normal" aria-pressed="true"><span data-es="Normal">Normal</span><small data-es="Traslaciones, giros de 90° y 180°, reflexiones">Translations, 90° and 180° turns, reflections</small></button>
+            <button type="button" class="opt" data-level="hard" aria-pressed="false"><span data-es="Difícil">Hard</span><small data-es="Giros hasta 360° y secuencias de transformaciones">Turns up to 360° and sequences of transformations</small></button>
+          </div>
+          <button type="button" class="go" id="btn-play" data-es="&#9654; Jugar">&#9654; Play</button><br>
+          <button type="button" class="ghost-btn" id="btn-how" data-es="Cómo se juega">How to play</button>
+        </div>
+      </div>
+      <!-- how to play -->
+      <div class="scr" id="scr-how" hidden>
+        <div class="card" style="max-width: 820px">
+          <h2 class="logo" style="font-size: clamp(26px, 5vh, 40px)" data-es="Cómo se juega">How to play</h2>
+          <ol class="rules" id="how-list"></ol>
+          <p class="keys" id="how-keys"></p>
+          <button type="button" class="go" id="btn-how-back" data-es="&#9664; Volver">&#9664; Back</button>
+        </div>
+      </div>
+      <!-- the match -->
+      <div id="match" hidden></div>
+      <button type="button" class="menu-btn" id="btn-menu" hidden data-es="&#9776; Menú">&#9776; Menu</button>
+      <!-- pause -->
+      <div class="scr" id="scr-pause" hidden style="background: rgba(5,8,22,0.7)">
+        <div class="card" style="max-width: 420px">
+          <h2 class="logo" style="font-size: 40px" data-es="Pausa">Paused</h2>
+          <button type="button" class="go" id="btn-resume" data-es="&#9654; Seguir">&#9654; Resume</button><br>
+          <button type="button" class="ghost-btn" id="btn-restart" data-es="Empezar de nuevo">Restart</button>
+          <button type="button" class="ghost-btn" id="btn-quit" data-es="Menú principal">Main menu</button>
+        </div>
+      </div>
+      <!-- game over -->
+      <div class="scr" id="scr-over" hidden style="background: rgba(5,8,22,0.72)">
+        <div class="card" style="max-width: 640px">
+          <h2 class="logo" id="over-title" style="font-size: clamp(30px, 6vh, 52px)"></h2>
+          <p class="tag" id="over-why"></p>
+          <div class="result-row" id="over-stats"></div>
+          <button type="button" class="go" id="btn-again" data-es="&#9654; Otra vez">&#9654; Play again</button><br>
+          <button type="button" class="ghost-btn" id="btn-results" data-es="Resultados por habilidad">Results by skill</button>
+          <button type="button" class="ghost-btn" id="btn-over-menu" data-es="Menú principal">Main menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="standards-panel">
+    <h2>&#128207; Common Core Standards</h2>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.1</span>
+      <p>Verify experimentally the properties of rotations, reflections, and translations: lines are taken to lines, angles to angles of the same measure, and parallel lines to parallel lines.</p>
+      <p class="applies">Applies to: every piece. The figure keeps its shape and size through each translation, quarter-turn and reflection, and students compare the image with the ghost of the pre-image.</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.2</span>
+      <p>Understand that a two-dimensional figure is congruent to another if the second can be obtained from the first by a sequence of rotations, reflections, and translations.</p>
+      <p class="applies">Applies to: Hard level&rsquo;s sequences (rotate, then reflect, then translate, in order).</p>
+    </div>
+    <div class="standard-entry">
+      <span class="code">CCSS.MATH.CONTENT.8.G.A.3</span>
+      <p>Describe the effect of dilations, translations, rotations, and reflections on two-dimensional figures using coordinates.</p>
+      <p class="applies">Applies to: counting grid units for translations, keeping each square the same distance from the line of reflection, and turning around a fixed point.</p>
+    </div>
+  </aside>
+</div>
+
+<section class="teaching-notes">
+  <h2>Quick Teacher Tips</h2>
+  <h3>What students practice</h3>
+  <p class="practice-summary"><b>Grade 8 &middot; CCSS 8.G.A.1, 8.G.A.2, 8.G.A.3.</b> A head-to-head falling-blocks game where every piece is a transformation students perform with their own hands before it drops.</p>
+  <ul>
+    <li>Translations left and right by a number of grid units</li>
+    <li>Rotations of 90&deg;, 180&deg;, 270&deg; and 360&deg;, clockwise and counterclockwise, around a fixed point</li>
+    <li>Reflections across vertical and horizontal lines</li>
+    <li>Sequences of transformations, done in order (Hard)</li>
+  </ul>
+  <p>Printables: <a href="guide">full teacher guide</a> &middot; <a href="worksheet">worksheet with answer key</a> &middot; <a href="exit-ticket">exit ticket</a></p>
+  <h3>Key vocabulary</h3>
+  <ul>
+    <li><strong>pre-image / image</strong>: the figure before a transformation, and the figure after it</li>
+    <li><strong>translation</strong>: a slide; every square moves the same number of units in the same direction</li>
+    <li><strong>rotation</strong>: a turn around a fixed point; each quarter-turn is 90&deg;</li>
+    <li><strong>clockwise / counterclockwise</strong>: the way a clock&rsquo;s hands turn, and the opposite way</li>
+    <li><strong>reflection</strong>: a flip across a line; every point lands the same distance from the line, on the other side</li>
+  </ul>
+  <h3>Tips for using the game</h3>
+  <ul>
+    <li><strong>The loop:</strong> a figure appears above the white dotted line; students slide it to a starting spot and press Confirm start. Then an instruction appears, a faint ghost keeps the pre-image in place, and students perform the transformation and press Check. A correct image drops, stacks and can complete rows.</li>
+    <li><strong>Rotations on tracing paper:</strong> the figure sits on a sheet of tracing paper pinned at a red point. Students drag the handle (or press a key) to turn it one quarter-turn at a time, and the arrow on the paper, which starts pointing up, shows how far it has turned. 180&deg; takes two turns and 360&deg; takes four, and the game checks the direction as well as the amount.</li>
+    <li><strong>Reflections:</strong> both a vertical and a horizontal line are shown, so students must pick the right line: the left and right keys flip across the vertical line, up and down across the horizontal one.</li>
+    <li><strong>Xs and hints:</strong> the first wrong check on a question adds an X, and each wrong check gives a stronger hint. Three Xs lose, but completing a row removes an X.</li>
+    <li><strong>Pressure:</strong> the floor rises on both boards every so often, and clearing two or more rows at once pushes a row onto the other player&rsquo;s board.</li>
+    <li><strong>Two players</strong> share one keyboard (left player: A D W S, Q E to turn, Space; right player: arrow keys, the &lt; and &gt; keys to turn, Enter). On phones and tablets students play the computer.</li>
+  </ul>
+</section>
+
+<section class="reset-progress">
+  <h2 data-es="Borrar progreso">Reset Progress</h2>
+  <p data-es="Borra tus récords de Transformania solo en este dispositivo. Los demás juegos no se ven afectados. Esto no se puede deshacer.">Erases your saved Transformania records on this device only. Other games are not affected. This cannot be undone.</p>
+  <button type="button" class="reset-progress-btn" id="reset-progress-btn" data-es="Borrar mi progreso">Reset My Progress</button>
+</section>
+
+<script src="../site-results.js?v=85c4ff8b"></script>
+<script src="transformania-game.js?v=00bb5ad3"></script>
+<script src="../site-fullscreen.js?v=00f33012"></script>
+<script>
+  document.getElementById('reset-progress-btn').addEventListener('click', function () {
+    if (!confirm('Reset your Transformania records? This erases your saved records on this device. This cannot be undone.')) return;
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('transformania_') === 0) keys.push(k); }
+    keys.forEach(function (k) { localStorage.removeItem(k); });
+    location.reload();
+  });
+</script>
+</body>
+</html>

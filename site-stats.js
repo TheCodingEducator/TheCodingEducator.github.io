@@ -89,7 +89,15 @@
       if (tots.length) { bs.played++; bs.best[k] = Math.min.apply(null, tots); }
     });
     bs.any = bs.rounds > 0 || bs.stars > 0;
+    var tf = {
+      played: has('transformania_games'), games: readNum('transformania_games', 0), wins: readNum('transformania_wins', 0),
+      solved: readNum('transformania_solved', 0), firstTry: readNum('transformania_firsttry', 0), bestRows: readNum('transformania_best_rows', 0)
+    };
     var games = [
+      { key: 'transformania', folder: 'transformania', icon: '🧩', name: 'Transformania', played: tf.played,
+        best: tf.bestRows > 0 || tf.wins > 0, coins: 0, rows: [
+          ['Games played', tf.games], ['Wins', tf.wins], ['Transformations done', tf.solved],
+          ['Done on the first try', tf.solved ? Math.round(100 * tf.firstTry / tf.solved) + '%' : '—'], ['Most rows in a game', tf.bestRows]] },
       { key: 'lgttp', folder: 'lets-get-to-the-point', icon: '🎯', name: "Let's Get to the Point", played: lg.played,
         best: lg.hsGenius > 0 || lg.hsGeometry > 0, coins: lg.coins, rows: [
           ['Coins', lg.coins], ['Current streak', lg.streak], ['Skins owned', lg.skins + ' / 12'],

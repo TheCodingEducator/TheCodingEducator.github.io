@@ -14,7 +14,7 @@
 $units = @(
   @{ slug = 'lines-and-slope'; name = 'Lines and Slope'; grades = 'Grade 8'; std = '8.EE.B.6, 8.F.A.3'; games = @('linear-world-cup') },
   @{ slug = 'angle-relationships'; name = 'Angle Relationships'; grades = 'Grades 7-8'; std = '7.G.B.5, 8.G.A.5'; games = @('bank-shot-angle-golf', 'math-billiards', 'laser-heist-angle-breaker'); extra = 'the Angle Puzzle Stations (one landscape page per station, to print and laminate)' },
-  @{ slug = 'transformations-and-similarity'; name = 'Transformations and Similarity'; grades = 'Grade 8'; std = '8.G.A.1, 8.G.A.3, 8.G.A.4'; games = @('lets-get-to-the-point', 'similarity-builder') },
+  @{ slug = 'transformations-and-similarity'; name = 'Transformations and Similarity'; grades = 'Grade 8'; std = '8.G.A.1, 8.G.A.2, 8.G.A.3, 8.G.A.4'; games = @('lets-get-to-the-point', 'transformania', 'similarity-builder') },
   @{ slug = 'pythagorean-theorem'; name = 'The Pythagorean Theorem'; grades = 'Grade 8'; std = '8.G.B.6, 8.G.B.7'; games = @('pythagorean-platforms') },
   @{ slug = 'solving-equations'; name = 'Solving Equations'; grades = 'Grades 6-8'; std = '6.EE.B.7, 7.EE.B.4a, 8.EE.C.7b'; games = @('tip-the-scales') },
   @{ slug = 'exponents-and-roots'; name = 'Exponents and Roots'; grades = 'Grades 6-8'; std = '6.EE.A.1, 8.EE.A.1, 8.EE.A.2, 8.NS.A.2'; games = @('exponent-racer', 'exponent-hoops', 'rooted-to-the-spot') },
