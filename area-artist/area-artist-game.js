@@ -294,10 +294,14 @@
     if (!TOUCH) try { a.focus({ preventScroll: true }); } catch (e) {}
   }
   // after a third miss, the piece is added up one column (or row) at a time: 4 + 4 = __, 8 + 4 = __, 12 + 4 = __ ...
+  // Product Picasso adds the first number shown (4 × 5: 4 + 4, 8 + 4, ...). Multiplication Monet adds the longer side,
+  // and after three single steps adds two groups at a time, so a 12 × 12 piece takes 7 additions instead of 11.
   function addPlan(pc) {
-    if (pc.kind === 'missing' ? pc.hide === 'h' : pc.w < 2) return { by: pc.w, cls: 'c', dir: 'row', n: pc.h, k: 1 };
+    var rows = pc.kind === 'missing' ? pc.hide === 'h' : game.m.key === 'h' ? pc.w > pc.h : pc.w < 2;
+    if (rows) return { by: pc.w, cls: 'c', dir: 'row', n: pc.h, k: 1 };
     return { by: pc.h, cls: 'r', dir: 'col', n: pc.w, k: 1 };
   }
+  function addStep(ad) { return game.m.key === 'h' && ad.k >= 4 && ad.n - ad.k >= 2 ? 2 : 1; }
   function groupWord(ad, many) {
     return ad.dir === 'col' ? (many ? T('columns', 'columnas') : T('column', 'columna')) : (many ? T('rows', 'filas') : T('row', 'fila'));
   }
@@ -313,20 +317,22 @@
       $('qKind').textContent = T('You reached ' + sum + '! How many ' + groupWord(ad, true) + ' of ' + ad.by + ' did it take?', '¡Llegaste a ' + sum + '! ¿Cuántas ' + groupWord(ad, true) + ' de ' + ad.by + ' hicieron falta?');
       $('qEq').innerHTML = eqHTML(pc, pc.hide);
     } else {
-      $('qKind').textContent = T('Add one more ' + groupWord(ad) + ' of ' + ad.by + ' squares.', 'Suma otra ' + groupWord(ad) + ' de ' + ad.by + ' cuadritos.');
-      $('qEq').innerHTML = '<span class="num">' + sum + '</span><span>+</span><span class="num ' + ad.cls + '">' + ad.by + '</span><span>=</span>' + inpHTML();
+      var two = addStep(ad) === 2;
+      $('qKind').textContent = two ? T('Now add two ' + groupWord(ad, true) + ' at once: two ' + groupWord(ad, true) + ' of ' + ad.by + ' make ' + 2 * ad.by + '.', 'Ahora suma dos ' + groupWord(ad, true) + ' a la vez: dos ' + groupWord(ad, true) + ' de ' + ad.by + ' son ' + 2 * ad.by + '.')
+        : T('Add one more ' + groupWord(ad) + ' of ' + ad.by + ' squares.', 'Suma otra ' + groupWord(ad) + ' de ' + ad.by + ' cuadritos.');
+      $('qEq').innerHTML = '<span class="num">' + sum + '</span><span>+</span><span class="num ' + ad.cls + '">' + (two ? 2 * ad.by : ad.by) + '</span><span>=</span>' + inpHTML();
     }
     bindAns();
   }
   function checkAdd(a, v) {
-    var pc = game.cur, ad = pc.add, sum = ad.k * ad.by;
-    if (v !== sum + ad.by) {
+    var pc = game.cur, ad = pc.add, sum = ad.k * ad.by, step = addStep(ad), add = step * ad.by;
+    if (v !== sum + add) {
       a.value = ''; shakeInput(a); sfx('bad');
-      setFb('bad', '&#129300; ' + T('Not quite! Start at <b>' + sum + '</b> and count up <b>' + ad.by + '</b> more.', 'Casi. Empieza en <b>' + sum + '</b> y cuenta <b>' + ad.by + '</b> más.'));
+      setFb('bad', '&#129300; ' + T('Not quite! Start at <b>' + sum + '</b> and count up <b>' + add + '</b> more.', 'Casi. Empieza en <b>' + sum + '</b> y cuenta <b>' + add + '</b> más.'));
       if (!TOUCH) a.focus();
       return;
     }
-    ad.k++;
+    ad.k += step;
     if (ad.k >= ad.n && pc.kind !== 'missing') return correct();
     sfx('place');
     setFb('good', '&#9989; ' + T(ad.k + ' ' + groupWord(ad, true) + ' of ' + ad.by + ' = <b>' + ad.k * ad.by + '</b>', ad.k + ' ' + groupWord(ad, true) + ' de ' + ad.by + ' = <b>' + ad.k * ad.by + '</b>'));
@@ -441,7 +447,8 @@
       ctx.fillRect(x0, y0, col ? k * s : pw, col ? ph : k * s);
       if (k < ad.n) {
         ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#1f8a50'; ctx.lineWidth = 2.5;
-        ctx.strokeRect(col ? x0 + k * s : x0, col ? y0 : y0 + k * s, col ? s : pw, col ? ph : s);
+        var nx = addStep(ad) * s;   // the next one or two groups
+        ctx.strokeRect(col ? x0 + k * s : x0, col ? y0 : y0 + k * s, col ? nx : pw, col ? ph : nx);
         ctx.restore();
       }
     }
