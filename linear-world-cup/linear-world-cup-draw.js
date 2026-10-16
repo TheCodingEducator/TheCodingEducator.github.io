@@ -213,12 +213,23 @@ function drawBallFading(x, y, alpha) {
   drawPentagonPatch(x - 0.6, y + 4.6, 1.7, 110);
 }
 
-function drawPostPop(px, py, t) {
+// The ball hit a post: the post itself flashes, with a ring and sparks around it.
+// side is -1 for the left post and 1 for the right one.
+function drawPostPop(side, t) {
   if (t >= 1) return;
-  var r = lerp(3, 16, t);
-  var a = lerp(230, 0, t);
+  var px = gridSX(side * GOAL_HALF_WIDTH), py = FY1 - 4.5;
+  var a = lerp(255, 0, t);
+  noStroke(); fill(255, 240, 120, a);
+  ellipse(px, py, 12, 12);
+  var r = lerp(6, 18, t);
   noFill(); stroke(255, 240, 120, a); strokeWeight(3);
   ellipse(px, py, r * 2, r * 2);
+  strokeWeight(2);
+  for (var k = 0; k < 8; k++) {
+    var ang = k * PI / 4 + PI / 8;
+    var r1 = r + 2, r2 = r + 2 + lerp(7, 2, t);
+    line(px + cos(ang) * r1, py + sin(ang) * r1, px + cos(ang) * r2, py + sin(ang) * r2);
+  }
 }
 
 function drawWindMarkers(x, y, dx, dy, speedFrac) {

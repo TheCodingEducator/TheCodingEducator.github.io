@@ -676,7 +676,7 @@ function drawEnemyPossessionScene() {
   }
   drawBallOnField(ebx, eby);
   if (enemyPhase === "postHit") {
-    drawPostPop(gridSX(enemyPostHitX >= 0 ? 3 : -3), FY1 - 4.5, enemyPostHitTimer / 12);
+    drawPostPop(enemyPostHitX >= 0 ? 1 : -1, enemyPostHitTimer / 20);
   }
 }
 

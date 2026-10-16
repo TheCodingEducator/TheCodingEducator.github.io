@@ -151,7 +151,7 @@ function drawFrame() {
     drawGoalie(gridSX(keeperX), gridSY(GY_MAX), defenderColor());
     drawPlayerCircle(gridSX(dribX), gridSY(dribY), attackerColor());
     drawBall(gridSX(bounceX), gridSY(bounceY));
-    drawPostPop(gridSX(bounceDir * 3), FY1 - 4.5, postHitTimer / 12);
+    drawPostPop(bounceDir, postHitTimer / 20);
     drawShootoutPanel(tl("HIT THE POST", "¡AL POSTE!"));
     if (postHitTimer >= postHitDuration) {
       startFeedback(tl("HIT THE POST", "¡AL POSTE!"));
