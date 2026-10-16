@@ -136,9 +136,6 @@
   #tm .pcard .who { background: none; padding: 0; }
   #tm .pcard.p1 .who b { color: #5cc8ff; } #tm .pcard.p2 .who b, #tm .pcard.cpu .who b { color: #ff7ab0; }
   #tm .panel.score { width: 210px; }
-  #tm .coach { background: rgba(78, 230, 166, 0.12); border: 2px solid rgba(78, 230, 166, 0.6); border-radius: 14px; padding: 8px 10px; font-size: 14px; font-weight: 700; line-height: 1.4; color: #d7ffee; }
-  #tm .coach b { color: #7dffc4; }
-  #tm .skip { align-self: flex-start; padding: 4px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: transparent; color: #dfe4ff; font-weight: 800; font-size: 12px; cursor: pointer; }
   #tm .opts.small .opt { min-width: 0; padding: 6px 12px; font-size: 14px; border-radius: 12px; }
   #tm .opts.small .opt kbd { margin-right: 4px; }
   #tm .opt { min-width: 170px; }
@@ -224,8 +221,7 @@
           </div>
           <button type="button" class="go" id="btn-play" data-es="&#9654; Jugar">&#9654; Play</button><br>
           <button type="button" class="ghost-btn" id="btn-how" data-es="Cómo se juega">How to play</button>
-          <button type="button" class="ghost-btn" id="btn-tutorial" data-es="Tutorial guiado">Guided tutorial</button>
-          <p class="keys" data-es="Teclado: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> modo &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> nivel &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> destrezas de práctica &middot; <kbd>Enter</kbd> jugar &middot; <kbd>H</kbd> cómo se juega &middot; <kbd>T</kbd> tutorial">Keyboard: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> mode &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> level &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> practice skills &middot; <kbd>Enter</kbd> play &middot; <kbd>H</kbd> how to play &middot; <kbd>T</kbd> tutorial</p>
+          <p class="keys" data-es="Teclado: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> modo &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> nivel &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> destrezas de práctica &middot; <kbd>Enter</kbd> jugar &middot; <kbd>H</kbd> cómo se juega">Keyboard: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> mode &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> level &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> practice skills &middot; <kbd>Enter</kbd> play &middot; <kbd>H</kbd> how to play</p>
         </div>
       </div>
       <!-- how to play -->
@@ -311,7 +307,7 @@
     <li><strong>Reflections:</strong> both a vertical and a horizontal line are shown, so students must pick the right line: the left and right keys flip across the vertical line, up and down across the horizontal one.</li>
     <li><strong>Taking turns:</strong> students and the computer (or two students) take turns on one board: a piece each, then the other player&rsquo;s turn. Watching the computer do its transformations correctly is a model, too.</li>
     <li><strong>Xs and hints:</strong> a wrong check names the mistake (wrong direction, wrong line, too far) with a hint; after the second, the correct move plays on the board. The first wrong check on a question adds an X. Three Xs lose, and a completed row removes one of that player&rsquo;s Xs.</li>
-    <li><strong>Practice and the tutorial:</strong> Practice is one student with no Xs and the skills you choose; the first game on a device starts with a three-piece guided tutorial.</li>
+    <li><strong>Practice:</strong> one student with no Xs and no opponent, and the skills you choose.</li>
     <li><strong>Hard:</strong> turns up to 360&deg;, translations up and down, sequences, and reflection lines that are not drawn: the instruction says where the line is.</li>
     <li><strong>Winning:</strong> the first player to clear the goal number of rows (5 on Normal, 6 on Hard) wins. A piece that stops above the dotted line loses, and the floor rises every few pieces.</li>
     <li><strong>Keyboard:</strong> everything works from the keyboard, including the menus (arrow keys choose the mode and level, Enter plays) and turning the tracing paper (up arrow clockwise, down arrow counterclockwise). Two players share the same keys and take turns.</li>
@@ -325,7 +321,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="transformania-game.js?v=5657a4ed"></script>
+<script src="transformania-game.js?v=23cfa4a0"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
   document.getElementById('reset-progress-btn').addEventListener('click', function () {

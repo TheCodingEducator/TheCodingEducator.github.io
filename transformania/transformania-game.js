@@ -143,7 +143,7 @@
     if (type === 'R') return genR(c, hard ? [1, -1, 2, -2, 3, -3, 4, -4] : [1, -1, 2, -2]);
     return genF(c, hard);
   }
-  // allow (Practice and the tutorial): which skills may come, { T, R, F, seq }; null = everything the level has
+  // allow (Practice): which skills may come, { T, R, F, seq }; null = everything the level has
   function makeQuestion(c, hard, allow) {
     var basics = ['T', 'R', 'F'].filter(function (t) { return !allow || allow[t]; });
     var seqOK = allow ? !!allow.seq : hard;
@@ -284,13 +284,11 @@
   // ------------------------------------------------------------------ game state
   // One shared board. Players take turns: each turn is one figure, placed, transformed and dropped by the player whose
   // turn it is; then the other player (the computer, or Player 2) takes a turn on the same board.
-  // Practice has one player, no opponent and no Xs, with the skills the student picks; the tutorial is a short guided
-  // Practice (a translation, a rotation and a reflection, with a coach explaining each step).
+  // Practice has one player, no opponent and no Xs, with the skills the student picks.
   var mode = 'cpu', level = 'normal', players = [], running = false, paused = false, over = false, overAt = 0, winner = null;
   var G = null;                                          // the board and the turn in progress
   var skills = { T: true, R: true, F: true, seq: false };   // Practice: which skills may come
-  var TUT = ['T', 'R', 'F'];                             // the tutorial's three pieces
-  function solo() { return mode === 'practice' || mode === 'tutorial'; }
+  function solo() { return mode === 'practice'; }
   function versus() { return !solo(); }
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, String(v)); } catch (e) { return null; } }
   function bump(k) { store(k, (+store(k) || 0) + 1); }
@@ -326,11 +324,6 @@
     var m = $('match'); m.innerHTML = '';
     var left = el('div', 'panel'), wrap = el('div', 'board-wrap'), right = el('div', 'panel score');
     UI.turnEl = el('div', 'turn'); left.appendChild(UI.turnEl);
-    if (mode === 'tutorial') {                           // the coach: what to do right now, one step at a time
-      UI.coachEl = el('div', 'coach'); left.appendChild(UI.coachEl);
-      var skip = el('button', 'skip', T('Skip the tutorial (K)', 'Saltar el tutorial (K)')); skip.type = 'button';
-      skip.addEventListener('click', endTutorial); UI.coachEl.parentNode.appendChild(skip); UI.skipBtn = skip;
-    } else UI.coachEl = null;
     UI.askEl = el('div', 'ask'); left.appendChild(UI.askEl);
     UI.msgEl = el('div', 'msg'); left.appendChild(UI.msgEl);
     var pad = el('div', 'pad'); UI.btn = {};
@@ -400,21 +393,19 @@
     if (p.kind !== 'cpu') {
       focusBoard();
       say((mode === 'pvp' ? p.name + T("'s turn. ", ': tu turno. ') : versus() ? T('Your turn. ', 'Tu turno. ') : '') + T('A new figure of ', 'Una figura nueva de ') + G.cur.length + T(' squares: ', ' cuadrados: ')
-        + figureWords(G.cur) + '. ' + (UI.coachEl ? UI.coachEl.textContent : T('Move it left or right, then confirm the start.', 'Muévela a la izquierda o la derecha y confirma el inicio.')));
+        + figureWords(G.cur) + '. ' + T('Move it left or right, then confirm the start.', 'Muévela a la izquierda o la derecha y confirma el inicio.'));
     } else say(T("The computer's turn.", 'Turno de la computadora.'));
   }
   // The instruction is made only after the start is confirmed. So that a good start is rewarded (and rows can be built),
   // the game makes thirty instructions that fit and picks the one whose image lands best on the board: both
   // players get the same treatment, and the transformation still has to be done exactly right.
   function allowNow() {
-    if (mode === 'tutorial') { var t = {}; t[TUT[Math.min(G.tutStep, 2)]] = true; return t; }
     return mode === 'practice' ? skills : null;
   }
   function rankedQuestions(c) {
     var list = [], allow = allowNow();
     for (var i = 0; i < 30; i++) {
-      var q = makeQuestion(c, level === 'hard' && mode !== 'tutorial', allow), img = c;
-      if (mode === 'tutorial' && q[0].type === 'R') { var r1 = genR(c, [1]); if (r1) q = [r1]; }   // the tutorial's turn: one quarter-turn clockwise
+      var q = makeQuestion(c, level === 'hard', allow), img = c;
       q.forEach(function (st) { img = apply(st, img); });
       list.push({ q: q, s: aiEval(landing(img)) });
     }
@@ -527,7 +518,6 @@
   // after each piece: in a match, every few pieces the floor rises one row (a row with one gap); then the next turn
   function passTurn() {
     G.phase = 'wait'; G.waitT = 0;
-    if (mode === 'tutorial') G.tutStep++;
     if (versus() && G.placed % RISE_EVERY[level] === 0 && G.board[Z].every(function (v) { return !v; })) {
       G.board.shift(); var hole = rnd(W), row = emptyRow(); for (var x = 0; x < W; x++) if (x !== hole) row[x] = GARBAGE; G.board.push(row);
       sfx('rise'); flash(T('▲ The floor rises', '▲ Sube el piso'), '#ff9f43'); say(T('The floor rises one row.', 'El piso sube una fila.'));
@@ -582,7 +572,7 @@
     if (a === 'ok') { check(); return; }
     if (a === 'reset') { var h = G.hint, tg = G.showTarget; beginStep(G.stepStart); G.hint = h; G.showTarget = tg; render(); return; }   // starting over keeps the hints earned
     var vert = a === 'up' || a === 'down';
-    if (st.type === 'T' && (a === 'left' || a === 'right' || (vert && level === 'hard' && mode !== 'tutorial'))) {   // Hard translations can go up or down too
+    if (st.type === 'T' && (a === 'left' || a === 'right' || (vert && level === 'hard'))) {   // Hard translations can go up or down too
       var t = translate(G.cur, a === 'left' ? -1 : a === 'right' ? 1 : 0, a === 'up' ? -1 : a === 'down' ? 1 : 0);
       if (inZone(t)) { G.cur = t; sfx('move'); }
     } else if (st.type === 'F' && a !== 'cw' && a !== 'ccw') {
@@ -637,7 +627,6 @@
       if (mode === 'practice' && '1234'.indexOf(k) >= 0 && k) { e.preventDefault(); toggleSkill(['T', 'R', 'F', 'seq'][+k - 1]); return; }
       if ((k === 'enter' || k === ' ') && !onBtn) { e.preventDefault(); ac(); play(); return; }
       if (k === 'h') { e.preventDefault(); openHow(); }
-      if (k === 't') { e.preventDefault(); ac(); startTutorial(false); }
       return;
     }
     if (screenOpen('scr-how')) { if (k === 'escape' || ((k === 'enter' || k === ' ') && !onBtn)) { e.preventDefault(); closeHow(); } return; }
@@ -655,7 +644,6 @@
       return;
     }
     if (k === 'escape') { if (running && !over) { e.preventDefault(); togglePause(); } return; }
-    if (k === 'k' && mode === 'tutorial' && running) { e.preventDefault(); endTutorial(); return; }
     var a = KEYS[k]; if (!a || !running) return;
     if (onBtn) return;   // a focused on-screen button handles its own press
     e.preventDefault();
@@ -752,7 +740,6 @@
     } else if (G.phase === 'wait') {
       G.waitT += dt;
       if (G.waitT > 450) {
-        if (mode === 'tutorial' && G.tutStep >= TUT.length) { finishTutorial(); return; }
         if (versus()) G.turn = 1 - G.turn;
         startTurn();
       }
@@ -921,8 +908,7 @@
     if (!G) return;
     var p = cur(), st = step(), html;
     UI.turnEl.className = 'turn ' + (p.kind === 'cpu' ? 'cpu' : (p.idx === 0 ? 'p1' : 'p2'));
-    UI.turnEl.textContent = over ? T('Game over', 'Fin del juego') : mode === 'tutorial' ? T('Tutorial', 'Tutorial') + ' ' + Math.min(G.tutStep + 1, 3) + ' / 3'
-      : mode === 'practice' ? T('Practice', 'Práctica') : p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno'));
+    UI.turnEl.textContent = over ? T('Game over', 'Fin del juego') : mode === 'practice' ? T('Practice', 'Práctica') : p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno'));
     if (G.phase === 'place') html = '<div class="lbl">' + T('Choose the start', 'Elige el inicio') + '</div><div class="txt">' + (p.kind === 'cpu' ? T('The computer is choosing where its figure starts.', 'La computadora elige dónde empieza su figura.') : T('Move the figure left or right, then confirm the start.', 'Mueve la figura a la izquierda o la derecha y confirma el inicio.')) + '</div>';
     else if (G.steps && G.steps.length > 1) html = '<div class="lbl">' + T('Do these in order', 'Hazlas en orden') + '</div><ol>' + G.steps.map(function (s2, k) {
       return '<li class="' + (k < G.si || G.phase !== 'xf' ? 'done' : k === G.si ? 'now' : 'later') + '">' + shortText(s2) + '</li>'; }).join('') + '</ol>';
@@ -930,10 +916,9 @@
     else html = '';
     UI.askEl.innerHTML = html;
     UI.msgEl.className = 'msg ' + (msgKind || ''); UI.msgEl.innerHTML = msgText || '';
-    if (UI.coachEl) UI.coachEl.innerHTML = coachText();
     UI.cv.setAttribute('aria-label', T('The board. ', 'El tablero. ') + UI.turnEl.textContent + '. ' + (st && G.phase === 'xf' ? stepText(st).replace(/&rsquo;/g, "'") : ''));
     var B = UI.btn, mine = humanTurn() && !G.demo, place = mine && G.phase === 'place', xf = mine && G.phase === 'xf', t = st && st.type;
-    var vMove = t === 'T' && level === 'hard' && mode !== 'tutorial';
+    var vMove = t === 'T' && level === 'hard';
     B.left.disabled = B.right.disabled = !(place || (xf && (t === 'T' || t === 'F')));
     B.up.disabled = B.down.disabled = !(xf && (t === 'F' || t === 'R' || vMove));
     B.cw.disabled = B.ccw.disabled = !(xf && t === 'R');
@@ -942,7 +927,6 @@
     B.ok.className = 'ok' + (G.phase === 'place' ? ' start' : '');
     B.ok.textContent = G.phase === 'place' ? T('✓ Confirm start', '✓ Confirmar inicio') : T('✓ Check', '✓ Comprobar');
     UI.goalEl.innerHTML = versus() ? T('First to <b>', 'Gana quien complete <b>') + GOAL[level] + T(' rows</b> wins', ' filas</b> primero')
-      : mode === 'tutorial' ? T('<b>Tutorial</b>: one of each transformation', '<b>Tutorial</b>: una de cada transformación')
       : T('<b>Practice</b>: no Xs, no opponent', '<b>Práctica</b>: sin X ni rival');
     players.forEach(function (q) {
       var xs = q.xsEl.children; for (var i = 0; i < 3; i++) xs[i].className = i < q.xs ? 'on' : '';
@@ -954,18 +938,6 @@
     var left = RISE_EVERY[level] - (G.placed % RISE_EVERY[level]);
     UI.riseEl.textContent = versus() ? T('The floor rises in ', 'El piso sube en ') + left + (left === 1 ? T(' piece', ' pieza') : T(' pieces', ' piezas')) : '';
   }
-  // the tutorial's coach: what to do right now
-  function coachText() {
-    var st = step(), ks = !TOUCH;
-    if (G.phase === 'place') return T('Your figure appears above the <b>white dotted line</b>. Press ◀ ▶ to choose where it starts, then <b>Confirm start</b>', 'Tu figura aparece arriba de la <b>línea blanca punteada</b>. Pulsa ◀ ▶ para elegir dónde empieza y luego <b>Confirmar inicio</b>') + (ks ? T(' (Space).', ' (Espacio).') : '.');
-    if (G.phase === 'xf' && st) {
-      if (G.demo) return T('Watch the correct move on the board.', 'Mira el movimiento correcto en el tablero.');
-      if (st.type === 'T') return T('<b>Translate</b> means slide. The faint ghost stays where the figure started. Press ◀ ▶ to count the units, then <b>Check</b>.', '<b>Trasladar</b> es deslizar. La figura tenue se queda donde empezó. Pulsa ◀ ▶ para contar las unidades y luego <b>Comprobar</b>.');
-      if (st.type === 'R') return T('The figure is on <b>tracing paper</b> pinned at the red point. Press ▲ (or ⟳) once: the paper turns a quarter-turn, <b>90°</b>, clockwise. The red arrow shows how far it turned. Then <b>Check</b>.', 'La figura está en <b>papel de calcar</b> fijo en el punto rojo. Pulsa ▲ (o ⟳) una vez: el papel gira un cuarto de vuelta, <b>90°</b>, en sentido horario. La flecha roja muestra cuánto giró. Luego <b>Comprobar</b>.');
-      return T('<b>Reflect</b> means flip. Use the line the instruction names: ◀ ▶ flip across the pink <b>vertical</b> line, ▲ ▼ across the green <b>horizontal</b> line. Then <b>Check</b>.', '<b>Reflejar</b> es voltear. Usa la línea que dice la instrucción: ◀ ▶ reflejan sobre la línea <b>vertical</b> rosa, ▲ ▼ sobre la línea <b>horizontal</b> verde. Luego <b>Comprobar</b>.');
-    }
-    return T('A correct image drops below the line. Fill a whole row to clear it.', 'Una imagen correcta cae debajo de la línea. Completa una fila entera para quitarla.');
-  }
   var flashTimer = 0;
   function flash(txt, col) {
     UI.banner.textContent = txt; UI.banner.style.color = col || '#fff';
@@ -975,24 +947,11 @@
 
   // ------------------------------------------------------------------ screens
   function show(id) { ['scr-title', 'scr-how', 'scr-pause', 'scr-over'].forEach(function (s) { $(s).hidden = s !== id; }); }
-  function play() {
-    // the very first game on this device starts with the tutorial (it can be skipped)
-    if (mode !== 'practice' && !store('transformania_tutorial')) { startTutorial(true); return; }
-    startMatch();
-  }
-  var afterTutorial = null;
-  function startTutorial(thenPlay) { afterTutorial = thenPlay ? mode : null; mode = 'tutorial'; startMatch(); }
-  function finishTutorial() {
-    store('transformania_tutorial', 'done'); store('transformania_tutorial_done', 1);   // the second one (finished, not skipped) earns a badge
-    running = false; flash(T('Tutorial done!', '¡Tutorial terminado!'), '#4ee6a6');
-    say(T('Tutorial done. You are ready to play.', 'Tutorial terminado. Ya puedes jugar.'));
-    setTimeout(function () { var m = afterTutorial; if (m) { mode = m; startMatch(); } else { mode = 'cpu'; toMenu(); } }, 1600);
-  }
-  function endTutorial() { if (mode !== 'tutorial') return; store('transformania_tutorial', 'done'); var m = afterTutorial; if (m) { mode = m; startMatch(); } else { mode = 'cpu'; toMenu(); } }
+  function play() { startMatch(); }
   function startMatch() {
     if (solo()) players = [makePlayer(0, 'human')];
     else players = [makePlayer(0, 'human'), makePlayer(1, mode === 'pvp' ? 'human' : 'cpu')];
-    G = { board: [], turn: 0, placed: 0, phase: 'idle', tutStep: 0 };
+    G = { board: [], turn: 0, placed: 0, phase: 'idle' };
     for (var y = 0; y < H; y++) G.board.push(emptyRow());
     buildUI();
     $('match').hidden = false; $('btn-menu').hidden = false; show(null);
@@ -1000,8 +959,7 @@
     running = true; paused = false; over = false; winner = null;
     if (window.SiteResults) SiteResults.reset();
     layout(); setTimeout(layout, 50);
-    say(T('Transformania. ', 'Transformania. ') + (mode === 'tutorial' ? T('Tutorial: three pieces, one of each transformation. Press K to skip it.', 'Tutorial: tres piezas, una de cada transformación. Pulsa K para saltarlo.')
-      : mode === 'practice' ? T('Practice: no Xs and no opponent. Press Escape, then F, to finish and see your results.', 'Práctica: sin X ni rival. Pulsa Escape y luego F para terminar y ver tus resultados.')
+    say(T('Transformania. ', 'Transformania. ') + (mode === 'practice' ? T('Practice: no Xs and no opponent. Press Escape, then F, to finish and see your results.', 'Práctica: sin X ni rival. Pulsa Escape y luego F para terminar y ver tus resultados.')
       : (mode === 'pvp' ? T('Player 1 and Player 2 take turns on one board.', 'El Jugador 1 y el Jugador 2 se turnan en un tablero.') : T('You and the computer take turns on one board.', 'Tú y la computadora se turnan en un tablero.'))
         + ' ' + T('First to ', 'Gana quien complete ') + GOAL[level] + T(' rows wins.', ' filas primero.')));
     startTurn();
@@ -1051,7 +1009,6 @@
   function showResults() { if (window.SiteResults) SiteResults.show({ title: T('Your results', 'Tus resultados') }); }
   function toMenu() {
     running = false; over = false; paused = false; players = []; G = null;
-    if (mode === 'tutorial') mode = 'cpu';
     $('match').hidden = true; $('match').innerHTML = ''; $('btn-menu').hidden = true; show('scr-title');
     syncTitle(); $('btn-play').focus();
   }
@@ -1076,7 +1033,6 @@
   document.querySelectorAll('#tm [data-level]').forEach(function (b) { b.addEventListener('click', function () { chooseLevel(b.getAttribute('data-level')); }); });
   document.querySelectorAll('#tm [data-skill]').forEach(function (b) { b.addEventListener('click', function () { toggleSkill(b.getAttribute('data-skill')); }); });
   $('btn-play').addEventListener('click', function () { ac(); play(); });
-  $('btn-tutorial').addEventListener('click', function () { ac(); startTutorial(false); });
   $('btn-how').addEventListener('click', openHow);
   $('btn-how-back').addEventListener('click', closeHow);
   $('btn-menu').addEventListener('click', togglePause);

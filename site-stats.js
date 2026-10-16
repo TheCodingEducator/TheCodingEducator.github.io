@@ -93,7 +93,7 @@
       played: has('transformania_games'), games: readNum('transformania_games', 0), wins: readNum('transformania_wins', 0),
       solved: readNum('transformania_solved', 0), firstTry: readNum('transformania_firsttry', 0), bestRows: readNum('transformania_best_rows', 0),
       ftT: readNum('transformania_ft_T', 0), ftR: readNum('transformania_ft_R', 0), ftF: readNum('transformania_ft_F', 0), ftSeq: readNum('transformania_ft_seq', 0),
-      hardWin: has('transformania_hard_win'), tutorial: has('transformania_tutorial_done')
+      hardWin: has('transformania_hard_win')
     };
     var games = [
       { key: 'transformania', folder: 'transformania', icon: '🧩', name: 'Transformania', played: tf.played,
@@ -153,7 +153,6 @@
       { game: 'all', icon: '🏆', name: 'Completionist', desc: 'Save progress in all ' + games.length + ' tracked games', earned: played >= games.length },
       { game: 'all', icon: '⏱️', name: 'Personal Best', desc: 'Record a best time or high score', earned: games.some(function (g) { return g.best; }) },
       { game: 'all', icon: '🪙', name: 'Coin Collector', desc: 'Earn 20+ coins in total', earned: coinsAll >= 20 },
-      { game: 'transformania', icon: '🎓', name: 'Tutorial Graduate', desc: 'Finish the Transformania tutorial', earned: tf.tutorial },
       { game: 'transformania', icon: '➡️', name: 'Slide Expert', desc: 'Get 20 translations right on the first try', earned: tf.ftT >= 20 },
       { game: 'transformania', icon: '🔄', name: 'Quarter-Turn Pro', desc: 'Get 20 rotations right on the first try', earned: tf.ftR >= 20 },
       { game: 'transformania', icon: '🪞', name: 'Mirror Master', desc: 'Get 20 reflections right on the first try', earned: tf.ftF >= 20 },
