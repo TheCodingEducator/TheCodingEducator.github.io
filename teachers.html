@@ -18,7 +18,7 @@
 <meta property="og:url" content="https://studentmathgames.com/teachers">
 <meta property="og:image" content="https://studentmathgames.com/og/site.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="stylesheet" href="site-pages.css?v=3d589e19">
+<link rel="stylesheet" href="site-pages.css?v=a5a70a78">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4317154407082893" crossorigin="anonymous"></script>
 <script data-goatcounter="https://studentmathgames.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -36,6 +36,7 @@
   <h1>For Teachers</h1>
   <p class="pg-lede">Every game on this site is free, runs in the browser, and asks nothing of your students: no accounts, no logins, no personal data. Each game has a teacher guide with the math, worked examples, the mistakes students make, and ideas for using it in class.</p>
   <p class="byline">Every game designed by <a href="about">Mr. H</a>, an 8th grade math teacher</p>
+  <p class="unblock-link">Blocked on school devices? <a href="#unblock">Here&rsquo;s how to get the site unblocked</a>.</p>
 </header>
 
 <main class="pg">
@@ -152,6 +153,66 @@
 
 
   <h2 id="more">More for teachers</h2>
+  <details class="more-details" id="unblock">
+    <summary>Blocked on school devices? How to get the site unblocked</summary>
+  <p>School web filters such as Linewize, GoGuardian, Securly, Lightspeed, iboss and Cisco Umbrella often block new game sites automatically, usually because the site is filed under a &ldquo;Games&rdquo; category. This site has no accounts, no chat and keeps no student data, so most schools approve it quickly. These steps go from fastest to most permanent.</p>
+
+  <h3>1. Find out what is blocking it</h3>
+  <ol class="unblock-steps">
+    <li>On a student device (or a student test account), open <strong>studentmathgames.com</strong>.</li>
+    <li>Read the block page. It usually shows the filter's name or logo and the category it was blocked for, such as &ldquo;Games&rdquo;. <strong>Take a screenshot</strong>; your technology department will want it.</li>
+    <li>If the home page opens but a game stays blank, the site itself is allowed and something the game needs is blocked. The list in step 4 shows what to allow.</li>
+  </ol>
+
+  <h3>2. Use the button on the block page</h3>
+  <p>Many block pages have a button such as <strong>Request access</strong>, <strong>Request review</strong> or <strong>Ask to unblock</strong>. Use it and add a short reason: &ldquo;Free, standards-aligned math practice for my class. No accounts or student data.&rdquo;</p>
+
+  <h3>3. Allow it for your own class, if your filter lets teachers do that</h3>
+  <ul>
+    <li><strong>Linewize Classwize:</strong> open your class in Classwize, create a rule for <strong>studentmathgames.com</strong>, set it to <strong>Allow</strong> for the whole class, and save. The rule works while the class is in session. Classwize cannot override a <em>locked</em> school policy or a block from the school firewall; for those, go to step 4.</li>
+    <li><strong>GoGuardian Teacher:</strong> if your administrator has turned on teacher override, you can give the class temporary access to a blocked site during a session.</li>
+    <li><strong>Other filters:</strong> search your district's help pages for &ldquo;allow a website&rdquo; or &ldquo;website request form&rdquo;. Many districts have a form for exactly this.</li>
+  </ul>
+
+  <h3>4. Ask your technology department to allow it for everyone</h3>
+  <p>This is the permanent fix. Ask them to add these to the allow list for student devices:</p>
+  <ul>
+    <li><strong>studentmathgames.com</strong>: required. Every game, worksheet and picture comes from here.</li>
+    <li><strong>cdnjs.cloudflare.com</strong>: needed for the 3D graphics in Rooted to the Spot. Most schools already allow it.</li>
+    <li><strong>fonts.googleapis.com</strong> and <strong>fonts.gstatic.com</strong>: the lettering. The games still work without them.</li>
+  </ul>
+  <p>The site also loads a cookie-free visitor counter (gc.zgo.at) and Google's ad service. Both are optional: every game works fully if they stay blocked.</p>
+  <p>If the filter lists the site under &ldquo;Games&rdquo;, ask them to move it to <strong>Education</strong>, or to send the filter company a recategorization request. Linewize, GoGuardian, Securly and Lightspeed all accept these.</p>
+  <p>Here is an email you can send. Fill in your name and attach your screenshot from step 1.</p>
+  <div class="email-box">
+    <button type="button" class="copy-email" aria-describedby="email-text">Copy the email</button>
+    <pre id="email-text">Subject: Please allow studentmathgames.com for students
+
+Hi,
+
+I would like to use studentmathgames.com with my students. It is a free set of math games for grades 2 through 8, organized by Common Core standard, and it is currently blocked by our web filter (screenshot attached).
+
+Could you add these to the allow list for student devices?
+- studentmathgames.com (required)
+- cdnjs.cloudflare.com (used by one game's 3D graphics)
+- fonts.googleapis.com and fonts.gstatic.com (lettering)
+
+About the site:
+- No accounts, logins or chat. Students never enter personal information.
+- Nothing students type is sent anywhere. Progress saves only in the browser on that device.
+- The visitor counter is cookie-free, and any ads are non-personalized because the site is registered with Google as directed to children.
+- Privacy policy: https://studentmathgames.com/privacy-policy
+
+If the filter lists the site under a Games category, could it be moved to Education?
+
+Thank you,
+[Your name]</pre>
+  </div>
+
+  <h3>5. Check it on a student device</h3>
+  <p>Once it is allowed, open a game on a student device. Student devices can take a few minutes to pick up a filter change; if a game is still blocked, have the student sign out and back in, or restart the device.</p>
+  </details>
+
   <details class="more-details" id="in-class">
     <summary>Ideas for using the games in class</summary>
   <ul>
@@ -196,11 +257,7 @@
   </details>
 
   <details class="more-details" id="good-to-know">
-    <summary>School filters and accessibility</summary>
-  <h3>Getting the games past school filters</h3>
-  <p>This site was built so it can run on school networks. There are no accounts and no chat, and nothing students type is sent anywhere. Progress (like best times and coins) saves only in that browser on that device, and students can erase it any time with the Reset progress button.</p>
-  <p>If your school's filter blocks the site, ask your technology department to allow <strong>studentmathgames.com</strong>. It may also help to mention that the site keeps no student data, uses a cookie-free visitor counter, and that any ads are non-personalized because the site is registered with Google as directed to children. The <a href="privacy-policy">privacy policy</a> explains exactly what the site does and doesn't collect.</p>
-
+    <summary>Accessibility</summary>
   <h3>Accessibility</h3>
   <p>Every game can be played in Spanish with the 🌐 Español button in its top bar (the choice is remembered for all the games on that device). Every game can be played with the keyboard alone: arrow keys move between buttons, Enter or Space presses them. Games fill the screen on a computer, and on phones and tablets the page never scrolls. Read more on the <a href="accessibility">accessibility page</a>.</p>
 
@@ -237,6 +294,14 @@
   }
   window.addEventListener('hashchange', function () { fromHash(true); });
   fromHash(false);
+  // Copy the unblock request email
+  var copyBtn = document.querySelector('.copy-email');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var pre = document.getElementById('email-text'), done = function () { copyBtn.textContent = 'Copied!'; setTimeout(function () { copyBtn.textContent = 'Copy the email'; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pre.textContent).then(done, function () { selectPre(pre); });
+    else selectPre(pre);
+  });
+  function selectPre(pre) { var r = document.createRange(); r.selectNodeContents(pre); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
   showing.querySelector('.show-all').addEventListener('click', function () {
     history.pushState(null, '', location.pathname + '#units'); show(''); document.getElementById('units').scrollIntoView();
   });

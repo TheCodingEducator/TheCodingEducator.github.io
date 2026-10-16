@@ -145,3 +145,7 @@ main.pg .unit-note { font-size: 14px; color: var(--muted); }
 .show-all { font: inherit; font-size: 14px; font-weight: 800; background: var(--panel); color: var(--accent); border: 2px solid var(--line); border-radius: 9px; padding: 4px 12px; cursor: pointer; }
 .more-details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 16px; margin: 8px 0; scroll-margin-top: 16px; }
 .more-details > summary { cursor: pointer; font-weight: 800; color: var(--accent); padding: 8px 0; font-size: 16px; }
+.unblock-link { font-weight: 700; margin: 6px 0 0; }
+.email-box { position: relative; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 8px 0 12px; }
+.email-box pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: Consolas, "Courier New", monospace; font-size: 14px; line-height: 1.5; color: #3a2f22; }
+.copy-email { float: right; margin: 0 0 8px 10px; font: inherit; font-size: 14px; font-weight: 800; background: var(--accent); color: #fff; border: 0; border-radius: 9px; padding: 6px 12px; cursor: pointer; }
