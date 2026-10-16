@@ -265,8 +265,9 @@
     updateProgress();
     camTo(camTarget(), 950, function () { g.phase = 'ask'; setupQuestion(); });
   }
+  function inpHTML() { return '<input class="ans" id="ans" autocomplete="off" maxlength="3" inputmode="numeric" aria-label="' + T('Your answer', 'Tu respuesta') + '"' + (TOUCH ? ' readonly' : '') + '>'; }
   function eqHTML(pc, slot) {   // slot: 'p' (the product), 'w' or 'h' (a missing side)
-    var inp = '<input class="ans" id="ans" autocomplete="off" maxlength="3" inputmode="numeric" aria-label="' + T('Your answer', 'Tu respuesta') + '"' + (TOUCH ? ' readonly' : '') + '>';
+    var inp = inpHTML();
     var h = slot === 'h' ? inp : '<span class="num r">' + pc.h + '</span>';
     var w = slot === 'w' ? inp : '<span class="num c">' + pc.w + '</span>';
     var p = slot === 'p' ? inp : '<span class="num">' + pc.w * pc.h + '</span>';
@@ -284,10 +285,52 @@
     }
     setFb('', '');
     $('pHint').innerHTML = T('Type your answer and press <b>Enter</b>. <b>Esc</b> opens the menu.', 'Escribe tu respuesta y presiona <b>Enter</b>. <b>Esc</b> abre el menú.');
+    bindAns();
+  }
+  function bindAns() {
     var a = $('ans');
     a.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); check(); } });
     a.addEventListener('input', function () { a.value = a.value.replace(/[^0-9]/g, '').slice(0, 3); a.classList.remove('shake'); });
     if (!TOUCH) try { a.focus({ preventScroll: true }); } catch (e) {}
+  }
+  // after a third miss, the piece is added up one column (or row) at a time: 4 + 4 = __, 8 + 4 = __, 12 + 4 = __ ...
+  function addPlan(pc) {
+    if (pc.kind === 'missing' ? pc.hide === 'h' : pc.w < 2) return { by: pc.w, cls: 'c', dir: 'row', n: pc.h, k: 1 };
+    return { by: pc.h, cls: 'r', dir: 'col', n: pc.w, k: 1 };
+  }
+  function groupWord(ad, many) {
+    return ad.dir === 'col' ? (many ? T('columns', 'columnas') : T('column', 'columna')) : (many ? T('rows', 'filas') : T('row', 'fila'));
+  }
+  function startAdd(pc) {
+    var ad = pc.add = addPlan(pc);
+    setFb('bad', '&#129300; ' + T('Not quite! Let’s add it up one ' + groupWord(ad) + ' at a time.', 'Casi. ¡Vamos a sumar una ' + groupWord(ad) + ' a la vez!'));
+    askAdd();
+  }
+  function askAdd() {
+    var pc = game.cur, ad = pc.add, sum = ad.k * ad.by;
+    if (ad.k >= ad.n) {   // the sums reached the total, so a missing side asks how many groups it took
+      ad.final = true;
+      $('qKind').textContent = T('You reached ' + sum + '! How many ' + groupWord(ad, true) + ' of ' + ad.by + ' did it take?', '¡Llegaste a ' + sum + '! ¿Cuántas ' + groupWord(ad, true) + ' de ' + ad.by + ' hicieron falta?');
+      $('qEq').innerHTML = eqHTML(pc, pc.hide);
+    } else {
+      $('qKind').textContent = T('Add one more ' + groupWord(ad) + ' of ' + ad.by + ' squares.', 'Suma otra ' + groupWord(ad) + ' de ' + ad.by + ' cuadritos.');
+      $('qEq').innerHTML = '<span class="num">' + sum + '</span><span>+</span><span class="num ' + ad.cls + '">' + ad.by + '</span><span>=</span>' + inpHTML();
+    }
+    bindAns();
+  }
+  function checkAdd(a, v) {
+    var pc = game.cur, ad = pc.add, sum = ad.k * ad.by;
+    if (v !== sum + ad.by) {
+      a.value = ''; shakeInput(a); sfx('bad');
+      setFb('bad', '&#129300; ' + T('Not quite! Start at <b>' + sum + '</b> and count up <b>' + ad.by + '</b> more.', 'Casi. Empieza en <b>' + sum + '</b> y cuenta <b>' + ad.by + '</b> más.'));
+      if (!TOUCH) a.focus();
+      return;
+    }
+    ad.k++;
+    if (ad.k >= ad.n && pc.kind !== 'missing') return correct();
+    sfx('place');
+    setFb('good', '&#9989; ' + T(ad.k + ' ' + groupWord(ad, true) + ' of ' + ad.by + ' = <b>' + ad.k * ad.by + '</b>', ad.k + ' ' + groupWord(ad, true) + ' de ' + ad.by + ' = <b>' + ad.k * ad.by + '</b>'));
+    askAdd();
   }
   function setFb(cls, html) { var f = $('fb'); f.className = 'fb' + (cls ? ' ' + cls : ''); f.innerHTML = html; }
   function shakeInput(a) { if (!a) return; a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); }
@@ -296,12 +339,16 @@
     var pc = g.cur;
     var a = $('ans'), v = parseInt(a.value, 10);
     if (isNaN(v)) { shakeInput(a); if (!TOUCH) a.focus(); return; }
+    if (pc.add && !pc.add.final) return checkAdd(a, v);
     var want = pc.kind === 'missing' ? (pc.hide === 'w' ? pc.w : pc.h) : pc.w * pc.h;
     if (window.SiteResults) SiteResults.record(pc.kind === 'missing' ? 'missing' : 'area', v === want);
     if (v === want) return correct();
     a.value = '';
     shakeInput(a);
-    if (pc.kind === 'missing') wrong(T('Not quite! Try counting each individual square along the side with the <b>?</b>',
+    pc.wrongs = (pc.wrongs || 0) + 1;
+    if (pc.add) wrong(T('Not quite! Count the ' + groupWord(pc.add, true) + ' of ' + pc.add.by + ' on the picture.', 'Casi. Cuenta las ' + groupWord(pc.add, true) + ' de ' + pc.add.by + ' en el cuadro.'));
+    else if (pc.wrongs >= 3 && (pc.kind === 'missing' || addPlan(pc).n > 1)) { wrong(''); startAdd(pc); }
+    else if (pc.kind === 'missing') wrong(T('Not quite! Try counting each individual square along the side with the <b>?</b>',
       'Casi. ¡Intenta contar cada cuadrito uno por uno en el lado del <b>?</b>'));
     else wrong(T('Not quite! Try counting each individual square in the rectangle.', 'Casi. ¡Intenta contar cada cuadrito del rectángulo uno por uno!'));
   }
@@ -317,7 +364,8 @@
     sfx('good');
     a.classList.add('good'); a.readOnly = true; a.blur();
     $('checkBtn').disabled = true;
-    setFb('good', '&#127881; ' + pick(PRAISE) + ' <b>' + pc.h + ' &times; ' + pc.w + ' = ' + pc.w * pc.h + '</b>');
+    var ad = pc.add, sums = ad ? T(ad.n + ' ' + groupWord(ad, ad.n > 1) + ' of ' + ad.by + ' = ' + ad.n * ad.by + ', so ', ad.n + ' ' + groupWord(ad, ad.n > 1) + ' de ' + ad.by + ' = ' + ad.n * ad.by + ', así que ') : '';
+    setFb('good', '&#127881; ' + pick(PRAISE) + ' ' + sums + '<b>' + pc.h + ' &times; ' + pc.w + ' = ' + pc.w * pc.h + '</b>');
     updateProgress();
     var n = pc.w * pc.h;
     g.fill = { t0: performance.now(), n: n, done: 0, dur: clamp(n * 55, 500, 1600) };
@@ -387,6 +435,16 @@
       if (g.m.key === 'e' || g.gridShown) tiles(ox, oy, pc, s, 'rgba(255,255,255,0.75)');
     }
     if (!pc.solved && (g.m.key === 'e' || g.gridShown)) gridLines(ox, oy, pc.x, pc.y, pc.w, pc.h, s, 'rgba(60,40,20,0.6)', 1.5);
+    if (pc.add && !pc.solved && g.phase === 'ask') {   // the columns (or rows) added up so far, and the next one dashed
+      var ad = pc.add, col = ad.dir === 'col', k = Math.min(ad.k, ad.n);
+      ctx.fillStyle = 'rgba(46,204,113,0.38)';
+      ctx.fillRect(x0, y0, col ? k * s : pw, col ? ph : k * s);
+      if (k < ad.n) {
+        ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = '#1f8a50'; ctx.lineWidth = 2.5;
+        ctx.strokeRect(col ? x0 + k * s : x0, col ? y0 : y0 + k * s, col ? s : pw, col ? ph : s);
+        ctx.restore();
+      }
+    }
     if (g.gridShown >= 2 && !pc.solved && s >= 14) {   // after a second miss, number the squares along the sides too
       var fs2 = clamp(s * 0.36, 9, 16);
       ctx.font = '600 ' + fs2 + 'px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#6e6485';
