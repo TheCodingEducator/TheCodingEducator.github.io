@@ -338,8 +338,7 @@
       pad.appendChild(bt); UI.btn[b[0]] = bt;
     });
     left.appendChild(pad);
-    if (!TOUCH) left.appendChild(el('div', 'help', T('<kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd> <kbd>↓</kbd> flip, or turn the paper (<kbd>↑</kbd> clockwise, <kbd>↓</kbd> counterclockwise; <kbd>Q</kbd> <kbd>E</kbd> too) · <kbd>Space</kbd> or <kbd>Enter</kbd> confirm / check · <kbd>R</kbd> start over · <kbd>I</kbd> where is my figure? · <kbd>Esc</kbd> menu',
-      '<kbd>←</kbd> <kbd>→</kbd> mover · <kbd>↑</kbd> <kbd>↓</kbd> reflejar, o girar el papel (<kbd>↑</kbd> horario, <kbd>↓</kbd> antihorario; también <kbd>Q</kbd> <kbd>E</kbd>) · <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar / comprobar · <kbd>R</kbd> otra vez · <kbd>I</kbd> ¿dónde está mi figura? · <kbd>Esc</kbd> menú')));
+    UI.helpEl = TOUCH ? null : el('div', 'help'); if (UI.helpEl) left.appendChild(UI.helpEl);   // the keys for this moment only (see keysNow)
     UI.cv = el('canvas'); UI.cv.tabIndex = 0; UI.cv.setAttribute('role', 'img');
     wrap.appendChild(UI.cv); UI.banner = el('div', 'banner'); wrap.appendChild(UI.banner);
     UI.ctx = UI.cv.getContext('2d');
@@ -542,11 +541,6 @@
     }
     return '';
   }
-  function sayWhere() {
-    if (!G || !G.cur) return;
-    var st = step(), img = G.phase === 'xf' && st && st.type === 'R' ? currentImage() : G.cur;
-    say(T('Your figure: ', 'Tu figura: ') + figureWords(img) + '. ' + (G.phase === 'xf' ? T('It started at ', 'Empezó en ') + figureWords(G.stepStart) + '. ' + (st.type === 'R' ? T('The paper has turned ', 'El papel ha girado ') + turnsWord(Math.round(G.rot.target / 90)) + ' ' + (G.rot.target ? dirWord(G.rot.target > 0) : '') + '. ' : '') + whereWords() + ' ' + stepText(st) : ''));
-  }
   function other(p) { return players[1 - p.idx]; }
   function endGame(loser, why) {
     if (over) return;
@@ -559,7 +553,6 @@
   function act(a) {
     if (!running || paused || over || !G) return;
     ac();
-    if (a === 'info') { sayWhere(); return; }
     if (G.demo) return;                                  // watching the correct move
     if (G.phase === 'place') {
       if (a === 'left' || a === 'right') { var c = translate(G.cur, a === 'left' ? -1 : 1); if (inZone(c)) { G.cur = c; sfx('move'); } }
@@ -587,7 +580,7 @@
     }
   }
 
-  // dragging the tracing paper's handle around the red point (the Q and E keys do the same, a quarter-turn per press)
+  // dragging the tracing paper's handle around the red point (the up and down keys do the same, a quarter-turn per press)
   function boardXY(e) { var r = UI.cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / cell, y: (e.clientY - r.top) / cell }; }
   function angleAt(st, pt) { return Math.atan2(pt.x - st.px, -(pt.y - st.py)) * 180 / Math.PI; }   // 0 = up, + = clockwise
   function pointerDown(e) {
@@ -613,7 +606,7 @@
 
   // every key: in a game, on the title screen, in the menus and on the results screen
   var KEYS = { arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right', arrowup: 'up', w: 'up', arrowdown: 'down', s: 'down',
-    q: 'ccw', ',': 'ccw', '<': 'ccw', e: 'cw', '.': 'cw', '>': 'cw', ' ': 'ok', enter: 'ok', r: 'reset', backspace: 'reset', i: 'info' };
+    ',': 'ccw', '<': 'ccw', '.': 'cw', '>': 'cw', ' ': 'ok', enter: 'ok', backspace: 'reset' };
   function screenOpen(id) { return !$(id).hidden; }
   document.addEventListener('keydown', function (e) {
     if (window.isPageControlKey && window.isPageControlKey(e)) return;
@@ -937,6 +930,17 @@
     });
     var left = RISE_EVERY[level] - (G.placed % RISE_EVERY[level]);
     UI.riseEl.textContent = versus() ? T('The floor rises in ', 'El piso sube en ') + left + (left === 1 ? T(' piece', ' pieza') : T(' pieces', ' piezas')) : '';
+    if (UI.helpEl) UI.helpEl.innerHTML = humanTurn() && !G.demo ? keysNow() : '';
+  }
+  // only the keys that do something right now (Start over, Where is my figure and the menu keys still work, unlisted)
+  function keysNow() {
+    var st = step(), go = '<kbd>' + T('Space', 'Espacio') + '</kbd> ';
+    if (G.phase === 'place') return T('<kbd>←</kbd> <kbd>→</kbd> move · ', '<kbd>←</kbd> <kbd>→</kbd> mover · ') + go + T('confirm the start', 'confirmar el inicio');
+    if (G.phase !== 'xf' || !st) return '';
+    var check = ' · ' + go + T('check', 'comprobar');
+    if (st.type === 'T') return (level === 'hard' ? T('<kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> move', '<kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> mover') : T('<kbd>←</kbd> <kbd>→</kbd> move', '<kbd>←</kbd> <kbd>→</kbd> mover')) + check;
+    if (st.type === 'R') return T('<kbd>↑</kbd> turn clockwise · <kbd>↓</kbd> turn counterclockwise', '<kbd>↑</kbd> girar en sentido horario · <kbd>↓</kbd> girar en sentido antihorario') + check;
+    return T('<kbd>←</kbd> <kbd>→</kbd> flip across the vertical line · <kbd>↑</kbd> <kbd>↓</kbd> flip across the horizontal line', '<kbd>←</kbd> <kbd>→</kbd> reflejar sobre la línea vertical · <kbd>↑</kbd> <kbd>↓</kbd> reflejar sobre la línea horizontal') + check;
   }
   var flashTimer = 0;
   function flash(txt, col) {
@@ -1055,8 +1059,8 @@
     T('Fill a whole row to clear it and remove one of your Xs. <b>The first to clear the goal number of rows wins.</b> Three Xs, or a piece that stops above the dotted line, loses. The floor rises every few pieces.', 'Completa una fila para quitarla y borrar una de tus X. <b>Gana quien complete primero el número de filas de la meta.</b> Pierde quien llega a tres X o suelta una pieza que queda arriba de la línea punteada. El piso sube cada pocas piezas.'),
     T('<b>Hard</b>: turns up to 360°, translations up and down, reflection lines you must picture, and sequences such as &ldquo;rotate 90° clockwise, then translate 2 units left&rdquo;, done in order.', '<b>Difícil</b>: giros hasta 360°, traslaciones hacia arriba y abajo, líneas de reflexión que debes imaginar y secuencias como &ldquo;rota 90° en sentido horario y luego traslada 2 unidades a la izquierda&rdquo;, en orden.')
   ].map(function (x) { return '<li>' + x + '</li>'; }).join('');
-  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>R</kbd> start over, <kbd>I</kbd> hear where your figure is, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
-    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>R</kbd> otra vez, <kbd>I</kbd> oír dónde está tu figura, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
+  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
+    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
 
   syncTitle();
   show('scr-title');
