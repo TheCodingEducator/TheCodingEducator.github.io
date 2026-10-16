@@ -283,9 +283,10 @@
 
   // ------------------------------------------------------------------ game state
   // One shared board. Players take turns: each turn is one figure, placed, transformed and dropped by the player whose
-  // turn it is; then the other player (the computer, or Player 2) takes a turn on the same board.
+  // turn it is; then the next player (the computer, or the next person at this device) takes a turn on the same board.
+  // Player vs Player is for 2 to 4 people; with 3 or 4, a player who is out drops out and the rest play on until one is left.
   // Practice has one player, no opponent and no Xs, with the skills the student picks.
-  var mode = 'cpu', level = 'normal', players = [], running = false, paused = false, over = false, overAt = 0, winner = null;
+  var mode = 'cpu', level = 'normal', count = 2, many = false, players = [], running = false, paused = false, over = false, overAt = 0, winner = null;
   var G = null;                                          // the board and the turn in progress
   var skills = { T: true, R: true, F: true, seq: false };   // Practice: which skills may come
   function solo() { return mode === 'practice'; }
@@ -294,6 +295,10 @@
   function bump(k) { store(k, (+store(k) || 0) + 1); }
   var GOAL = { normal: 3, hard: 4 }, RISE_EVERY = { normal: 12, hard: 10 }, TOPN = 1;   // rows to win; pieces between floor rises
   var PALETTE = [['#5cc8ff', '#7cf0ff', '#4ee6a6', '#8fd3ff'], ['#ff7ab0', '#ffcc33', '#ff9f43', '#ff6b6b']];   // cool for the left player, warm for the right
+  var PALETTE4 = [['#5cc8ff', '#7cf0ff', '#8fd3ff', '#4aa8ff'], ['#ff7ab0', '#ff6b6b', '#ff9cc4', '#ff5d8f'],   // 3 or 4 players: blue, pink, green, yellow
+    ['#4ee6a6', '#7dffc4', '#3fd17f', '#9be86a'], ['#ffcc33', '#ff9f43', '#ffd84d', '#ffb31a']];
+  var TURNCOL = ['#5cc8ff', '#ff9cc4', '#7dffc4', '#ffd84d'];
+  var ZONETINT = ['rgba(92, 200, 255, 0.07)', 'rgba(255, 122, 176, 0.07)', 'rgba(78, 230, 166, 0.07)', 'rgba(255, 204, 51, 0.07)'];
   if (window.SiteResults) SiteResults.setup([
     { id: 'T', en: 'Translations', es: 'Traslaciones' }, { id: 'R', en: 'Rotations', es: 'Rotaciones' },
     { id: 'F', en: 'Reflections', es: 'Reflexiones' }, { id: 'seq', en: 'Sequences of transformations', es: 'Secuencias de transformaciones' }]);
@@ -305,23 +310,24 @@
     var c = clone(pick(pool));
     var k = rnd(4); for (var i = 0; i < k; i++) c = c.map(function (q) { return [-q[1], q[0]]; });
     if (Math.random() < 0.5) c = c.map(function (q) { return [-q[0], q[1]]; });
-    return { cells: norm(c), color: pick(PALETTE[p.idx]) };
+    return { cells: norm(c), color: pick((many ? PALETTE4 : PALETTE)[p.idx]) };
   }
   function makePlayer(idx, kind) {
-    var p = { idx: idx, kind: kind, name: kind === 'cpu' ? T('Computer', 'Computadora') : (mode === 'pvp' ? (idx === 0 ? T('Player 1', 'Jugador 1') : T('Player 2', 'Jugador 2')) : T('You', 'Tú')),
+    var p = { idx: idx, kind: kind, name: kind === 'cpu' ? T('Computer', 'Computadora') : (mode === 'pvp' ? T('Player ', 'Jugador ') + (idx + 1) : T('You', 'Tú')),
       fresh: 0,
       xs: 0, rows: 0, pieces: 0, solved: 0, firstTry: 0, dead: '' };
     p.next = newShape(p);
     return p;
   }
   function cur() { return players[G.turn]; }
+  function pcls(p) { return p.kind === 'cpu' ? 'cpu' : 'p' + (p.idx + 1); }
   function humanTurn() { return running && !paused && !over && G && cur().kind !== 'cpu'; }
 
   // ------------------------------------------------------------------ the page: controls | board | scoreboard
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   var UI = {};
   function buildUI() {
-    var m = $('match'); m.innerHTML = '';
+    var m = $('match'); m.innerHTML = ''; m.classList.toggle('many', many);
     var left = el('div', 'panel'), wrap = el('div', 'board-wrap'), right = el('div', 'panel score');
     UI.turnEl = el('div', 'turn'); left.appendChild(UI.turnEl);
     UI.askEl = el('div', 'ask'); left.appendChild(UI.askEl);
@@ -348,7 +354,7 @@
     UI.cv.addEventListener('pointercancel', pointerUp);
     UI.goalEl = el('div', 'goal'); right.appendChild(UI.goalEl);
     players.forEach(function (p) {
-      var card = el('div', 'pcard ' + (p.kind === 'cpu' ? 'cpu' : (p.idx === 0 ? 'p1' : 'p2')));
+      var card = el('div', 'pcard ' + pcls(p));
       var who = el('div', 'who'); p.nameEl = el('b', '', p.name); p.xsEl = el('div', 'xs');
       for (var i = 0; i < 3; i++) p.xsEl.appendChild(el('i', '', '✕'));
       who.appendChild(p.nameEl); who.appendChild(p.xsEl); card.appendChild(who);
@@ -387,7 +393,7 @@
     G.phase = 'place'; G.steps = null; G.si = 0; G.wrongQ = false; G.hint = 0; G.showTarget = false; G.demo = null; G.flipV = G.flipH = false;
     G.rot = { angle: 0, target: 0, drag: false, last: 0 }; G.ai = { queue: [], wait: 0, plan: '' };
     setMsg('', '');
-    if (versus()) flash(p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno')), p.idx === 0 ? '#5cc8ff' : '#ff9cc4');
+    if (versus()) flash(p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno')), TURNCOL[p.idx]);
     render();
     if (p.kind !== 'cpu') {
       focusBoard();
@@ -474,7 +480,7 @@
       render();
       say((named || T('Not yet.', 'Todavía no.')) + ' ' + h + (versus() ? ' ' + T('Xs: ', 'X: ') + p.xs : ''));
     }
-    if (versus() && p.xs >= 3) endGame(p, 'xs');
+    if (versus() && p.xs >= 3 && !knockOut(p, 'xs')) { G.demo = null; G.phase = 'wait'; G.waitT = 0; setMsg('', ''); render(); }   // the others play on
   }
   function endDemo() {
     var keep = G.demo.hint; G.demo = null;
@@ -488,13 +494,15 @@
     G.drop.forEach(function (q) { if (q[1] >= 0) G.board[q[1]][q[0]] = G.piece.color; });
     p.pieces++; G.placed++; sfx('lock');
     if (G.drop.some(function (q) { return q[1] < Z; })) {
-      G.drop = null;
+      var dropped = G.drop; G.drop = null;
       if (solo()) {                                    // Practice: a full board just starts fresh
         for (var r = 0; r < H; r++) G.board[r] = emptyRow();
         p.fresh++; flash(T('Fresh board!', '¡Tablero nuevo!'), '#ffd84d'); say(T('The stack reached the line, so the board starts fresh.', 'La pila llegó a la línea, así que el tablero empieza de nuevo.'));
         passTurn(); render(); return;
       }
-      render(); endGame(p, 'top'); return;
+      if (knockOut(p, 'top')) { render(); return; }
+      dropped.forEach(function (q) { if (q[1] >= 0) G.board[q[1]][q[0]] = null; });   // the others play on, without that piece
+      passTurn(); render(); return;
     }
     var full = [];
     for (var y = Z; y < H; y++) if (G.board[y].every(function (v) { return v; })) full.push(y);
@@ -511,7 +519,7 @@
     flash('+' + rows.length + (rows.length === 1 ? T(' row', ' fila') : T(' rows', ' filas')) + (back ? T('  ✕ removed', '  ✕ fuera') : ''), '#4ee6a6');
     say(p.name + ': ' + rows.length + T(' row cleared. ', ' fila completa. ') + (back ? T('One X removed. ', 'Se quita una X. ') : '') + T('Rows: ', 'Filas: ') + p.rows + (versus() ? T(' of ', ' de ') + GOAL[level] : ''));
     G.clearRows = null;
-    if (versus() && p.rows >= GOAL[level]) { render(); endGame(other(p), 'goal'); return; }
+    if (versus() && p.rows >= GOAL[level]) { render(); endGame(p, 'goal'); return; }
     passTurn(); render();
   }
   // after each piece: in a match, every few pieces the floor rises one row (a row with one gap); then the next turn
@@ -541,10 +549,23 @@
     }
     return '';
   }
-  function other(p) { return players[1 - p.idx]; }
-  function endGame(loser, why) {
+  function alive() { return players.filter(function (q) { return !q.dead; }); }
+  function nextTurn() { var t = G.turn; do { t = (t + 1) % players.length; } while (players[t].dead && t !== G.turn); return t; }
+  // three Xs, or a piece stopped above the line: that player is out. With two players the other one wins;
+  // with three or four the rest play on until one is left. Returns true when that ends the game.
+  function knockOut(p, why) {
+    if (over) return true;
+    p.dead = why; G.lastOut = p;
+    var left = alive();
+    if (left.length <= 1) { endGame(left[0], why); return true; }
+    flash(T(p.name + ' is out!', '¡' + p.name + ' queda fuera!'), '#ff4d6a');
+    say(p.name + (why === 'xs' ? T(' reached three Xs and is out. ', ' llegó a tres X y queda fuera. ') : T(' dropped a piece above the dotted line and is out. ', ' soltó una pieza arriba de la línea punteada y queda fuera. '))
+      + left.length + T(' players left.', ' jugadores siguen.'));
+    return false;
+  }
+  function endGame(win, why) {
     if (over) return;
-    loser.dead = why; winner = other(loser); G.phase = 'over'; render();
+    winner = win; G.endWhy = why; G.phase = 'over'; render();
     flash(why === 'xs' ? T('✕ ✕ ✕  Out!', '✕ ✕ ✕  ¡Fuera!') : why === 'top' ? T('Over the line!', '¡Pasó la línea!') : winner.name + T(' reached the goal!', ' llegó a la meta!'), why === 'goal' ? '#4ee6a6' : '#ff4d6a');
     over = true; overAt = performance.now();
   }
@@ -618,6 +639,7 @@
       if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); chooseMode(modes[(modes.indexOf(mode) + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
       if (k === 'arrowup' || k === 'arrowdown') { e.preventDefault(); chooseLevel(k === 'arrowup' ? 'normal' : 'hard'); return; }
       if (mode === 'practice' && '1234'.indexOf(k) >= 0 && k) { e.preventDefault(); toggleSkill(['T', 'R', 'F', 'seq'][+k - 1]); return; }
+      if (mode === 'pvp' && '234'.indexOf(k) >= 0 && k) { e.preventDefault(); chooseCount(+k); return; }
       if ((k === 'enter' || k === ' ') && !onBtn) { e.preventDefault(); ac(); play(); return; }
       if (k === 'h') { e.preventDefault(); openHow(); }
       return;
@@ -733,7 +755,7 @@
     } else if (G.phase === 'wait') {
       G.waitT += dt;
       if (G.waitT > 450) {
-        if (versus()) G.turn = 1 - G.turn;
+        if (versus()) G.turn = nextTurn();
         startTurn();
       }
     }
@@ -780,7 +802,7 @@
     var g = UI.ctx, s = cell, BW = W * s, BH = H * s;
     g.clearRect(0, 0, BW, BH);
     g.fillStyle = '#0d1333'; g.fillRect(0, 0, BW, BH);
-    var tc = G.piece && G.piece.owner === 1 ? 'rgba(255, 122, 176, 0.07)' : 'rgba(92, 200, 255, 0.07)';   // the zone takes the color of whose turn it is
+    var tc = ZONETINT[G.piece ? G.piece.owner : 0];   // the zone takes the color of whose turn it is
     g.fillStyle = tc; g.fillRect(0, 0, BW, Z * s);
     g.strokeStyle = 'rgba(140, 160, 255, 0.16)'; g.lineWidth = 1; g.beginPath();
     for (var x = 0; x <= W; x++) { g.moveTo(x * s + 0.5, 0); g.lineTo(x * s + 0.5, BH); }
@@ -900,7 +922,7 @@
   function render() {
     if (!G) return;
     var p = cur(), st = step(), html;
-    UI.turnEl.className = 'turn ' + (p.kind === 'cpu' ? 'cpu' : (p.idx === 0 ? 'p1' : 'p2'));
+    UI.turnEl.className = 'turn ' + pcls(p);
     UI.turnEl.textContent = over ? T('Game over', 'Fin del juego') : mode === 'practice' ? T('Practice', 'Práctica') : p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno'));
     if (G.phase === 'place') html = '<div class="lbl">' + T('Choose the start', 'Elige el inicio') + '</div><div class="txt">' + (p.kind === 'cpu' ? T('The computer is choosing where its figure starts.', 'La computadora elige dónde empieza su figura.') : T('Move the figure left or right, then confirm the start.', 'Mueve la figura a la izquierda o la derecha y confirma el inicio.')) + '</div>';
     else if (G.steps && G.steps.length > 1) html = '<div class="lbl">' + T('Do these in order', 'Hazlas en orden') + '</div><ol>' + G.steps.map(function (s2, k) {
@@ -927,6 +949,8 @@
       q.xsEl.setAttribute('aria-label', T('Xs: ', 'X: ') + q.xs + T(' of 3', ' de 3'));
       q.statsEl.innerHTML = '<span>' + T('Rows', 'Filas') + ' <b>' + q.rows + (versus() ? ' / ' + GOAL[level] : '') + '</b></span><span>' + T('First try', 'A la primera') + ' <b>' + q.firstTry + (solo() ? ' / ' + q.solved : '') + '</b></span>';
       q.card.classList.toggle('active', !over && q === p);
+      q.card.classList.toggle('out', !!q.dead && q !== winner);
+      q.nameEl.textContent = q.name + (q.dead && q !== winner ? T(' · out', ' · fuera') : '');
     });
     var left = RISE_EVERY[level] - (G.placed % RISE_EVERY[level]);
     UI.riseEl.textContent = versus() ? T('The floor rises in ', 'El piso sube en ') + left + (left === 1 ? T(' piece', ' pieza') : T(' pieces', ' piezas')) : '';
@@ -953,8 +977,9 @@
   function show(id) { ['scr-title', 'scr-how', 'scr-pause', 'scr-over'].forEach(function (s) { $(s).hidden = s !== id; }); }
   function play() { startMatch(); }
   function startMatch() {
-    if (solo()) players = [makePlayer(0, 'human')];
-    else players = [makePlayer(0, 'human'), makePlayer(1, mode === 'pvp' ? 'human' : 'cpu')];
+    var n = solo() ? 1 : mode === 'pvp' ? count : 2;
+    many = n > 2; players = [];
+    for (var i = 0; i < n; i++) players.push(makePlayer(i, i === 1 && mode === 'cpu' ? 'cpu' : 'human'));
     G = { board: [], turn: 0, placed: 0, phase: 'idle' };
     for (var y = 0; y < H; y++) G.board.push(emptyRow());
     buildUI();
@@ -964,7 +989,7 @@
     if (window.SiteResults) SiteResults.reset();
     layout(); setTimeout(layout, 50);
     say(T('Transformania. ', 'Transformania. ') + (mode === 'practice' ? T('Practice: no Xs and no opponent. Press Escape, then F, to finish and see your results.', 'Práctica: sin X ni rival. Pulsa Escape y luego F para terminar y ver tus resultados.')
-      : (mode === 'pvp' ? T('Player 1 and Player 2 take turns on one board.', 'El Jugador 1 y el Jugador 2 se turnan en un tablero.') : T('You and the computer take turns on one board.', 'Tú y la computadora se turnan en un tablero.'))
+      : (mode === 'pvp' ? (n === 2 ? T('Player 1 and Player 2 take turns on one board.', 'El Jugador 1 y el Jugador 2 se turnan en un tablero.') : T('Players 1 to ' + n + ' take turns on one board.', 'Los jugadores del 1 al ' + n + ' se turnan en un tablero.')) : T('You and the computer take turns on one board.', 'Tú y la computadora se turnan en un tablero.'))
         + ' ' + T('First to ', 'Gana quien complete ') + GOAL[level] + T(' rows wins.', ' filas primero.')));
     startTurn();
   }
@@ -988,11 +1013,13 @@
       why = p0.solved + T(' transformations, ', ' transformaciones, ') + p0.firstTry + T(' right on the first try.', ' correctas a la primera.');
       sfx('win');
     } else {
-      var loser = players[0].dead ? players[0] : players[1];
-      txt = winner.kind === 'cpu' ? T('The computer wins', 'Gana la computadora') : (mode === 'pvp' ? winner.name + T(' wins!', ' gana!') : T('You win!', '¡Ganaste!'));
-      why = loser.dead === 'goal' ? winner.name + T(' cleared ', ' completó ') + winner.rows + T(' rows first.', ' filas primero.')
-        : loser.name + (loser.dead === 'xs' ? T(' reached three Xs.', ' llegó a tres X.') : T(' dropped a piece that stopped above the dotted line.', ' soltó una pieza que quedó arriba de la línea punteada.'));
-      if (loser.dead === 'goal') loser.dead = '';
+      var lo = G.lastOut;
+      txt = winner.kind === 'cpu' ? T('The computer wins', 'Gana la computadora') : (mode === 'pvp' ? T(winner.name + ' wins!', '¡' + winner.name + ' gana!') : T('You win!', '¡Ganaste!'));
+      if (G.endWhy === 'goal') why = winner.name + T(' cleared ', ' completó ') + winner.rows + T(' rows first.', ' filas primero.');
+      else {
+        why = lo.name + (lo.dead === 'xs' ? T(' reached three Xs.', ' llegó a tres X.') : T(' dropped a piece that stopped above the dotted line.', ' soltó una pieza que quedó arriba de la línea punteada.'));
+        if (many) why += ' ' + T(winner.name + ' is the last player left.', winner.name + ' es quien queda en juego.');
+      }
       sfx(winner.kind === 'cpu' ? 'lose' : 'win');
     }
     // records for My Stats (the people at this computer; the computer doesn't count)
@@ -1021,8 +1048,11 @@
     document.querySelectorAll('#tm [data-level]').forEach(function (o) { o.setAttribute('aria-pressed', String(o.getAttribute('data-level') === level)); });
     document.querySelectorAll('#tm [data-skill]').forEach(function (o) { o.setAttribute('aria-pressed', String(!!skills[o.getAttribute('data-skill')])); });
     $('skills-row').hidden = mode !== 'practice';
+    document.querySelectorAll('#tm [data-count]').forEach(function (o) { o.setAttribute('aria-pressed', String(+o.getAttribute('data-count') === count)); });
+    $('count-row').hidden = mode !== 'pvp';
   }
-  function chooseMode(m) { mode = m; syncTitle(); sfx('move'); say(m === 'pvp' ? T('Player versus player', 'Jugador contra jugador') : m === 'practice' ? T('Practice. Keys 1 to 4 choose the skills.', 'Práctica. Las teclas 1 a 4 eligen las destrezas.') : T('Player versus computer', 'Jugador contra computadora')); }
+  function chooseCount(n) { count = n; syncTitle(); sfx('move'); say(n + T(' players', ' jugadores')); }
+  function chooseMode(m) { mode = m; syncTitle(); sfx('move'); say(m === 'pvp' ? T('Player versus player, ' + count + ' players. Keys 2 to 4 choose how many.', 'Jugador contra jugador, ' + count + ' jugadores. Las teclas 2 a 4 eligen cuántos.') : m === 'practice' ? T('Practice. Keys 1 to 4 choose the skills.', 'Práctica. Las teclas 1 a 4 eligen las destrezas.') : T('Player versus computer', 'Jugador contra computadora')); }
   function chooseLevel(l) { level = l; syncTitle(); sfx('move'); say(l === 'hard' ? T('Hard', 'Difícil') : T('Normal', 'Normal')); }
   function toggleSkill(s) {
     skills[s] = !skills[s];
@@ -1036,6 +1066,7 @@
   document.querySelectorAll('#tm [data-mode]').forEach(function (b) { b.addEventListener('click', function () { chooseMode(b.getAttribute('data-mode')); }); });
   document.querySelectorAll('#tm [data-level]').forEach(function (b) { b.addEventListener('click', function () { chooseLevel(b.getAttribute('data-level')); }); });
   document.querySelectorAll('#tm [data-skill]').forEach(function (b) { b.addEventListener('click', function () { toggleSkill(b.getAttribute('data-skill')); }); });
+  document.querySelectorAll('#tm [data-count]').forEach(function (b) { b.addEventListener('click', function () { chooseCount(+b.getAttribute('data-count')); }); });
   $('btn-play').addEventListener('click', function () { ac(); play(); });
   $('btn-how').addEventListener('click', openHow);
   $('btn-how-back').addEventListener('click', closeHow);
@@ -1049,23 +1080,23 @@
   $('btn-results').addEventListener('click', showResults);
 
   $('how-list').innerHTML = [
-    T('Players <b>take turns on one board</b>: you place a piece, then the computer (or Player 2) places one. <b>Practice</b> is just you, with the skills you choose and no Xs.', 'Los jugadores <b>se turnan en un tablero</b>: tú colocas una pieza y luego la computadora (o el Jugador 2) coloca otra. En <b>Práctica</b> juegas solo, con las destrezas que eliges y sin X.'),
+    T('Players <b>take turns on one board</b>: you place a piece, then the computer (or the next player) places one. <b>Player vs Player</b> is for 2 to 4 people on one device. <b>Practice</b> is just you, with the skills you choose and no Xs.', 'Los jugadores <b>se turnan en un tablero</b>: tú colocas una pieza y luego la computadora (o el siguiente jugador) coloca otra. <b>Jugador contra jugador</b> es para 2 a 4 personas en un dispositivo. En <b>Práctica</b> juegas solo, con las destrezas que eliges y sin X.'),
     T('A figure appears above the <b>white dotted line</b>. Slide it left or right to choose where it starts, then press <b>Confirm start</b>.', 'Una figura aparece arriba de la <b>línea blanca punteada</b>. Deslízala a la izquierda o la derecha para elegir dónde empieza y pulsa <b>Confirmar inicio</b>.'),
     T('An instruction appears, and a faint <b>ghost</b> keeps the starting figure (the pre-image) in place.', 'Aparece una instrucción, y una <b>figura tenue</b> deja la figura inicial (la preimagen) en su lugar.'),
     T('<b>Translate</b>: slide with ◀ ▶ and count the grid units (on Hard, ▲ ▼ too).', '<b>Traslada</b>: desliza con ◀ ▶ y cuenta las unidades (en Difícil, también ▲ ▼).'),
     T('<b>Rotate</b>: the figure is on tracing paper pinned at a <b>red point</b>. Press ▲ to turn it clockwise and ▼ counterclockwise (or ⟳ ⟲, or drag the handle). Each turn is <b>90°</b>: 180° is 2 turns, 270° is 3, 360° is 4. The red arrow on the paper starts pointing up.', '<b>Rota</b>: la figura está en papel de calcar fijo en un <b>punto rojo</b>. Pulsa ▲ para girarlo en sentido horario y ▼ en sentido antihorario (o ⟳ ⟲, o arrastra el asa). Cada vuelta es de <b>90°</b>: 180° son 2 vueltas, 270° son 3 y 360° son 4. La flecha roja del papel empieza apuntando hacia arriba.'),
     T('<b>Reflect</b>: ◀ ▶ flip the figure across the pink <b>vertical</b> line, ▲ ▼ across the green <b>horizontal</b> line. On Hard the lines aren&rsquo;t drawn: the instruction tells you where the line is.', '<b>Refleja</b>: ◀ ▶ reflejan la figura sobre la línea <b>vertical</b> rosa, ▲ ▼ sobre la línea <b>horizontal</b> verde. En Difícil no se dibujan las líneas: la instrucción dice dónde está la línea.'),
     T('Press <b>Check</b>. A correct image drops below the line and stacks. A wrong check tells you what went wrong; the first one on a question adds an <b>X</b>, and after the second you watch the correct move.', 'Pulsa <b>Comprobar</b>. Una imagen correcta cae debajo de la línea y se apila. Un error te dice qué salió mal; el primero de cada pregunta suma una <b>X</b>, y después del segundo ves el movimiento correcto.'),
-    T('Fill a whole row to clear it and remove one of your Xs. <b>The first to clear the goal number of rows wins.</b> Three Xs, or a piece that stops above the dotted line, loses. The floor rises every few pieces.', 'Completa una fila para quitarla y borrar una de tus X. <b>Gana quien complete primero el número de filas de la meta.</b> Pierde quien llega a tres X o suelta una pieza que queda arriba de la línea punteada. El piso sube cada pocas piezas.'),
+    T('Fill a whole row to clear it and remove one of your Xs. <b>The first to clear the goal number of rows wins.</b> Three Xs, or a piece that stops above the dotted line, loses (with 3 or 4 players, that player is out and the rest play on until one is left). The floor rises every few pieces.', 'Completa una fila para quitarla y borrar una de tus X. <b>Gana quien complete primero el número de filas de la meta.</b> Pierde quien llega a tres X o suelta una pieza que queda arriba de la línea punteada (con 3 o 4 jugadores, ese jugador queda fuera y los demás siguen hasta que quede uno). El piso sube cada pocas piezas.'),
     T('<b>Hard</b>: turns up to 360°, translations up and down, reflection lines you must picture, and sequences such as &ldquo;rotate 90° clockwise, then translate 2 units left&rdquo;, done in order.', '<b>Difícil</b>: giros hasta 360°, traslaciones hacia arriba y abajo, líneas de reflexión que debes imaginar y secuencias como &ldquo;rota 90° en sentido horario y luego traslada 2 unidades a la izquierda&rdquo;, en orden.')
   ].map(function (x) { return '<li>' + x + '</li>'; }).join('');
-  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
-    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
+  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>Esc</kbd> menu. With more than one player, the player whose turn it is uses the same keys.',
+    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>Esc</kbd> menú. Con varios jugadores, quien tiene el turno usa las mismas teclas.');
 
   syncTitle();
   show('scr-title');
   requestAnimationFrame(frame);
   // a small hook for automated checks
   window.TM = { get players() { return players; }, get G() { return G; }, act: act, apply: apply, rotateAbout: rotateAbout, reflectV: reflectV, reflectH: reflectH, makeQuestion: makeQuestion, same: same, inZone: inZone, startMatch: startMatch,
-    setMode: function (m, l) { mode = m; level = l; }, update: update, mistakeText: mistakeText, figureWords: figureWords, skills: skills };
+    setMode: function (m, l, n) { mode = m; level = l; if (n) count = n; }, update: update, mistakeText: mistakeText, figureWords: figureWords, skills: skills };
 })();
