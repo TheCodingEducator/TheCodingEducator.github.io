@@ -214,6 +214,19 @@
   #bc .mode ul { margin: 8px 0 0; padding: 0 18px 0 36px; font-size: clamp(13px, 1.9cqmin, 15px); color: var(--ink2); line-height: 1.4; }
   #bc .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: clamp(12px, 2.6cqmin, 24px); }
   #bc .menu-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  /* play a friend online: host (get a code) or join (type the code) */
+  #bc .online-cols { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; width: min(100%, 760px); }
+  #bc .ocard { flex: 1 1 280px; max-width: 360px; background: #fff; border-radius: 22px; padding: 16px 18px 18px; box-shadow: 0 8px 0 #9ab6d1, 0 14px 30px rgba(11,37,69,0.25); text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  #bc .ocard h2 { margin: 0; font: 800 24px/1.1 'Baloo 2', sans-serif; color: var(--ink); }
+  #bc .ocard p { margin: 0; font-size: 15px; color: var(--ink2); line-height: 1.35; }
+  #bc .orank { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  #bc .orank button { font: 800 14px 'Nunito', sans-serif; border: 2px solid #c9d6e3; background: #f4f8fb; color: var(--ink); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+  #bc .orank button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+  #bc .ocode { font: 800 44px/1 'Baloo 2', sans-serif; letter-spacing: 0.18em; color: var(--ink); background: #fff7d6; border: 3px dashed #e0b400; border-radius: 16px; padding: 8px 14px 4px 22px; }
+  #bc .ocard input { font: 800 30px/1 'Baloo 2', sans-serif; letter-spacing: 0.18em; text-transform: uppercase; text-align: center; width: 8.2em; max-width: 100%; padding: 8px 6px 4px; border: 3px solid #c9d6e3; border-radius: 14px; color: var(--ink); }
+  #bc .ocard input:focus { border-color: var(--blue); outline: none; }
+  #bc .omsg { min-height: 1.4em; margin-top: 12px; font: 800 17px 'Nunito', sans-serif; color: #f1f5f9; text-shadow: 0 2px 6px #000; text-align: center; }
+  #bc .omsg.bad { color: #ffd0c4; }
 
   /* ===== Instructions ===== */
   #bc .instr { width: min(100%, 1060px); display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(12px, 2.4cqmin, 24px); }
@@ -703,7 +716,38 @@
               <ul><li data-es="Cronómetro, pares ordenados completos">Timer, full ordered-pair typing</li><li data-es="Preguntas de cuadrantes y de razonamiento">Quadrant and reasoning challenges</li></ul>
             </button>
           </div>
-          <div class="row"><button type="button" class="btn ghost" id="modes-back" data-es="&larr; Atrás">&larr; Back</button></div>
+          <div class="row"><button type="button" class="btn ghost" id="modes-back" data-es="&larr; Atrás">&larr; Back</button><button type="button" class="btn orange" id="btn-online" hidden data-es="&#127760; Jugar con un amigo en línea">&#127760; Play a friend online</button></div>
+        </div>
+      </section>
+
+      <!-- Play a friend online (only with ?online in the address while it is being built) -->
+      <section class="scr center" id="scr-online" hidden aria-labelledby="online-h">
+        <div class="menu-wrap fade-in">
+          <div class="scr-head">
+            <h1 id="online-h" data-es="JUEGA CON UN AMIGO EN LÍNEA">PLAY A FRIEND ONLINE</h1>
+            <p data-es="Dos computadoras, una batalla. Una persona crea el juego y recibe un código; la otra lo escribe.">Two computers, one battle. One player hosts and gets a game code; the other types it in.</p>
+          </div>
+          <div class="online-cols">
+            <div class="ocard">
+              <h2 data-es="Crear un juego">Host a game</h2>
+              <p data-es="Elige el rango y crea un código.">Choose the rank, then make a code.</p>
+              <div class="orank" role="group" aria-label="Rank" data-es-aria="Rango">
+                <button type="button" data-orank="easy" aria-pressed="false" data-es="1 estrella">1 star</button>
+                <button type="button" data-orank="standard" aria-pressed="true" data-es="2 estrellas">2 stars</button>
+                <button type="button" data-orank="hard" aria-pressed="false" data-es="3 estrellas">3 stars</button>
+              </div>
+              <button type="button" class="btn green" id="btn-host" data-es="Crear un código">Make a game code</button>
+              <div class="ocode" id="host-code" hidden aria-live="polite"></div>
+            </div>
+            <div class="ocard">
+              <h2 data-es="Unirse a un juego">Join a game</h2>
+              <p><label for="join-code" data-es="Escribe el código que te dieron.">Type the code you were given.</label></p>
+              <input id="join-code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+              <button type="button" class="btn orange" id="btn-join" data-es="Unirse">Join</button>
+            </div>
+          </div>
+          <div class="omsg" id="online-msg" aria-live="polite"></div>
+          <div class="row"><button type="button" class="btn ghost" id="online-back" data-es="&larr; Atrás">&larr; Back</button></div>
         </div>
       </section>
 
@@ -855,7 +899,8 @@
   </ul>
 </section>
 
-<script src="battle-on-the-coordinate-plane-game.js?v=05a294c2"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
+<script src="battle-online.js?v=fb35f68b"></script>
+<script src="battle-on-the-coordinate-plane-game.js?v=eb354196"></script>   <!-- bump ?v= whenever the game script changes, so browsers never pair this page with an old copy -->
 
 <script src="../site-fullscreen.js?v=00f33012"></script>
 </body>

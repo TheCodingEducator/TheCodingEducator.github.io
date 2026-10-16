@@ -521,10 +521,10 @@
   var B = { place: new Board($('#board-place')), me: new Board($('#board-me')), foe: new Board($('#board-foe')) };
 
   function show(name) {
-    ['title', 'modes', 'instr', 'place', 'battle'].forEach(function (n) { $('#scr-' + n).hidden = n !== name; });
+    ['title', 'modes', 'online', 'instr', 'place', 'battle'].forEach(function (n) { $('#scr-' + n).hidden = n !== name; });
     G.screen = name;
     app.setAttribute('data-screen', name);
-    Storm.set(name === 'title' || name === 'modes' || G.mode !== 'easy');
+    Storm.set(name === 'title' || name === 'modes' || name === 'online' || G.mode !== 'easy');
     app.classList.toggle('rank2', G.mode === 'standard');   // each rank has its own board frames (CSS)
     app.classList.toggle('rank3', G.mode === 'hard');
     $('#btn-menu').hidden = !(name === 'battle' || name === 'place');
@@ -760,6 +760,7 @@
     layout();   // size the board around the ship dock now that the dock is built
     placeMsg(TOUCH ? T('Drag a ship onto the board. Tap a ship on the board to turn it.', 'Arrastra un barco al tablero. Toca un barco del tablero para girarlo.')
       : T('Drag a ship onto the board, or press Enter on a ship to put it on the board.', 'Arrastra un barco al tablero, o pulsa Enter en un barco para ponerlo en el tablero.'));
+    if (G.net) { G.net.inbox = []; G.net.meReady = false; placeMsg(T('Connected! Place your fleet, then press START GAME. Your opponent is placing theirs.', '¡Conectados! Ubica tu flota y pulsa EMPEZAR. Tu rival está ubicando la suya.'), 'good'); }
     focusLater($('.ship-pick'));
   }
   function buildDock() {
@@ -1049,12 +1050,12 @@
     Sound.play('rotate'); renderPlace();
     placeMsg(T('Random fleet placed. Move or rotate the ships if you like, then press START GAME.', 'Flota ubicada al azar. Mueve o gira los barcos si quieres, y pulsa EMPEZAR.'), 'good');
   });
-  $('#place-back').addEventListener('click', function () { Sound.play('click'); showInstructions(false); });
+  $('#place-back').addEventListener('click', function () { Sound.play('click'); if (G.net) leaveOnline(); else showInstructions(false); });
   $('#btn-start').addEventListener('click', function () {
     if (!allPlaced()) return;
     if (sharedPoints().length) { Sound.play('invalid'); placeMsg(overlapMsg(), 'bad'); return; }
     Sound.play('click');
-    startBattle();
+    if (G.net) netReady(); else startBattle();
   });
 
   // ---------------------------------------------------------------- battle
@@ -1062,7 +1063,8 @@
     G.id++;
     var id = G.id;
     selId = null;
-    G.foe = randomFleet();
+    G.foe = G.net ? emptyFleet() : randomFleet();   // online, the opponent's ships stay on their computer until sunk
+    G.foeAll = false;
     G.myHits = {}; G.foeHits = {}; G.shots = [];
     G.ai = { tried: {}, open: [] };
     G.sinceQuiz = 0; G.round = 0;
@@ -1081,8 +1083,8 @@
   function alive(id) { return G.id === id && G.screen === 'battle'; }
 
   function battleLoop(id) {
-    (function round() {
-      if (!alive(id)) return;
+    // each half returns true when the game is over; online, the second player starts with the opponent's turn
+    function mine() {
       G.round++;
       var pre = Promise.resolve();
       // 3-Star: some turns start with one question of its own (a Radar Check or a Turn Check); a turn never asks more
@@ -1093,16 +1095,22 @@
         pre = Math.random() < 0.35 ? turnCheck(id) : radarCheck(id);
       }
       else G.sinceQuiz++;
-      pre.then(function () { return alive(id) && playerTurn(id); })
-        .then(function () {
-          if (!alive(id)) return;
-          if (allSunk(G.foe, G.foeHits)) return endGame(id, true);
-          return wait(500).then(function () { return alive(id) && enemyTurn(id); }).then(function () {
-            if (!alive(id)) return;
-            if (allSunk(G.my, G.myHits)) return endGame(id, false);
-            return wait(400).then(round);
-          });
-        });
+      return pre.then(function () { return alive(id) && playerTurn(id); }).then(function () {
+        if (!alive(id)) return true;
+        if (G.net ? G.foeAll : allSunk(G.foe, G.foeHits)) { endGame(id, true); return true; }
+      });
+    }
+    function theirs() {
+      return enemyTurn(id).then(function () {
+        if (!alive(id)) return true;
+        if (allSunk(G.my, G.myHits)) { endGame(id, false); return true; }
+      });
+    }
+    var meFirst = !G.net || G.net.meFirst, first = meFirst ? mine : theirs, second = meFirst ? theirs : mine;
+    (function round() {
+      if (!alive(id)) return;
+      first().then(function (over) { return over || !alive(id) ? true : wait(meFirst ? 500 : 400).then(second); })
+        .then(function (over) { if (!over && alive(id)) wait(meFirst ? 400 : 500).then(round); });
     })();
   }
   function isSunk(fleet, hits, sid) { return cellsOf(fleet[sid]).every(function (c) { return hits[key(c[0], c[1])]; }); }
@@ -1189,6 +1197,7 @@
         G.onFire = null;
         Sound.play('timeout');
         lockEntry();
+        if (G.net) G.net.send({ t: 'skip' });   // online, the opponent's turn comes next
         banner('time', '&#9200; ' + T('TIME’S UP!', '¡SE ACABÓ EL TIEMPO!'), T('You lose this shot. Next time, type the ordered pair a little faster.', 'Pierdes este disparo. La próxima vez, escribe el par ordenado un poco más rápido.'), 2200).then(resolve);
       });
     });
@@ -1389,6 +1398,7 @@
   function fireAt(id, x, y) {
     var b = B.foe;
     lockEntry();
+    var asked = G.net ? netShot(x, y) : null;   // online: ask now, so the answer can arrive while the plane flies
     var note = shotNote(x, y);
     var head = '<h2 class="me">' + T('FIRING AT', 'DISPARANDO A') + ' ' + pair(x, y) + '</h2>' + (note ? '<div class="fb info">&#128161; ' + note + '</div>' : '');
     var info = head + '<p>' + T('Watch the plane: <b>x first</b> (' + (x === 0 ? 'x = 0, so no left or right' : units(x) + ' ' + wordX(x)) + '), then <b>y</b> (' + (y === 0 ? 'y = 0, so no up or down' : units(y) + ' ' + wordY(y)) + ').',
@@ -1420,7 +1430,10 @@
       });
     }).then(function () {
       if (!alive(id)) return;
-      var sid = shipAt(G.foe, x, y), hit = !!sid, k = key(x, y), already = !!G.foeHits[k];
+      return asked ? netAnswer(asked, x, y) : { sid: shipAt(G.foe, x, y) };
+    }).then(function (res) {
+      if (!alive(id) || !res) return;
+      var sid = res.sid, hit = !!sid, k = key(x, y), already = !!G.foeHits[k];
       if (hit) { b.explode(x, y); Sound.play('hit'); } else { b.splash(x, y); Sound.play('miss'); }
       return wait(600).then(function () {
         if (!alive(id)) return;
@@ -1511,6 +1524,7 @@
   }
 
   function enemyTurn(id) {
+    if (G.net) return netEnemyTurn(id);
     var t = aiPick();
     setTurn('foe', T('ENEMY’S TURN', 'TURNO ENEMIGO'), '&#128680;');
     setPin(null);
@@ -1532,8 +1546,8 @@
       activeZone('me', T('Find the point here!', '¡Busca el punto aquí!'));
       setPin((G.hard ? words : '<b>' + pair(tx, ty) + '</b>') + ' &rarr; ' + T('find it on YOUR BOARD', 'búscalo en TU TABLERO'));
       var head = '<h2 class="foe">' + T('ENEMY FIRE!', '¡FUEGO ENEMIGO!') + '</h2>' +
-        (G.hard ? '<p>' + T('The computer&rsquo;s target:', 'El objetivo de la computadora:') + '</p><div class="words" id="enemy-words">' + words + '</div>'
-          : '<p>' + T('The computer is firing at:', 'La computadora dispara a:') + '</p><div class="target-big" id="enemy-pair">' + pair(tx, ty) + '</div>') +
+        (G.hard ? '<p>' + (G.net ? T('Your opponent&rsquo;s target:', 'El objetivo de tu rival:') : T('The computer&rsquo;s target:', 'El objetivo de la computadora:')) + '</p><div class="words" id="enemy-words">' + words + '</div>'
+          : '<p>' + (G.net ? T('Your opponent is firing at:', 'Tu rival dispara a:') : T('The computer is firing at:', 'La computadora dispara a:')) + '</p><div class="target-big" id="enemy-pair">' + pair(tx, ty) + '</div>') +
         '<p>' + (TOUCH ? T('Find this point on <b>YOUR BOARD</b> and tap it.', 'Busca este punto en <b>TU TABLERO</b> y tócalo.')
           : T('Find this point on <b>YOUR BOARD</b> and click it. Keyboard: arrow keys, then <kbd>Enter</kbd>.', 'Busca este punto en <b>TU TABLERO</b> y haz clic. Teclado: flechas y luego <kbd>Enter</kbd>.')) + '</p>';
       panel(head + '<div id="loc-fb" aria-live="polite"></div>');
@@ -1571,7 +1585,8 @@
       function onFocus() { drawCur(true); }
       function onBlur() { drawCur(false); }
       b.svg.setAttribute('tabindex', '0');
-      b.svg.setAttribute('aria-label', T('Your board. Use the arrow keys to move from point to point, then press Enter to choose the computer’s target. The cursor starts at the origin.', 'Tu tablero. Usa las flechas para moverte de punto en punto y pulsa Enter para elegir el objetivo de la computadora. El cursor empieza en el origen.'));
+      b.svg.setAttribute('aria-label', G.net ? T('Your board. Use the arrow keys to move from point to point, then press Enter to choose your opponent’s target. The cursor starts at the origin.', 'Tu tablero. Usa las flechas para moverte de punto en punto y pulsa Enter para elegir el objetivo de tu rival. El cursor empieza en el origen.')
+        : T('Your board. Use the arrow keys to move from point to point, then press Enter to choose the computer’s target. The cursor starts at the origin.', 'Tu tablero. Usa las flechas para moverte de punto en punto y pulsa Enter para elegir el objetivo de la computadora. El cursor empieza en el origen.'));
       b.svg.addEventListener('pointermove', onMove);
       b.svg.addEventListener('pointerleave', onLeave);
       b.svg.addEventListener('click', onClick);
@@ -1641,7 +1656,7 @@
   }
   function resolveEnemy(id, x, y, how) {
     var b = B.me, sid = shipAt(G.my, x, y), k = key(x, y);
-    if (G.ai.tried[k]) {
+    if (!G.net && G.ai.tried[k]) {
       // the 1-Star computer fired at a point it already tried: nothing new happens
       b.splash(x, y); Sound.play('miss');
       return wait(600).then(function () {
@@ -1650,7 +1665,8 @@
       });
     }
     if (sid) { G.myHits[k] = true; b.explode(x, y); Sound.play('hit'); } else { b.splash(x, y); Sound.play('miss'); }
-    aiRecord(x, y, sid);
+    if (G.net) G.net.send({ t: 'result', x: x, y: y, sid: sid, ship: sid && isSunk(G.my, G.myHits, sid) ? G.my[sid] : null, all: allSunk(G.my, G.myHits) });
+    else aiRecord(x, y, sid);
     return wait(600).then(function () {
       if (!alive(id)) return;
       b.addMark(x, y, !!sid);
@@ -1660,7 +1676,7 @@
         if (!sid || !alive(id) || !isSunk(G.my, G.myHits, sid) || G.sunkMe[sid]) return;
         G.sunkMe[sid] = true;
         return sinkShip(b, G.my[sid], false).then(function () {
-          return banner('sunk', SHIP[sid].up + ' ' + T('SUNK!', '¡HUNDIDO!'), T('The computer sank your ' + SHIP[sid].name + '.', 'La computadora hundió tu ' + SHIP[sid].name + '.'), 1800);
+          return banner('sunk', SHIP[sid].up + ' ' + T('SUNK!', '¡HUNDIDO!'), (G.net ? T('Your opponent sank your ' + SHIP[sid].name + '.', 'Tu rival hundió tu ' + SHIP[sid].name + '.') : T('The computer sank your ' + SHIP[sid].name + '.', 'La computadora hundió tu ' + SHIP[sid].name + '.')), 1800);
         });
       });
     });
@@ -2042,8 +2058,9 @@
     G.screen = 'over';
     setPin(null);
     if (!win) {
-      SHIPS.forEach(function (sh) { if (!isSunk(G.foe, G.foeHits, sh.id)) { var g = B.foe.drawShip(G.foe[sh.id]); g.style.opacity = 0.45; } });
+      showFoeLeft();
     }
+    if (win && G.net) G.net.send({ t: 'fleet', fleet: G.my });   // so the other player can see where your ships were
     setTurn(win ? 'me' : 'foe', win ? T('VICTORY!', '¡VICTORIA!') : T('BATTLE OVER', 'FIN DE LA BATALLA'), win ? '&#127942;' : '&#9875;');
     panel(win ? '<h2 class="me">' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') + '</h2>' : '<h2 class="foe">' + T('BATTLE OVER', 'FIN DE LA BATALLA') + '</h2><p>' + T('The enemy ships that were still hiding are shown faintly on the opponent&rsquo;s board.', 'Los barcos enemigos que seguían escondidos se ven tenues en el tablero del oponente.') + '</p>');
     return wait(win ? 600 : 1500).then(function () {
@@ -2051,8 +2068,10 @@
       var card = $('#end-card');
       card.className = 'card ' + (win ? 'end-win' : 'end-lose');
       $('#end-h').innerHTML = win ? '&#127942; ' + T('FLEET COMPLETE!', '¡FLOTA COMPLETA!') : '&#9875; ' + T('BATTLE OVER', 'FIN DE LA BATALLA');
-      $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
+      $('#end-p').innerHTML = win ? T('You sank both enemy ships!', '¡Hundiste los dos barcos enemigos!') : G.net ? T('Your opponent found both of your ships this time. Press PLAY AGAIN for a rematch!', 'Esta vez tu rival encontró tus dos barcos. ¡Pulsa JUGAR DE NUEVO para la revancha!')
+        : T('The computer found both of your ships this time. Regroup, place your fleet, and try again!', 'Esta vez la computadora encontró tus dos barcos. ¡Reorganízate, ubica tu flota y vuelve a intentarlo!');
       $('#end-report').innerHTML = reportHTML();
+      $('#end-again').hidden = false;
       $('#scr-end').hidden = false;
       fitScreen();
       Sound.play(win ? 'victory' : 'lose');
@@ -2077,7 +2096,190 @@
   }
   $('#end-again').addEventListener('click', function () { Sound.play('click'); hideOverlay(); startPlacement(); });
   $('#end-menu').addEventListener('click', function () { Sound.play('click'); goMenu(); });
-  function goMenu() { G.id++; stopTimer(); hideOverlay(); $('#banner').hidden = true; show('modes'); focusLater($('.mode[data-mode="' + G.mode + '"]')); }
+  function goMenu() { netEnd(); G.id++; stopTimer(); hideOverlay(); $('#banner').hidden = true; show('modes'); focusLater($('.mode[data-mode="' + G.mode + '"]')); }
+
+  // ---------------- playing a friend on another computer (battle-online.js carries the messages)
+  // Messages: hello (host to joiner: the rank), ready (fleet placed), shot {x, y}, skip (ran out of time),
+  // result {x, y, sid, ship, all} (the answer to a shot: the ship hit, the whole ship once it is sunk, all sunk),
+  // fleet (the winner's ships, shown to the other player at the end).
+  var lobbyRank = 'standard';
+  function onlineMsg(text, bad) { var m = $('#online-msg'); m.textContent = text || ''; m.className = 'omsg' + (bad ? ' bad' : ''); }
+  function netErrText(e) {
+    var t = e && e.type;
+    if (t === 'peer-unavailable') return T('There is no game with that code. Check the code and try again.', 'No hay ningún juego con ese código. Revísalo y vuelve a intentarlo.');
+    if (t === 'lib' || t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') return T('Could not reach the online game service. Check the internet connection, or ask your teacher if online games are blocked.', 'No se pudo conectar con el servicio de juego en línea. Revisa la conexión a internet, o pregunta a tu maestro si los juegos en línea están bloqueados.');
+    if (t === 'browser-incompatible') return T('This browser can’t play online. Try another browser.', 'Este navegador no puede jugar en línea. Prueba con otro navegador.');
+    if (t === 'timeout') return T('No answer from that game. Check the code, and make sure the host is still waiting.', 'Ese juego no responde. Revisa el código y asegúrate de que quien lo creó sigue esperando.');
+    return T('Something went wrong with the connection. Please try again.', 'Algo salió mal con la conexión. Inténtalo de nuevo.');
+  }
+  function openOnline() {
+    netEnd();
+    show('online');
+    $('#host-code').hidden = true; $('#btn-host').disabled = false; $('#btn-join').disabled = false;
+    onlineMsg('');
+    focusLater($('#btn-host'));
+  }
+  function setLobbyRank(r) {
+    lobbyRank = r;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-orank]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-orank') === r)); });
+  }
+  function newNet() {
+    netEnd();
+    var net = BattleNet.create({ open: netOpen, message: netMessage, close: netLost, error: function (e) { if (G.screen === 'online') onlineMsg(netErrText(e), true); } });
+    net.inbox = []; net.waiting = null; net.games = 0;
+    G.net = net;
+    return net;
+  }
+  function hostGame() {
+    var net = newNet(); net.isHost = true; net.rank = lobbyRank;
+    $('#btn-host').disabled = true;
+    onlineMsg(T('Making a game code…', 'Creando un código…'));
+    net.host().then(function (code) {
+      if (G.net !== net) return;
+      var c = $('#host-code'); c.textContent = code; c.hidden = false;
+      onlineMsg(T('Give your opponent this code. Waiting for them to join…', 'Dale este código a tu rival. Esperando a que se una…'));
+      say(T('Your game code is ', 'Tu código de juego es ') + code.split('').join(' ') + '. ' + T('Waiting for your opponent to join.', 'Esperando a que tu rival se una.'));
+    }, function (e) { if (G.net !== net) return; netEnd(); $('#btn-host').disabled = false; onlineMsg(netErrText(e), true); });
+  }
+  function joinGame() {
+    var code = BattleNet.clean($('#join-code').value);
+    if (code.length !== BattleNet.codeLength) { onlineMsg(T('A game code has ' + BattleNet.codeLength + ' letters and numbers.', 'Un código tiene ' + BattleNet.codeLength + ' letras y números.'), true); focusLater($('#join-code')); return; }
+    var net = newNet(); net.isHost = false;
+    $('#btn-join').disabled = true;
+    onlineMsg(T('Joining…', 'Uniéndose…'));
+    net.join(code).then(function () {
+      if (G.net === net) onlineMsg(T('Connected! Getting the game ready…', '¡Conectados! Preparando el juego…'));
+    }, function (e) { if (G.net !== net) return; netEnd(); $('#btn-join').disabled = false; onlineMsg(netErrText(e), true); });
+  }
+  // both computers are connected: the host says which rank, and both go to placing their ships
+  function netOpen() {
+    var net = G.net; if (!net) return;
+    if (net.isHost) { net.send({ t: 'hello', v: 1, mode: net.rank }); startOnline(net.rank); }
+  }
+  function startOnline(mode) {
+    if (!MODES[mode]) mode = 'standard';
+    G.mode = mode; G.min = MODES[mode].min; G.max = MODES[mode].max; G.hard = !!MODES[mode].hard;
+    Sound.play('click');
+    say(T('Connected to your opponent. ', 'Conectado con tu rival. ') + MODES[mode].label + ', ' + MODES[mode].name + '.');
+    startPlacement();
+  }
+  function netMessage(m) {
+    var net = G.net; if (!net) return;
+    if (m.t === 'hello') { if (!net.isHost && G.screen === 'online') startOnline(m.mode); return; }
+    if (m.t === 'ready') { net.peerReady = true; if (net.meReady && G.screen === 'place') beginNetBattle(); return; }
+    if (m.t === 'fleet') { if (G.foe && m.fleet && typeof m.fleet === 'object') { SHIPS.forEach(function (sh) { var s = m.fleet[sh.id]; if (s && !G.foe[sh.id].placed) G.foe[sh.id] = cleanShip(s, sh.id) || G.foe[sh.id]; }); if (G.screen === 'over') showFoeLeft(); } return; }
+    net.inbox.push(m);
+    if (net.waiting) { var w = net.waiting; net.waiting = null; w(); }
+  }
+  // wait for the next message of one of these kinds (they can arrive before anyone is waiting for them)
+  function netNext(kinds) {
+    return new Promise(function (resolve) {
+      (function look() {
+        var net = G.net; if (!net) return;   // the connection is gone: this turn never finishes (netLost moves on)
+        for (var i = 0; i < net.inbox.length; i++) if (kinds.indexOf(net.inbox[i].t) >= 0) { resolve(net.inbox.splice(i, 1)[0]); return; }
+        net.waiting = look;
+      })();
+    });
+  }
+  function netReady() {
+    var net = G.net;
+    net.meReady = true;
+    net.send({ t: 'ready' });
+    $('#btn-start').disabled = true;
+    if (net.peerReady) { beginNetBattle(); return; }
+    placeMsg(T('Fleet ready! Waiting for your opponent to place their fleet…', '¡Flota lista! Esperando a que tu rival ubique la suya…'), 'good');
+    say(T('Waiting for your opponent to place their fleet.', 'Esperando a que tu rival ubique su flota.'));
+  }
+  function beginNetBattle() {
+    var net = G.net;
+    net.meReady = net.peerReady = false;
+    net.meFirst = (net.games % 2 === 0) === net.isHost;   // the host fires first, then the first shot alternates each game
+    net.games++;
+    startBattle();
+    if (!net.meFirst) say(T('Your opponent fires first.', 'Tu rival dispara primero.'));
+  }
+  // a ship from the other computer: only the fields we use, and it must fit the board
+  function cleanShip(s, sid) {
+    if (!s || !SHIP[sid] || (s.dir !== 'h' && s.dir !== 'v') || s.x !== Math.round(s.x) || s.y !== Math.round(s.y)) return null;
+    var ship = { id: sid, x: s.x, y: s.y, dir: s.dir, placed: true };
+    return cellsOf(ship).every(function (c) { return onBoard(c[0], c[1]); }) ? ship : null;
+  }
+  function netShot(x, y) { G.net.send({ t: 'shot', x: x, y: y }); return netNext(['result']); }
+  // the answer to our shot, once the other player has found the point on their board
+  function netAnswer(asked, x, y) {
+    var shown = false, t = setTimeout(function () {
+      shown = true;
+      setPin('&#8987; ' + T('Your opponent is finding ', 'Tu rival está buscando ') + pair(x, y) + T(' on their board…', ' en su tablero…'));
+    }, 400);
+    return asked.then(function (m) {
+      clearTimeout(t); if (shown) setPin('&#127919; ' + T('Firing at ', 'Disparando a ') + pair(x, y));
+      var sid = SHIP[m.sid] ? m.sid : null;
+      if (sid && m.ship) { var ship = cleanShip(m.ship, sid); if (ship) G.foe[sid] = ship; }
+      if (sid && m.all) G.foeAll = true;
+      return { sid: sid };
+    });
+  }
+  function netEnemyTurn(id) {
+    setTurn('foe', T('OPPONENT’S TURN', 'TURNO DEL RIVAL'), '&#128680;');
+    setPin(null);
+    activeZone(null);
+    panel('<h2 class="foe">' + T('OPPONENT’S TURN', 'TURNO DEL RIVAL') + '</h2><p>' + T('Your opponent is choosing a target&hellip;', 'Tu rival está eligiendo un objetivo&hellip;') + '</p>');
+    say(T('Your opponent is choosing a target.', 'Tu rival está eligiendo un objetivo.'));
+    return netNext(['shot', 'skip']).then(function (m) {
+      if (!alive(id)) return;
+      var x = m.x, y = m.y;
+      if (m.t === 'skip' || x !== Math.round(x) || y !== Math.round(y) || !onBoard(x, y)) {
+        return banner('time', '&#9200; ' + T('TIME’S UP!', '¡SE ACABÓ EL TIEMPO!'), T('Your opponent ran out of time and loses this shot.', 'A tu rival se le acabó el tiempo y pierde este disparo.'), 1800);
+      }
+      Sound.play('alarm');
+      return banner('enemy', '&#128680; ' + T('ENEMY FIRE!', '¡FUEGO ENEMIGO!'), G.hard ? T('Read your opponent’s target carefully.', 'Lee con cuidado el objetivo de tu rival.') : T('Your opponent is firing at ', 'Tu rival dispara a ') + pair(x, y), 1300).then(function () {
+        if (!alive(id)) return;
+        return locate(id, x, y);
+      }).then(function (how) {
+        if (!alive(id)) return;
+        return resolveEnemy(id, x, y, how);
+      });
+    });
+  }
+  // the opponent's ships that were never sunk, shown faintly when the battle is over
+  function showFoeLeft() {
+    SHIPS.forEach(function (sh) {
+      var s = G.foe && G.foe[sh.id];
+      if (!s || !s.placed || isSunk(G.foe, G.foeHits, sh.id) || G.shown['left:' + sh.id]) return;
+      G.shown['left:' + sh.id] = true;
+      var g = B.foe.drawShip(s); g.style.opacity = 0.45;
+    });
+  }
+  // the opponent left, or the connection dropped
+  function netLost() {
+    if (!G.net) return;
+    G.net = null;
+    G.id++; stopTimer();
+    if (G.screen === 'online') { $('#btn-host').disabled = false; $('#btn-join').disabled = false; $('#host-code').hidden = true; onlineMsg(T('The connection closed. Make a new code or join again.', 'La conexión se cerró. Crea un código nuevo o vuelve a unirte.'), true); return; }
+    $('#banner').hidden = true; $('#scr-pause').hidden = true; setPaused(false);
+    var card = $('#end-card');
+    card.className = 'card end-lose';
+    $('#end-h').innerHTML = '&#128268; ' + T('CONNECTION LOST', 'SE PERDIÓ LA CONEXIÓN');
+    $('#end-p').innerHTML = T('Your opponent left the game, or the connection dropped.', 'Tu rival salió del juego, o se cortó la conexión.');
+    $('#end-report').innerHTML = '';
+    $('#end-again').hidden = true;
+    $('#scr-end').hidden = false;
+    fitScreen();
+    say($('#end-h').textContent + '. ' + $('#end-p').textContent, true);
+    focusLater($('#end-menu'));
+  }
+  // we are leaving online play
+  function netEnd() { var net = G.net; G.net = null; if (net) net.close(); }
+  function leaveOnline() { netEnd(); G.id++; stopTimer(); openOnline(); }
+  window.addEventListener('pagehide', function () { if (G.net) G.net.close(); });
+  if (window.BattleNet && BattleNet.enabled) $('#btn-online').hidden = false;
+  $('#btn-online').addEventListener('click', function () { Sound.play('click'); openOnline(); });
+  $('#online-back').addEventListener('click', function () { Sound.play('click'); netEnd(); show('modes'); focusLater($('#btn-online')); });
+  $('#btn-host').addEventListener('click', function () { Sound.play('click'); hostGame(); });
+  $('#btn-join').addEventListener('click', function () { Sound.play('click'); joinGame(); });
+  $('#join-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); joinGame(); } });
+  $('#join-code').addEventListener('input', function () { var i = $('#join-code'), v = BattleNet.clean(i.value); if (v !== i.value) i.value = v; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-orank]'), function (b) { b.addEventListener('click', function () { Sound.play('click'); setLobbyRank(b.getAttribute('data-orank')); }); });
 
   // ---------------- pause menu
   var pauseReturn = null;
@@ -2090,6 +2292,7 @@
   }
   function openPause() {
     if (!$('#scr-end').hidden) return;
+    $('#pause-restart').hidden = !!G.net;   // online, a restart needs both players: the results screen has PLAY AGAIN
     setPaused(true);
     if (!pauseReturn) pauseReturn = document.activeElement;
     $('#scr-pause').hidden = false;
@@ -2135,6 +2338,7 @@
       if (!$('#scr-end').hidden) return;
       if (drag) { dragCancel(); return; }
       if (G.screen === 'modes') { e.preventDefault(); $('#modes-back').click(); }
+      else if (G.screen === 'online') { e.preventDefault(); $('#online-back').click(); }
       else if (G.screen === 'instr') { e.preventDefault(); $('#instr-back').click(); }
       else if (G.screen === 'battle' || G.screen === 'place') { e.preventDefault(); openPause(); }
       return;
@@ -2163,7 +2367,7 @@
     if (s < 0.999) el.style.zoom = Math.max(0.3, Math.floor(s * 100) / 100);
   }
   function fitScreen() {
-    var map = { title: '#scr-title .t-wrap', modes: '#scr-modes .menu-wrap', instr: '#instr-body', place: '#place-wrap' };
+    var map = { title: '#scr-title .t-wrap', modes: '#scr-modes .menu-wrap', online: '#scr-online .menu-wrap', instr: '#instr-body', place: '#place-wrap' };
     var sel = map[G.screen];
     if (sel) fitTo($(sel), $(sel).closest('.scr'));
     if (!$('#scr-instr').hidden && $('#scr-instr').style.zIndex) fitTo($('#instr-body'), $('#scr-instr'));   // How to play, from the pause menu
