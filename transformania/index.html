@@ -136,6 +136,12 @@
   #tm .pcard .who { background: none; padding: 0; }
   #tm .pcard.p1 .who b { color: #5cc8ff; } #tm .pcard.p2 .who b, #tm .pcard.cpu .who b { color: #ff7ab0; }
   #tm .panel.score { width: 210px; }
+  #tm .coach { background: rgba(78, 230, 166, 0.12); border: 2px solid rgba(78, 230, 166, 0.6); border-radius: 14px; padding: 8px 10px; font-size: 14px; font-weight: 700; line-height: 1.4; color: #d7ffee; }
+  #tm .coach b { color: #7dffc4; }
+  #tm .skip { align-self: flex-start; padding: 4px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: transparent; color: #dfe4ff; font-weight: 800; font-size: 12px; cursor: pointer; }
+  #tm .opts.small .opt { min-width: 0; padding: 6px 12px; font-size: 14px; border-radius: 12px; }
+  #tm .opts.small .opt kbd { margin-right: 4px; }
+  #tm .opt { min-width: 170px; }
   #tm .menu-btn { position: absolute; top: 8px; right: 10px; z-index: 4; padding: 6px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.35); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; }
   #tm .banner { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); font-family: "Fredoka", sans-serif; font-weight: 700; font-size: 26px; padding: 8px 18px; border-radius: 14px; background: rgba(0,0,0,0.6); pointer-events: none; white-space: nowrap; }
   #tm .banner:empty { display: none; }
@@ -200,15 +206,26 @@
           <div class="opts" role="group" aria-label="Mode" data-es-aria="Modo">
             <button type="button" class="opt" data-mode="cpu" aria-pressed="true">&#129302; <span data-es="Jugador contra computadora">Player vs Computer</span><small data-es="Se turnan en un tablero">Take turns on one board</small></button>
             <button type="button" class="opt" data-mode="pvp" aria-pressed="false" id="opt-pvp">&#128101; <span data-es="Jugador contra jugador">Player vs Player</span><small data-es="Dos jugadores se turnan en un tablero">Two players take turns on one board</small></button>
+            <button type="button" class="opt" data-mode="practice" aria-pressed="false">&#127919; <span data-es="Práctica">Practice</span><small data-es="Solo tú, sin X; elige las destrezas">Just you, no Xs; pick the skills</small></button>
+          </div>
+          <div id="skills-row" hidden>
+            <div class="opt-lbl" data-es="Destrezas para practicar">Skills to practice</div>
+            <div class="opts small" role="group" aria-label="Skills to practice" data-es-aria="Destrezas para practicar">
+              <button type="button" class="opt" data-skill="T" aria-pressed="true"><kbd>1</kbd> <span data-es="Traslaciones">Translations</span></button>
+              <button type="button" class="opt" data-skill="R" aria-pressed="true"><kbd>2</kbd> <span data-es="Rotaciones">Rotations</span></button>
+              <button type="button" class="opt" data-skill="F" aria-pressed="true"><kbd>3</kbd> <span data-es="Reflexiones">Reflections</span></button>
+              <button type="button" class="opt" data-skill="seq" aria-pressed="false"><kbd>4</kbd> <span data-es="Secuencias">Sequences</span></button>
+            </div>
           </div>
           <div class="opt-lbl" data-es="Nivel">Level</div>
           <div class="opts" role="group" aria-label="Level" data-es-aria="Nivel">
             <button type="button" class="opt" data-level="normal" aria-pressed="true"><span data-es="Normal">Normal</span><small data-es="Traslaciones, giros de 90° y 180°, reflexiones">Translations, 90° and 180° turns, reflections</small></button>
-            <button type="button" class="opt" data-level="hard" aria-pressed="false"><span data-es="Difícil">Hard</span><small data-es="Giros hasta 360° y secuencias de transformaciones">Turns up to 360° and sequences of transformations</small></button>
+            <button type="button" class="opt" data-level="hard" aria-pressed="false"><span data-es="Difícil">Hard</span><small data-es="Giros hasta 360°, líneas sin dibujar y secuencias">Turns to 360°, lines you picture, and sequences</small></button>
           </div>
           <button type="button" class="go" id="btn-play" data-es="&#9654; Jugar">&#9654; Play</button><br>
           <button type="button" class="ghost-btn" id="btn-how" data-es="Cómo se juega">How to play</button>
-          <p class="keys" data-es="Teclado: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> modo &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> nivel &middot; <kbd>Enter</kbd> jugar &middot; <kbd>H</kbd> cómo se juega">Keyboard: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> mode &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> level &middot; <kbd>Enter</kbd> play &middot; <kbd>H</kbd> how to play</p>
+          <button type="button" class="ghost-btn" id="btn-tutorial" data-es="Tutorial guiado">Guided tutorial</button>
+          <p class="keys" data-es="Teclado: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> modo &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> nivel &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> destrezas de práctica &middot; <kbd>Enter</kbd> jugar &middot; <kbd>H</kbd> cómo se juega &middot; <kbd>T</kbd> tutorial">Keyboard: <kbd>&larr;</kbd> <kbd>&rarr;</kbd> mode &middot; <kbd>&uarr;</kbd> <kbd>&darr;</kbd> level &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> practice skills &middot; <kbd>Enter</kbd> play &middot; <kbd>H</kbd> how to play &middot; <kbd>T</kbd> tutorial</p>
         </div>
       </div>
       <!-- how to play -->
@@ -228,6 +245,7 @@
         <div class="card" style="max-width: 420px">
           <h2 class="logo" style="font-size: 40px" data-es="Pausa">Paused</h2>
           <button type="button" class="go" id="btn-resume" data-es="&#9654; Seguir">&#9654; Resume</button><br>
+          <button type="button" class="ghost-btn" id="btn-finish" hidden data-es="Terminar la práctica (F)">Finish practice (F)</button>
           <button type="button" class="ghost-btn" id="btn-restart" data-es="Empezar de nuevo (R)">Restart (R)</button>
           <button type="button" class="ghost-btn" id="btn-quit" data-es="Menú principal (M)">Main menu (M)</button>
           <p class="keys" data-es="<kbd>Esc</kbd> o <kbd>Enter</kbd> para seguir">Press <kbd>Esc</kbd> or <kbd>Enter</kbd> to resume</p>
@@ -277,7 +295,7 @@
     <li>Reflections across vertical and horizontal lines</li>
     <li>Sequences of transformations, done in order (Hard)</li>
   </ul>
-  <p>Printables: <a href="guide">full teacher guide</a> &middot; <a href="worksheet">worksheet with answer key</a> &middot; <a href="exit-ticket">exit ticket</a></p>
+  <p>Printables: <a href="guide">full teacher guide</a> &middot; <a href="pre-assessment">pre-assessment</a> &middot; <a href="notes">visual notes</a> &middot; <a href="entry-ticket">entry ticket</a> &middot; <a href="worksheet">worksheet with answer key</a> &middot; <a href="exit-ticket">exit ticket</a></p>
   <h3>Key vocabulary</h3>
   <ul>
     <li><strong>pre-image / image</strong>: the figure before a transformation, and the figure after it</li>
@@ -292,7 +310,9 @@
     <li><strong>Rotations on tracing paper:</strong> the figure sits on a sheet of tracing paper pinned at a red point. Students drag the handle (or press the up arrow for clockwise, the down arrow for counterclockwise) to turn it one quarter-turn at a time, and the arrow on the paper, which starts pointing up, shows how far it has turned. 180&deg; takes two turns and 360&deg; takes four, and the game checks the direction as well as the amount.</li>
     <li><strong>Reflections:</strong> both a vertical and a horizontal line are shown, so students must pick the right line: the left and right keys flip across the vertical line, up and down across the horizontal one.</li>
     <li><strong>Taking turns:</strong> students and the computer (or two students) take turns on one board: a piece each, then the other player&rsquo;s turn. Watching the computer do its transformations correctly is a model, too.</li>
-    <li><strong>Xs and hints:</strong> the first wrong check on a question adds an X, and each wrong check gives a stronger hint. Three Xs lose, and a completed row removes one of that player&rsquo;s Xs.</li>
+    <li><strong>Xs and hints:</strong> a wrong check names the mistake (wrong direction, wrong line, too far) with a hint; after the second, the correct move plays on the board. The first wrong check on a question adds an X. Three Xs lose, and a completed row removes one of that player&rsquo;s Xs.</li>
+    <li><strong>Practice and the tutorial:</strong> Practice is one student with no Xs and the skills you choose; the first game on a device starts with a three-piece guided tutorial.</li>
+    <li><strong>Hard:</strong> turns up to 360&deg;, translations up and down, sequences, and reflection lines that are not drawn: the instruction says where the line is.</li>
     <li><strong>Winning:</strong> the first player to clear the goal number of rows (5 on Normal, 6 on Hard) wins. A piece that stops above the dotted line loses, and the floor rises every few pieces.</li>
     <li><strong>Keyboard:</strong> everything works from the keyboard, including the menus (arrow keys choose the mode and level, Enter plays) and turning the tracing paper (up arrow clockwise, down arrow counterclockwise). Two players share the same keys and take turns.</li>
   </ul>
@@ -305,7 +325,7 @@
 </section>
 
 <script src="../site-results.js?v=85c4ff8b"></script>
-<script src="transformania-game.js?v=144a855e"></script>
+<script src="transformania-game.js?v=5657a4ed"></script>
 <script src="../site-fullscreen.js?v=00f33012"></script>
 <script>
   document.getElementById('reset-progress-btn').addEventListener('click', function () {

@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   var T = window.tl || function (en) { return en; };
-  var say = function (m) { if (window.SiteSR) SiteSR.say(m); };
+  var say = function (m) { if (window.SiteSR) SiteSR.say(String(m).replace(/&rsquo;/g, "'").replace(/<[^>]*>/g, '')); };
   var TOUCH = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
   var CALM = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   var $ = function (id) { return document.getElementById(id); };
@@ -54,7 +54,7 @@
 
   // ------------------------------------------------------------------ the transformations, on cells
   // (a cell [x, y] is the unit square from (x, y) to (x+1, y+1); pivots and lines sit on grid lines)
-  function translate(c, dx) { return c.map(function (p) { return [p[0] + dx, p[1]]; }); }
+  function translate(c, dx, dy) { dy = dy || 0; return c.map(function (p) { return [p[0] + dx, p[1] + dy]; }); }
   function rotateAbout(c, px, py, turns) {          // turns: quarter-turns, + = clockwise (on screen, y points down)
     var k = ((turns % 4) + 4) % 4;
     return c.map(function (p) {
@@ -66,17 +66,30 @@
   function reflectV(c, a) { return c.map(function (p) { return [2 * a - p[0] - 1, p[1]]; }); }   // across x = a
   function reflectH(c, b) { return c.map(function (p) { return [p[0], 2 * b - p[1] - 1]; }); }   // across y = b
   function apply(st, c) {
-    if (st.type === 'T') return translate(c, st.dx);
+    if (st.type === 'T') return translate(c, st.dx, st.dy);
     if (st.type === 'R') return rotateAbout(c, st.px, st.py, st.turns);
     return st.axis === 'v' ? reflectV(c, st.a) : reflectH(c, st.b);
   }
   function inZone(c) { return c.every(function (p) { return p[0] >= 0 && p[0] < W && p[1] >= 0 && p[1] < Z; }); }
 
   // ------------------------------------------------------------------ making instructions that fit the zone
-  function genT(c, maxN) {
-    var opts = [];
-    for (var n = 1; n <= maxN; n++) [-1, 1].forEach(function (s) { if (inZone(translate(c, s * n))) opts.push(s * n); });
-    return opts.length ? { type: 'T', dx: pick(opts) } : null;
+  // Normal: translations left or right, 90° and 180° turns, reflections across a line drawn on the board.
+  // Hard: translations can go up or down too, turns go up to 360°, reflection lines are not drawn (the instruction says
+  // where the line is) and can sit 1 or 2 units away from the figure, and many instructions are sequences.
+  function genT(c, hard) {
+    var kinds = hard ? shuffle(['h', 'h', 'v', 'hv']) : ['h'], opts;
+    for (var i = 0; i < kinds.length; i++) {
+      opts = [];
+      for (var dx = -4; dx <= 4; dx++) for (var dy = -3; dy <= 3; dy++) {
+        var k = kinds[i];
+        if (k === 'h' && (dy !== 0 || dx === 0)) continue;
+        if (k === 'v' && (dx !== 0 || dy === 0)) continue;
+        if (k === 'hv' && (dx === 0 || dy === 0 || Math.abs(dx) > 3 || Math.abs(dy) > 2)) continue;
+        if (inZone(translate(c, dx, dy))) opts.push([dx, dy]);
+      }
+      if (opts.length) { var o = pick(opts); return { type: 'T', dx: o[0], dy: o[1] }; }
+    }
+    return null;
   }
   function pivots(c) {
     var seen = {}, out = [];
@@ -97,82 +110,106 @@
     }
     return null;
   }
-  function lineSpots(lo, hi, limit) {             // where a line can go beside a figure spanning [lo, hi), so its image fits
+  function lineSpots(lo, hi, limit, maxGap) {     // where a line can go beside a figure spanning [lo, hi), so its image fits
     var out = [];
-    [0, 1].forEach(function (g) {
+    for (var g = 0; g <= maxGap; g++) {
       var a = lo - g; if (a >= 0 && 2 * a - hi >= 0) out.push(a);           // a line before the figure: the image lands before it
       var b = hi + g; if (b <= limit && 2 * b - lo <= limit) out.push(b);   // a line after it: the image lands after it
-    });
+    }
     return out;
   }
-  function genF(c, onlyAxis) {
-    var b = box(c), axes = onlyAxis ? [onlyAxis] : shuffle(['v', 'h']);
+  function genF(c, hard) {
+    var b = box(c), axes = shuffle(['v', 'h']), gap = hard ? 2 : 1;
     for (var i = 0; i < axes.length; i++) {
       var ax = axes[i];
-      var vs = shuffle(lineSpots(b.x0, b.x1, W)), hs = shuffle(lineSpots(b.y0, b.y1, Z));
+      var vs = shuffle(lineSpots(b.x0, b.x1, W, gap)), hs = shuffle(lineSpots(b.y0, b.y1, Z, gap));
       var good = ax === 'v' ? vs : hs;
       for (var j = 0; j < good.length; j++) {
-        var st = { type: 'F', axis: ax };
+        var st = { type: 'F', axis: ax, hidden: hard };
         if (ax === 'v') { st.a = good[j]; st.b = hs.length ? hs[0] : (b.y1 <= Z - 1 ? b.y1 : b.y0); }
         else { st.b = good[j]; st.a = vs.length ? vs[0] : (b.x1 <= W - 1 ? b.x1 : b.x0); }
-        if (inZone(apply(st, c))) return st;
+        if (inZone(apply(st, c))) {
+          // where the line is, measured from the figure (said in words when the line isn't drawn)
+          st.vside = st.a <= b.x0 ? 'left' : 'right'; st.vgap = st.a <= b.x0 ? b.x0 - st.a : st.a - b.x1;
+          st.hside = st.b <= b.y0 ? 'above' : 'below'; st.hgap = st.b <= b.y0 ? b.y0 - st.b : st.b - b.y1;
+          return st;
+        }
       }
     }
     return null;
   }
   function genStep(type, c, hard) {
-    if (type === 'T') return genT(c, 4);
+    if (type === 'T') return genT(c, hard);
     if (type === 'R') return genR(c, hard ? [1, -1, 2, -2, 3, -3, 4, -4] : [1, -1, 2, -2]);
-    return genF(c);
+    return genF(c, hard);
   }
-  function makeQuestion(c, hard) {
-    if (!hard) {
-      var order = shuffle(['T', 'R', 'F']);
-      for (var i = 0; i < order.length; i++) { var s = genStep(order[i], c, false); if (s) return [s]; }
-      return [genT(c, 9) || { type: 'T', dx: 0 }];
+  // allow (Practice and the tutorial): which skills may come, { T, R, F, seq }; null = everything the level has
+  function makeQuestion(c, hard, allow) {
+    var basics = ['T', 'R', 'F'].filter(function (t) { return !allow || allow[t]; });
+    var seqOK = allow ? !!allow.seq : hard;
+    if (!basics.length) basics = ['T', 'R', 'F'];                       // sequences only: their steps can be anything
+    var singlesOK = !allow || allow.T || allow.R || allow.F;
+    var seqChance = !seqOK ? 0 : !singlesOK ? 1 : allow ? 0.5 : 0.65;
+    if (Math.random() >= seqChance) {
+      var order = shuffle(basics);
+      for (var i = 0; i < order.length; i++) { var s = genStep(order[i], c, hard); if (s) return [s]; }
+      if (!seqOK) return [genT(c, false) || { type: 'T', dx: 0, dy: 0 }];
     }
-    var r = Math.random();
-    if (r < 0.25) { var s1 = genStep('R', c, true); if (s1) return [s1]; }
-    if (r < 0.35) { var s2 = genStep(pick(['T', 'F']), c, true); if (s2) return [s2]; }
     for (var tries = 0; tries < 40; tries++) {
-      var len = Math.random() < 0.7 ? 2 : 3, steps = [], cur = c, prev = null, ok = true;
+      var len = hard && Math.random() < 0.3 ? 3 : 2, steps = [], cur = c, prev = null, ok = true;
       for (var k = 0; k < len; k++) {
-        var types = shuffle(['T', 'R', 'F'].filter(function (t) { return t !== prev; })), st = null;
-        for (var m = 0; m < types.length && !st; m++) st = genStep(types[m], cur, true);
+        var types = shuffle(basics.filter(function (t) { return t !== prev || basics.length === 1; })), st = null;
+        for (var m = 0; m < types.length && !st; m++) st = genStep(types[m], cur, hard);
         if (!st) { ok = false; break; }
         steps.push(st); cur = apply(st, cur); prev = st.type;
       }
       if (ok) return steps;
     }
-    return makeQuestion(c, false);
+    return [genT(c, false) || { type: 'T', dx: 0, dy: 0 }];
   }
 
   // ------------------------------------------------------------------ words
-  function units(n) { return n === 1 ? T('1 unit', '1 unidad') : n + T(' units', ' unidades'); }
+  function units(n) { n = Math.abs(n); return n === 1 ? T('1 unit', '1 unidad') : n + T(' units', ' unidades'); }
   function turnsWord(n) { n = Math.abs(n); return n === 1 ? T('1 turn', '1 vuelta') : n + T(' turns', ' vueltas'); }
   function dirWord(cw) { return cw ? T('clockwise', 'en sentido horario') : T('counterclockwise', 'en sentido antihorario'); }
+  function moveWords(dx, dy) {                     // "3 units right and 1 unit up"
+    var parts = [];
+    if (dx) parts.push(units(dx) + (dx > 0 ? T(' right', ' a la derecha') : T(' left', ' a la izquierda')));
+    if (dy) parts.push(units(dy) + (dy > 0 ? T(' down', ' hacia abajo') : T(' up', ' hacia arriba')));
+    return parts.join(T(' and ', ' y '));
+  }
+  function lineWords(st) {                         // where a reflection line is, in words (Hard draws no line)
+    if (st.axis === 'v') {
+      var sv = st.vside === 'left' ? T('left', 'izquierdo') : T('right', 'derecho');
+      return st.vgap === 0 ? T('the vertical line along the figure&rsquo;s ', 'la línea vertical sobre el borde ') + (st.vside === 'left' ? T('left edge', 'izquierdo de la figura') : T('right edge', 'derecho de la figura'))
+        : T('the vertical line ', 'la línea vertical a ') + units(st.vgap) + (st.vside === 'left' ? T(' to the left of the figure', ' a la izquierda de la figura') : T(' to the right of the figure', ' a la derecha de la figura'));
+    }
+    return st.hgap === 0 ? T('the horizontal line along the figure&rsquo;s ', 'la línea horizontal sobre el borde ') + (st.hside === 'above' ? T('top edge', 'de arriba de la figura') : T('bottom edge', 'de abajo de la figura'))
+      : T('the horizontal line ', 'la línea horizontal a ') + units(st.hgap) + (st.hside === 'above' ? T(' above the figure', ' arriba de la figura') : T(' below the figure', ' debajo de la figura'));
+  }
   function stepText(st) {
-    if (st.type === 'T') return T('Translate ', 'Traslada ') + units(Math.abs(st.dx)) + (st.dx > 0 ? T(' right', ' a la derecha') : T(' left', ' a la izquierda')) + '.';
+    if (st.type === 'T') return T('Translate ', 'Traslada ') + moveWords(st.dx, st.dy) + '.';
     if (st.type === 'R') return T('Rotate ', 'Rota ') + Math.abs(st.turns) * 90 + '° ' + dirWord(st.turns > 0) + T(' around the red point.', ' alrededor del punto rojo.');
+    if (st.hidden) return T('Reflect across ', 'Refleja sobre ') + lineWords(st) + '.';
     return st.axis === 'v' ? T('Reflect across the vertical line.', 'Refleja sobre la línea vertical.') : T('Reflect across the horizontal line.', 'Refleja sobre la línea horizontal.');
   }
   function shortText(st) {
-    if (st.type === 'T') return T('Translate ', 'Traslada ') + units(Math.abs(st.dx)) + (st.dx > 0 ? T(' right', ' a la der.') : T(' left', ' a la izq.'));
+    if (st.type === 'T') return T('Translate ', 'Traslada ') + moveWords(st.dx, st.dy);
     if (st.type === 'R') return T('Rotate ', 'Rota ') + Math.abs(st.turns) * 90 + '° ' + (st.turns > 0 ? T('CW', 'horario') : T('CCW', 'antihorario'));
+    if (st.hidden) return T('Reflect across ', 'Refleja sobre ') + lineWords(st);
     return st.axis === 'v' ? T('Reflect: vertical line', 'Refleja: línea vertical') : T('Reflect: horizontal line', 'Refleja: línea horizontal');
   }
   function goodText(st) {
-    if (st.type === 'T') return T('Correct! The figure was translated ', '¡Correcto! La figura se trasladó ') + units(Math.abs(st.dx)) + (st.dx > 0 ? T(' right.', ' a la derecha.') : T(' left.', ' a la izquierda.'));
+    if (st.type === 'T') return T('Correct! The figure was translated ', '¡Correcto! La figura se trasladó ') + moveWords(st.dx, st.dy) + '.';
     if (st.type === 'R') { var n = Math.abs(st.turns); return T('Correct! ', '¡Correcto! ') + n * 90 + '° = ' + (n === 1 ? T('one 90° turn', 'una vuelta de 90°') : n + T(' turns of 90°', ' vueltas de 90°')) + ' ' + dirWord(st.turns > 0) + '.'; }
     return T('Correct! Every square is the same distance from the ', '¡Correcto! Cada cuadrado está a la misma distancia de la línea ') + (st.axis === 'v' ? T('vertical', 'vertical') : T('horizontal', 'horizontal')) + T(' line, on the other side.', ', del otro lado.');
   }
   function hintText(st, level) {
     var L = Math.min(level, 4);
     if (st.type === 'T') {
-      var n = Math.abs(st.dx), right = st.dx > 0, d = right ? T('right', 'la derecha') : T('left', 'la izquierda');
       return [T('Count grid units: each square is 1 unit. A translation slides the figure without turning it.', 'Cuenta unidades de la cuadrícula: cada cuadrado mide 1 unidad. Una traslación desliza la figura sin girarla.'),
-        T('Slide toward the ', 'Desliza hacia ') + d + T(' side of the board, and compare with the faint ghost.', ' del tablero y compara con la figura tenue.'),
-        T('Pick one square of the ghost and count ', 'Elige un cuadrado de la figura tenue y cuenta ') + units(n) + T(' to the ', ' hacia ') + d + T('. The same square must end up there.', '. Ese mismo cuadrado debe quedar ahí.'),
+        T('Compare with the faint ghost: the image is the same figure, moved ', 'Compara con la figura tenue: la imagen es la misma figura, movida ') + moveWords(st.dx, st.dy) + '.',
+        T('Pick one square of the ghost and count ', 'Elige un cuadrado de la figura tenue y cuenta ') + moveWords(st.dx, st.dy) + T(' from it. The same square must end up there.', ' desde él. Ese mismo cuadrado debe quedar ahí.'),
         T('The dotted yellow outline shows where the image goes.', 'El contorno amarillo punteado muestra dónde va la imagen.')][L - 1];
     }
     if (st.type === 'R') {
@@ -186,9 +223,36 @@
     var v = st.axis === 'v';
     return [T('In a reflection, every square lands the same distance from the line, on the other side.', 'En una reflexión, cada cuadrado queda a la misma distancia de la línea, del otro lado.'),
       T('A vertical line goes up and down: flip across it with ◀ ▶. A horizontal line goes side to side: flip across it with ▲ ▼.', 'Una línea vertical va de arriba abajo: refleja sobre ella con ◀ ▶. Una línea horizontal va de lado a lado: refleja con ▲ ▼.'),
-      v ? T('Use the pink vertical line. Its mirror image goes on its other side, flipped left to right.', 'Usa la línea vertical rosa. La imagen va del otro lado, volteada de izquierda a derecha.')
+      st.hidden ? T('Picture ', 'Imagina ') + lineWords(st) + T('. The image is its mirror image on the other side of that line, the same distance away.', '. La imagen es su reflejo del otro lado de esa línea, a la misma distancia.')
+        : v ? T('Use the pink vertical line. Its mirror image goes on its other side, flipped left to right.', 'Usa la línea vertical rosa. La imagen va del otro lado, volteada de izquierda a derecha.')
         : T('Use the green horizontal line. Its mirror image goes on its other side, flipped top to bottom.', 'Usa la línea horizontal verde. La imagen va del otro lado, volteada de arriba abajo.'),
       T('The dotted yellow outline shows where the image goes.', 'El contorno amarillo punteado muestra dónde va la imagen.')][L - 1];
+  }
+  // what the student actually did, compared with what was asked: so the feedback names the mistake
+  function mistakeText(st, g) {
+    if (st.type === 'T') {
+      var b0 = box(g.stepStart), b1 = box(g.cur), mx = b1.x0 - b0.x0, my = b1.y0 - b0.y0;
+      if (!mx && !my) return T("You haven't moved the figure yet.", 'Todavía no moviste la figura.');
+      if (mx * st.dx < 0 || my * (st.dy || 0) < 0) return T('You moved it ', 'La moviste ') + moveWords(mx, my) + T(': check the direction.', ': revisa la dirección.');
+      if ((st.dy || 0) === 0 && my) return T('You moved it up or down too: this translation only goes ', 'También la moviste arriba o abajo: esta traslación solo va ') + (st.dx > 0 ? T('right.', 'a la derecha.') : T('left.', 'a la izquierda.'));
+      if (st.dx === 0 && mx) return T('You moved it sideways too: this translation only goes ', 'También la moviste de lado: esta traslación solo va ') + (st.dy > 0 ? T('down.', 'hacia abajo.') : T('up.', 'hacia arriba.'));
+      return T('You moved it ', 'La moviste ') + moveWords(mx, my) + T(', but the instruction says ', ', pero la instrucción dice ') + moveWords(st.dx, st.dy) + '.';
+    }
+    if (st.type === 'R') {
+      var k = Math.round(g.rot.target / 90);
+      if (k === 0) return T("The paper hasn't turned yet.", 'El papel todavía no gira.');
+      if (k * st.turns < 0) {
+        var sameSpot = same(rotateAbout(g.stepStart, st.px, st.py, k), apply(st, g.stepStart));
+        return T('You turned ', 'Giraste ') + dirWord(k > 0) + T(', but the instruction says ', ', pero la instrucción dice ') + dirWord(st.turns > 0) + '.'
+          + (sameSpot ? T(' (It lands in the same spot, but the turn must go the right way.)', ' (Llega al mismo lugar, pero el giro debe ir en el sentido correcto.)') : '');
+      }
+      return T('You turned ', 'Giraste ') + turnsWord(k) + ' (' + Math.abs(k) * 90 + T('°), but ', '°), pero ') + Math.abs(st.turns) * 90 + T('° is ', '° son ') + turnsWord(st.turns) + '.';
+    }
+    var want = st.axis === 'v';
+    if (!g.flipV && !g.flipH) return T("You haven't flipped the figure yet.", 'Todavía no reflejaste la figura.');
+    if (g.flipV && g.flipH) return T('You flipped across both lines; flip across only the ', 'La reflejaste sobre las dos líneas; refléjala solo sobre la línea ') + (want ? T('vertical line.', 'vertical.') : T('horizontal line.', 'horizontal.'));
+    if (g.flipV !== want) return T('You flipped across the ', 'La reflejaste sobre la línea ') + (g.flipV ? T('vertical', 'vertical') : T('horizontal', 'horizontal')) + T(' line; the instruction says the ', '; la instrucción dice la línea ') + (want ? T('vertical line.', 'vertical.') : T('horizontal line.', 'horizontal.'));
+    return '';
   }
   function skillOf(steps) { return steps.length > 1 ? 'seq' : steps[0].type; }
 
@@ -220,8 +284,16 @@
   // ------------------------------------------------------------------ game state
   // One shared board. Players take turns: each turn is one figure, placed, transformed and dropped by the player whose
   // turn it is; then the other player (the computer, or Player 2) takes a turn on the same board.
+  // Practice has one player, no opponent and no Xs, with the skills the student picks; the tutorial is a short guided
+  // Practice (a translation, a rotation and a reflection, with a coach explaining each step).
   var mode = 'cpu', level = 'normal', players = [], running = false, paused = false, over = false, overAt = 0, winner = null;
   var G = null;                                          // the board and the turn in progress
+  var skills = { T: true, R: true, F: true, seq: false };   // Practice: which skills may come
+  var TUT = ['T', 'R', 'F'];                             // the tutorial's three pieces
+  function solo() { return mode === 'practice' || mode === 'tutorial'; }
+  function versus() { return !solo(); }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, String(v)); } catch (e) { return null; } }
+  function bump(k) { store(k, (+store(k) || 0) + 1); }
   var GOAL = { normal: 3, hard: 4 }, RISE_EVERY = { normal: 12, hard: 10 }, TOPN = 1;   // rows to win; pieces between floor rises
   var PALETTE = [['#5cc8ff', '#7cf0ff', '#4ee6a6', '#8fd3ff'], ['#ff7ab0', '#ffcc33', '#ff9f43', '#ff6b6b']];   // cool for the left player, warm for the right
   if (window.SiteResults) SiteResults.setup([
@@ -239,6 +311,7 @@
   }
   function makePlayer(idx, kind) {
     var p = { idx: idx, kind: kind, name: kind === 'cpu' ? T('Computer', 'Computadora') : (mode === 'pvp' ? (idx === 0 ? T('Player 1', 'Jugador 1') : T('Player 2', 'Jugador 2')) : T('You', 'Tú')),
+      fresh: 0,
       xs: 0, rows: 0, pieces: 0, solved: 0, firstTry: 0, dead: '' };
     p.next = newShape(p);
     return p;
@@ -253,11 +326,17 @@
     var m = $('match'); m.innerHTML = '';
     var left = el('div', 'panel'), wrap = el('div', 'board-wrap'), right = el('div', 'panel score');
     UI.turnEl = el('div', 'turn'); left.appendChild(UI.turnEl);
+    if (mode === 'tutorial') {                           // the coach: what to do right now, one step at a time
+      UI.coachEl = el('div', 'coach'); left.appendChild(UI.coachEl);
+      var skip = el('button', 'skip', T('Skip the tutorial (K)', 'Saltar el tutorial (K)')); skip.type = 'button';
+      skip.addEventListener('click', endTutorial); UI.coachEl.parentNode.appendChild(skip); UI.skipBtn = skip;
+    } else UI.coachEl = null;
     UI.askEl = el('div', 'ask'); left.appendChild(UI.askEl);
     UI.msgEl = el('div', 'msg'); left.appendChild(UI.msgEl);
     var pad = el('div', 'pad'); UI.btn = {};
     [['left', '◀', T('Move or flip left', 'Mover o reflejar a la izquierda')], ['right', '▶', T('Move or flip right', 'Mover o reflejar a la derecha')],
-     ['up', '▲', T('Flip up', 'Reflejar hacia arriba')], ['down', '▼', T('Flip down', 'Reflejar hacia abajo')],
+     ['up', '▲', T('Up: move or flip up, or turn the paper clockwise', 'Arriba: mover o reflejar hacia arriba, o girar el papel en sentido horario')],
+     ['down', '▼', T('Down: move or flip down, or turn the paper counterclockwise', 'Abajo: mover o reflejar hacia abajo, o girar el papel en sentido antihorario')],
      ['ccw', '⟲', T('Turn the paper 90 degrees counterclockwise', 'Girar el papel 90 grados en sentido antihorario')], ['cw', '⟳', T('Turn the paper 90 degrees clockwise', 'Girar el papel 90 grados en sentido horario')],
      ['reset', T('↺ Start over', '↺ Empezar otra vez'), T('Start this step over', 'Empezar este paso otra vez')], ['ok', '', '']].forEach(function (b) {
       var bt = el('button', b[0] === 'reset' ? 'wide' : (b[0] === 'ok' ? 'ok' : ''), b[1]); bt.type = 'button';
@@ -266,8 +345,8 @@
       pad.appendChild(bt); UI.btn[b[0]] = bt;
     });
     left.appendChild(pad);
-    if (!TOUCH) left.appendChild(el('div', 'help', T('<kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd> <kbd>↓</kbd> flip, or turn the paper (<kbd>↑</kbd> clockwise, <kbd>↓</kbd> counterclockwise; <kbd>Q</kbd> <kbd>E</kbd> too) · <kbd>Space</kbd> or <kbd>Enter</kbd> confirm / check · <kbd>R</kbd> start over · <kbd>Esc</kbd> menu',
-      '<kbd>←</kbd> <kbd>→</kbd> mover · <kbd>↑</kbd> <kbd>↓</kbd> reflejar, o girar el papel (<kbd>↑</kbd> horario, <kbd>↓</kbd> antihorario; también <kbd>Q</kbd> <kbd>E</kbd>) · <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar / comprobar · <kbd>R</kbd> otra vez · <kbd>Esc</kbd> menú')));
+    if (!TOUCH) left.appendChild(el('div', 'help', T('<kbd>←</kbd> <kbd>→</kbd> move · <kbd>↑</kbd> <kbd>↓</kbd> flip, or turn the paper (<kbd>↑</kbd> clockwise, <kbd>↓</kbd> counterclockwise; <kbd>Q</kbd> <kbd>E</kbd> too) · <kbd>Space</kbd> or <kbd>Enter</kbd> confirm / check · <kbd>R</kbd> start over · <kbd>I</kbd> where is my figure? · <kbd>Esc</kbd> menu',
+      '<kbd>←</kbd> <kbd>→</kbd> mover · <kbd>↑</kbd> <kbd>↓</kbd> reflejar, o girar el papel (<kbd>↑</kbd> horario, <kbd>↓</kbd> antihorario; también <kbd>Q</kbd> <kbd>E</kbd>) · <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar / comprobar · <kbd>R</kbd> otra vez · <kbd>I</kbd> ¿dónde está mi figura? · <kbd>Esc</kbd> menú')));
     UI.cv = el('canvas'); UI.cv.tabIndex = 0; UI.cv.setAttribute('role', 'img');
     wrap.appendChild(UI.cv); UI.banner = el('div', 'banner'); wrap.appendChild(UI.banner);
     UI.ctx = UI.cv.getContext('2d');
@@ -313,21 +392,29 @@
     var b = box(sh.cells), x0 = Math.floor((W - b.w) / 2), y0 = Math.floor((Z - b.h) / 2);
     G.piece = { cells: translate(sh.cells.map(function (q) { return [q[0], q[1] + y0]; }), x0), color: sh.color, owner: p.idx };
     G.cur = clone(G.piece.cells);
-    G.phase = 'place'; G.steps = null; G.si = 0; G.wrongQ = false; G.hint = 0; G.showTarget = false;
+    G.phase = 'place'; G.steps = null; G.si = 0; G.wrongQ = false; G.hint = 0; G.showTarget = false; G.demo = null; G.flipV = G.flipH = false;
     G.rot = { angle: 0, target: 0, drag: false, last: 0 }; G.ai = { queue: [], wait: 0, plan: '' };
     setMsg('', '');
-    flash(p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno')), p.idx === 0 ? '#5cc8ff' : '#ff9cc4');
+    if (versus()) flash(p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno')), p.idx === 0 ? '#5cc8ff' : '#ff9cc4');
     render();
-    if (p.kind !== 'cpu') { focusBoard(); say((mode === 'pvp' ? p.name + T("'s turn. ", ': tu turno. ') : T('Your turn. ', 'Tu turno. ')) + T('A figure of ', 'Una figura de ') + G.cur.length + T(' squares. Move it left or right, then confirm the start.', ' cuadrados. Muévela a la izquierda o la derecha y confirma el inicio.')); }
-    else say(T("The computer's turn.", 'Turno de la computadora.'));
+    if (p.kind !== 'cpu') {
+      focusBoard();
+      say((mode === 'pvp' ? p.name + T("'s turn. ", ': tu turno. ') : versus() ? T('Your turn. ', 'Tu turno. ') : '') + T('A new figure of ', 'Una figura nueva de ') + G.cur.length + T(' squares: ', ' cuadrados: ')
+        + figureWords(G.cur) + '. ' + (UI.coachEl ? UI.coachEl.textContent : T('Move it left or right, then confirm the start.', 'Muévela a la izquierda o la derecha y confirma el inicio.')));
+    } else say(T("The computer's turn.", 'Turno de la computadora.'));
   }
   // The instruction is made only after the start is confirmed. So that a good start is rewarded (and rows can be built),
   // the game makes thirty instructions that fit and picks the one whose image lands best on the board: both
   // players get the same treatment, and the transformation still has to be done exactly right.
+  function allowNow() {
+    if (mode === 'tutorial') { var t = {}; t[TUT[Math.min(G.tutStep, 2)]] = true; return t; }
+    return mode === 'practice' ? skills : null;
+  }
   function rankedQuestions(c) {
-    var list = [];
+    var list = [], allow = allowNow();
     for (var i = 0; i < 30; i++) {
-      var q = makeQuestion(c, level === 'hard'), img = c;
+      var q = makeQuestion(c, level === 'hard' && mode !== 'tutorial', allow), img = c;
+      if (mode === 'tutorial' && q[0].type === 'R') { var r1 = genR(c, [1]); if (r1) q = [r1]; }   // the tutorial's turn: one quarter-turn clockwise
       q.forEach(function (st) { img = apply(st, img); });
       list.push({ q: q, s: aiEval(landing(img)) });
     }
@@ -338,17 +425,17 @@
     G.steps = pick(rankedQuestions(G.start)).q;
     G.si = 0; beginStep(G.start);
     sfx('start'); render();
-    if (cur().kind !== 'cpu') say(G.steps.map(function (s, i) { return (G.steps.length > 1 ? (i + 1) + '. ' : '') + stepText(s); }).join(' ') + ' ' + controlsWord(G.steps[0]));
+    if (cur().kind !== 'cpu') say(G.steps.map(function (s, i) { return (G.steps.length > 1 ? (i + 1) + '. ' : '') + stepText(s); }).join(' ') + ' ' + whereWords() + ' ' + controlsWord(G.steps[0]));
     else say(T('The computer: ', 'La computadora: ') + G.steps.map(stepText).join(' '));
   }
   function controlsWord(st) {
     if (TOUCH) return '';
-    if (st.type === 'T') return T('Use left and right.', 'Usa izquierda y derecha.');
+    if (st.type === 'T') return level === 'hard' ? T('Use the arrow keys.', 'Usa las flechas.') : T('Use left and right.', 'Usa izquierda y derecha.');
     if (st.type === 'R') return T('Up turns the paper a quarter-turn clockwise; down turns it counterclockwise.', 'Arriba gira el papel un cuarto de vuelta en sentido horario; abajo, en sentido antihorario.');
     return T('Left and right flip across the vertical line; up and down across the horizontal line.', 'Izquierda y derecha reflejan sobre la línea vertical; arriba y abajo sobre la horizontal.');
   }
   function beginStep(from) {
-    G.phase = 'xf'; G.stepStart = clone(from); G.cur = clone(from);
+    G.phase = 'xf'; G.stepStart = clone(from); G.cur = clone(from); G.flipV = G.flipH = false;
     G.rot.angle = G.rot.target = 0; G.rot.drag = false; G.hint = 0; G.showTarget = false; G.ai.plan = '';
   }
   function step() { return G && G.steps && G.steps[G.si]; }
@@ -368,31 +455,57 @@
       if (G.si < G.steps.length - 1) {
         setMsg('good', T('Step ', 'Paso ') + (G.si + 1) + ' ✓ ' + goodText(st));
         sfx('flip'); G.si++; beginStep(want); render();
-        if (p.kind !== 'cpu') say(T('Correct. Now step ', 'Correcto. Ahora el paso ') + (G.si + 1) + ': ' + stepText(step()));
+        if (p.kind !== 'cpu') say(T('Correct. Now step ', 'Correcto. Ahora el paso ') + (G.si + 1) + ': ' + stepText(step()) + ' ' + whereWords());
         return;
       }
       p.solved++; if (!G.wrongQ) p.firstTry++;
-      if (p.kind !== 'cpu' && window.SiteResults) SiteResults.record(skillOf(G.steps), !G.wrongQ);
+      if (p.kind !== 'cpu') {
+        if (window.SiteResults) SiteResults.record(skillOf(G.steps), !G.wrongQ);
+        if (!G.wrongQ) bump('transformania_ft_' + skillOf(G.steps));     // for the badges on My Stats
+      }
       setMsg('good', goodText(st)); sfx('good');
       if (p.kind !== 'cpu') say(goodText(st));
       G.phase = 'drop'; G.dropT = 0; G.drop = clone(want); render();
       return;
     }
     G.hint++;
-    if (!G.wrongQ) { G.wrongQ = true; p.xs++; flash('✕', '#ff4d6a'); }
+    if (!G.wrongQ) { G.wrongQ = true; if (versus()) { p.xs++; flash('✕', '#ff4d6a'); } }
     if (G.hint >= 4) G.showTarget = true;
-    var h = hintText(st, G.hint);
-    setMsg('hint', (G.hint === 1 ? T('Not yet. ', 'Todavía no. ') : '') + h); sfx('bad');
-    render();
-    say(T('Not yet. ', 'Todavía no. ') + h.replace(/&rsquo;/g, "'") + ' ' + T('Xs: ', 'X: ') + p.xs);
-    if (p.xs >= 3) endGame(p, 'xs');
+    var named = mistakeText(st, G), h = hintText(st, G.hint);
+    sfx('bad');
+    if (G.hint === 2) {
+      // the second miss: watch the right move once, slowly, on the board; then the step starts over to try again
+      G.demo = { st: st, from: clone(G.stepStart), t: 0, dur: st.type === 'R' ? 700 + Math.abs(st.turns) * 650 : 1400, hint: G.hint };
+      setMsg('hint', (named ? named + ' ' : '') + T('Watch the correct move, then try it yourself.', 'Mira el movimiento correcto y luego inténtalo tú.'));
+      render();
+      say((named ? named + ' ' : '') + T('Watch the correct move, then try it yourself.', 'Mira el movimiento correcto y luego inténtalo tú.') + (versus() ? ' ' + T('Xs: ', 'X: ') + p.xs : ''));
+    } else {
+      setMsg('hint', (named ? '<b>' + named + '</b> ' : (G.hint === 1 ? T('Not yet. ', 'Todavía no. ') : '')) + h);
+      render();
+      say((named || T('Not yet.', 'Todavía no.')) + ' ' + h + (versus() ? ' ' + T('Xs: ', 'X: ') + p.xs : ''));
+    }
+    if (versus() && p.xs >= 3) endGame(p, 'xs');
+  }
+  function endDemo() {
+    var keep = G.demo.hint; G.demo = null;
+    beginStep(G.stepStart); G.hint = keep;
+    setMsg('hint', T('Now you try: ', 'Ahora tú: ') + stepText(step()));
+    render(); say(T('Now you try. ', 'Ahora tú. ') + stepText(step()));
   }
   function fits(c) { return c.every(function (q) { return q[0] >= 0 && q[0] < W && q[1] < H && (q[1] < 0 || !G.board[q[1]][q[0]]); }); }
   function lock() {
     var p = cur();
     G.drop.forEach(function (q) { if (q[1] >= 0) G.board[q[1]][q[0]] = G.piece.color; });
     p.pieces++; G.placed++; sfx('lock');
-    if (G.drop.some(function (q) { return q[1] < Z; })) { G.drop = null; render(); endGame(p, 'top'); return; }
+    if (G.drop.some(function (q) { return q[1] < Z; })) {
+      G.drop = null;
+      if (solo()) {                                    // Practice: a full board just starts fresh
+        for (var r = 0; r < H; r++) G.board[r] = emptyRow();
+        p.fresh++; flash(T('Fresh board!', '¡Tablero nuevo!'), '#ffd84d'); say(T('The stack reached the line, so the board starts fresh.', 'La pila llegó a la línea, así que el tablero empieza de nuevo.'));
+        passTurn(); render(); return;
+      }
+      render(); endGame(p, 'top'); return;
+    }
     var full = [];
     for (var y = Z; y < H; y++) if (G.board[y].every(function (v) { return v; })) full.push(y);
     G.drop = null;
@@ -406,18 +519,43 @@
     p.rows += rows.length;
     var back = Math.min(p.xs, rows.length); p.xs -= back;
     flash('+' + rows.length + (rows.length === 1 ? T(' row', ' fila') : T(' rows', ' filas')) + (back ? T('  ✕ removed', '  ✕ fuera') : ''), '#4ee6a6');
-    say(p.name + ': ' + rows.length + T(' row cleared. ', ' fila completa. ') + (back ? T('One X removed. ', 'Se quita una X. ') : '') + T('Rows: ', 'Filas: ') + p.rows + T(' of ', ' de ') + GOAL[level]);
+    say(p.name + ': ' + rows.length + T(' row cleared. ', ' fila completa. ') + (back ? T('One X removed. ', 'Se quita una X. ') : '') + T('Rows: ', 'Filas: ') + p.rows + (versus() ? T(' of ', ' de ') + GOAL[level] : ''));
     G.clearRows = null;
-    if (p.rows >= GOAL[level]) { render(); endGame(other(p), 'goal'); return; }
+    if (versus() && p.rows >= GOAL[level]) { render(); endGame(other(p), 'goal'); return; }
     passTurn(); render();
   }
-  // after each piece: every few pieces the floor rises one row (a row with one gap), then the other player's turn
+  // after each piece: in a match, every few pieces the floor rises one row (a row with one gap); then the next turn
   function passTurn() {
     G.phase = 'wait'; G.waitT = 0;
-    if (G.placed % RISE_EVERY[level] === 0 && G.board[Z].every(function (v) { return !v; })) {
+    if (mode === 'tutorial') G.tutStep++;
+    if (versus() && G.placed % RISE_EVERY[level] === 0 && G.board[Z].every(function (v) { return !v; })) {
       G.board.shift(); var hole = rnd(W), row = emptyRow(); for (var x = 0; x < W; x++) if (x !== hole) row[x] = GARBAGE; G.board.push(row);
       sfx('rise'); flash(T('▲ The floor rises', '▲ Sube el piso'), '#ff9f43'); say(T('The floor rises one row.', 'El piso sube una fila.'));
     }
+  }
+  // where things are, in words, for screen readers (columns counted from the left, rows from the top of the board)
+  function figureWords(c) {
+    var rows = {};
+    c.forEach(function (q) { (rows[q[1]] = rows[q[1]] || []).push(q[0] + 1); });
+    return Object.keys(rows).map(Number).sort(function (a, b) { return a - b; }).map(function (y) {
+      var cols = rows[y].sort(function (a, b) { return a - b; });
+      return T('row ', 'fila ') + (y + 1) + (cols.length === 1 ? T(', column ', ', columna ') : T(', columns ', ', columnas ')) + cols.join(', ');
+    }).join('; ');
+  }
+  function whereWords() {
+    var st = step(); if (!st || G.phase !== 'xf') return '';
+    if (st.type === 'R') return T('The red point is the corner where columns ', 'El punto rojo es la esquina donde se unen las columnas ') + st.px + T(' and ', ' y ') + (st.px + 1) + T(' meet rows ', ' con las filas ') + st.py + T(' and ', ' y ') + (st.py + 1) + '.';
+    if (st.type === 'F') {
+      var v = T('The vertical line runs between columns ', 'La línea vertical pasa entre las columnas ') + st.a + T(' and ', ' y ') + (st.a + 1) + '. ';
+      var h = T('The horizontal line runs between rows ', 'La línea horizontal pasa entre las filas ') + st.b + T(' and ', ' y ') + (st.b + 1) + '.';
+      return st.hidden ? T('The line is ', 'La línea es ') + lineWords(st) + '.' : v + h;
+    }
+    return '';
+  }
+  function sayWhere() {
+    if (!G || !G.cur) return;
+    var st = step(), img = G.phase === 'xf' && st && st.type === 'R' ? currentImage() : G.cur;
+    say(T('Your figure: ', 'Tu figura: ') + figureWords(img) + '. ' + (G.phase === 'xf' ? T('It started at ', 'Empezó en ') + figureWords(G.stepStart) + '. ' + (st.type === 'R' ? T('The paper has turned ', 'El papel ha girado ') + turnsWord(Math.round(G.rot.target / 90)) + ' ' + (G.rot.target ? dirWord(G.rot.target > 0) : '') + '. ' : '') + whereWords() + ' ' + stepText(st) : ''));
   }
   function other(p) { return players[1 - p.idx]; }
   function endGame(loser, why) {
@@ -431,6 +569,8 @@
   function act(a) {
     if (!running || paused || over || !G) return;
     ac();
+    if (a === 'info') { sayWhere(); return; }
+    if (G.demo) return;                                  // watching the correct move
     if (G.phase === 'place') {
       if (a === 'left' || a === 'right') { var c = translate(G.cur, a === 'left' ? -1 : 1); if (inZone(c)) { G.cur = c; sfx('move'); } }
       else if (a === 'ok') confirmStart();
@@ -440,14 +580,18 @@
     var st = step();
     if (st.type === 'R' && (a === 'up' || a === 'down')) a = a === 'up' ? 'cw' : 'ccw';   // during a rotation: up turns clockwise, down counterclockwise
     if (a === 'ok') { check(); return; }
-    if (a === 'reset') { beginStep(G.stepStart); render(); return; }
-    if (st.type === 'T' && (a === 'left' || a === 'right')) {
-      var t = translate(G.cur, a === 'left' ? -1 : 1);
-      if (t.every(function (q) { return q[0] >= 0 && q[0] < W; })) { G.cur = t; sfx('move'); }
+    if (a === 'reset') { var h = G.hint, tg = G.showTarget; beginStep(G.stepStart); G.hint = h; G.showTarget = tg; render(); return; }   // starting over keeps the hints earned
+    var vert = a === 'up' || a === 'down';
+    if (st.type === 'T' && (a === 'left' || a === 'right' || (vert && level === 'hard' && mode !== 'tutorial'))) {   // Hard translations can go up or down too
+      var t = translate(G.cur, a === 'left' ? -1 : a === 'right' ? 1 : 0, a === 'up' ? -1 : a === 'down' ? 1 : 0);
+      if (inZone(t)) { G.cur = t; sfx('move'); }
     } else if (st.type === 'F' && a !== 'cw' && a !== 'ccw') {
-      var bx = box(G.cur), vert = a === 'left' || a === 'right', mid = vert ? (bx.x0 + bx.x1) / 2 : (bx.y0 + bx.y1) / 2, line = vert ? st.a : st.b;
+      var bx = box(G.cur), across = a === 'left' || a === 'right', mid = across ? (bx.x0 + bx.x1) / 2 : (bx.y0 + bx.y1) / 2, line = across ? st.a : st.b;
       var toward = (a === 'left' || a === 'up') ? -1 : 1;
-      if ((mid - line) * toward < 0) { G.cur = vert ? reflectV(G.cur, st.a) : reflectH(G.cur, st.b); sfx('flip'); }
+      if ((mid - line) * toward < 0) {
+        G.cur = across ? reflectV(G.cur, st.a) : reflectH(G.cur, st.b); sfx('flip');
+        if (across) G.flipV = !G.flipV; else G.flipH = !G.flipH;   // which lines it has been flipped across (to name a mistake)
+      }
     } else if (st.type === 'R' && (a === 'cw' || a === 'ccw')) {
       if (Math.abs(G.rot.target) < 1440) { G.rot.target += a === 'cw' ? 90 : -90; sfx('turn'); }
     }
@@ -479,7 +623,7 @@
 
   // every key: in a game, on the title screen, in the menus and on the results screen
   var KEYS = { arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right', arrowup: 'up', w: 'up', arrowdown: 'down', s: 'down',
-    q: 'ccw', ',': 'ccw', '<': 'ccw', e: 'cw', '.': 'cw', '>': 'cw', ' ': 'ok', enter: 'ok', r: 'reset', backspace: 'reset' };
+    q: 'ccw', ',': 'ccw', '<': 'ccw', e: 'cw', '.': 'cw', '>': 'cw', ' ': 'ok', enter: 'ok', r: 'reset', backspace: 'reset', i: 'info' };
   function screenOpen(id) { return !$(id).hidden; }
   document.addEventListener('keydown', function (e) {
     if (window.isPageControlKey && window.isPageControlKey(e)) return;
@@ -487,16 +631,20 @@
     var k = e.key.toLowerCase(), onBtn = e.target && e.target.tagName === 'BUTTON' && (k === ' ' || k === 'enter');
     // title screen: arrows pick the mode and level, Enter plays, H opens How to play
     if (screenOpen('scr-title')) {
-      if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); chooseMode(k === 'arrowleft' ? 'cpu' : 'pvp'); return; }
+      var modes = ['cpu', 'pvp', 'practice'];
+      if (k === 'arrowleft' || k === 'arrowright') { e.preventDefault(); chooseMode(modes[(modes.indexOf(mode) + (k === 'arrowleft' ? 2 : 1)) % 3]); return; }
       if (k === 'arrowup' || k === 'arrowdown') { e.preventDefault(); chooseLevel(k === 'arrowup' ? 'normal' : 'hard'); return; }
-      if ((k === 'enter' || k === ' ') && !onBtn) { e.preventDefault(); ac(); startMatch(); return; }
+      if (mode === 'practice' && '1234'.indexOf(k) >= 0 && k) { e.preventDefault(); toggleSkill(['T', 'R', 'F', 'seq'][+k - 1]); return; }
+      if ((k === 'enter' || k === ' ') && !onBtn) { e.preventDefault(); ac(); play(); return; }
       if (k === 'h') { e.preventDefault(); openHow(); }
+      if (k === 't') { e.preventDefault(); ac(); startTutorial(false); }
       return;
     }
     if (screenOpen('scr-how')) { if (k === 'escape' || ((k === 'enter' || k === ' ') && !onBtn)) { e.preventDefault(); closeHow(); } return; }
     if (screenOpen('scr-pause')) {
       if (k === 'escape' || ((k === 'enter' || k === ' ') && !onBtn)) { e.preventDefault(); togglePause(); }
       else if (k === 'r') { e.preventDefault(); paused = false; startMatch(); }
+      else if (k === 'f' && mode === 'practice') { e.preventDefault(); paused = false; finishPractice(); }
       else if (k === 'm') { e.preventDefault(); toMenu(); }
       return;
     }
@@ -507,6 +655,7 @@
       return;
     }
     if (k === 'escape') { if (running && !over) { e.preventDefault(); togglePause(); } return; }
+    if (k === 'k' && mode === 'tutorial' && running) { e.preventDefault(); endTutorial(); return; }
     var a = KEYS[k]; if (!a || !running) return;
     if (onBtn) return;   // a focused on-screen button handles its own press
     e.preventDefault();
@@ -549,7 +698,10 @@
       return;
     }
     var st = step(); q.push({ a: null, t: think });
-    if (st.type === 'T') { for (var j = 0; j < Math.abs(st.dx); j++) q.push({ a: st.dx > 0 ? 'right' : 'left', t: mv }); }
+    if (st.type === 'T') {
+      for (var j = 0; j < Math.abs(st.dx); j++) q.push({ a: st.dx > 0 ? 'right' : 'left', t: mv });
+      for (var j2 = 0; j2 < Math.abs(st.dy || 0); j2++) q.push({ a: st.dy > 0 ? 'down' : 'up', t: mv });
+    }
     else if (st.type === 'R') { for (var k = 0; k < Math.abs(st.turns); k++) q.push({ a: st.turns > 0 ? 'cw' : 'ccw', t: 520 }); }
     else {
       var bb = box(G.cur);
@@ -583,6 +735,7 @@
   }
   function update(dt) {
     if (!G) return;
+    if (G.demo) { G.demo.t += dt; if (G.demo.t >= G.demo.dur + 500) endDemo(); return; }   // the replay of the correct move
     if (!G.rot.drag && G.rot.angle !== G.rot.target) {   // the paper turns smoothly through every quarter-turn on the way
       var sp = (CALM ? 900 : 300) * dt / 1000, d = G.rot.target - G.rot.angle;
       G.rot.angle = Math.abs(d) <= sp ? G.rot.target : G.rot.angle + Math.sign(d) * sp;
@@ -597,7 +750,12 @@
     } else if (G.phase === 'clear') {
       G.clearT += dt; if (G.clearT > 380) finishClear();
     } else if (G.phase === 'wait') {
-      G.waitT += dt; if (G.waitT > 450) { G.turn = 1 - G.turn; startTurn(); }
+      G.waitT += dt;
+      if (G.waitT > 450) {
+        if (mode === 'tutorial' && G.tutStep >= TUT.length) { finishTutorial(); return; }
+        if (versus()) G.turn = 1 - G.turn;
+        startTurn();
+      }
     }
     if (!over && cur().kind === 'cpu') aiTick(dt);
     if (over && performance.now() - overAt > 1500) showOver();
@@ -666,8 +824,9 @@
       outline(g, G.start, 'rgba(255,255,255,0.55)', [4, 3], 2, 'rgba(255,255,255,0.07)');   // the ghost: the pre-image where it started
       if (G.si > 0) outline(g, G.stepStart, 'rgba(255,255,255,0.3)', [2, 4], 1.5);
       if (G.showTarget) outline(g, apply(st, G.stepStart), '#ffd84d', [5, 4], 2.5);
-      if (st.type === 'F') drawLines(st);
-      if (st.type === 'R') drawPaper(st);
+      if (st.type === 'F' && (!st.hidden || G.demo)) drawLines(st);   // Hard draws no lines (the replay shows the one it used)
+      if (G.demo) drawDemo();
+      else if (st.type === 'R') drawPaper(st);
       else G.cur.forEach(function (q) { blockAt(g, q[0] * s, q[1] * s, s, G.piece.color); });
     } else if (G.phase === 'drop' && G.drop) {
       G.drop.forEach(function (q) { blockAt(g, q[0] * s, q[1] * s, s, G.piece.color); });
@@ -722,6 +881,31 @@
     var ly = cy + hs + s * 0.55 > Z * s ? cy - hs - s * 0.5 : cy + hs + s * 0.55;
     tag(g, lbl, Math.min(Math.max(cx, s * 2.4), W * s - s * 2.4), Math.max(s * 0.5, ly), '#ffd84d');
   }
+  // the replay: the correct move played slowly from the step's start (a slide, the paper turning, or a flip across its line)
+  function drawDemo() {
+    var g = UI.ctx, s = cell, d = G.demo, st = d.st, u = Math.min(1, d.t / d.dur);
+    u = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;                       // ease in and out
+    var col = G.piece.color;
+    g.save();
+    if (st.type === 'T') {
+      g.translate(st.dx * u * s, (st.dy || 0) * u * s);
+      d.from.forEach(function (q) { blockAt(g, q[0] * s, q[1] * s, s, col, 0.9); });
+    } else if (st.type === 'R') {
+      var cx = st.px * s, cy = st.py * s, ang = st.turns * 90 * u * Math.PI / 180;
+      g.translate(cx, cy); g.rotate(ang); g.translate(-cx, -cy);
+      d.from.forEach(function (q) { blockAt(g, q[0] * s, q[1] * s, s, col, 0.9); });
+      g.restore(); g.save();
+      g.beginPath(); g.arc(cx, cy, Math.max(5, s * 0.24), 0, Math.PI * 2); g.fillStyle = '#ff3b3b'; g.fill();
+      tag(g, Math.round(Math.abs(st.turns) * 90 * u) + '° ' + (st.turns > 0 ? T('CW', 'horario') : T('CCW', 'antihorario')), Math.min(Math.max(cx, s * 2.4), W * s - s * 2.4), Math.max(s * 0.5, cy - s * 1.2), '#ffd84d');
+    } else {
+      var k = 1 - 2 * u;                                                                // the mirror squeezes to the line and opens on the other side
+      if (st.axis === 'v') { g.translate(st.a * s, 0); g.scale(k || 0.001, 1); g.translate(-st.a * s, 0); }
+      else { g.translate(0, st.b * s); g.scale(1, k || 0.001); g.translate(0, -st.b * s); }
+      d.from.forEach(function (q) { blockAt(g, q[0] * s, q[1] * s, s, col, 0.9); });
+    }
+    g.restore();
+    tag(g, T('Watch: the correct move', 'Mira: el movimiento correcto'), W * s / 2, s * 0.6, '#ffd84d', 'rgba(60, 40, 0, 0.85)');
+  }
   function drawNext(p) {
     if (!p.nextCv || !p.next) return;
     var g = p.nextCv.getContext('2d'), b = box(p.next.cells), sz = Math.min(13, Math.floor(Math.min(80 / b.w, 46 / b.h)));
@@ -737,7 +921,8 @@
     if (!G) return;
     var p = cur(), st = step(), html;
     UI.turnEl.className = 'turn ' + (p.kind === 'cpu' ? 'cpu' : (p.idx === 0 ? 'p1' : 'p2'));
-    UI.turnEl.textContent = over ? T('Game over', 'Fin del juego') : p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno'));
+    UI.turnEl.textContent = over ? T('Game over', 'Fin del juego') : mode === 'tutorial' ? T('Tutorial', 'Tutorial') + ' ' + Math.min(G.tutStep + 1, 3) + ' / 3'
+      : mode === 'practice' ? T('Practice', 'Práctica') : p.kind === 'cpu' ? T("Computer's turn", 'Turno de la computadora') : (mode === 'pvp' ? p.name + T("'s turn", ': tu turno') : T('Your turn', 'Tu turno'));
     if (G.phase === 'place') html = '<div class="lbl">' + T('Choose the start', 'Elige el inicio') + '</div><div class="txt">' + (p.kind === 'cpu' ? T('The computer is choosing where its figure starts.', 'La computadora elige dónde empieza su figura.') : T('Move the figure left or right, then confirm the start.', 'Mueve la figura a la izquierda o la derecha y confirma el inicio.')) + '</div>';
     else if (G.steps && G.steps.length > 1) html = '<div class="lbl">' + T('Do these in order', 'Hazlas en orden') + '</div><ol>' + G.steps.map(function (s2, k) {
       return '<li class="' + (k < G.si || G.phase !== 'xf' ? 'done' : k === G.si ? 'now' : 'later') + '">' + shortText(s2) + '</li>'; }).join('') + '</ol>';
@@ -745,24 +930,41 @@
     else html = '';
     UI.askEl.innerHTML = html;
     UI.msgEl.className = 'msg ' + (msgKind || ''); UI.msgEl.innerHTML = msgText || '';
-    UI.cv.setAttribute('aria-label', T('The board. ', 'El tablero. ') + UI.turnEl.textContent + '. ' + (st && G.phase === 'xf' ? stepText(st) : ''));
-    var B = UI.btn, mine = humanTurn(), place = mine && G.phase === 'place', xf = mine && G.phase === 'xf', t = st && st.type;
+    if (UI.coachEl) UI.coachEl.innerHTML = coachText();
+    UI.cv.setAttribute('aria-label', T('The board. ', 'El tablero. ') + UI.turnEl.textContent + '. ' + (st && G.phase === 'xf' ? stepText(st).replace(/&rsquo;/g, "'") : ''));
+    var B = UI.btn, mine = humanTurn() && !G.demo, place = mine && G.phase === 'place', xf = mine && G.phase === 'xf', t = st && st.type;
+    var vMove = t === 'T' && level === 'hard' && mode !== 'tutorial';
     B.left.disabled = B.right.disabled = !(place || (xf && (t === 'T' || t === 'F')));
-    B.up.disabled = B.down.disabled = !(xf && (t === 'F' || t === 'R'));
+    B.up.disabled = B.down.disabled = !(xf && (t === 'F' || t === 'R' || vMove));
     B.cw.disabled = B.ccw.disabled = !(xf && t === 'R');
     B.reset.disabled = !xf;
     B.ok.disabled = !(place || xf);
     B.ok.className = 'ok' + (G.phase === 'place' ? ' start' : '');
     B.ok.textContent = G.phase === 'place' ? T('✓ Confirm start', '✓ Confirmar inicio') : T('✓ Check', '✓ Comprobar');
-    UI.goalEl.innerHTML = T('First to <b>', 'Gana quien complete <b>') + GOAL[level] + T(' rows</b> wins', ' filas</b> primero');
+    UI.goalEl.innerHTML = versus() ? T('First to <b>', 'Gana quien complete <b>') + GOAL[level] + T(' rows</b> wins', ' filas</b> primero')
+      : mode === 'tutorial' ? T('<b>Tutorial</b>: one of each transformation', '<b>Tutorial</b>: una de cada transformación')
+      : T('<b>Practice</b>: no Xs, no opponent', '<b>Práctica</b>: sin X ni rival');
     players.forEach(function (q) {
       var xs = q.xsEl.children; for (var i = 0; i < 3; i++) xs[i].className = i < q.xs ? 'on' : '';
+      q.xsEl.style.display = versus() ? '' : 'none';
       q.xsEl.setAttribute('aria-label', T('Xs: ', 'X: ') + q.xs + T(' of 3', ' de 3'));
-      q.statsEl.innerHTML = '<span>' + T('Rows', 'Filas') + ' <b>' + q.rows + ' / ' + GOAL[level] + '</b></span><span>' + T('First try', 'A la primera') + ' <b>' + q.firstTry + '</b></span>';
+      q.statsEl.innerHTML = '<span>' + T('Rows', 'Filas') + ' <b>' + q.rows + (versus() ? ' / ' + GOAL[level] : '') + '</b></span><span>' + T('First try', 'A la primera') + ' <b>' + q.firstTry + (solo() ? ' / ' + q.solved : '') + '</b></span>';
       q.card.classList.toggle('active', !over && q === p);
     });
     var left = RISE_EVERY[level] - (G.placed % RISE_EVERY[level]);
-    UI.riseEl.textContent = T('The floor rises in ', 'El piso sube en ') + left + (left === 1 ? T(' piece', ' pieza') : T(' pieces', ' piezas'));
+    UI.riseEl.textContent = versus() ? T('The floor rises in ', 'El piso sube en ') + left + (left === 1 ? T(' piece', ' pieza') : T(' pieces', ' piezas')) : '';
+  }
+  // the tutorial's coach: what to do right now
+  function coachText() {
+    var st = step(), ks = !TOUCH;
+    if (G.phase === 'place') return T('Your figure appears above the <b>white dotted line</b>. Press ◀ ▶ to choose where it starts, then <b>Confirm start</b>', 'Tu figura aparece arriba de la <b>línea blanca punteada</b>. Pulsa ◀ ▶ para elegir dónde empieza y luego <b>Confirmar inicio</b>') + (ks ? T(' (Space).', ' (Espacio).') : '.');
+    if (G.phase === 'xf' && st) {
+      if (G.demo) return T('Watch the correct move on the board.', 'Mira el movimiento correcto en el tablero.');
+      if (st.type === 'T') return T('<b>Translate</b> means slide. The faint ghost stays where the figure started. Press ◀ ▶ to count the units, then <b>Check</b>.', '<b>Trasladar</b> es deslizar. La figura tenue se queda donde empezó. Pulsa ◀ ▶ para contar las unidades y luego <b>Comprobar</b>.');
+      if (st.type === 'R') return T('The figure is on <b>tracing paper</b> pinned at the red point. Press ▲ (or ⟳) once: the paper turns a quarter-turn, <b>90°</b>, clockwise. The red arrow shows how far it turned. Then <b>Check</b>.', 'La figura está en <b>papel de calcar</b> fijo en el punto rojo. Pulsa ▲ (o ⟳) una vez: el papel gira un cuarto de vuelta, <b>90°</b>, en sentido horario. La flecha roja muestra cuánto giró. Luego <b>Comprobar</b>.');
+      return T('<b>Reflect</b> means flip. Use the line the instruction names: ◀ ▶ flip across the pink <b>vertical</b> line, ▲ ▼ across the green <b>horizontal</b> line. Then <b>Check</b>.', '<b>Reflejar</b> es voltear. Usa la línea que dice la instrucción: ◀ ▶ reflejan sobre la línea <b>vertical</b> rosa, ▲ ▼ sobre la línea <b>horizontal</b> verde. Luego <b>Comprobar</b>.');
+    }
+    return T('A correct image drops below the line. Fill a whole row to clear it.', 'Una imagen correcta cae debajo de la línea. Completa una fila entera para quitarla.');
   }
   var flashTimer = 0;
   function flash(txt, col) {
@@ -773,17 +975,35 @@
 
   // ------------------------------------------------------------------ screens
   function show(id) { ['scr-title', 'scr-how', 'scr-pause', 'scr-over'].forEach(function (s) { $(s).hidden = s !== id; }); }
+  function play() {
+    // the very first game on this device starts with the tutorial (it can be skipped)
+    if (mode !== 'practice' && !store('transformania_tutorial')) { startTutorial(true); return; }
+    startMatch();
+  }
+  var afterTutorial = null;
+  function startTutorial(thenPlay) { afterTutorial = thenPlay ? mode : null; mode = 'tutorial'; startMatch(); }
+  function finishTutorial() {
+    store('transformania_tutorial', 'done'); store('transformania_tutorial_done', 1);   // the second one (finished, not skipped) earns a badge
+    running = false; flash(T('Tutorial done!', '¡Tutorial terminado!'), '#4ee6a6');
+    say(T('Tutorial done. You are ready to play.', 'Tutorial terminado. Ya puedes jugar.'));
+    setTimeout(function () { var m = afterTutorial; if (m) { mode = m; startMatch(); } else { mode = 'cpu'; toMenu(); } }, 1600);
+  }
+  function endTutorial() { if (mode !== 'tutorial') return; store('transformania_tutorial', 'done'); var m = afterTutorial; if (m) { mode = m; startMatch(); } else { mode = 'cpu'; toMenu(); } }
   function startMatch() {
-    players = [makePlayer(0, 'human'), makePlayer(1, mode === 'pvp' ? 'human' : 'cpu')];
-    G = { board: [], turn: 0, placed: 0, phase: 'idle' };
+    if (solo()) players = [makePlayer(0, 'human')];
+    else players = [makePlayer(0, 'human'), makePlayer(1, mode === 'pvp' ? 'human' : 'cpu')];
+    G = { board: [], turn: 0, placed: 0, phase: 'idle', tutStep: 0 };
     for (var y = 0; y < H; y++) G.board.push(emptyRow());
     buildUI();
     $('match').hidden = false; $('btn-menu').hidden = false; show(null);
+    $('btn-finish').hidden = mode !== 'practice';
     running = true; paused = false; over = false; winner = null;
     if (window.SiteResults) SiteResults.reset();
     layout(); setTimeout(layout, 50);
-    say(T('Transformania. ', 'Transformania. ') + (mode === 'pvp' ? T('Player 1 and Player 2 take turns on one board.', 'El Jugador 1 y el Jugador 2 se turnan en un tablero.') : T('You and the computer take turns on one board.', 'Tú y la computadora se turnan en un tablero.'))
-      + ' ' + T('First to ', 'Gana quien complete ') + GOAL[level] + T(' rows wins.', ' filas primero.'));
+    say(T('Transformania. ', 'Transformania. ') + (mode === 'tutorial' ? T('Tutorial: three pieces, one of each transformation. Press K to skip it.', 'Tutorial: tres piezas, una de cada transformación. Pulsa K para saltarlo.')
+      : mode === 'practice' ? T('Practice: no Xs and no opponent. Press Escape, then F, to finish and see your results.', 'Práctica: sin X ni rival. Pulsa Escape y luego F para terminar y ver tus resultados.')
+      : (mode === 'pvp' ? T('Player 1 and Player 2 take turns on one board.', 'El Jugador 1 y el Jugador 2 se turnan en un tablero.') : T('You and the computer take turns on one board.', 'Tú y la computadora se turnan en un tablero.'))
+        + ' ' + T('First to ', 'Gana quien complete ') + GOAL[level] + T(' rows wins.', ' filas primero.')));
     startTurn();
   }
   function togglePause() {
@@ -791,73 +1011,101 @@
     paused = !paused; show(paused ? 'scr-pause' : null);
     if (paused) $('btn-resume').focus(); else { focusBoard(); render(); }
   }
+  function finishPractice() {
+    if (!G) return;
+    running = true; over = true; winner = null; overAt = performance.now() - 2000;
+    paused = false; show(null); showOver();
+  }
   function showOver() {
     if (!running) return;
     running = false;
-    var loser = players[0].dead ? players[0] : players[1], txt, why;
-    txt = winner.kind === 'cpu' ? T('The computer wins', 'Gana la computadora') : (mode === 'pvp' ? winner.name + T(' wins!', ' gana!') : T('You win!', '¡Ganaste!'));
-    why = loser.dead === 'goal' ? winner.name + T(' cleared ', ' completó ') + winner.rows + T(' rows first.', ' filas primero.')
-      : loser.name + (loser.dead === 'xs' ? T(' reached three Xs.', ' llegó a tres X.') : T(' dropped a piece that stopped above the dotted line.', ' soltó una pieza que quedó arriba de la línea punteada.'));
-    if (loser.dead === 'goal') loser.dead = '';
-    sfx(winner.kind === 'cpu' ? 'lose' : 'win');
+    var txt, why;
+    if (mode === 'practice') {
+      var p0 = players[0];
+      txt = T('Practice finished', 'Práctica terminada');
+      why = p0.solved + T(' transformations, ', ' transformaciones, ') + p0.firstTry + T(' right on the first try.', ' correctas a la primera.');
+      sfx('win');
+    } else {
+      var loser = players[0].dead ? players[0] : players[1];
+      txt = winner.kind === 'cpu' ? T('The computer wins', 'Gana la computadora') : (mode === 'pvp' ? winner.name + T(' wins!', ' gana!') : T('You win!', '¡Ganaste!'));
+      why = loser.dead === 'goal' ? winner.name + T(' cleared ', ' completó ') + winner.rows + T(' rows first.', ' filas primero.')
+        : loser.name + (loser.dead === 'xs' ? T(' reached three Xs.', ' llegó a tres X.') : T(' dropped a piece that stopped above the dotted line.', ' soltó una pieza que quedó arriba de la línea punteada.'));
+      if (loser.dead === 'goal') loser.dead = '';
+      sfx(winner.kind === 'cpu' ? 'lose' : 'win');
+    }
     // records for My Stats (the people at this computer; the computer doesn't count)
-    try {
-      var add = function (k, n) { localStorage.setItem(k, String((+localStorage.getItem(k) || 0) + n)); };
-      add('transformania_games', 1);
-      if (winner.kind !== 'cpu') add('transformania_wins', 1);
-      players.forEach(function (p) {
-        if (p.kind === 'cpu') return;
-        add('transformania_solved', p.solved); add('transformania_firsttry', p.firstTry);
-        if (p.rows > (+localStorage.getItem('transformania_best_rows') || 0)) localStorage.setItem('transformania_best_rows', String(p.rows));
-      });
-    } catch (e) {}
+    bump('transformania_games');
+    if (mode !== 'practice' && winner.kind !== 'cpu') { bump('transformania_wins'); if (mode === 'cpu' && level === 'hard') store('transformania_hard_win', 1); }
+    players.forEach(function (p) {
+      if (p.kind === 'cpu') return;
+      store('transformania_solved', (+store('transformania_solved') || 0) + p.solved); store('transformania_firsttry', (+store('transformania_firsttry') || 0) + p.firstTry);
+      if (p.rows > (+store('transformania_best_rows') || 0)) store('transformania_best_rows', p.rows);
+    });
     $('over-title').textContent = txt; $('over-why').textContent = why;
     $('over-stats').innerHTML = players.map(function (p) {
       return '<div><span>' + p.name + '</span><b>' + p.rows + T(' rows', ' filas') + '</b><span>' + p.solved + T(' transformations · ', ' transformaciones · ') + p.firstTry + T(' first try', ' a la primera') + '</span></div>'; }).join('');
     $('btn-results').hidden = !window.SiteResults;
     show('scr-over'); $('btn-again').focus();
-    say(txt + ' ' + why + ' ' + T('Enter plays again, S shows results by skill, M goes to the menu.', 'Enter juega otra vez, S muestra los resultados, M va al menú.'));
+    say(txt + '. ' + why + ' ' + T('Enter plays again, S shows results by skill, M goes to the menu.', 'Enter juega otra vez, S muestra los resultados, M va al menú.'));
   }
   function showResults() { if (window.SiteResults) SiteResults.show({ title: T('Your results', 'Tus resultados') }); }
   function toMenu() {
     running = false; over = false; paused = false; players = []; G = null;
+    if (mode === 'tutorial') mode = 'cpu';
     $('match').hidden = true; $('match').innerHTML = ''; $('btn-menu').hidden = true; show('scr-title');
-    $('btn-play').focus();
+    syncTitle(); $('btn-play').focus();
   }
-  function chooseMode(m) { mode = m; document.querySelectorAll('#tm [data-mode]').forEach(function (o) { o.setAttribute('aria-pressed', String(o.getAttribute('data-mode') === m)); }); sfx('move'); say(m === 'pvp' ? T('Player versus player', 'Jugador contra jugador') : T('Player versus computer', 'Jugador contra computadora')); }
-  function chooseLevel(l) { level = l; document.querySelectorAll('#tm [data-level]').forEach(function (o) { o.setAttribute('aria-pressed', String(o.getAttribute('data-level') === l)); }); sfx('move'); say(l === 'hard' ? T('Hard', 'Difícil') : T('Normal', 'Normal')); }
+  function syncTitle() {
+    document.querySelectorAll('#tm [data-mode]').forEach(function (o) { o.setAttribute('aria-pressed', String(o.getAttribute('data-mode') === mode)); });
+    document.querySelectorAll('#tm [data-level]').forEach(function (o) { o.setAttribute('aria-pressed', String(o.getAttribute('data-level') === level)); });
+    document.querySelectorAll('#tm [data-skill]').forEach(function (o) { o.setAttribute('aria-pressed', String(!!skills[o.getAttribute('data-skill')])); });
+    $('skills-row').hidden = mode !== 'practice';
+  }
+  function chooseMode(m) { mode = m; syncTitle(); sfx('move'); say(m === 'pvp' ? T('Player versus player', 'Jugador contra jugador') : m === 'practice' ? T('Practice. Keys 1 to 4 choose the skills.', 'Práctica. Las teclas 1 a 4 eligen las destrezas.') : T('Player versus computer', 'Jugador contra computadora')); }
+  function chooseLevel(l) { level = l; syncTitle(); sfx('move'); say(l === 'hard' ? T('Hard', 'Difícil') : T('Normal', 'Normal')); }
+  function toggleSkill(s) {
+    skills[s] = !skills[s];
+    if (!skills.T && !skills.R && !skills.F && !skills.seq) skills[s] = true;   // at least one skill stays on
+    syncTitle(); sfx('move');
+    say({ T: T('Translations', 'Traslaciones'), R: T('Rotations', 'Rotaciones'), F: T('Reflections', 'Reflexiones'), seq: T('Sequences', 'Secuencias') }[s] + ' ' + (skills[s] ? T('on', 'sí') : T('off', 'no')));
+  }
   function openHow() { show('scr-how'); $('btn-how-back').focus(); }
   function closeHow() { show('scr-title'); $('btn-play').focus(); }
 
   document.querySelectorAll('#tm [data-mode]').forEach(function (b) { b.addEventListener('click', function () { chooseMode(b.getAttribute('data-mode')); }); });
   document.querySelectorAll('#tm [data-level]').forEach(function (b) { b.addEventListener('click', function () { chooseLevel(b.getAttribute('data-level')); }); });
-  $('btn-play').addEventListener('click', function () { ac(); startMatch(); });
+  document.querySelectorAll('#tm [data-skill]').forEach(function (b) { b.addEventListener('click', function () { toggleSkill(b.getAttribute('data-skill')); }); });
+  $('btn-play').addEventListener('click', function () { ac(); play(); });
+  $('btn-tutorial').addEventListener('click', function () { ac(); startTutorial(false); });
   $('btn-how').addEventListener('click', openHow);
   $('btn-how-back').addEventListener('click', closeHow);
   $('btn-menu').addEventListener('click', togglePause);
   $('btn-resume').addEventListener('click', togglePause);
   $('btn-restart').addEventListener('click', function () { paused = false; startMatch(); });
+  $('btn-finish').addEventListener('click', finishPractice);
   $('btn-quit').addEventListener('click', toMenu);
   $('btn-again').addEventListener('click', startMatch);
   $('btn-over-menu').addEventListener('click', toMenu);
   $('btn-results').addEventListener('click', showResults);
 
   $('how-list').innerHTML = [
-    T('Players <b>take turns on one board</b>: you place a piece, then the computer (or Player 2) places one.', 'Los jugadores <b>se turnan en un tablero</b>: tú colocas una pieza y luego la computadora (o el Jugador 2) coloca otra.'),
+    T('Players <b>take turns on one board</b>: you place a piece, then the computer (or Player 2) places one. <b>Practice</b> is just you, with the skills you choose and no Xs.', 'Los jugadores <b>se turnan en un tablero</b>: tú colocas una pieza y luego la computadora (o el Jugador 2) coloca otra. En <b>Práctica</b> juegas solo, con las destrezas que eliges y sin X.'),
     T('A figure appears above the <b>white dotted line</b>. Slide it left or right to choose where it starts, then press <b>Confirm start</b>.', 'Una figura aparece arriba de la <b>línea blanca punteada</b>. Deslízala a la izquierda o la derecha para elegir dónde empieza y pulsa <b>Confirmar inicio</b>.'),
     T('An instruction appears, and a faint <b>ghost</b> keeps the starting figure (the pre-image) in place.', 'Aparece una instrucción, y una <b>figura tenue</b> deja la figura inicial (la preimagen) en su lugar.'),
-    T('<b>Translate</b>: slide with ◀ ▶ and count the grid units.', '<b>Traslada</b>: desliza con ◀ ▶ y cuenta las unidades.'),
+    T('<b>Translate</b>: slide with ◀ ▶ and count the grid units (on Hard, ▲ ▼ too).', '<b>Traslada</b>: desliza con ◀ ▶ y cuenta las unidades (en Difícil, también ▲ ▼).'),
     T('<b>Rotate</b>: the figure is on tracing paper pinned at a <b>red point</b>. Press ▲ to turn it clockwise and ▼ counterclockwise (or ⟳ ⟲, or drag the handle). Each turn is <b>90°</b>: 180° is 2 turns, 270° is 3, 360° is 4. The red arrow on the paper starts pointing up.', '<b>Rota</b>: la figura está en papel de calcar fijo en un <b>punto rojo</b>. Pulsa ▲ para girarlo en sentido horario y ▼ en sentido antihorario (o ⟳ ⟲, o arrastra el asa). Cada vuelta es de <b>90°</b>: 180° son 2 vueltas, 270° son 3 y 360° son 4. La flecha roja del papel empieza apuntando hacia arriba.'),
-    T('<b>Reflect</b>: ◀ ▶ flip the figure across the pink <b>vertical</b> line, ▲ ▼ across the green <b>horizontal</b> line.', '<b>Refleja</b>: ◀ ▶ reflejan la figura sobre la línea <b>vertical</b> rosa, ▲ ▼ sobre la línea <b>horizontal</b> verde.'),
-    T('Press <b>Check</b>. A correct image drops below the line and stacks. The first wrong check on a question adds an <b>X</b>, and every wrong check gives a stronger hint.', 'Pulsa <b>Comprobar</b>. Una imagen correcta cae debajo de la línea y se apila. El primer error de cada pregunta suma una <b>X</b>, y cada error da una pista más clara.'),
+    T('<b>Reflect</b>: ◀ ▶ flip the figure across the pink <b>vertical</b> line, ▲ ▼ across the green <b>horizontal</b> line. On Hard the lines aren&rsquo;t drawn: the instruction tells you where the line is.', '<b>Refleja</b>: ◀ ▶ reflejan la figura sobre la línea <b>vertical</b> rosa, ▲ ▼ sobre la línea <b>horizontal</b> verde. En Difícil no se dibujan las líneas: la instrucción dice dónde está la línea.'),
+    T('Press <b>Check</b>. A correct image drops below the line and stacks. A wrong check tells you what went wrong; the first one on a question adds an <b>X</b>, and after the second you watch the correct move.', 'Pulsa <b>Comprobar</b>. Una imagen correcta cae debajo de la línea y se apila. Un error te dice qué salió mal; el primero de cada pregunta suma una <b>X</b>, y después del segundo ves el movimiento correcto.'),
     T('Fill a whole row to clear it and remove one of your Xs. <b>The first to clear the goal number of rows wins.</b> Three Xs, or a piece that stops above the dotted line, loses. The floor rises every few pieces.', 'Completa una fila para quitarla y borrar una de tus X. <b>Gana quien complete primero el número de filas de la meta.</b> Pierde quien llega a tres X o suelta una pieza que queda arriba de la línea punteada. El piso sube cada pocas piezas.'),
-    T('<b>Hard</b>: turns up to 360° and sequences such as &ldquo;rotate 90° clockwise, then translate 2 units left&rdquo;, done in order.', '<b>Difícil</b>: giros hasta 360° y secuencias como &ldquo;rota 90° en sentido horario y luego traslada 2 unidades a la izquierda&rdquo;, en orden.')
+    T('<b>Hard</b>: turns up to 360°, translations up and down, reflection lines you must picture, and sequences such as &ldquo;rotate 90° clockwise, then translate 2 units left&rdquo;, done in order.', '<b>Difícil</b>: giros hasta 360°, traslaciones hacia arriba y abajo, líneas de reflexión que debes imaginar y secuencias como &ldquo;rota 90° en sentido horario y luego traslada 2 unidades a la izquierda&rdquo;, en orden.')
   ].map(function (x) { return '<li>' + x + '</li>'; }).join('');
-  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>R</kbd> start over, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
-    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>R</kbd> otra vez, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
+  $('how-keys').innerHTML = TOUCH ? '' : T('Keyboard: <kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> <kbd>↓</kbd> flip (in a rotation, <kbd>↑</kbd> turns the paper clockwise and <kbd>↓</kbd> counterclockwise), <kbd>Space</kbd> or <kbd>Enter</kbd> confirm and check, <kbd>R</kbd> start over, <kbd>I</kbd> hear where your figure is, <kbd>Esc</kbd> menu. In two-player games, the player whose turn it is uses the same keys.',
+    'Teclado: <kbd>←</kbd> <kbd>→</kbd> mover, <kbd>↑</kbd> <kbd>↓</kbd> reflejar (en una rotación, <kbd>↑</kbd> gira el papel en sentido horario y <kbd>↓</kbd> en sentido antihorario), <kbd>Espacio</kbd> o <kbd>Enter</kbd> confirmar y comprobar, <kbd>R</kbd> otra vez, <kbd>I</kbd> oír dónde está tu figura, <kbd>Esc</kbd> menú. En dos jugadores, quien tiene el turno usa las mismas teclas.');
 
+  syncTitle();
   show('scr-title');
   requestAnimationFrame(frame);
   // a small hook for automated checks
-  window.TM = { get players() { return players; }, get G() { return G; }, act: act, apply: apply, rotateAbout: rotateAbout, reflectV: reflectV, reflectH: reflectH, makeQuestion: makeQuestion, same: same, inZone: inZone, startMatch: startMatch, setMode: function (m, l) { mode = m; level = l; }, update: update };
+  window.TM = { get players() { return players; }, get G() { return G; }, act: act, apply: apply, rotateAbout: rotateAbout, reflectV: reflectV, reflectH: reflectH, makeQuestion: makeQuestion, same: same, inZone: inZone, startMatch: startMatch,
+    setMode: function (m, l) { mode = m; level = l; }, update: update, mistakeText: mistakeText, figureWords: figureWords, skills: skills };
 })();
